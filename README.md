@@ -5,8 +5,15 @@
 ## 저장소 구조
 
 ```text
-LancerPick/           # Spring Boot 백엔드
-LancerPickFrontend/   # React 프런트엔드
+lancerpick/
+├─ LancerPick/           # Spring Boot 백엔드
+├─ LancerPickFrontend/   # React 프런트엔드
+├─ docs/                 # 기획·API·ERD·개발 안내
+├─ .github/
+│  └─ workflows/
+│     └─ ci.yml          # 자동 빌드·검사
+├─ .gitignore            # 공통 Git 제외 규칙
+└─ README.md             # 프로젝트 소개·실행 안내
 ```
 
 ## 준비 사항
