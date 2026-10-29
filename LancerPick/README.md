@@ -42,7 +42,7 @@ order/
 - B 영역: seller·product·review
 - C 영역: order
 - D 영역: wallet·payment·settlement
-- 실제 담당자와 조장은 별도 작업표에서 배정합니다.
+- A 김창재, B 박소현, C 정은찬, D 황준범으로 배정했습니다. 정은찬은 조장·통합 조율, 황준범은 React 공통 기반을 겸합니다. 검토자·배포 담당은 별도 작업표에서 확정합니다.
 - Member 엔티티는 member/entity에 둡니다. auth에서 동일한 회원 엔티티를 다시 만들지 않습니다.
 - Category는 product, 납품·수정·취소 요청·주문 이력은 order에 둡니다.
 - 관리자 상품 운영 이력은 admin에서 관리하며 상품 엔티티를 중복 정의하지 않습니다.
