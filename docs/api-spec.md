@@ -190,7 +190,7 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 | 409 | CANCELLATION_PENDING, REQUEST_ALREADY_RESOLVED, REVISION_ALREADY_USED, REVIEW_ALREADY_EXISTS, PAYMENT_ALREADY_REFUNDED, DELIVERY_ALREADY_SUBMITTED, DELIVERY_SEQUENCE_CONFLICT |
 | 500 | INTERNAL_ERROR, DATA_INTEGRITY_ERROR |
 
-확정 업무 입력: 가격 1~1,000,000원, 기간 1~30일, 별점 1~5, requestKey UUID, 결과물 URL HTTPS. 문자열 길이는 물리 SQL·DTO·화면을 함께 맞출 때 확정한다. 앞서 제안된 길이 수치는 합의된 업무 정책으로 간주하지 않는다.
+확정 업무 입력: 가격 1~1,000,000원, 기간 1~30일, 별점 1~5, requestKey UUID, 결과물 URL HTTPS. 문자열 길이·정규화·상품 기본값의 신규 기준안은 [물리 DB 설계](physical-db.md#3-이번-설계-선택)를 참조한다. 설계안 리뷰 후 물리 SQL·DTO·화면에 함께 반영한다. 기존 정책과 새 설계 선택, 실제 구현 완료는 구분한다.
 
 ### 구현 전 확정할 계약
 
@@ -198,8 +198,8 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 
 | 항목 | 함께 정할 내용 |
 | --- | --- |
-| 문자열 검증 | 필드별 필수 여부·최소/최대 길이·공백 정규화, DTO·DB·화면의 일치 |
-| 상품 생성 | 최초 saleStatus와 isHidden의 서버 기본값 |
+| 문자열 검증 | 물리 설계안에 필수 여부·길이·정규화 제시, DTO·화면·SQL의 일치 검증 대기 |
+| 상품 생성 | 물리 설계안은 ON_SALE·isHidden=false·version=0 선택, 팀 리뷰·실제 구현 대기 |
 | 상품 수정 | ProductInput 전체 제출인지 부분 제출인지, 생략·null·빈 문자열의 구분 |
 | 관리자 목록 | 목록 항목의 필드와 필터의 생략 시 동작 |
 | 요청·응답 예시 | 인증·상품·주문·취소·결제의 정상/오류 JSON, ID·시각·null 표현 |
