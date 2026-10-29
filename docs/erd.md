@@ -56,6 +56,8 @@
 
 ## 3. 관계도
 
+아래는 논리 관계도다. 실제 검토용 DDL의 컬럼·자료형·키를 포함한 이미지는 [물리 ERD PNG](images/lancerpick-physical-erd.png) 또는 [확대용 SVG](images/lancerpick-physical-erd.svg)를 참고한다. 이미지의 22개 선은 SQL의 개별 FK를 표현하므로 아래 요약 관계의 선 개수와 다를 수 있다.
+
 ```mermaid
 erDiagram
     MEMBERS ||--o| SELLER_PROFILES : has

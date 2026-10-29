@@ -4,6 +4,8 @@
 
 ## 1. 결과물과 적용 범위
 
+- [ERD PNG 원본](images/lancerpick-physical-erd.png) · [확대용 SVG](images/lancerpick-physical-erd.svg): DDL에서 생성한 15개 테이블·119개 컬럼·22개 FK 관계도. PK·FK·복합 UNIQUE 묶음·NULL 여부를 표시한다.
+
 - [DDL 원본](sql/V1__init.sql): 기존 논리 ERD의 15개 테이블, 자료형·NULL·기본값·PK·FK·UNIQUE·CHECK·인덱스.
 - [읽기 전용 스키마 확인 SQL](sql/inspect-physical-schema.sql): 별도 테스트 DB에 적용한 뒤 구조를 확인할 때 사용.
 - [정적 검사 도구](scripts/check_physical_schema.py): 테이블·컬럼·FK·인덱스·안전한 파일 구성을 점검한다. MySQL 실행 검증을 대신하지 않는다.
