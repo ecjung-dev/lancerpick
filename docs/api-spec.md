@@ -1,5 +1,7 @@
 # 랜서픽 MVP API 명세서
 
+2026-10-29 구조 검토 반영: [변경 기록](review-changes.md). 실제 구현·실행 검증과 구분한다.
+
 개정 기록 2026-10-29 | 정책·역할·기술 정리, 취소 요청 식별, 환불 후 결제 재요청, 납품 회차·지연 표시 보완 | 구현·설치·페이지 시각 검증 미완료
 
 버전 1.0 | 작성일 2026-10-29
@@ -13,6 +15,19 @@ MVP의 화면과 서버가 사용할 요청·응답·권한·중복 처리 기�
 목록은 page=0, size=20, 최대 100. 최신 생성순과 ID 내림차순을 기본으로 하며 categories는 displayOrder·ID 오름차순이다. 목록 응답은 items, page, size, totalElements, totalPages를 가진다.
 
 GET·수정·업무 명령 성공은 200, 리소스 생성은 201, 로그아웃은 204. 안전한 생성 재호출은 200과 기존 결과. 오류는 code, message, fieldErrors(배열), traceId를 반환한다. 비공개 타인 자원은 404, 관리자 기능 권한 부족은 403으로 처리한다.
+
+fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 오류 코드 문자열), message(안내 문자열)를 가진다. 필드와 무관한 오류는 빈 배열이다. rejectedValue는 반환하지 않는다. 다음은 응답 형식 예시이며 문자열 길이 정책을 확정하는 예시는 아니다.
+
+```json
+{
+  "code": "VALIDATION_FAILED",
+  "message": "입력값을 확인해 주세요.",
+  "fieldErrors": [
+    { "field": "rating", "code": "OUT_OF_RANGE", "message": "별점은 1~5입니다." }
+  ],
+  "traceId": "example-trace-id"
+}
+```
 
 다음 표의 경로는 /api 이후 경로다. 거래 명령은 허용 행동을 표시하는 화면과 별개로 서버가 신원·권한·상태를 다시 확인한다.
 
@@ -66,7 +81,7 @@ buyer·seller는 id·displayName만 제공한다. originalDueAt=orders.due_at, r
 
 주문 상태: REQUESTED, AWAITING_PAYMENT, IN_PROGRESS, AWAITING_CONFIRMATION, REVISION_IN_PROGRESS, COMPLETED, REJECTED, CANCELLED. 허용 행동: ACCEPT, REJECT, PAY, CANCEL, DELIVER, REQUEST_REVISION, CONFIRM, REQUEST_CANCELLATION, APPROVE_CANCELLATION, REJECT_CANCELLATION, WITHDRAW_CANCELLATION, WRITE_REVIEW.
 
-## 주문 상세 내부 응답 계약
+### 주문 상세 내부 응답 계약
 
 productSnapshot: title,description,scopeDescription,preparationDescription,productVersion. termsSnapshot은 보존된 거래 조건 문자열이다. category는 id,name, seller·counterparty는 id,displayName을 제공한다.
 
@@ -155,9 +170,11 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 | GET /admin/products | keyword,isHidden,saleStatus,page,size | 관리자 상품 목록 |
 | GET /admin/products/{id} | 없음 | 상품 상세 |
 | GET /admin/products/{id}/moderation-logs | page,size | id,adminId,action,reason,createdAt 목록 |
-| PATCH /admin/products/{id}/visibility | hidden,reason | 상품 현재 상태 |
+| PATCH /admin/products/{id}/visibility | hidden,reason,expectedVersion | 관리자 ProductDetail |
 
 모든 경로는 관리자 전용이다. 숨김 상태와 이력을 함께 저장하며 판매 상태는 변경하지 않는다. 관리자에게 거래·지갑·강제 환불 API를 제공하지 않는다.
+
+관리자 상품 상세는 본인 조회와 같은 ProductDetail 필드에 isHidden을 포함한다. 숨김·복구는 상품 잠금 후 현재 상태를 확인한다. 이미 요청한 hidden 상태라면 버전 차이와 관계없이 현재 상세를 반환하고 버전·운영 이력을 변경하지 않는다. 실제 상태 변경이 필요하면 expectedVersion을 검사하고, 불일치는 409 PRODUCT_VERSION_CONFLICT로 처리한다. 변경 성공 시 상품 version 증가와 숨김 상태·운영 이력을 같은 트랜잭션에서 반영한다. 판매자 상품 수정·판매 상태 변경도 이 version과 일관되게 처리한다.
 
 ## 10 오류와 입력 기준
 
@@ -172,6 +189,20 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 | 500 | INTERNAL_ERROR, DATA_INTEGRITY_ERROR |
 
 확정 업무 입력: 가격 1~1,000,000원, 기간 1~30일, 별점 1~5, requestKey UUID, 결과물 URL HTTPS. 문자열 길이는 물리 SQL·DTO·화면을 함께 맞출 때 확정한다. 앞서 제안된 길이 수치는 합의된 업무 정책으로 간주하지 않는다.
+
+### 구현 전 확정할 계약
+
+다음 항목은 아직 확정되지 않았으며 담당자가 [작업표](work-plan.md)에 결정과 검증 결과를 기록한 뒤 이 문서에 반영한다. 임시 구현값을 합의된 정책으로 표현하지 않는다.
+
+| 항목 | 함께 정할 내용 |
+| --- | --- |
+| 문자열 검증 | 필드별 필수 여부·최소/최대 길이·공백 정규화, DTO·DB·화면의 일치 |
+| 상품 생성 | 최초 saleStatus와 isHidden의 서버 기본값 |
+| 상품 수정 | ProductInput 전체 제출인지 부분 제출인지, 생략·null·빈 문자열의 구분 |
+| 관리자 목록 | 목록 항목의 필드와 필터의 생략 시 동작 |
+| 요청·응답 예시 | 인증·상품·주문·취소·결제의 정상/오류 JSON, ID·시각·null 표현 |
+
+주문·취소 요청 키의 중복 처리와 납품 회차·지연 표시의 상세 API 규칙은 이 문서 4~7절을 기준으로 한다. 다른 문서에는 목적과 데이터 제약을 남기고 상세 계약은 이 문서를 참조한다.
 
 ## 11 DB 변경과 완료 검증
 
@@ -193,5 +224,8 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 | 동일 회차 납품 동시 제출 | 한 건만 생성, 나머지 409 |
 | 기한 내 납품 후 확인 대기가 기한을 초과 | 현재 작업 지연 아님, 최초 제출 지각 아님 |
 | 수정 납품 제출 시각이 수정 기한과 같음 | 지각 아님 |
+| 관리자 숨김 변경 시 조회 버전과 현재 버전 불일치 | 409 PRODUCT_VERSION_CONFLICT, 숨김 상태·운영 이력 불변 |
+| 이미 숨김 상태인 상품에 같은 숨김 요청 재전송 | 현재 관리자 ProductDetail 반환, 버전·운영 이력 추가 없음 |
+| 판매자 상품 수정과 관리자 숨김 동시 실행 | 같은 상품 version·잠금 기준으로 처리, 허용된 변경만 반영 |
 
 위 항목은 실행할 테스트 목록이며 현재 테스트 통과를 의미하지 않는다. 구현 후 실제 MySQL·API·React 연결을 검증한다. 실제 담당자·검토자·배포 담당과 첫 통합·배포일은 팀 작업표에서 확정하고, 라이브러리 패치는 설치 검증 후 기록한다.

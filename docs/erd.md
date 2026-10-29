@@ -1,20 +1,22 @@
 # 랜서픽 MVP ERD 설계 v1.0
 
+2026-10-29 구조 검토 반영: [변경 기록](review-changes.md). 실제 구현·실행 검증과 구분한다.
+
 개정 기록 2026-10-29 | 정책·역할·기술 정리, 취소 요청 식별, 환불 후 결제 재요청, 납품 회차·지연 표시 보완 | 구현·설치·페이지 시각 검증 미완료
 
 목적: 4인 학원 취업·포트폴리오 프로젝트의 MVP 구현과 점진적 고도화를 위한 데이터 기준.
 
 ## 1. 설계 범위
 
-## MVP 구현 대상
+### MVP 구현 대상
 
 회원·판매자·상품·주문·테스트 적립금 결제·납품·수정 1회·취소·환불·구매 확정·판매 수익·후기·최소 상품 운영.
 
-## MVP 제외 대상
+### MVP 제외 대상
 
 소셜 로그인·결제사 충전·채팅·알림·파일 업로드·실제 송금·출금.
 
-## 원칙
+### 원칙
 
 현재 상품 정보와 주문 당시 거래 조건을 분리한다.
 
@@ -52,47 +54,26 @@
 
 ## 3. 관계도
 
-```
+```mermaid
 erDiagram
     MEMBERS ||--o| SELLER_PROFILES : has
     MEMBERS ||--|| WALLETS : owns
     MEMBERS ||--o{ PRODUCTS : sells
     CATEGORIES ||--o{ PRODUCTS : classifies
-```
-
-```
     MEMBERS ||--o{ ORDERS : buys
     MEMBERS ||--o{ ORDERS : sells
     PRODUCTS ||--o{ ORDERS : referenced_by
-```
-
-```
     ORDERS ||--o{ ORDER_HISTORIES : records
     MEMBERS ||--o{ ORDER_HISTORIES : acts
-```
-
-```
     ORDERS ||--o{ DELIVERIES : receives
     ORDERS ||--o| REVISION_REQUESTS : allows
     DELIVERIES ||--o| REVISION_REQUESTS : target
-```
-
-```
     ORDERS ||--o{ CANCELLATION_REQUESTS : records
     ORDERS ||--o| PAYMENTS : has
-```
-
-```
     WALLETS ||--o{ WALLET_ENTRIES : records
     PAYMENTS o|--o{ WALLET_ENTRIES : references
-```
-
-```
     ORDERS ||--o| SETTLEMENTS : generates
     ORDERS ||--o| REVIEWS : receives
-```
-
-```
     PRODUCTS ||--o{ PRODUCT_MODERATION_LOGS : records
     MEMBERS ||--o{ PRODUCT_MODERATION_LOGS : performs
 ```
@@ -180,7 +161,7 @@ display_order: 표시 순서
 | version | 상품 변경 식별 |
 | created_at, updated_at | 생성·수정 시각 |
 
-## 제약·규칙
+### 제약·규칙
 
 가격: 1원 이상 100만원 이하.
 
@@ -221,7 +202,7 @@ display_order: 표시 순서
 | 종료 | completed_at, cancelled_at | 완료·취소 시각 |
 | 기본 | created_at, updated_at | 생성·수정 시각 |
 
-## 제약
+### 제약
 
 (buyer_id, request_key) UNIQUE.
 
@@ -231,7 +212,7 @@ display_order: 표시 순서
 
 성공적으로 생성된 주문의 조건·요구사항을 덮어쓰지 않는다.
 
-## 재전송 규칙
+### 재전송 규칙
 
 같은 키·같은 제출 내용: 기존 주문 반환.
 
@@ -241,7 +222,7 @@ display_order: 표시 순서
 
 제출 내용 비교에는 구매자가 보낸 상품 버전·상품 ID·요구사항 등을 사용한다. 기존 주문을 재조회하는 요청에는 현재 상품 가격을 다시 적용하지 않는다.
 
-## 주문 상태
+### 주문 상태
 
 | 값 | 의미 |
 | --- | --- |
@@ -314,7 +295,7 @@ requested_at
 
 due_at: 재납품 기한
 
-## 검증
+### 검증
 
 요청자가 주문 구매자인가?
 
@@ -328,15 +309,15 @@ due_at: 재납품 기한
 
 최초 납기는 orders.due_at, 수정 납기는 revision_requests.due_at에 별도로 보존한다. API는 두 값을 구분하고 현재 적용 기한은 조회 시 결정한다. 이를 위한 새 컬럼은 추가하지 않는다. 완료·취소·거절 주문에는 진행 중 지연 표시를 하지 않는다.
 
-납품 요청은 expectedSequenceNo(정수 1 또는 2)를 필수로 포함한다. 최초 납품은 1, 수정 납품은 2로 요청하며 재전송 시 값을 유지한다. 서버는 주문 참여자·판매자 권한 확인 후 주문을 잠그고, 이미 존재하는 회차면 409 DELIVERY_ALREADY_SUBMITTED를 반환한다. 미존재 회차라도 현재 상태가 허용한 회차와 다르면 409 DELIVERY_SEQUENCE_CONFLICT다. 최초 납품은 IN_PROGRESS에서 1회차, 수정 납품은 REVISION_IN_PROGRESS에서 2회차만 허용한다. 대기 취소 요청도 확인한 뒤 저장하며 클라이언트 회차를 그대로 신뢰하지 않는다.
+납품 요청은 최초 1·수정 2 회차를 명시하고 재전송에서 바꾸지 않는다. 서버는 주문 잠금 아래 권한·상태·기존 회차·대기 취소 요청을 검증한다. 상세 입력·처리 순서·충돌 응답은 [API 명세 5절](api-spec.md#5-주문-명령-c와-d)을 따른다.
 
 expectedSequenceNo는 API 요청값이며 별도 컬럼이 아니다. 기존 deliveries.sequence_no와 (order_id, sequence_no) UNIQUE를 사용한다.
 
-지연 표시는 현재 작업 지연과 제출 결과를 구분한다. 현재 작업 지연은 IN_PROGRESS에서 최초 기한, REVISION_IN_PROGRESS에서 수정 기한을 기준으로 현재 시각이 기한을 넘었을 때만 표시한다. AWAITING_CONFIRMATION은 구매자 확인 대기이며 현재 납품 지연으로 표시하지 않는다. 각 납품의 지각 여부는 submitted_at이 해당 회차 기한을 초과했는지로 계산한다. 완료·취소·거절 후 현재 지연 경고는 표시하지 않되 과거 제출 시각·기한은 보존한다. 경계 시각과 같으면 지각이 아니다. 계산값을 위한 DB 컬럼은 추가하지 않는다.
+지연 표시는 작업 중 기한 초과와 납품 제출 시각의 지각 여부를 구분한다. 확인 대기·종료 상태를 현재 작업 지연으로 표시하지 않는다. 계산값을 위한 DB 컬럼은 추가하지 않으며 상태별 계산·경계 시각 기준은 [API 명세 5절](api-spec.md#5-주문-명령-c와-d)을 따른다.
 
 ## 9. 취소 요청
 
-## cancellation_requests
+### cancellation_requests
 
 | 컬럼 | 의미 |
 | --- | --- |
@@ -369,9 +350,9 @@ expectedSequenceNo는 API 요청값이며 별도 컬럼이 아니다. 기존 del
 
 결제 전 즉시 취소와 대기 요청 없는 판매자 직접 취소는 order_histories에 사유를 기록한다.
 
-## 취소 요청 재전송 보완
+### 취소 요청 재전송 보완
 
-취소 요청 생성은 requestKey(UUID)를 필수로 받는다. (order_id, requested_by, request_key)를 고유하게 관리하며 주문 잠금 안에서 기존 키를 먼저 조회한다. 같은 키·같은 사유는 요청이 이미 승인·거절·철회되었어도 해당 기존 요청과 현재 주문을 반환한다. 같은 키·다른 사유는 409 IDEMPOTENCY_KEY_REUSED다. 새로운 요청 키는 사용자가 명시적으로 새 취소 요청을 작성할 때만 생성한다.
+취소 요청은 요청 키를 유지하여 과거 요청과 새 요청을 구분한다. 동일 키 입력 비교·재호출 응답·처리 순서는 [API 명세 6절](api-spec.md#6-취소-요청과-재전송-계약)을 따른다.
 
 cancellation_requests에 request_key 컬럼과 (order_id, requested_by, request_key) UNIQUE를 추가한다. 대기 요청 최대 한 건 검사는 기존 주문 잠금 아래에서 유지한다. 새 테이블은 추가하지 않는다.
 
@@ -499,7 +480,7 @@ created_at
 
 ## 12. 관리자 상품 운영
 
-## product_moderation_logs
+### product_moderation_logs
 
 id: PK
 
@@ -519,7 +500,7 @@ created_at
 
 ## 13. DB 제약과 서버 검증 구분
 
-## 추가 관계·상태 검증 기준
+### 추가 관계·상태 검증 기준
 
 주문의 seller_id는 상품에서 가져오며, 사용자가 전달한 값을 그대로 저장하지 않는다. 거래 이력이 있는 상품의 판매자는 변경하지 않는다.
 
@@ -543,23 +524,23 @@ paid_at, completed_at, cancelled_at은 해당 사건이 발생했을 때 기록�
 
 ## 14. 트랜잭션·동시성 기준
 
-## 가입
+### 가입
 
 회원·지갑·초기 지급 내역을 함께 생성한다.
 
-## 상품 수정과 주문 생성
+### 상품 수정과 주문 생성
 
 상품 수정·숨김·판매 중지·주문 생성이 같은 상품의 최신 상태를 기준으로 처리되도록 한다.
 
 주문 생성은 상품 상태·버전 확인과 조건 복사를 하나의 트랜잭션에서 수행한다. 구체적 잠금 구현은 실제 DB 테스트로 검증한다.
 
-## 주문 상태 변경
+### 주문 상태 변경
 
 납품·수정·취소 요청·응답·구매 확정은 같은 주문을 잠근 뒤 상태와 대기 요청을 확인한다.
 
 주문은 이 방식으로 통일하며, 초기에는 별도의 주문 버전 컬럼을 중복 도입하지 않는다.
 
-## 결제·환불
+### 결제·환불
 
 잠금 순서는 주문 → 구매자 지갑으로 통일한다.
 
@@ -569,11 +550,11 @@ paid_at, completed_at, cancelled_at은 해당 사건이 발생했을 때 기록�
 
 관련 변경은 함께 성공하거나 함께 실패한다.
 
-## 구매 확정
+### 구매 확정
 
 주문 완료 + 정산 기록 + 주문 이력을 함께 확정한다. 구매 지갑에는 판매 수익을 넣지 않는다.
 
-## 원칙
+### 원칙
 
 같은 주문의 중복 결제와 여러 주문의 동시 결제를 모두 검증한다.
 
@@ -583,7 +564,7 @@ paid_at, completed_at, cancelled_at은 해당 사건이 발생했을 때 기록�
 
 중복·충돌·재시도 응답은 API 단계에서 통일한다.
 
-결제 재요청은 주문 잠금 후 현재 주문·결제 상태를 확인한다. 환불 기록이 있으면 409 PAYMENT_ALREADY_REFUNDED, 미결제 취소 주문이면 409 ORDER_STATE_CONFLICT를 반환한다. 기존 결제가 PAID이고 주문이 결제 후 유효 상태라면 차감·기록 추가 없이 현재 주문을 반환한다. 재호출마다 buyerConfirmedTermsAt·paidAt·dueAt을 덮어쓰지 않는다.
+결제 재요청은 주문·결제 상태를 함께 확인하며 재차감하거나 기존 시각을 덮어쓰지 않는다. 환불 후 충돌 응답과 유효한 기존 결제 재호출의 상세 계약은 [API 명세 7절](api-spec.md#7-결제-재요청과-충돌-응답)을 따른다.
 
 취소 요청이 거절·철회된 뒤 지연 재전송되어도 같은 키의 요청은 한 건이어야 한다. 새 키의 의도적 재요청만 현재 상태 검증 후 새 기록을 만든다.
 
@@ -644,7 +625,7 @@ paid_at, completed_at, cancelled_at은 해당 사건이 발생했을 때 기록�
 | 판매 통계 | 주문·결제·정산 | 기간·취소 반영 기준과 집계 조회 |
 | 향후 출금 | 정산 기록 | 출금·지급·예약 금액 구조 별도 설계 |
 
-## 외부 충전 확장 시
+### 외부 충전 확장 시
 
 기존 payments는 주문 결제 용도로 유지한다.
 
@@ -656,15 +637,15 @@ paid_at, completed_at, cancelled_at은 해당 사건이 발생했을 때 기록�
 
 충전 취소를 지원한다면 사용·취소 가능 금액의 추적을 추가 설계한다.
 
-## 소셜 확장 시
+### 소셜 확장 시
 
 현재 이메일·비밀번호 필수 구조를 그대로 둔 채 임의 이메일·가짜 비밀번호를 생성하지 않는다. 인증 수단을 분리하고 기존 회원 데이터의 이전 방식을 정한다.
 
-## 파일 확장 시
+### 파일 확장 시
 
 기존 URL 납품을 삭제하지 않고 파일 정보와 공존하게 한다. 저장소 주소 공개와 다운로드 권한은 별개로 다룬다.
 
-## 출금 확장 시
+### 출금 확장 시
 
 누적 판매 수익을 바로 출금 가능액으로 사용하지 않는다. 신청 중·지급 완료·실패 금액을 구분해야 한다.
 
