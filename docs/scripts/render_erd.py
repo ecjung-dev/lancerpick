@@ -17,20 +17,22 @@ PLACEMENT = {
     "members": (1680, 280), "wallets": (2480, 280), "wallet_entries": (3280, 280),
     "products": (80, 1000), "product_moderation_logs": (880, 1000),
     "orders": (1680, 1000), "payments": (2480, 1000), "settlements": (3280, 1000),
+    "order_snapshots": (1680, 1700),
     "reviews": (80, 2120), "revision_requests": (880, 2120),
     "deliveries": (1680, 2120), "order_histories": (2480, 2120),
     "cancellation_requests": (3280, 2120),
 }
 LABELS = {
     "members": "회원", "seller_profiles": "판매자 프로필", "categories": "카테고리",
-    "products": "상품", "orders": "주문 · 거래 조건 스냅샷", "order_histories": "주문 이력",
+    "products": "상품", "orders": "주문 · 가격 · 소요일 · 진행", "order_histories": "주문 이력",
+    "order_snapshots": "주문 당시 상품 · 조건 · 요구사항",
     "deliveries": "납품", "revision_requests": "수정 요청", "cancellation_requests": "취소 요청",
     "wallets": "구매 적립금 지갑", "payments": "주문 결제 · 환불", "wallet_entries": "적립금 원장",
     "settlements": "판매 수익 · 정산", "reviews": "후기", "product_moderation_logs": "상품 운영 이력",
 }
 GROUP = {
     "members": "A", "product_moderation_logs": "A", "seller_profiles": "B", "categories": "B",
-    "products": "B", "reviews": "B", "orders": "C", "order_histories": "C", "deliveries": "C",
+    "products": "B", "reviews": "B", "orders": "C", "order_snapshots": "C", "order_histories": "C", "deliveries": "C",
     "revision_requests": "C", "cancellation_requests": "C", "wallets": "D", "wallet_entries": "D",
     "payments": "D", "settlements": "D",
 }
@@ -52,8 +54,10 @@ def parse():
         tables[name] = {"cols": cols, "pk": pk, "unique": unique, "fks": fks}
         for local, parent, remote in fks:
             edges.append((name, local, parent, remote))
-    assert len(tables) == 15 and sum(len(t["cols"]) for t in tables.values()) == 119
-    assert len(edges) == 22 and set(tables) == set(PLACEMENT)
+    assert set(tables) == set(PLACEMENT), "Update the diagram layout for every SQL table"
+    for child, local, parent, remote in edges:
+        assert any(c["name"] == local for c in tables[child]["cols"])
+        assert any(c["name"] == remote for c in tables[parent]["cols"])
     return tables, edges
 
 
@@ -100,7 +104,8 @@ def render():
     canvas = Canvas()
     canvas.rect((0, 0, W, 185), "#13223d")
     canvas.text((80, 32), "LancerPick | 물리 ERD", 46, "#ffffff")
-    canvas.text((80, 100), "MySQL 8.4  ·  15 tables  ·  119 columns  ·  22 foreign keys  |  설계 검토용 · 실제 DB 적용 미검증", 24, "#d8e3f6")
+    column_count = sum(len(t["cols"]) for t in tables.values())
+    canvas.text((80, 100), f"MySQL 8.4  ·  {len(tables)} tables  ·  {column_count} columns  ·  {len(edges)} foreign keys  |  설계 검토용 · 실제 DB 적용 미검증", 24, "#d8e3f6")
     canvas.text((80, 204), "PK 기본키   FK 외래키   U1/U2 복합 UNIQUE 묶음   NN 필수   ? NULL 허용   AI 자동 증가", 24)
     canvas.text((80, 244), "관계선: 자식 FK → 부모 키  |  선 번호는 아래 FK 목록과 대응  |  점선은 NULL 허용 FK", 20, "#566880")
     rects = {}
@@ -200,14 +205,15 @@ def render():
     canvas.rect((60,2810,W-60,H-40),"#ffffff","#d5ddea")
     canvas.text((86,2830),"FOREIGN KEY MAP · DDL에 실제 정의된 관계",28)
     canvas.text((86,2875),"부모 1개에 대한 자식 수: 0..1 = FK 자체가 PK/단일 UNIQUE인 경우, 그 외 0..N. 자식의 부모는 NN이면 1, ?이면 0..1.",20,"#566880")
+    legend_rows = (len(edges) + 1) // 2
     for index,(child,local,parent,remote) in enumerate(edges):
-        x=90+(index//11)*1940
-        y=2920+(index%11)*26
+        x=90+(index//legend_rows)*1940
+        y=2920+(index%legend_rows)*24
         unique = [local] in tables[child]["unique"] or tables[child]["pk"] == [local]
         cardinality = "0..1" if unique else "0..N"
         line=f"{index+1:02d}  {child}.{local}  ->  {parent}.{remote}   [{cardinality}]"
         canvas.text((x,y),line,18,COLORS[GROUP[child]],True)
-    canvas.text((86,3225),"주의: 회원별 지갑 필수 생성, 최초 납품 대상 검증, 취소 대기 1건, 금액·상태 원자성은 서비스에서도 보장해야 합니다.",21,"#566880")
+    canvas.text((86,3225),"주의: 주문별 스냅샷·회원별 지갑 필수 생성, 취소 대기 1건, 최초 납품 대상 검증·금액 원자성은 서비스에서도 보장합니다.",21,"#566880")
     canvas.text((86,3263),"SOURCE: docs/sql/V1__init.sql  |  2026-10-29  |  CHECK·기본값·일반 인덱스의 상세 구문은 SQL 원본을 확인하세요.",19,"#566880")
     OUT.mkdir(exist_ok=True)
     canvas.image.save(OUT/"lancerpick-physical-erd.png",optimize=True)
@@ -215,7 +221,7 @@ def render():
     preview=canvas.image.copy()
     preview.thumbnail((1800,1800))
     preview.save(OUT/"lancerpick-physical-erd-preview.png",optimize=True)
-    print("Rendered 15 tables / 119 columns / 22 FK edges: PNG 4000x3320 + SVG + preview")
+    print(f"Rendered {len(tables)} tables / {column_count} columns / {len(edges)} FK edges: PNG 4000x3320 + SVG + preview")
 
 
 if __name__ == "__main__":

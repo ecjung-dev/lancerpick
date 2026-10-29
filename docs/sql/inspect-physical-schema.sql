@@ -34,3 +34,35 @@ SELECT CONSTRAINT_NAME, CHECK_CLAUSE
 FROM information_schema.CHECK_CONSTRAINTS
 WHERE CONSTRAINT_SCHEMA = DATABASE()
 ORDER BY CONSTRAINT_NAME;
+
+-- Expected design: 16 application tables. Flyway metadata is excluded.
+SELECT COUNT(*) AS application_table_count, 16 AS expected_application_table_count
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
+  AND TABLE_NAME <> 'flyway_schema_history';
+
+-- Price/duration remain in orders; immutable text/version/requirements belong to snapshots.
+SELECT TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('orders', 'order_snapshots')
+ORDER BY TABLE_NAME, ORDINAL_POSITION;
+
+-- Must return zero rows: no snapshot fields should remain in orders after the split.
+SELECT COLUMN_NAME AS unexpectedly_retained_snapshot_column
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'
+  AND COLUMN_NAME IN ('product_version_snapshot', 'product_title_snapshot',
+      'description_snapshot', 'scope_snapshot', 'preparation_snapshot',
+      'terms_snapshot', 'requirements');
+
+-- Must return zero rows: every order needs its snapshot after a transaction commits.
+SELECT o.id AS order_without_snapshot
+FROM orders AS o
+LEFT JOIN order_snapshots AS s ON s.order_id = o.id
+WHERE s.order_id IS NULL;
+
+-- Must return zero rows: the FK also prevents snapshots without a parent order.
+SELECT s.order_id AS snapshot_without_order
+FROM order_snapshots AS s
+LEFT JOIN orders AS o ON o.id = s.order_id
+WHERE o.id IS NULL;

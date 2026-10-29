@@ -1,5 +1,7 @@
 # 랜서픽 MVP ERD 설계 v1.0
 
+설계 변경 2026-10-29: 주문 당시 설명·조건·요구사항을 `order_snapshots`로 분리한다. 주문 확정 가격·소요일과 진행 정보는 `orders`에 유지하며 총 16개 논리 테이블로 구성한다. 물리 SQL·엔티티 구현 완료를 의미하지 않는다.
+
 역할 배정 갱신 2026-10-29: [확정 담당·지원 원칙·업무 비중](work-plan.md#확정-역할-배정)을 따른다. 상세 일정·검토자·배포 담당은 별도 확정한다.
 
 2026-10-29 구조 검토 반영: [변경 기록](review-changes.md). 실제 구현·실행 검증과 구분한다.
@@ -40,7 +42,8 @@
 | 판매자 | seller_profiles | 소개·전문 분야·포트폴리오 | B · 박소현 |
 | 상품 | categories | 고정 분류 | B · 박소현 |
 | 상품 | products | 현재 상품 조건·판매 상태 | B · 박소현 |
-| 주문 | orders | 당사자·주문 당시 조건·상태 | C · 정은찬 |
+| 주문 | orders | 당사자·확정 가격·소요일·진행 상태 | C · 정은찬 |
+| 주문 | order_snapshots | 주문 당시 상품 설명·조건·요구사항 | C · 정은찬 |
 | 주문 | order_histories | 행동·상태 변경 이력 | C · 정은찬 |
 | 납품 | deliveries | 최초 납품·재납품 | C · 정은찬 |
 | 수정 | revision_requests | 주문당 수정 요청 1회 | C · 정은찬 |
@@ -52,11 +55,11 @@
 | 후기 | reviews | 완료 주문 후기 | B · 박소현 |
 | 운영 | product_moderation_logs | 상품 숨김·복구 기록 | A · 김창재 |
 
-총 15개 테이블을 유지한다.
+총 16개 테이블로 구성한다.
 
 ## 3. 관계도
 
-아래는 논리 관계도다. 실제 검토용 DDL의 컬럼·자료형·키를 포함한 이미지는 [물리 ERD PNG](images/lancerpick-physical-erd.png) 또는 [확대용 SVG](images/lancerpick-physical-erd.svg)를 참고한다. 이미지의 22개 선은 SQL의 개별 FK를 표현하므로 아래 요약 관계의 선 개수와 다를 수 있다.
+최신 물리 관계도: [PNG 원본](images/lancerpick-physical-erd.png) · [확대용 SVG](images/lancerpick-physical-erd.svg). 16개 테이블·120개 컬럼·23개 FK를 SQL에서 추출한다. order_snapshots는 DB에서 주문당 최대 한 건을 보장하며, 아래 논리도의 필수 1:1 생성은 서비스 트랜잭션·테스트로 보장한다.
 
 ```mermaid
 erDiagram
@@ -67,6 +70,7 @@ erDiagram
     MEMBERS ||--o{ ORDERS : buys
     MEMBERS ||--o{ ORDERS : sells
     PRODUCTS ||--o{ ORDERS : referenced_by
+    ORDERS ||--|| ORDER_SNAPSHOTS : preserves
     ORDERS ||--o{ ORDER_HISTORIES : records
     MEMBERS ||--o{ ORDER_HISTORIES : acts
     ORDERS ||--o{ DELIVERIES : receives
@@ -82,7 +86,7 @@ erDiagram
     MEMBERS ||--o{ PRODUCT_MODERATION_LOGS : performs
 ```
 
-회원 가입 시 지갑을 함께 생성한다. 주문의 결제·정산·후기는 진행 단계에 따라 생성되므로 처음에는 존재하지 않는다.
+회원 가입 시 지갑을 함께 생성한다. 주문 생성 시 주문과 스냅샷을 함께 생성한다. 주문의 결제·정산·후기는 진행 단계에 따라 생성되므로 처음에는 존재하지 않는다.
 
 ## 4. 공통 저장 규칙
 
@@ -98,7 +102,7 @@ erDiagram
 
 사용자 입력의 길이·URL 형식은 서버에서 검증한다.
 
-문자열 길이·자료형·인덱스의 신규 설계안은 [물리 DB 설계](physical-db.md)와 [검토용 DDL](sql/V1__init.sql)을 따른다. 기존 논리 설계의 업무 정책과 새 물리 설계 선택을 구분하며, DTO·엔티티·화면 반영과 실제 MySQL 검증은 별도 작업이다.
+정확한 문자열 길이·자료형·인덱스는 SQL 작성 단계에서 고정한다.
 
 ## 5. 회원·판매자
 
@@ -191,15 +195,8 @@ display_order: 표시 순서
 | 관계 | buyer_id, seller_id, product_id | 구매자·판매자·원상품 FK |
 | 재전송 | request_key | 동일 제출 식별 |
 | 상태 | status | 주문 상태 |
-| 상품 근거 | product_version_snapshot | 신청 시 상품 버전 |
-| 조건 보관 | product_title_snapshot | 주문 당시 상품명 |
-| 조건 보관 | description_snapshot | 주문 당시 설명 |
-| 조건 보관 | scope_snapshot | 제공·미제공 범위 |
-| 조건 보관 | preparation_snapshot | 준비사항 |
-| 조건 보관 | terms_snapshot | 당시 적용 거래 규칙 원문 |
 | 금액 | price_amount | 주문 가격 |
 | 일정 | duration_days_snapshot | 주문 당시 소요일 |
-| 입력 | requirements | 구매자 요구사항 |
 | 확인 | accepted_at | 판매자 수락 시각 |
 | 확인 | buyer_confirmed_terms_at | 결제 시 조건 확인 시각 |
 | 진행 | paid_at, due_at | 결제 시각·최초 납기 |
@@ -214,7 +211,7 @@ display_order: 표시 순서
 
 가격·소요일은 주문 생성 시 확정한다.
 
-성공적으로 생성된 주문의 조건·요구사항을 덮어쓰지 않는다.
+성공적으로 생성된 주문의 가격·소요일은 변경하지 않는다. 설명·조건·요구사항은 `order_snapshots`에 보관하며 덮어쓰지 않는다. 가격·소요일은 스냅샷 테이블에 중복 저장하지 않는다.
 
 ### 재전송 규칙
 
@@ -224,7 +221,7 @@ display_order: 표시 순서
 
 새로운 주문을 의도적으로 작성한 경우: 새 키 사용.
 
-제출 내용 비교에는 구매자가 보낸 상품 버전·상품 ID·요구사항 등을 사용한다. 기존 주문을 재조회하는 요청에는 현재 상품 가격을 다시 적용하지 않는다.
+제출 내용 비교에는 `orders.product_id`, `order_snapshots.product_version_snapshot`, `order_snapshots.requirements` 등 최초 저장된 입력을 사용한다. 기존 주문을 재조회하는 요청에는 현재 상품 가격을 다시 적용하지 않는다.
 
 ### 주문 상태
 
@@ -239,7 +236,30 @@ display_order: 표시 순서
 | REJECTED | 수락 전 판매자 거절 |
 | CANCELLED | 취소 |
 
-### 7.2 order_histories
+### 7.2 order_snapshots
+
+| 컬럼 | 의미 | 제약 |
+| --- | --- | --- |
+| order_id | 연결 주문 ID | PK·FK → orders.id |
+| product_version_snapshot | 신청 시 상품 버전 | 기존 입력·저장 정책 유지 |
+| product_title_snapshot | 주문 당시 상품명 | 기존 입력·저장 정책 유지 |
+| description_snapshot | 주문 당시 상품 설명 | 기존 입력·저장 정책 유지 |
+| scope_snapshot | 주문 당시 제공·미제공 범위 | 기존 입력·저장 정책 유지 |
+| preparation_snapshot | 주문 당시 구매자 준비사항 | 기존 입력·저장 정책 유지 |
+| terms_snapshot | 당시 적용 거래 규칙 원문 | 기존 입력·저장 정책 유지 |
+| requirements | 구매자 요구사항 | 기존 입력·저장 정책 유지 |
+
+주문 한 건에 스냅샷 한 건을 연결한다. 별도의 스냅샷 ID 대신 `order_id`를 PK·FK로 사용하여 주문당 최대 한 건을 보장한다. 모든 주문에 스냅샷이 존재하도록 하는 것은 주문 생성 서비스와 통합 테스트로 보장한다.
+
+이번 분리로 필드별 필수 여부·문자열 길이·공백 정책을 새로 확정하지 않는다. 미확정 사항은 기존 작업표에 따라 API·DTO·화면·물리 SQL을 함께 정한다.
+
+상품 상태·버전 확인, `orders`의 가격·소요일 확정, `order_snapshots`의 조건 복사·요구사항 저장, 최초 주문 이력 생성을 하나의 트랜잭션에서 처리한다. 일부만 저장되면 전체를 롤백한다.
+
+스냅샷은 최초 신청 내용을 보존하는 불변 기록이다. 수정·삭제 API를 제공하지 않으며, 조건 변경이 필요하면 기존 정책에 따라 취소 후 새 주문과 스냅샷을 생성한다. 현재 상품을 다시 조회하여 과거 스냅샷을 갱신하지 않는다.
+
+주문 목록의 상품명과 주문 상세의 상품 설명·조건은 이 테이블을 조회한다. 결제·환불·납기 계산은 `orders.price_amount`, `orders.duration_days_snapshot`을 기준으로 한다. API의 기존 요청·응답 구조는 유지하며 저장 위치만 분리한다.
+
+### 7.3 order_histories
 
 id: PK
 
@@ -536,7 +556,7 @@ paid_at, completed_at, cancelled_at은 해당 사건이 발생했을 때 기록�
 
 상품 수정·숨김·판매 중지·주문 생성이 같은 상품의 최신 상태를 기준으로 처리되도록 한다.
 
-주문 생성은 상품 상태·버전 확인과 조건 복사를 하나의 트랜잭션에서 수행한다. 구체적 잠금 구현은 실제 DB 테스트로 검증한다.
+주문 생성은 상품 상태·버전 확인, `orders`와 `order_snapshots` 생성, 최초 주문 이력 저장을 하나의 트랜잭션에서 수행한다. 구체적 잠금 구현은 실제 DB 테스트로 검증한다.
 
 ### 주문 상태 변경
 
@@ -589,6 +609,8 @@ paid_at, completed_at, cancelled_at은 해당 사건이 발생했을 때 기록�
 결제된 주문의 취소에는 환불 기록 존재.
 
 초기 지급은 회원당 한 번.
+
+모든 주문에는 스냅샷 한 건이 존재한다. 주문 확정 가격·소요일과 스냅샷의 설명·조건·요구사항은 생성 후 불변이다.
 
 재납품 뒤에도 수정 요청은 한 건.
 
@@ -665,7 +687,7 @@ DB 변경은 Flyway 스크립트로 관리한다. 적용된 공유 스크립트�
 
 스키마 변경마다 담당자·이유·기존 데이터 영향·검증 결과를 기록한다.
 
-React 전환으로 기존 15개 테이블과 관계를 변경하지 않는다. 기술 버전은 공통 개발 규칙, 업무 정책은 MVP 명세서를 참조한다.
+React 사용 자체로 데이터 관계를 변경하지 않는다. 주문 정보와 조건 원문을 분리하는 이번 설계 변경으로 `order_snapshots`를 추가해 총 16개 테이블로 구성한다. 기술 버전은 공통 개발 규칙, 업무 정책은 MVP 명세서를 참조한다.
 
 자료형·문자열 길이·인덱스·실제 SQL은 물리 설계 작업이다. 논리 설계 정리 완료와 실제 DB 실행·동시성 검증 완료를 구분한다.
 
@@ -677,6 +699,6 @@ MVP 데이터 책임·관계·이력·중복 방지 기준: 정리 완료.
 
 고도화 연결 위치·주의점: 정리 완료.
 
-물리 설계·DDL: 검토안 작성 완료. 실제 DB 생성·SQL 실행·동시성 검증: 미수행.
+실제 DB 생성·SQL 실행·동시성 검증: 미수행.
 
-다음 작업: 물리 설계안 리뷰·실제 MySQL 검증, Flyway 적용·엔티티 매핑, API·화면 입력 검증 반영. 현재 DDL은 docs에만 있어 자동 적용되지 않는다.
+다음 작업: API 응답 상세·물리 DB·담당별 작업표 확정 및 초기 구현 검증.

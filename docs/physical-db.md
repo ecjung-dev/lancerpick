@@ -2,11 +2,13 @@
 
 작성일: 2026-10-29. 기존 docs의 Markdown 문서 13개를 검토해 작성한 MySQL 8.4 기준 설계안이다. 기존 업무 정책과 이번에 선택한 물리 설계 기준을 구분한다. 팀 리뷰·실제 MySQL 적용·JPA 매핑 검증 완료를 뜻하지 않는다.
 
+후속 검토 반영: 조건 원문 7개 컬럼을 order_snapshots로 분리하여 총 16개 테이블·120개 컬럼·23개 FK로 갱신했다. 가격·소요일·진행 상태는 orders에 유지한다. 문자열 길이·초기값 등의 기존 제안은 이번 분리로 새롭게 업무 정책으로 확정하지 않는다.
+
 ## 1. 결과물과 적용 범위
 
-- [ERD PNG 원본](images/lancerpick-physical-erd.png) · [확대용 SVG](images/lancerpick-physical-erd.svg): DDL에서 생성한 15개 테이블·119개 컬럼·22개 FK 관계도. PK·FK·복합 UNIQUE 묶음·NULL 여부를 표시한다.
+- [ERD PNG 원본](images/lancerpick-physical-erd.png) · [확대용 SVG](images/lancerpick-physical-erd.svg): DDL에서 생성한 16개 테이블·120개 컬럼·23개 FK 관계도. PK·FK·복합 UNIQUE 묶음·NULL 여부를 표시한다.
 
-- [DDL 원본](sql/V1__init.sql): 기존 논리 ERD의 15개 테이블, 자료형·NULL·기본값·PK·FK·UNIQUE·CHECK·인덱스.
+- [DDL 원본](sql/V1__init.sql): 기존 논리 ERD의 16개 테이블, 자료형·NULL·기본값·PK·FK·UNIQUE·CHECK·인덱스.
 - [읽기 전용 스키마 확인 SQL](sql/inspect-physical-schema.sql): 별도 테스트 DB에 적용한 뒤 구조를 확인할 때 사용.
 - [정적 검사 도구](scripts/check_physical_schema.py): 테이블·컬럼·FK·인덱스·안전한 파일 구성을 점검한다. MySQL 실행 검증을 대신하지 않는다.
 
@@ -19,7 +21,7 @@ DDL은 docs에만 두었다. 자동 실행되는 `LancerPick/src/main/resources/
 | 근거 | 반영 내용 |
 | --- | --- |
 | [MVP](mvp-spec.md) | 가격 1~100만원, 소요일 1~30일, 초기 지급 100만원, 수정 1회, 전액 환불, 구매 확정 시 정산, 수수료 10% 버림 |
-| [ERD](erd.md) | 15개 테이블·기존 컬럼 이름·관계, 주문 스냅샷·이력 보존, 원장·정산 분리 |
+| [ERD](erd.md) | 16개 테이블·기존 컬럼 이름·관계, 주문 스냅샷·이력 보존, 원장·정산 분리 |
 | [API](api-spec.md) | 문자열 ID, 주문·취소 요청 키, 상품 version, 납품 1·2회차, 별점 1~5, 선택 값 NULL |
 | [화면 흐름](screen-flow.md) | 현재 상품과 주문 조건 구분, 취소 대기 행동 제한, 최초·수정 납기 분리 |
 | [개발 규칙](development-rules.md) | 단일 트랜잭션, 주문→지갑 잠금, Flyway, UTC, MySQL 기반 검증 |
@@ -40,7 +42,7 @@ DDL은 docs에만 두었다. 자동 실행되는 `LancerPick/src/main/resources/
 | 문자셋 | utf8mb4 | 한글·이모지 저장 |
 | 일반 문자열 collation | utf8mb4_0900_ai_ci | 상품 검색 등의 대소문자·악센트 비구분 비교, 원문 저장값은 보존 |
 | 이메일 | VARCHAR(254), utf8mb4_0900_as_cs | 서버 정규화 후 동일 문자열 고유성 보장, 악센트 차이를 임의로 합치지 않음 |
-| ID | signed BIGINT, 독립 PK는 AUTO_INCREMENT | Java Long, JSON에서는 문자열. seller_profiles·wallets는 회원 ID 공유 PK |
+| ID | signed BIGINT, 독립 PK는 AUTO_INCREMENT | Java Long, JSON에서는 문자열. seller_profiles·wallets는 회원 ID 공유 PK, order_snapshots는 주문 ID 공유 PK |
 | 금액·잔액 | signed BIGINT | Java Long, 결제 변동액 음수 허용, 중간 계산도 long 이상 |
 | 기간·순번·별점·bps | INT | Java Integer로 일관되게 매핑 |
 | 숨김 여부 | BOOLEAN | MySQL TINYINT(1), Java Boolean, 0·1 CHECK |
@@ -54,7 +56,7 @@ DB 시각 자동 기본값·ON UPDATE CURRENT_TIMESTAMP·트리거는 사용하�
 
 DB CHECK의 NULL 처리에 기대 필수값이 빠지지 않도록 필수 컬럼은 NOT NULL로 선언했다. 사건 시각은 상태별 NULL·NOT NULL 조합을 별도로 검사한다. FK에 연쇄 변경 동작을 지정하지 않아 기본 제한 동작으로 이력의 연쇄 삭제를 막는다. 거래 기록 자체의 직접 UPDATE/DELETE 금지는 애플리케이션·운영 권한 정책도 필요하다.
 
-JPA 구현에서는 EnumType.STRING만 지정하고 DB가 VARCHAR일 것이라고 가정하지 않는다. Hibernate의 MySQL enum 매핑과 구분하기 위해 `@Enumerated(EnumType.STRING)`과 `@JdbcTypeCode(SqlTypes.VARCHAR)` 및 해당 `@Column(length=...)`를 함께 명시하고 validate로 확인한다. TEXT는 명시적인 TEXT 컬럼 매핑을 사용한다. 요청 키는 String CHAR(36) 매핑으로 두고 서버에서 UUID를 파싱·정규화한다. 공유 PK인 seller_profiles·wallets에는 별도 IDENTITY를 붙이지 않는다. 실제 엔티티는 이 작업에서 생성하지 않았다.
+JPA 구현에서는 EnumType.STRING만 지정하고 DB가 VARCHAR일 것이라고 가정하지 않는다. Hibernate의 MySQL enum 매핑과 구분하기 위해 `@Enumerated(EnumType.STRING)`과 `@JdbcTypeCode(SqlTypes.VARCHAR)` 및 해당 `@Column(length=...)`를 함께 명시하고 validate로 확인한다. TEXT는 명시적인 TEXT 컬럼 매핑을 사용한다. 요청 키는 String CHAR(36) 매핑으로 두고 서버에서 UUID를 파싱·정규화한다. 공유 PK인 seller_profiles·wallets·order_snapshots에는 별도 IDENTITY를 붙이지 않는다. 실제 엔티티는 이 작업에서 생성하지 않았다.
 
 ### 입력 길이와 정규화
 
@@ -88,6 +90,12 @@ UUID와 사용자 입력의 비교는 정규화된 문자열 기준이며, 주�
 
 ## 4. 핵심 제약과 서비스의 책임
 
+orders는 REQUESTED·REJECTED에서 수락·결제 시각을 허용하지 않으며, AWAITING_PAYMENT에서는 수락 시각을 필수로 하고 결제 시각은 허용하지 않는다. 결제 후 진행·검수·수정·완료 상태에는 수락·조건 확인·결제·납기를 필수로 한다. CANCELLED는 수락 전·수락 후 미결제·결제 후 취소를 모두 허용하고 기존 수락·결제 기록은 보존한다.
+
+수락≥생성, 조건 확인≥수락, 결제≥조건 확인, 최초 납기>결제, 완료≥결제, 취소≥이미 발생한 수락·결제 시각을 검사한다. updated_at도 이미 기록된 사건 시각보다 빠를 수 없다. 최초 납기의 정확한 소요일 덧셈과 다른 테이블의 사건 연결은 서비스에서 검증한다.
+
+TEXT 길이는 `CHAR_LENGTH(원문) BETWEEN 1 AND 상한`으로 실제 저장 길이를 제한하고 `CHAR_LENGTH(TRIM(원문)) > 0`으로 공백뿐인 값을 별도 거절한다. 선택인 reviews.content는 NULL을 계속 허용한다. 서버의 trim·줄바꿈 정규화 정책과 별개로 뒤 공백을 붙여 DB 길이 검사를 우회하지 못하게 한다.
+
 | 정책 | DB 보장 | 서비스·트랜잭션에서 보장 |
 | --- | --- | --- |
 | 회원 이메일 중복 | 정규화 문자열 UNIQUE·NOT NULL | 이메일 형식·정규화·동시 중복 오류의 409 변환 |
@@ -99,7 +107,7 @@ UUID와 사용자 입력의 비교는 정규화된 문자열 기준이며, 주�
 | 적립금 중복 | event_key UNIQUE, (payment_id,type) UNIQUE | 회원별 고정 초기 지급 키, 지갑 잠금, 원장합·잔액 일치 |
 | 테스트 지급·결제·환불 | 원장 유형별 부호·범위·참조 NULL 규칙 | 주문 구매자와 지갑 소유자 일치·전액 환불·결제액 일치 |
 | 정산 금액 | fee=floor(gross*bps/10000), seller+fee=gross | 원결제·완료 주문·정산 중복과 원자성 |
-| 주문 스냅샷 | 필수값·가격/기간 범위 | 상품 잠금·버전 일치·판매자 일치·원문 불변 |
+| 주문·스냅샷 | orders에 가격·기간 범위, order_snapshots에 공유 PK·FK·원문 필수값 | 주문·스냅샷·최초 이력 원자 생성, 상품 잠금·버전·판매자 일치·원문 불변 |
 | 취소·완료 배타성 | 상태별 종료 시각·허용 상태 CHECK | 주문→지갑 잠금과 상태 재검사, 환불·정산 동시 성립 방지 |
 | 숨김·판매 중지 분리 | 두 컬럼·허용값·version | 관리자 권한·동일 상태 무이력·판매자 변경과 버전 충돌 |
 
@@ -136,6 +144,7 @@ FK는 각 참조 대상의 존재만 보장한다. products.seller_id는 기존 
 | 내 상품 | products(seller_id,created_at DESC,id DESC) |
 | 구매/판매 주문 최신순 | orders(buyer_id 또는 seller_id,created_at DESC,id DESC), status는 우선 잔여 필터 |
 | 상품별 주문·후기 | orders(product_id,created_at DESC,id DESC) → reviews의 order_id UNIQUE 조인 |
+| 주문 상품명·조건 조회 | orders → order_snapshots(order_id) 공유 PK 조인. 상품명은 스냅샷에서 조회 |
 | 주문 이력 | order_histories(order_id,created_at DESC,id DESC) |
 | 납품·수정 | deliveries(order_id,sequence_no)·revision_requests(order_id) UNIQUE |
 | 대기 취소 요청 | cancellation_requests(order_id,status,requested_at DESC,id DESC) |
@@ -153,7 +162,7 @@ FK에 필요한 인덱스도 DDL에서 명시했다. 상품 키워드는 제목�
 2. 실제 MySQL에서 VERSION(), sql_mode, @@session.time_zone을 확인한다. Workbench 연결명 MySQL80만으로 실제 서버 버전을 단정하지 않는다. 기준은 MySQL 8.4이며 8.0을 쓰면 최소 8.0.16 이상의 CHECK 집행과 차이를 따로 검증한다.
 3. 기존 업무 테이블이 없는 별도 테스트 스키마에 먼저 적용한다. docs/sql 파일을 실행하는 것과 Flyway 이력 등록은 다르다. 같은 DB에 수동 생성 후 V1을 다시 적용하거나 baseline/repair로 우회하지 않는다.
 4. 검증 후 아직 V1이 없는지 확인하고 DDL 원본을 `LancerPick/src/main/resources/db/migration/V1__init.sql`로 이동한다. 실행 경로와 docs에 복사본 두 개를 장기 유지하지 않는다. DB에 기존 업무 데이터가 있으면 별도 마이그레이션 계획을 세운다.
-5. 실제 Flyway 적용 후 15개 테이블과 flyway_schema_history를 확인한다. 엔티티를 같은 PR에서 작성하고 Hibernate validate로 매핑을 확인한다. 엔티티가 없을 때 시작 테스트만 성공한 것은 15개 매핑 검증이 아니다.
+5. 실제 Flyway 적용 후 16개 테이블과 flyway_schema_history를 확인한다. 엔티티를 같은 PR에서 작성하고 Hibernate validate로 매핑을 확인한다. 엔티티가 없을 때 시작 테스트만 성공한 것은 16개 매핑 검증이 아니다.
 6. 아래 실패·동시성 시나리오를 검증하고 PR에 실제 결과를 기록한다. 공유 적용된 V1은 이후 수정하지 않고 V2 이상을 추가한다.
 
 | 시나리오 | 기대 결과 |
@@ -173,6 +182,10 @@ FK에 필요한 인덱스도 DDL에서 명시했다. 상품 키워드는 제목�
 | 결제·환불·정산 처리 중 실패 | 상태·금액·이력 전체 롤백 |
 
 ### 검증 상태
+
+후속 재검토: 16개 테이블·120개 컬럼·23개 FK·74개 CHECK의 정적 검사를 통과했고, 컬럼 사전과 PNG·SVG를 SQL에서 다시 생성했다. SQL에 있는 orders·TEXT CHECK 식을 추출해 [조건식 논리 검사](scripts/test_schema_checks.py) 4개를 실행했다. 정상 상태·취소 3경로, 모순된 상태, 역전된 시각, TEXT 11개 컬럼의 한글·이모지·길이 경계·뒤 공백 우회를 확인했다.
+
+이 논리 검사는 메모리 SQLite의 SQL 3값 논리로 문자열 비교와 길이 식만 평가한다. MySQL 테이블 생성·자료형·collation·FK·CHECK 집행·Flyway·동시성 검증이 아니며 이를 대체하지 않는다. `python docs/scripts/check_physical_schema.py`와 `python docs/scripts/test_schema_checks.py`로 실행한다.
 
 설계·정적 구조 검사와 실제 DB 실행 검증은 구분한다. 이번 작업에서는 개인 접속 파일·비밀번호를 읽지 않았고 실제 DB에 DDL을 실행하지 않았다. 로컬 MySQL 클라이언트와 Docker 명령은 사용할 수 없었으며, 파서 검사는 MySQL 실행 성공으로 표현하지 않는다. 앞서 사용자가 보고한 기존 clean build 성공은 이번 신규 스키마 적용 성공과 다르다.
 
@@ -246,15 +259,8 @@ CHECK의 허용 표현·NULL·다른 테이블 참조 제한은 [MySQL CHECK 문
 | `product_id` | `BIGINT` | 불가 | 없음 | 원상품 ID |
 | `request_key` | `CHAR(36)` | 불가 | 없음 | 정규화 UUID 요청 키 |
 | `status` | `VARCHAR(32)` | 불가 | 'REQUESTED' | 주문 상태 |
-| `product_version_snapshot` | `BIGINT` | 불가 | 없음 | 확인한 상품 버전 |
-| `product_title_snapshot` | `VARCHAR(100)` | 불가 | 없음 | 주문 당시 상품명 |
-| `description_snapshot` | `TEXT` | 불가 | 없음 | 주문 당시 상세 설명 |
-| `scope_snapshot` | `TEXT` | 불가 | 없음 | 주문 당시 제공 범위 |
-| `preparation_snapshot` | `TEXT` | 불가 | 없음 | 주문 당시 준비사항 |
-| `terms_snapshot` | `TEXT` | 불가 | 없음 | 주문 당시 거래 규칙 원문, 최대 10000자 |
 | `price_amount` | `BIGINT` | 불가 | 없음 | 주문 가격 원 |
 | `duration_days_snapshot` | `INT` | 불가 | 없음 | 주문 소요일 |
-| `requirements` | `TEXT` | 불가 | 없음 | 구매자 요구사항, 최대 5000자 |
 | `accepted_at` | `DATETIME(6)` | 허용 | 없음 | 수락 시각 UTC |
 | `buyer_confirmed_terms_at` | `DATETIME(6)` | 허용 | 없음 | 결제 전 조건 확인 시각 UTC |
 | `paid_at` | `DATETIME(6)` | 허용 | 없음 | 결제 시각 UTC, 환불 후 보존 |
@@ -263,6 +269,19 @@ CHECK의 허용 표현·NULL·다른 테이블 참조 제한은 [MySQL CHECK 문
 | `cancelled_at` | `DATETIME(6)` | 허용 | 없음 | 취소 시각 UTC |
 | `created_at` | `DATETIME(6)` | 불가 | 없음 | 생성 시각 UTC |
 | `updated_at` | `DATETIME(6)` | 불가 | 없음 | 수정 시각 UTC |
+
+### order_snapshots
+
+| 컬럼 | 자료형 | NULL | 기본값·생성 | 의미 |
+| --- | --- | --- | --- | --- |
+| `order_id` | `BIGINT` | 불가 | 없음 | 주문 ID, 공유 PK |
+| `product_version_snapshot` | `BIGINT` | 불가 | 없음 | 확인한 상품 버전 |
+| `product_title_snapshot` | `VARCHAR(100)` | 불가 | 없음 | 주문 당시 상품명 |
+| `description_snapshot` | `TEXT` | 불가 | 없음 | 주문 당시 상세 설명 |
+| `scope_snapshot` | `TEXT` | 불가 | 없음 | 주문 당시 제공 범위 |
+| `preparation_snapshot` | `TEXT` | 불가 | 없음 | 주문 당시 준비사항 |
+| `terms_snapshot` | `TEXT` | 불가 | 없음 | 주문 당시 거래 규칙 원문, 최대 10000자 |
+| `requirements` | `TEXT` | 불가 | 없음 | 구매자 요구사항, 최대 5000자 |
 
 ### order_histories
 

@@ -79,6 +79,8 @@ ProductSummary: id,title,priceAmount,durationDays,category,seller. ProductDetail
 
 OrderSummary: id,status,productTitle,priceAmount,counterparty,createdAt,currentDueAt. OrderDetail: id,status,buyer,seller,productId,productSnapshot,termsSnapshot,priceAmount,durationDays,requirements,createdAt,acceptedAt,buyerConfirmedTermsAt,paidAt,originalDueAt,revisionDueAt,currentDueAt,completedAt,cancelledAt,deliveries,revisionRequest,cancellationRequests,histories,payment,review,allowedActions. 판매자 수익은 본인 정산 API에서 조회한다.
 
+저장 구조 분리: 상품명·상품 버전·설명·범위·준비사항·거래 규칙·요구사항은 `order_snapshots`에서 조회한다. `priceAmount`와 `durationDays`는 `orders.price_amount`, `orders.duration_days_snapshot`에서 조회한다. 주문과 스냅샷은 함께 생성하며 요청·응답 필드 및 기존 재전송 계약은 변경하지 않는다. 기존 키의 입력 비교도 최초 저장된 스냅샷을 사용한다.
+
 buyer·seller는 id·displayName만 제공한다. originalDueAt=orders.due_at, revisionDueAt=revision_requests.due_at이다. currentDueAt은 수정 요청이 있으면 수정 기한, 없으면 최초 기한이며 결제 전에는 null이다. 별도 DB 컬럼을 추가하지 않는다. 종료 거래에 지연 경고를 표시하지 않는다.
 
 주문 상태: REQUESTED, AWAITING_PAYMENT, IN_PROGRESS, AWAITING_CONFIRMATION, REVISION_IN_PROGRESS, COMPLETED, REJECTED, CANCELLED. 허용 행동: ACCEPT, REJECT, PAY, CANCEL, DELIVER, REQUEST_REVISION, CONFIRM, REQUEST_CANCELLATION, APPROVE_CANCELLATION, REJECT_CANCELLATION, WITHDRAW_CANCELLATION, WRITE_REVIEW.
@@ -190,7 +192,7 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 | 409 | CANCELLATION_PENDING, REQUEST_ALREADY_RESOLVED, REVISION_ALREADY_USED, REVIEW_ALREADY_EXISTS, PAYMENT_ALREADY_REFUNDED, DELIVERY_ALREADY_SUBMITTED, DELIVERY_SEQUENCE_CONFLICT |
 | 500 | INTERNAL_ERROR, DATA_INTEGRITY_ERROR |
 
-확정 업무 입력: 가격 1~1,000,000원, 기간 1~30일, 별점 1~5, requestKey UUID, 결과물 URL HTTPS. 문자열 길이·정규화·상품 기본값의 신규 기준안은 [물리 DB 설계](physical-db.md#3-이번-설계-선택)를 참조한다. 설계안 리뷰 후 물리 SQL·DTO·화면에 함께 반영한다. 기존 정책과 새 설계 선택, 실제 구현 완료는 구분한다.
+확정 업무 입력: 가격 1~1,000,000원, 기간 1~30일, 별점 1~5, requestKey UUID, 결과물 URL HTTPS. 문자열 길이는 물리 SQL·DTO·화면을 함께 맞출 때 확정한다. 앞서 제안된 길이 수치는 합의된 업무 정책으로 간주하지 않는다.
 
 ### 구현 전 확정할 계약
 
@@ -198,8 +200,8 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 
 | 항목 | 함께 정할 내용 |
 | --- | --- |
-| 문자열 검증 | 물리 설계안에 필수 여부·길이·정규화 제시, DTO·화면·SQL의 일치 검증 대기 |
-| 상품 생성 | 물리 설계안은 ON_SALE·isHidden=false·version=0 선택, 팀 리뷰·실제 구현 대기 |
+| 문자열 검증 | 필드별 필수 여부·최소/최대 길이·공백 정규화, DTO·DB·화면의 일치 |
+| 상품 생성 | 최초 saleStatus와 isHidden의 서버 기본값 |
 | 상품 수정 | ProductInput 전체 제출인지 부분 제출인지, 생략·null·빈 문자열의 구분 |
 | 관리자 목록 | 목록 항목의 필드와 필터의 생략 시 동작 |
 | 요청·응답 예시 | 인증·상품·주문·취소·결제의 정상/오류 JSON, ID·시각·null 표현 |
@@ -208,10 +210,12 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 
 ## 11 DB 변경과 완료 검증
 
-기존 15개 테이블을 유지한다. cancellation_requests.request_key 필수 컬럼과 (order_id, requested_by, request_key) UNIQUE를 추가한다. DB 미생성 환경은 최초 스키마에 반영한다. 이미 데이터가 있는 환경은 새 마이그레이션으로 기존 행에 고유 키를 채운 후 NOT NULL·UNIQUE를 적용한다. 기존 주문·잔액을 삭제하지 않는다.
+`order_snapshots` 추가로 총 16개 테이블로 구성한다. 가격·소요일은 `orders`에 유지하고 상품 설명·조건·요구사항은 스냅샷으로 분리한다. `cancellation_requests.request_key` 필수 컬럼과 `(order_id, requested_by, request_key)` UNIQUE도 유지한다. DB 미생성 환경은 최초 스키마에 반영한다. 이미 주문 데이터가 있는 환경은 새 마이그레이션에서 당시 주문에 저장된 값으로 스냅샷을 채우고 누락·중복·원문 일치를 확인한 뒤 원래 컬럼의 제거 시점을 정한다. 현재 상품값으로 과거 조건을 복원하지 않는다. 기존 취소 요청에 키가 없다면 고유 키를 채운 후 NOT NULL·UNIQUE를 적용한다. 기존 주문·잔액을 삭제하지 않는다.
 
 | 시나리오 | 기대 결과 |
 | --- | --- |
+| 주문 생성 중 스냅샷·최초 이력 저장 실패 | 주문·스냅샷·이력 전체 롤백 |
+| 상품 변경 후 기존 주문 재조회·동일 키 재전송 | 기존 스냅샷과 orders의 확정 가격·소요일 유지, 기존 주문 반환 |
 | 같은 키·사유의 취소 요청 동시 제출 | 요청 1개, 같은 요청 ID |
 | 취소 요청 거절·철회 후 같은 키 재전송 | 기존 해결 요청 반환, 새 요청·이력 없음 |
 | 같은 키·다른 사유 | 409 IDEMPOTENCY_KEY_REUSED |

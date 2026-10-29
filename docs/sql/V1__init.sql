@@ -3,6 +3,9 @@
 -- Target an empty, isolated test schema first. No database/user creation or seed data.
 -- All times are supplied by the application in UTC, truncated to microseconds.
 -- Foreign keys use the default restrictive action; there are no cascade deletes.
+-- 16 tables: orders retains price/duration/progress; order_snapshots stores immutable terms.
+-- Orders, snapshots and the initial history must be inserted in one application transaction.
+-- If an earlier schema is already applied, use a new migration; do not rerun this file.
 
 CREATE TABLE members (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT '회원 ID',
@@ -30,7 +33,7 @@ CREATE TABLE seller_profiles (
     updated_at DATETIME(6) NOT NULL COMMENT '수정 시각 UTC',
     PRIMARY KEY (member_id),
     CONSTRAINT fk_seller_profiles_member FOREIGN KEY (member_id) REFERENCES members (id),
-    CONSTRAINT ck_seller_profiles_intro CHECK (CHAR_LENGTH(TRIM(introduction)) BETWEEN 1 AND 2000),
+    CONSTRAINT ck_seller_profiles_intro CHECK ((CHAR_LENGTH(introduction) BETWEEN 1 AND 2000 AND CHAR_LENGTH(TRIM(introduction)) > 0)),
     CONSTRAINT ck_seller_profiles_specialty CHECK (CHAR_LENGTH(TRIM(specialty)) BETWEEN 1 AND 100),
     CONSTRAINT ck_seller_profiles_url CHECK (portfolio_url IS NULL OR CHAR_LENGTH(TRIM(portfolio_url)) BETWEEN 1 AND 2048),
     CONSTRAINT ck_seller_profiles_time CHECK (updated_at >= created_at)
@@ -69,9 +72,9 @@ CREATE TABLE products (
     CONSTRAINT fk_products_seller FOREIGN KEY (seller_id) REFERENCES members (id),
     CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories (id),
     CONSTRAINT ck_products_title CHECK (CHAR_LENGTH(TRIM(title)) BETWEEN 1 AND 100),
-    CONSTRAINT ck_products_description CHECK (CHAR_LENGTH(TRIM(description)) BETWEEN 1 AND 10000),
-    CONSTRAINT ck_products_scope CHECK (CHAR_LENGTH(TRIM(scope_description)) BETWEEN 1 AND 3000),
-    CONSTRAINT ck_products_preparation CHECK (CHAR_LENGTH(TRIM(preparation_description)) BETWEEN 1 AND 3000),
+    CONSTRAINT ck_products_description CHECK ((CHAR_LENGTH(description) BETWEEN 1 AND 10000 AND CHAR_LENGTH(TRIM(description)) > 0)),
+    CONSTRAINT ck_products_scope CHECK ((CHAR_LENGTH(scope_description) BETWEEN 1 AND 3000 AND CHAR_LENGTH(TRIM(scope_description)) > 0)),
+    CONSTRAINT ck_products_preparation CHECK ((CHAR_LENGTH(preparation_description) BETWEEN 1 AND 3000 AND CHAR_LENGTH(TRIM(preparation_description)) > 0)),
     CONSTRAINT ck_products_price CHECK (price BETWEEN 1 AND 1000000),
     CONSTRAINT ck_products_days CHECK (duration_days BETWEEN 1 AND 30),
     CONSTRAINT ck_products_sale_status CHECK (sale_status IN ('ON_SALE', 'STOPPED')),
@@ -87,15 +90,8 @@ CREATE TABLE orders (
     product_id BIGINT NOT NULL COMMENT '원상품 ID',
     request_key CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT '정규화 UUID 요청 키',
     status VARCHAR(32) COLLATE utf8mb4_0900_as_cs NOT NULL DEFAULT 'REQUESTED' COMMENT '주문 상태',
-    product_version_snapshot BIGINT NOT NULL COMMENT '확인한 상품 버전',
-    product_title_snapshot VARCHAR(100) NOT NULL COMMENT '주문 당시 상품명',
-    description_snapshot TEXT NOT NULL COMMENT '주문 당시 상세 설명',
-    scope_snapshot TEXT NOT NULL COMMENT '주문 당시 제공 범위',
-    preparation_snapshot TEXT NOT NULL COMMENT '주문 당시 준비사항',
-    terms_snapshot TEXT NOT NULL COMMENT '주문 당시 거래 규칙 원문, 최대 10000자',
     price_amount BIGINT NOT NULL COMMENT '주문 가격 원',
     duration_days_snapshot INT NOT NULL COMMENT '주문 소요일',
-    requirements TEXT NOT NULL COMMENT '구매자 요구사항, 최대 5000자',
     accepted_at DATETIME(6) NULL COMMENT '수락 시각 UTC',
     buyer_confirmed_terms_at DATETIME(6) NULL COMMENT '결제 전 조건 확인 시각 UTC',
     paid_at DATETIME(6) NULL COMMENT '결제 시각 UTC, 환불 후 보존',
@@ -114,13 +110,6 @@ CREATE TABLE orders (
     CONSTRAINT fk_orders_product FOREIGN KEY (product_id) REFERENCES products (id),
     CONSTRAINT ck_orders_parties CHECK (buyer_id <> seller_id),
     CONSTRAINT ck_orders_status CHECK (status IN ('REQUESTED', 'AWAITING_PAYMENT', 'IN_PROGRESS', 'AWAITING_CONFIRMATION', 'REVISION_IN_PROGRESS', 'COMPLETED', 'REJECTED', 'CANCELLED')),
-    CONSTRAINT ck_orders_version CHECK (product_version_snapshot >= 0),
-    CONSTRAINT ck_orders_title CHECK (CHAR_LENGTH(TRIM(product_title_snapshot)) BETWEEN 1 AND 100),
-    CONSTRAINT ck_orders_description CHECK (CHAR_LENGTH(TRIM(description_snapshot)) BETWEEN 1 AND 10000),
-    CONSTRAINT ck_orders_scope CHECK (CHAR_LENGTH(TRIM(scope_snapshot)) BETWEEN 1 AND 3000),
-    CONSTRAINT ck_orders_preparation CHECK (CHAR_LENGTH(TRIM(preparation_snapshot)) BETWEEN 1 AND 3000),
-    CONSTRAINT ck_orders_terms CHECK (CHAR_LENGTH(TRIM(terms_snapshot)) BETWEEN 1 AND 10000),
-    CONSTRAINT ck_orders_requirements CHECK (CHAR_LENGTH(TRIM(requirements)) BETWEEN 1 AND 5000),
     CONSTRAINT ck_orders_price CHECK (price_amount BETWEEN 1 AND 1000000),
     CONSTRAINT ck_orders_days CHECK (duration_days_snapshot BETWEEN 1 AND 30),
     CONSTRAINT ck_orders_paid_fields CHECK (
@@ -129,7 +118,51 @@ CREATE TABLE orders (
     CONSTRAINT ck_orders_completed CHECK ((status = 'COMPLETED' AND completed_at IS NOT NULL) OR (status <> 'COMPLETED' AND completed_at IS NULL)),
     CONSTRAINT ck_orders_cancelled CHECK ((status = 'CANCELLED' AND cancelled_at IS NOT NULL) OR (status <> 'CANCELLED' AND cancelled_at IS NULL)),
     CONSTRAINT ck_orders_paid_status CHECK (status NOT IN ('IN_PROGRESS', 'AWAITING_CONFIRMATION', 'REVISION_IN_PROGRESS', 'COMPLETED') OR paid_at IS NOT NULL),
+    CONSTRAINT ck_orders_unpaid_status CHECK (status NOT IN ('REQUESTED', 'AWAITING_PAYMENT', 'REJECTED') OR paid_at IS NULL),
+    CONSTRAINT ck_orders_acceptance CHECK (
+        (status IN ('REQUESTED', 'REJECTED') AND accepted_at IS NULL)
+        OR (status IN ('AWAITING_PAYMENT', 'IN_PROGRESS', 'AWAITING_CONFIRMATION', 'REVISION_IN_PROGRESS', 'COMPLETED') AND accepted_at IS NOT NULL)
+        OR status = 'CANCELLED'),
+    CONSTRAINT ck_orders_event_times CHECK (
+        (accepted_at IS NULL OR accepted_at >= created_at)
+        AND (buyer_confirmed_terms_at IS NULL OR buyer_confirmed_terms_at >= accepted_at)
+        AND (paid_at IS NULL OR paid_at >= buyer_confirmed_terms_at)
+        AND (due_at IS NULL OR due_at > paid_at)
+        AND (completed_at IS NULL OR completed_at >= paid_at)
+        AND (cancelled_at IS NULL OR (
+            cancelled_at >= created_at
+            AND (accepted_at IS NULL OR cancelled_at >= accepted_at)
+            AND (paid_at IS NULL OR cancelled_at >= paid_at)))),
+    CONSTRAINT ck_orders_updated_events CHECK (
+        (accepted_at IS NULL OR updated_at >= accepted_at)
+        AND (buyer_confirmed_terms_at IS NULL OR updated_at >= buyer_confirmed_terms_at)
+        AND (paid_at IS NULL OR updated_at >= paid_at)
+        AND (completed_at IS NULL OR updated_at >= completed_at)
+        AND (cancelled_at IS NULL OR updated_at >= cancelled_at)),
     CONSTRAINT ck_orders_time CHECK (updated_at >= created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Shared PK enforces at most one snapshot per order.
+-- Existence for every order and snapshot immutability are application/test responsibilities.
+-- Existing candidate data types, lengths and checks are preserved; they remain review proposals.
+CREATE TABLE order_snapshots (
+    order_id BIGINT NOT NULL COMMENT '주문 ID, 공유 PK',
+    product_version_snapshot BIGINT NOT NULL COMMENT '확인한 상품 버전',
+    product_title_snapshot VARCHAR(100) NOT NULL COMMENT '주문 당시 상품명',
+    description_snapshot TEXT NOT NULL COMMENT '주문 당시 상세 설명',
+    scope_snapshot TEXT NOT NULL COMMENT '주문 당시 제공 범위',
+    preparation_snapshot TEXT NOT NULL COMMENT '주문 당시 준비사항',
+    terms_snapshot TEXT NOT NULL COMMENT '주문 당시 거래 규칙 원문, 최대 10000자',
+    requirements TEXT NOT NULL COMMENT '구매자 요구사항, 최대 5000자',
+    PRIMARY KEY (order_id),
+    CONSTRAINT fk_order_snapshots_order FOREIGN KEY (order_id) REFERENCES orders (id),
+    CONSTRAINT ck_order_snapshots_version CHECK (product_version_snapshot >= 0),
+    CONSTRAINT ck_order_snapshots_title CHECK (CHAR_LENGTH(TRIM(product_title_snapshot)) BETWEEN 1 AND 100),
+    CONSTRAINT ck_order_snapshots_description CHECK ((CHAR_LENGTH(description_snapshot) BETWEEN 1 AND 10000 AND CHAR_LENGTH(TRIM(description_snapshot)) > 0)),
+    CONSTRAINT ck_order_snapshots_scope CHECK ((CHAR_LENGTH(scope_snapshot) BETWEEN 1 AND 3000 AND CHAR_LENGTH(TRIM(scope_snapshot)) > 0)),
+    CONSTRAINT ck_order_snapshots_preparation CHECK ((CHAR_LENGTH(preparation_snapshot) BETWEEN 1 AND 3000 AND CHAR_LENGTH(TRIM(preparation_snapshot)) > 0)),
+    CONSTRAINT ck_order_snapshots_terms CHECK ((CHAR_LENGTH(terms_snapshot) BETWEEN 1 AND 10000 AND CHAR_LENGTH(TRIM(terms_snapshot)) > 0)),
+    CONSTRAINT ck_order_snapshots_requirements CHECK ((CHAR_LENGTH(requirements) BETWEEN 1 AND 5000 AND CHAR_LENGTH(TRIM(requirements)) > 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE order_histories (
@@ -164,7 +197,7 @@ CREATE TABLE deliveries (
     UNIQUE KEY uk_deliveries_order_sequence (order_id, sequence_no),
     CONSTRAINT fk_deliveries_order FOREIGN KEY (order_id) REFERENCES orders (id),
     CONSTRAINT ck_deliveries_sequence CHECK (sequence_no IN (1, 2)),
-    CONSTRAINT ck_deliveries_description CHECK (CHAR_LENGTH(TRIM(description)) BETWEEN 1 AND 5000),
+    CONSTRAINT ck_deliveries_description CHECK ((CHAR_LENGTH(description) BETWEEN 1 AND 5000 AND CHAR_LENGTH(TRIM(description)) > 0)),
     CONSTRAINT ck_deliveries_url CHECK (CHAR_LENGTH(TRIM(result_url)) BETWEEN 1 AND 2048)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
@@ -292,7 +325,7 @@ CREATE TABLE reviews (
     KEY ix_reviews_created (created_at DESC, id DESC),
     CONSTRAINT fk_reviews_order FOREIGN KEY (order_id) REFERENCES orders (id),
     CONSTRAINT ck_reviews_rating CHECK (rating BETWEEN 1 AND 5),
-    CONSTRAINT ck_reviews_content CHECK (content IS NULL OR CHAR_LENGTH(TRIM(content)) BETWEEN 1 AND 2000)
+    CONSTRAINT ck_reviews_content CHECK (content IS NULL OR (CHAR_LENGTH(content) BETWEEN 1 AND 2000 AND CHAR_LENGTH(TRIM(content)) > 0))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE product_moderation_logs (

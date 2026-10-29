@@ -6,7 +6,7 @@ import re
 DOCS = Path(__file__).resolve().parents[1]
 SQL_PATH = DOCS / "sql" / "V1__init.sql"
 EXPECTED = {
-    "members", "seller_profiles", "categories", "products", "orders",
+    "members", "seller_profiles", "categories", "products", "orders", "order_snapshots",
     "order_histories", "deliveries", "revision_requests", "cancellation_requests",
     "wallets", "payments", "wallet_entries", "settlements", "reviews",
     "product_moderation_logs",
@@ -29,9 +29,9 @@ def main():
             "DDL must contain only additive schema definitions, without seeds or destructive operations")
     matches = list(re.finditer(
         r"(?ms)^CREATE TABLE (\w+) \(\n(.*?)^\) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;", sql))
-    require(len(matches) == 15, "Expected 15 CREATE TABLE blocks")
+    require(len(matches) == len(EXPECTED), f"Expected {len(EXPECTED)} CREATE TABLE blocks")
     require({m[1] for m in matches} == EXPECTED, "Tables differ from the logical ERD")
-    require(code.count(";") == 15, "Unexpected statements outside CREATE TABLE")
+    require(code.count(";") == len(EXPECTED), "Unexpected statements outside CREATE TABLE")
     tables = {}
     constraints = set()
     dictionaries = []
@@ -99,8 +99,22 @@ def main():
         for listing in listings:
             require(re.search(r"UNIQUE KEY \w+ \(" + re.escape(listing) + r"\)", tables[table]["body"]),
                     f"Required uniqueness missing: {table}({listing})")
-    require("UNIQUE KEY uk_cancellation_requests_order_status" not in sql,
+    require(not re.search(r"UNIQUE KEY \w+ \(\s*order_id\s*,\s*status\s*\)", tables["cancellation_requests"]["body"]),
             "Do not prevent repeated resolved cancellation histories")
+    snapshot_columns = {
+        "product_version_snapshot", "product_title_snapshot", "description_snapshot",
+        "scope_snapshot", "preparation_snapshot", "terms_snapshot", "requirements",
+    }
+    require(set(tables["order_snapshots"]["cols"]) == snapshot_columns | {"order_id"},
+            "Snapshot columns differ from the agreed split")
+    require(not snapshot_columns.intersection(tables["orders"]["cols"]),
+            "Snapshot data must not remain duplicated in orders")
+    require({"price_amount", "duration_days_snapshot"}.issubset(tables["orders"]["cols"]),
+            "Price and duration must remain in orders")
+    require(re.search(r"PRIMARY KEY \(order_id\)", tables["order_snapshots"]["body"]),
+            "Snapshot must use the order ID as its shared primary key")
+    require(re.search(r"FOREIGN KEY \(order_id\) REFERENCES orders \(id\)", tables["order_snapshots"]["body"]),
+            "Snapshot must reference its order")
     require(not re.search(r"\b(current_due_at|is_overdue|revision_count|seller_balance)\b", code, re.I),
             "Unneeded derived columns found")
     if args.write_dictionary:
