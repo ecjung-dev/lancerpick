@@ -6,7 +6,9 @@
 
 개정 기록 2026-10-29 | 정책·역할·기술 정리, 취소 요청 식별, 환불 후 결제 재요청, 납품 회차·지연 표시 보완 | 구현·설치·페이지 시각 검증 미완료
 
-버전 1.0 | 작성일 2026-10-29
+버전 1.1 | 작성일 2026-10-29 | 계약 보완 2026-10-30
+
+2026-10-30 사용자 요청으로 기존 물리 설계의 입력 기준을 채택하고 상품 부분 수정·관리자 목록 계약을 보완했다. 문서 기준의 결정이며 팀원 리뷰·DTO·화면 구현·실제 DB 검증 완료를 뜻하지 않는다.
 
 MVP의 화면과 서버가 사용할 요청·응답·권한·중복 처리 기준이다. 구현 기준을 정리한 문서이며 실제 API 구현·테스트 완료를 의미하지 않는다. 업무 정책은 MVP 기획 명세서, 데이터 구조는 ERD, 개발 방식과 기술 버전은 공통 개발 규칙을 따른다.
 
@@ -33,7 +35,7 @@ fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 
 
 다음 표의 경로는 /api 이후 경로다. 거래 명령은 허용 행동을 표시하는 화면과 별개로 서버가 신원·권한·상태를 다시 확인한다.
 
-## 2 인증과 회원 A
+## 2 인증과 회원 김창재
 
 | 메서드·경로 | 입력·권한 | 출력·처리 |
 | --- | --- | --- |
@@ -46,7 +48,7 @@ fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 
 
 Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·소문자 정규화 후 중복 확인한다. 가입 후 로그인 화면으로 이동하며 자동 로그인하지 않는다. 로그인·로그아웃 후 CSRF 토큰을 다시 획득한다.
 
-## 3 판매자와 상품 B
+## 3 판매자와 상품 박소현
 
 | 메서드·경로 | 입력·권한 | 출력 |
 | --- | --- | --- |
@@ -59,7 +61,7 @@ Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·
 | GET /me/products | 회원; page,size | 본인 상품 목록; 중지·숨김 포함 |
 | GET /me/products/{id} | 소유자 | 본인 ProductDetail |
 | POST /products | 판매자 프로필 보유; ProductInput | 201 ProductDetail |
-| PATCH /products/{id} | 소유자; ProductInput,expectedVersion | ProductDetail |
+| PATCH /products/{id} | 소유자; ProductPatch,expectedVersion 필수 | ProductDetail |
 | PATCH /products/{id}/sale-status | 소유자; saleStatus,expectedVersion | ProductDetail |
 | GET /products/{id}/reviews | 전체; 공개·판매 중 상품, page,size | Review 목록 |
 
@@ -67,7 +69,36 @@ SellerProfile: id(회원 ID),displayName,introduction,specialty,portfolioUrl. �
 
 ProductSummary: id,title,priceAmount,durationDays,category,seller. ProductDetail은 description,scopeDescription,preparationDescription,version,saleStatus,createdAt,updatedAt을 추가한다. 본인·관리자 조회는 isHidden 추가. 상품 변경·판매 상태 변경·숨김 변경은 버전 충돌 검사와 일관되게 관리한다. 숨김·중지 상품의 기존 거래는 주문 스냅샷으로 조회한다.
 
-## 4 주문 조회와 생성 C
+### 상품 등록·부분 수정 계약
+
+등록의 ProductInput은 categoryId,title,description,scopeDescription,preparationDescription,priceAmount,durationDays를 모두 필수로 받는다. 서버가 saleStatus=ON_SALE, isHidden=false, version=0으로 생성한다. 클라이언트가 sellerId·saleStatus·isHidden·version을 등록 본문으로 지정하지 않는다.
+
+ProductPatch는 ProductInput의 7개 필드 중 바꿀 필드만 보내는 JSON 객체다. `Content-Type: application/json`을 사용하며 JSON Merge Patch 형식은 사용하지 않는다. expectedVersion은 현재 조회한 0 이상의 정수로 항상 제출하고, 수정 필드는 최소 1개 필요하다.
+
+| 제출 형태 | 처리 |
+| --- | --- |
+| 수정 필드 생략 | 기존 값 유지 |
+| 수정 필드에 null | 400 VALIDATION_FAILED, 전체 변경 없음 |
+| 필수 문자열에 빈 문자열·공백만 제출 | 정규화 후 400 VALIDATION_FAILED |
+| expectedVersion만 제출 | 400 VALIDATION_FAILED |
+| 정의하지 않은 필드·잘못된 JSON 타입 제출 | 400 VALIDATION_FAILED; 숫자·boolean 문자열을 자동 변환하지 않음 |
+| 상품 version 불일치 | 409 PRODUCT_VERSION_CONFLICT, 전체 변경 없음 |
+
+서버는 소유권·버전을 확인하고 기존 값과 제출값을 합친 최종 상품을 검증한 뒤 한 트랜잭션으로 저장한다. 동일한 값을 보낸 경우에도 expectedVersion을 검사한다. 일치하고 실제 값 변경이 없으면 현재 ProductDetail을 반환하며 version·updatedAt을 바꾸지 않는다. 변경이 있으면 version을 증가시킨다. saleStatus는 전용 판매 상태 API, isHidden은 관리자 API에서만 변경한다. 기존 주문·스냅샷에는 수정값을 반영하지 않는다.
+
+```json
+{
+  "title": "랜딩 페이지 제작",
+  "priceAmount": 150000,
+  "expectedVersion": 2
+}
+```
+
+위 요청은 제목·가격만 수정하며 카테고리·설명·범위·준비사항·기간을 유지한다. 충돌 시 화면은 최신 상품을 다시 조회하고 사용자의 수정 내용을 확인받으며 자동 덮어쓰기하지 않는다.
+
+판매자 프로필 PUT은 introduction·specialty를 매번 제출하는 전체 교체다. portfolioUrl은 생략·null·정규화 후 빈 값이면 NULL로 지운다. PATCH의 생략=유지 규칙을 PUT에 적용하지 않는다.
+
+## 4 주문 조회와 생성 정은찬
 
 | 메서드·경로 | 입력·권한 | 출력 |
 | --- | --- | --- |
@@ -95,7 +126,7 @@ payment: id,amount,feeRateBps,status,paidAt,refundedAt. review는 8절의 Review
 
 생성 전 단일 객체 payment·revisionRequest·review는 null, 이력·납품·취소 요청·allowedActions는 빈 배열로 표현한다. 미발생 시각 acceptedAt·buyerConfirmedTermsAt·paidAt·originalDueAt·revisionDueAt·currentDueAt·completedAt·cancelledAt 및 refundedAt·resolvedAt·resolvedBy는 null이다. 선택 입력 portfolioUrl·review.content·responseReason은 미입력 시 null이다. 나머지 필수 필드는 생략하지 않는다.
 
-## 5 주문 명령 C와 D
+## 5 주문 명령 정은찬과 황준범
 
 | POST 경로 | 실행자·입력 | 조건·결과 |
 | --- | --- | --- |
@@ -155,7 +186,7 @@ PAYMENT_ALREADY_REFUNDED 응답에는 재결제 성공 의미를 담지 않는�
 
 반복 요청에도 실행자 권한을 확인한다. 주문 → 지갑 잠금 순서를 통일한다. 결과 불명확 시 프런트는 조회로 확인하며 변경 요청 자동 재시도는 하지 않는다.
 
-## 8 지갑 정산 리뷰 D와 B
+## 8 지갑·정산 담당 황준범, 후기 담당 박소현
 
 | 메서드·경로 | 권한·입력 | 출력 |
 | --- | --- | --- |
@@ -167,11 +198,11 @@ PAYMENT_ALREADY_REFUNDED 응답에는 재결제 성공 의미를 담지 않는�
 
 WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급의 orderId는 null. Settlement: id,orderId,grossAmount,feeRateBps,feeAmount,sellerAmount,createdAt. Review: id,orderId,authorDisplayName,rating,content,createdAt. 공개 리뷰 조회에는 orderId를 제외한다. 별점 1~5 필수, 본문 선택, 주문당 1개.
 
-## 9 관리자 상품 운영 A
+## 9 관리자 상품 운영 김창재
 
 | 메서드·경로 | 입력 | 출력 |
 | --- | --- | --- |
-| GET /admin/products | keyword,isHidden,saleStatus,page,size | 관리자 상품 목록 |
+| GET /admin/products | keyword,isHidden,saleStatus,page,size | AdminProductSummary 목록 |
 | GET /admin/products/{id} | 없음 | 상품 상세 |
 | GET /admin/products/{id}/moderation-logs | page,size | id,adminId,action,reason,createdAt 목록 |
 | PATCH /admin/products/{id}/visibility | hidden,reason,expectedVersion | 관리자 ProductDetail |
@@ -179,6 +210,48 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 모든 경로는 관리자 전용이다. 숨김 상태와 이력을 함께 저장하며 판매 상태는 변경하지 않는다. 관리자에게 거래·지갑·강제 환불 API를 제공하지 않는다.
 
 관리자 상품 상세는 본인 조회와 같은 ProductDetail 필드에 isHidden을 포함한다. 숨김·복구는 상품 잠금 후 현재 상태를 확인한다. 이미 요청한 hidden 상태라면 버전 차이와 관계없이 현재 상세를 반환하고 버전·운영 이력을 변경하지 않는다. 실제 상태 변경이 필요하면 expectedVersion을 검사하고, 불일치는 409 PRODUCT_VERSION_CONFLICT로 처리한다. 변경 성공 시 상품 version 증가와 숨김 상태·운영 이력을 같은 트랜잭션에서 반영한다. 판매자 상품 수정·판매 상태 변경도 이 version과 일관되게 처리한다.
+
+### 관리자 상품 목록 계약
+
+AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(id,displayName),saleStatus,isHidden,version,createdAt,updatedAt. 응답은 공통 목록의 items,page,size,totalElements,totalPages를 사용한다. 상품 상세 설명·이메일·지갑 정보·운영 이력은 목록에 포함하지 않는다.
+
+| 쿼리 | 생략 시 | 제출 시 |
+| --- | --- | --- |
+| keyword | 검색 제한 없음 | 앞뒤 공백 제거 후 빈 값도 제한 없음; 최대 100 코드 포인트. 제목 또는 설명에 포함된 문자열 검색 |
+| isHidden | 숨김·미숨김 모두 | true 또는 false만 허용; 빈 값·다른 문자열은 400 |
+| saleStatus | ON_SALE·STOPPED 모두 | ON_SALE 또는 STOPPED만 허용; 빈 값·다른 문자열은 400 |
+| page | 0 | 0 이상의 정수 |
+| size | 20 | 1~100의 정수 |
+
+필터는 AND로 결합하며 keyword의 제목·설명 조건만 OR로 묶는다. keyword의 `%`·`_`·이스케이프 문자는 일반 검색 문자로 처리하고 검색값은 바인딩한다. 정렬은 createdAt 내림차순, 같은 시각은 id 내림차순으로 고정한다. 없는 결과나 범위를 벗어난 page는 items=[]이며 집계는 같은 필터의 전체 결과를 기준으로 한다. 잘못된 쿼리·길이 초과는 400 VALIDATION_FAILED다.
+
+예: `GET /api/admin/products?isHidden=true&saleStatus=STOPPED&page=0&size=20`은 숨김이면서 판매 중지인 상품만 조회한다. 공개 상품 목록은 기존처럼 판매 중·미숨김만 노출하며 관리자 필터를 그대로 적용하지 않는다. 공개 목록의 keyword 정규화·길이·문자 그대로 검색 기준은 위와 같다.
+
+```json
+{
+  "items": [
+    {
+      "id": "101",
+      "title": "랜딩 페이지 제작",
+      "priceAmount": 150000,
+      "durationDays": 7,
+      "category": { "id": "1", "name": "웹 개발" },
+      "seller": { "id": "20", "displayName": "판매자 예시" },
+      "saleStatus": "STOPPED",
+      "isHidden": true,
+      "version": 3,
+      "createdAt": "2026-10-30T00:00:00Z",
+      "updatedAt": "2026-10-30T01:00:00Z"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+위 값은 응답 형식 설명용이며 실제 회원·상품·카테고리 데이터가 아니다.
 
 ## 10 오류와 입력 기준
 
@@ -192,19 +265,37 @@ WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급�
 | 409 | CANCELLATION_PENDING, REQUEST_ALREADY_RESOLVED, REVISION_ALREADY_USED, REVIEW_ALREADY_EXISTS, PAYMENT_ALREADY_REFUNDED, DELIVERY_ALREADY_SUBMITTED, DELIVERY_SEQUENCE_CONFLICT |
 | 500 | INTERNAL_ERROR, DATA_INTEGRITY_ERROR |
 
-확정 업무 입력: 가격 1~1,000,000원, 기간 1~30일, 별점 1~5, requestKey UUID, 결과물 URL HTTPS. 문자열 길이는 물리 SQL·DTO·화면을 함께 맞출 때 확정한다. 앞서 제안된 길이 수치는 합의된 업무 정책으로 간주하지 않는다.
+### 문자열·필수값 공통 기준
 
-### 구현 전 확정할 계약
+2026-10-30 보완 기준: 기존 물리 설계의 아래 길이·정규화와 상품 기본값을 구현 계약으로 채택한다. 가격 1~1,000,000원, 기간 1~30일, 별점 1~5, requestKey UUID 등 기존 업무 정책은 유지한다. DB 미생성 상태에서도 DTO·화면이 동일한 계약을 사용하도록 하며 SQL 실행 성공을 의미하지 않는다.
 
-다음 항목은 아직 확정되지 않았으며 담당자가 [작업표](work-plan.md)에 결정과 검증 결과를 기록한 뒤 이 문서에 반영한다. 임시 구현값을 합의된 정책으로 표현하지 않는다.
-
-| 항목 | 함께 정할 내용 |
+| 입력 필드 | 필수·정규화 후 길이 |
 | --- | --- |
-| 문자열 검증 | 필드별 필수 여부·최소/최대 길이·공백 정규화, DTO·DB·화면의 일치 |
-| 상품 생성 | 최초 saleStatus와 isHidden의 서버 기본값 |
-| 상품 수정 | ProductInput 전체 제출인지 부분 제출인지, 생략·null·빈 문자열의 구분 |
-| 관리자 목록 | 목록 항목의 필드와 필터의 생략 시 동작 |
-| 요청·응답 예시 | 인증·상품·주문·취소·결제의 정상/오류 JSON, ID·시각·null 표현 |
+| email | 필수 3~254; 이메일 형식 검사, 앞뒤 공백 제거 후 Locale.ROOT 소문자화 |
+| displayName | 필수 1~30; 중복 허용 |
+| introduction / specialty | 필수 1~2000 / 1~100 |
+| category.name / title | 필수 1~50 / 1~100; 카테고리명은 고정 데이터 기준이며 등록 API를 추가하지 않음 |
+| description / scopeDescription / preparationDescription | 필수 1~10000 / 1~3000 / 1~3000; 준비사항이 없으면 없다는 설명 작성 |
+| requirements / 납품 description | 필수 1~5000 / 1~5000 |
+| 주문 거절·직접 취소·수정 요청·취소 요청·관리자 운영 reason | 필수 1~1000 |
+| 취소 요청 거절 responseReason / 후기 content | 선택, 입력 시 1~1000 / 1~2000 |
+| portfolioUrl / resultUrl | 선택 / 필수, 입력 시 1~2048; HTTPS URL |
+| termsSnapshot | 서버가 생성·보존, 필수 1~10000; 클라이언트 입력 불가 |
+| keyword | 선택 1~100; 생략·정규화 후 빈 값은 검색 제한 없음 |
+
+필수는 생성·해당 명령에서 생략·null·정규화 후 빈 문자열을 거절한다는 뜻이다. 상품 PATCH는 제출한 필드에만 필수값 검증을 적용하고, 생략은 기존 값을 유지한다. 선택 문자열은 생략·null·빈 값·공백만 제출하면 NULL로 통일한다. history.reason은 업무에서 발생한 사유를 보존하며 사유가 없는 사건만 NULL이다.
+
+일반 문자열은 CRLF·CR을 LF로 바꾸고 앞뒤 공백을 제거한 뒤 길이를 검사·저장·재전송 비교한다. 앞뒤 제거 대상은 Unicode White_Space 집합(U+0009~000D, U+0020, U+0085, U+00A0, U+1680, U+2000~200A, U+2028~2029, U+202F, U+205F, U+3000)으로 통일한다. 내부 공백·줄바꿈은 보존하며 Unicode 정규화나 대소문자 변경은 하지 않는다. 이메일 소문자화와 UUID 표준형 변환은 별도 예외다. 서버의 정규화를 기준으로 하며 DB TRIM이 모든 Unicode 공백을 제거한다고 가정하지 않는다.
+
+길이는 UTF-16 길이나 바이트 수가 아닌 Unicode 코드 포인트 수로 센다. 서버는 codePointCount, 화면은 `[...value].length`, DB는 CHAR_LENGTH 기준이다. 정규화 후 상한 초과는 자르지 않고 400 VALIDATION_FAILED로 반환한다. 화면도 같은 기준을 적용하며 HTML maxlength나 기본 @Size만으로 검증을 대체하지 않는다.
+
+URL은 URI 파서로 https 스킴·호스트 존재·userinfo 부재를 확인한다. 형식·스킴 오류는 400 INVALID_URL이며 서버는 해당 주소에 접속하지 않는다. ID는 양의 BIGINT 범위의 10진 문자열, expectedVersion·expectedProductVersion은 0 이상의 정수, 숫자·boolean 필드는 정확한 JSON 타입으로 받는다. requestKey는 UUID 파싱 후 소문자 하이픈 표준형으로 저장·비교한다.
+
+비밀번호 원문은 위 trim·줄바꿈·소문자화 규칙에서 제외하고 입력 그대로 인코더에 전달한다. 원문 최소·최대 길이와 인코더는 인증 구현 전에 함께 결정하며 조용한 절삭을 허용하지 않는다. password_hash의 VARCHAR(255)는 원문 비밀번호 길이 제한이 아니다.
+
+### 남은 구현 전 결정
+
+문자열(비밀번호 원문 제외)·상품 기본값·상품 PATCH·관리자 목록 계약은 위 보완 기준을 따른다. 비밀번호 원문 정책·인코더, 실제 카테고리 목록은 별도 결정한다. 인증·주문·취소·결제의 상세 JSON 예시와 실행 결과는 해당 기능 구현 시 추가하며, 이 문서의 예시를 실행 검증 기록으로 보지 않는다.
 
 주문·취소 요청 키의 중복 처리와 납품 회차·지연 표시의 상세 API 규칙은 이 문서 4~7절을 기준으로 한다. 다른 문서에는 목적과 데이터 제약을 남기고 상세 계약은 이 문서를 참조한다.
 

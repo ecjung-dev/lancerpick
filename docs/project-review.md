@@ -97,7 +97,7 @@ QueryDSL·Lombok·DevTools도 build.gradle에 포함되어 있다. 의존성 존
 - 초기 생성 참고 절차와 현재 저장소 복제 후 실행 절차를 구분했다.
 - 현재 MySQL·개인 properties 방식과 선택적인 Docker·YAML 예시를 구분했다.
 - 구성된 CI 파일과 미확인 원격 실행 결과를 구분했다.
-- API 세부 계약의 미확정 사항과 C·D 호출 경계 제안을 작업표로 연결했다.
+- API 세부 계약의 미확정 사항과 정은찬·황준범 호출 경계 제안을 작업표로 연결했다.
 
 기본 패키지 `com.example.lancerpick`은 애플리케이션과 테스트에서 일치한다. 이전 가이드의 `com.lancerpick` 제안과 다르다는 이유만으로 패키지 이동을 요구하지 않는다. 배포 Dockerfile·Compose·Nginx 설정은 없으며 실제 배포 준비 완료로 표시하지 않는다.
 

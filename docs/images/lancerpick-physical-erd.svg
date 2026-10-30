@@ -100,7 +100,7 @@
 <rect x="1680" y="280" width="640" height="320" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="1680" y="280" width="640" height="76" fill="#475569" stroke="#475569"/>
 <text x="1696" y="290" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">members</text>
-<text x="1696" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">회원  ·  A</text>
+<text x="1696" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">회원  ·  김창재</text>
 <rect x="1681" y="356" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="2002" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -137,7 +137,7 @@
 <rect x="880" y="280" width="640" height="266" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="880" y="280" width="640" height="76" fill="#087f8c" stroke="#087f8c"/>
 <text x="896" y="290" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">seller_profiles</text>
-<text x="896" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">판매자 프로필  ·  B</text>
+<text x="896" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">판매자 프로필  ·  박소현</text>
 <rect x="881" y="356" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="892" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">member_id</text>
 <text x="1202" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -168,7 +168,7 @@
 <rect x="80" y="280" width="640" height="204" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="80" y="280" width="640" height="76" fill="#087f8c" stroke="#087f8c"/>
 <text x="96" y="290" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">categories</text>
-<text x="96" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">카테고리  ·  B</text>
+<text x="96" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">카테고리  ·  박소현</text>
 <rect x="81" y="356" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="402" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -187,7 +187,7 @@
 <rect x="80" y="1000" width="640" height="498" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="80" y="1000" width="640" height="76" fill="#087f8c" stroke="#087f8c"/>
 <text x="96" y="1010" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">products</text>
-<text x="96" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">상품  ·  B</text>
+<text x="96" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">상품  ·  박소현</text>
 <rect x="81" y="1076" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="402" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -254,7 +254,7 @@
 <rect x="1680" y="1000" width="640" height="581" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="1680" y="1000" width="640" height="76" fill="#3158b5" stroke="#3158b5"/>
 <text x="1696" y="1010" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">orders</text>
-<text x="1696" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">주문 · 가격 · 소요일 · 진행  ·  C</text>
+<text x="1696" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">주문 · 가격 · 소요일 · 진행  ·  정은찬</text>
 <rect x="1681" y="1076" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="2002" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -331,7 +331,7 @@
 <rect x="1680" y="1700" width="640" height="324" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="1680" y="1700" width="640" height="76" fill="#3158b5" stroke="#3158b5"/>
 <text x="1696" y="1710" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">order_snapshots</text>
-<text x="1696" y="1745" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">주문 당시 상품 · 조건 · 요구사항  ·  C</text>
+<text x="1696" y="1745" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">주문 당시 상품 · 조건 · 요구사항  ·  정은찬</text>
 <rect x="1681" y="1776" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1781" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">order_id</text>
 <text x="2002" y="1781" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -371,7 +371,7 @@
 <rect x="2480" y="2120" width="640" height="324" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="2480" y="2120" width="640" height="76" fill="#3158b5" stroke="#3158b5"/>
 <text x="2496" y="2130" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">order_histories</text>
-<text x="2496" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">주문 이력  ·  C</text>
+<text x="2496" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">주문 이력  ·  정은찬</text>
 <rect x="2481" y="2196" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="2492" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="2802" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -411,7 +411,7 @@
 <rect x="1680" y="2120" width="640" height="291" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="1680" y="2120" width="640" height="76" fill="#3158b5" stroke="#3158b5"/>
 <text x="1696" y="2130" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">deliveries</text>
-<text x="1696" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">납품  ·  C</text>
+<text x="1696" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">납품  ·  정은찬</text>
 <rect x="1681" y="2196" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="2002" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -443,7 +443,7 @@
 <rect x="880" y="2120" width="640" height="316" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="880" y="2120" width="640" height="76" fill="#3158b5" stroke="#3158b5"/>
 <text x="896" y="2130" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">revision_requests</text>
-<text x="896" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">수정 요청  ·  C</text>
+<text x="896" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">수정 요청  ·  정은찬</text>
 <rect x="881" y="2196" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="892" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="1202" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -476,7 +476,7 @@
 <rect x="3280" y="2120" width="640" height="407" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="3280" y="2120" width="640" height="76" fill="#3158b5" stroke="#3158b5"/>
 <text x="3296" y="2130" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">cancellation_requests</text>
-<text x="3296" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">취소 요청  ·  C</text>
+<text x="3296" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">취소 요청  ·  정은찬</text>
 <rect x="3281" y="2196" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="3602" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -526,7 +526,7 @@
 <rect x="2480" y="280" width="640" height="179" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="2480" y="280" width="640" height="76" fill="#8852ad" stroke="#8852ad"/>
 <text x="2496" y="290" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">wallets</text>
-<text x="2496" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">구매 적립금 지갑  ·  D</text>
+<text x="2496" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">구매 적립금 지갑  ·  황준범</text>
 <rect x="2481" y="356" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="2492" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">member_id</text>
 <text x="2802" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -544,7 +544,7 @@
 <rect x="2480" y="1000" width="640" height="320" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="2480" y="1000" width="640" height="76" fill="#8852ad" stroke="#8852ad"/>
 <text x="2496" y="1010" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">payments</text>
-<text x="2496" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">주문 결제 · 환불  ·  D</text>
+<text x="2496" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">주문 결제 · 환불  ·  황준범</text>
 <rect x="2481" y="1076" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="2492" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="2802" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -581,7 +581,7 @@
 <rect x="3280" y="280" width="640" height="374" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="3280" y="280" width="640" height="76" fill="#8852ad" stroke="#8852ad"/>
 <text x="3296" y="290" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">wallet_entries</text>
-<text x="3296" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">적립금 원장  ·  D</text>
+<text x="3296" y="325" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">적립금 원장  ·  황준범</text>
 <rect x="3281" y="356" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="3602" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -623,7 +623,7 @@
 <rect x="3280" y="1000" width="640" height="320" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="3280" y="1000" width="640" height="76" fill="#8852ad" stroke="#8852ad"/>
 <text x="3296" y="1010" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">settlements</text>
-<text x="3296" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">판매 수익 · 정산  ·  D</text>
+<text x="3296" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">판매 수익 · 정산  ·  황준범</text>
 <rect x="3281" y="1076" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="3602" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -660,7 +660,7 @@
 <rect x="80" y="2120" width="640" height="262" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="80" y="2120" width="640" height="76" fill="#087f8c" stroke="#087f8c"/>
 <text x="96" y="2130" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">reviews</text>
-<text x="96" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">후기  ·  B</text>
+<text x="96" y="2165" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">후기  ·  박소현</text>
 <rect x="81" y="2196" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="402" y="2201" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
@@ -688,7 +688,7 @@
 <rect x="880" y="1000" width="640" height="266" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="880" y="1000" width="640" height="76" fill="#475569" stroke="#475569"/>
 <text x="896" y="1010" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="26" fill="#ffffff">product_moderation_logs</text>
-<text x="896" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">상품 운영 이력  ·  A</text>
+<text x="896" y="1045" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#ffffff">상품 운영 이력  ·  김창재</text>
 <rect x="881" y="1076" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="892" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">id</text>
 <text x="1202" y="1081" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>

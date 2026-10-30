@@ -31,12 +31,12 @@ LABELS = {
     "settlements": "판매 수익 · 정산", "reviews": "후기", "product_moderation_logs": "상품 운영 이력",
 }
 GROUP = {
-    "members": "A", "product_moderation_logs": "A", "seller_profiles": "B", "categories": "B",
-    "products": "B", "reviews": "B", "orders": "C", "order_snapshots": "C", "order_histories": "C", "deliveries": "C",
-    "revision_requests": "C", "cancellation_requests": "C", "wallets": "D", "wallet_entries": "D",
-    "payments": "D", "settlements": "D",
+    "members": "김창재", "product_moderation_logs": "김창재", "seller_profiles": "박소현", "categories": "박소현",
+    "products": "박소현", "reviews": "박소현", "orders": "정은찬", "order_snapshots": "정은찬", "order_histories": "정은찬", "deliveries": "정은찬",
+    "revision_requests": "정은찬", "cancellation_requests": "정은찬", "wallets": "황준범", "wallet_entries": "황준범",
+    "payments": "황준범", "settlements": "황준범",
 }
-COLORS = {"A": "#475569", "B": "#087f8c", "C": "#3158b5", "D": "#8852ad"}
+COLORS = {"김창재": "#475569", "박소현": "#087f8c", "정은찬": "#3158b5", "황준범": "#8852ad"}
 
 
 def parse():
