@@ -53,7 +53,7 @@ export function WalletPreviewPage() {
     page, size, totalElements: previewEntries.length, totalPages: Math.ceil(previewEntries.length / size),
   }
   return <WalletLayout preview>
-    <BalanceCard balance={previewBalance} />
+    <BalanceCard balance={previewBalance} preview />
     <EntryList data={data} onPageChange={setPage} />
   </WalletLayout>
 }
@@ -78,16 +78,16 @@ function WalletLayout({ children, preview = false }: { children: ReactNode; prev
       <div className={styles.content}>
         <div className={styles.sectionHeading}><h2>적립금 · 이용 내역</h2><p>사용 가능한 잔액과 적립금 변동을 확인하세요.</p></div>
         {children}
-        <div className={styles.guide}><strong>적립금 이용 안내</strong><ul><li>가입 시 테스트 적립금 1,000,000원이 한 번 지급됩니다.</li><li>테스트 적립금은 실제 현금 가치가 없으며 충전·출금할 수 없습니다.</li><li>구매 적립금과 판매 수익은 별도로 관리됩니다.</li></ul></div>
+        <div className={styles.guide}><strong>적립금 이용 안내</strong><ul><li>가입 시 테스트 적립금 1,000,000원이 한 번 지급됩니다.</li><li>테스트 적립금은 현금 가치가 없으며 실제 현금 충전·출금을 지원하지 않습니다.</li><li>구매 적립금과 판매 수익은 별도로 관리됩니다.</li></ul></div>
       </div>
     </div>
   </section>
 }
 
-function BalanceCard({ balance }: { balance: WalletBalance }) {
+function BalanceCard({ balance, preview = false }: { balance: WalletBalance; preview?: boolean }) {
   return <section className={styles.balanceCard} aria-labelledby="balance-title">
     <div><div className={styles.balanceLabel}><h3 id="balance-title">사용 가능한 적립금</h3>{balance.isTest && <span>TEST CREDIT</span>}</div><p className={styles.amount}>{formatWon(balance.balance)}</p><p className={styles.balanceHelp}>마음에 드는 서비스를 만나면, 적립금으로 결제하세요.</p></div>
-    <Link to="/#services" className={styles.explore}>서비스 둘러보기 <span aria-hidden="true">↗</span></Link>
+    <Link to={preview ? '/mypage/wallet/topup/preview' : '/mypage/wallet/topup'} className={styles.explore}>{preview ? '충전 화면 미리보기' : '테스트 적립금 충전'} <span aria-hidden="true">↗</span></Link>
   </section>
 }
 

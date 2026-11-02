@@ -17,7 +17,7 @@
 
 **키 설정은 외부 결제 기능의 구현 완료를 뜻하지 않습니다.** 충전 주문·금액 검증·승인·중복 지급 방지·결과 재확인 등은 별도 구현해야 합니다. 현재 확장 계획은 외부 테스트 결제로 적립금을 충전하고 기존 주문의 적립금 결제를 유지하는 방식이며, 이 문서는 MVP 범위를 변경하지 않습니다.
 
-2026-11-02 후속: [V2 충전 신청 저장 구조](wallet-topup-schema.md)·Entity/Repository를 준비합니다. 토스 통신·충전 API·실제 지급 기능은 아직 추가하지 않았습니다.
+2026-11-02 후속: [충전 저장 구조](wallet-topup-schema.md), [신청·조회](wallet-topup-api.md), [승인·지급·재확인](wallet-topup-approval.md), [React SDK·결과 화면](wallet-topup-frontend.md)을 준비했습니다. 외부 호출은 기본 비활성화이며 개인 설정의 TOSS_TOPUP_ENABLED=true와 테스트 시크릿으로 활성화합니다. 프런트는 기존 keys.env를 읽도록 연결했습니다. 실제 테스트키 SDK UI 로딩은 확인했고, 실제 결제·인증 포함 전체 검증·자동 복구는 후속입니다.
 
 ## 2. 백엔드 설정
 
@@ -47,13 +47,13 @@ toss.secret-key=${TOSS_SECRET_KEY}
 
 ## 3. 프런트엔드 설정
 
-파일 위치는 `LancerPickFrontend/.env.local`입니다. 기존 파일이 있다면 아래 항목만 추가·수정합니다.
+현재 개인 파일은 `LancerPickFrontend/keys.env`입니다. 기존 파일을 그대로 사용하고 아래 항목을 설정합니다. Vite는 keys.env를 기본 이름으로 읽지 않으므로 저장소의 vite.config.ts가 클라이언트 키 항목만 명시적으로 연결합니다. 표준 .env.local 방식도 대체 설정으로 지원하지만 두 파일을 중복 작성할 필요는 없습니다.
 
 ```dotenv
 VITE_TOSS_CLIENT_KEY=CHANGE_ME
 ```
 
-`CHANGE_ME`를 별도로 전달받은 테스트 **클라이언트 키**로 바꿉니다. 파일이 없다면 `LancerPickFrontend/.env.example`을 `.env.local`로 복사해 사용할 수 있습니다.
+`CHANGE_ME`를 별도로 전달받은 테스트 **클라이언트 키**로 바꿉니다. 파일이 없다면 `LancerPickFrontend/.env.example`을 `keys.env`로 복사합니다. 기존 개인 파일은 덮어쓰지 않습니다. 셸 변수 → keys.env → 표준 .env 계열 순서로 적용합니다.
 
 추후 SDK 연동 코드는 다음으로 클라이언트 키를 읽습니다.
 
@@ -70,7 +70,7 @@ import.meta.env.VITE_TOSS_CLIENT_KEY
 3. 저장소 루트에서 개인 파일이 Git 제외 대상인지 확인합니다.
 
 ```powershell
-git check-ignore -v LancerPick/local-application.properties LancerPickFrontend/.env.local
+git check-ignore -v LancerPick/local-application.properties LancerPickFrontend/keys.env
 git status --short
 ```
 

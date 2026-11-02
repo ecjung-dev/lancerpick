@@ -14,3 +14,17 @@ export interface WalletEntry {
   orderId: string | null
   createdAt: string
 }
+
+export type TopupStatus = 'READY' | 'PROCESSING' | 'UNKNOWN' | 'COMPLETED' | 'FAILED'
+
+export interface WalletTopup {
+  id: string
+  tossOrderId: string
+  amount: number
+  currency: 'KRW'
+  isTest: boolean
+  status: TopupStatus
+  createdAt: string
+}
+
+export interface TopupConfirmation { paymentKey: string; orderId: string; amount: number }

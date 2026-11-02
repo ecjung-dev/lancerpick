@@ -3,6 +3,7 @@ package com.example.lancerpick.wallet.repository;
 import com.example.lancerpick.wallet.entity.Wallet;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -31,4 +32,9 @@ public interface WalletRepository extends JpaRepository<Wallet, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select wallet from Wallet wallet where wallet.memberId = :memberId")
     Optional<Wallet> findByMemberIdForUpdate(@Param("memberId") long memberId);
+
+    /** 지갑 잠금 후 사용. Instant로 UTC 물리 시각을 저장한다. */
+    @Modifying(flushAutomatically = true)
+    @Query(value = "UPDATE wallets SET balance=:balance, updated_at=:at WHERE member_id=:memberId", nativeQuery = true)
+    int updateTopupBalance(@Param("memberId") long memberId, @Param("balance") long balance, @Param("at") Instant at);
 }

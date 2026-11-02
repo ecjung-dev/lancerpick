@@ -85,6 +85,46 @@ public class WalletTopup {
     }
 
     public Long getId() { return id; }
+
+    public void startProcessing(String paymentKey, Instant now) {
+        if (status != WalletTopupStatus.READY) throw new IllegalStateException("Top-up is not ready");
+        this.paymentKey = Objects.requireNonNull(paymentKey);
+        this.status = WalletTopupStatus.PROCESSING;
+        this.updatedAt = monotonic(now);
+        this.processingStartedAt = updatedAt;
+    }
+
+    public void markUnknown(String safeCode, Instant now) {
+        if (status == WalletTopupStatus.PROCESSING || status == WalletTopupStatus.UNKNOWN) {
+            status = WalletTopupStatus.UNKNOWN;
+            lastErrorCode = safeCode;
+            updatedAt = monotonic(now);
+        }
+    }
+
+    public void markFailed(Instant now) {
+        if (status == WalletTopupStatus.PROCESSING || status == WalletTopupStatus.UNKNOWN) {
+            status = WalletTopupStatus.FAILED;
+            lastErrorCode = "PROVIDER_TERMINAL_STATE";
+            updatedAt = monotonic(now);
+        }
+    }
+
+    public void complete(Instant approvedAt, Instant now) {
+        if (status != WalletTopupStatus.PROCESSING && status != WalletTopupStatus.UNKNOWN) {
+            throw new IllegalStateException("Top-up is not processing");
+        }
+        this.approvedAt = approvedAt.truncatedTo(ChronoUnit.MICROS);
+        this.completedAt = monotonic(now.isBefore(this.approvedAt) ? this.approvedAt : now);
+        this.updatedAt = completedAt;
+        this.status = WalletTopupStatus.COMPLETED;
+        this.lastErrorCode = null;
+    }
+
+    private Instant monotonic(Instant now) {
+        Instant value = now.truncatedTo(ChronoUnit.MICROS);
+        return value.isBefore(updatedAt) ? updatedAt : value;
+    }
     public Long getMemberId() { return memberId; }
     public String getTossOrderId() { return tossOrderId; }
     public long getAmount() { return amount; }

@@ -4,7 +4,7 @@ Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 공통 HTTP·Security·�
 
 ## 패키지 구조
 
-토스 테스트 충전의 [V2 저장 구조](../docs/wallet-topup-schema.md)·Entity/Repository를 추가했습니다. 일반 실행 시 Flyway가 V2를 적용할 수 있으므로 연결 대상 DB를 확인합니다. 현재는 충전 신청·승인 API나 지급 서비스가 없어 적립금이 자동 증가하지 않습니다.
+토스 테스트 충전의 [V2 저장 구조](../docs/wallet-topup-schema.md), [신청·본인 조회](../docs/wallet-topup-api.md), [승인·지급·본인 재확인](../docs/wallet-topup-approval.md)을 추가했습니다. 일반 실행 시 Flyway가 V2를 적용할 수 있으므로 연결 대상 DB를 확인합니다. 외부 호출은 기본 비활성화이며 TOSS_TOPUP_ENABLED=true와 테스트 시크릿으로 활성화합니다. 검증된 외부 DONE에서만 잔액을 늘리며, 실제 토스 결제창·로그인·프런트 연동은 아직 검증 전입니다.
 
 기본 패키지는 `com.example.lancerpick`입니다.
 

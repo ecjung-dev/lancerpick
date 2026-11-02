@@ -41,6 +41,10 @@
 - [지갑 생성·최초 지급 구현](wallet-initialization.md): 회원가입에서 호출할 내부 서비스 계약, 기존 V1 매핑, 동시 초기화·실패 롤백 검증. 실제 회원가입·결제 API 연결과 구분한다.
 - [잔액·적립금 내역 조회 준비](wallet-query.md): 조회 서비스·보호 Controller·인증 principal 계약, React 마이페이지·조회 훅·캐시 정리. 실제 로그인·가입 호출부·프런트 인증 상태 연결은 후속 작업이다.
 - [토스 테스트 충전 저장 구조](wallet-topup-schema.md): V2 충전 신청 테이블·원장 참조·Entity/Repository·DB 검증. 토스 승인·실제 지급·충전 화면은 후속 구현이다.
+- [토스 충전 신청·조회 API](wallet-topup-api.md): 인증·CSRF 기반 READY 신청 저장과 본인 조회. 신청 자체는 잔액을 증가시키지 않으며 지급은 승인 API를 따른다.
+- [토스 승인·지급·재확인](wallet-topup-approval.md): 외부 호출과 DB 트랜잭션 분리, 멱등 지급·본인 복구 API. 외부 제공자 대역으로 검증하며 실제 결제·인증 통합·자동 복구는 후속이다.
+- [React 토스 충전 화면](wallet-topup-frontend.md): 금액·SDK·복귀 검증·서버 승인·결과 재확인 화면. keys.env 연결과 SDK UI 로딩을 확인했으며 실제 결제·인증 통합은 검증 전이다.
+- [황준범 담당 진행 현황](wallet-payment-progress.md): 지갑·토스 충전·결제·환불·정산의 남은 작업과 가중치 기반 진행률 추정.
 
 ## 문서 간 기준
 

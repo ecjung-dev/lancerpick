@@ -7,6 +7,8 @@ import com.example.lancerpick.wallet.service.WalletInitializationService;
 import com.example.lancerpick.wallet.service.WalletQueryService;
 import com.example.lancerpick.order.service.OrderCreationService;
 import com.example.lancerpick.order.repository.OrderCreationQueries;
+import com.example.lancerpick.wallet.service.WalletTopupService;
+import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
 
 /** 기본 프로필에도 공개 메인이 동작하는지 동일한 HTTP·Security 계약을 검사한다. */
 @ActiveProfiles(value = "default", inheritProfiles = false)
@@ -32,4 +34,10 @@ class DefaultCatalogApiTests extends CommonApiTests {
 
     @MockitoBean
     OrderCreationQueries orderCreationQueries;
+
+    @MockitoBean
+    WalletTopupService walletTopupService;
+
+    @MockitoBean
+    TopupApprovalTransactions topupApprovalTransactions;
 }

@@ -7,3 +7,5 @@ DB_PASSWORD=CHANGE_ME
 # Optional preparation for Toss test payments. Actual keys are provided separately.
 # Keep the secret key in local-application.properties only; never commit its value.
 TOSS_SECRET_KEY=CHANGE_ME
+# Set true only when explicitly running the Toss test integration.
+TOSS_TOPUP_ENABLED=false

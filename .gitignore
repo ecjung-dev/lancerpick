@@ -11,6 +11,7 @@
 !.env.example
 local-application.properties
 local-test.properties
+keys.env
 /.db
 *.pem
 *.key
