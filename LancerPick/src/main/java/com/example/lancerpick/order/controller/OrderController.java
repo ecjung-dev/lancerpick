@@ -7,6 +7,8 @@ import com.example.lancerpick.order.dto.OrderSide;
 import com.example.lancerpick.order.dto.OrderSummaryResponse;
 import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.order.service.OrderQueryService;
+import com.example.lancerpick.order.service.OrderDecisionService;
+import com.example.lancerpick.order.dto.RejectOrderRequest;
 import com.example.lancerpick.order.service.OrderCreationApiService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -31,11 +33,27 @@ public class OrderController {
     private final OrderCreationApiService orders;
     private final CurrentMemberId currentMember;
     private final OrderQueryService queries;
+    private final OrderDecisionService decisions;
 
-    public OrderController(OrderCreationApiService orders, CurrentMemberId currentMember, OrderQueryService queries) {
+    public OrderController(OrderCreationApiService orders, CurrentMemberId currentMember, OrderQueryService queries,
+            OrderDecisionService decisions) {
         this.orders = orders;
         this.currentMember = currentMember;
         this.queries = queries;
+        this.decisions = decisions;
+    }
+
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<OrderDetailResponse> accept(Authentication authentication, @PathVariable String id) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(decisions.accept(currentMember.require(authentication), id));
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<OrderDetailResponse> reject(Authentication authentication, @PathVariable String id,
+            @Valid @RequestBody RejectOrderRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(decisions.reject(currentMember.require(authentication), id, request.reason()));
     }
 
     @GetMapping

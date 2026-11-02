@@ -169,6 +169,30 @@ public class Order {
         return status;
     }
 
+    public void accept(LocalDateTime now) {
+        requireRequested(now);
+        status = OrderStatus.AWAITING_PAYMENT;
+        acceptedAt = now.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        updatedAt = acceptedAt;
+    }
+
+    public void reject(LocalDateTime now) {
+        requireRequested(now);
+        status = OrderStatus.REJECTED;
+        updatedAt = now.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+    }
+
+    private void requireRequested(LocalDateTime now) {
+        if (status != OrderStatus.REQUESTED) {
+            throw new BusinessException(HttpStatus.CONFLICT, "ORDER_STATE_CONFLICT", "수락·거절 가능한 주문 상태가 아닙니다.");
+        }
+        if (now == null || now.getYear() < 1000 || now.getYear() > 9999 || now.isBefore(updatedAt)) {
+            throw new IllegalStateException("Invalid order decision clock");
+        }
+    }
+
+    public Long getSellerId() { return sellerId; }
+
     public Long getId() {
         return id;
     }

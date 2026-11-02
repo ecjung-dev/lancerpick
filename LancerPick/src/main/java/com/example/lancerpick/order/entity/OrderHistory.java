@@ -82,6 +82,30 @@ public class OrderHistory {
         return new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", message);
     }
 
+    public static OrderHistory accepted(Long orderId, Long sellerId, LocalDateTime at) {
+        return decision(orderId, sellerId, at, OrderHistoryAction.ACCEPTED, OrderStatus.AWAITING_PAYMENT, null);
+    }
+
+    public static OrderHistory rejected(Long orderId, Long sellerId, LocalDateTime at, String reason) {
+        if (reason == null) throw invalidInput("거절 사유가 필요합니다.");
+        String normalized = com.example.lancerpick.common.text.TextNormalizer.normalize(reason);
+        if (normalized.isEmpty() || normalized.codePointCount(0, normalized.length()) > 1000) {
+            throw invalidInput("거절 사유는 공백 정리 후 1~1000자여야 합니다.");
+        }
+        return decision(orderId, sellerId, at, OrderHistoryAction.REJECTED, OrderStatus.REJECTED, normalized);
+    }
+
+    private static OrderHistory decision(Long orderId, Long sellerId, LocalDateTime at,
+            OrderHistoryAction action, OrderStatus toStatus, String reason) {
+        // 기존 생성 팩터리의 ID·시각 검사를 공통으로 사용한다.
+        OrderHistory history = created(orderId, sellerId, at);
+        history.action = action;
+        history.fromStatus = OrderStatus.REQUESTED;
+        history.toStatus = toStatus;
+        history.reason = reason;
+        return history;
+    }
+
     public Long getId() { return id; }
     public Long getOrderId() { return orderId; }
     public Long getActorId() { return actorId; }
