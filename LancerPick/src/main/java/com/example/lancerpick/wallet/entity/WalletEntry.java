@@ -44,6 +44,7 @@ public class WalletEntry {
     @Column(name = "event_key", nullable = false, length = 100)
     private String eventKey;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;
 

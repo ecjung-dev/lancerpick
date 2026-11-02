@@ -50,7 +50,7 @@ public class WalletInitializationService {
         }
         Wallet initialWallet = Wallet.withInitialGrant(memberId, grantedAt);
         int inserted = wallets.insertInitialWalletIfAbsent(initialWallet.getMemberId(),
-                initialWallet.getBalance(), initialWallet.getUpdatedAt());
+                initialWallet.getBalance(), initialWallet.getUpdatedAt().toInstant(ZoneOffset.UTC));
         if (inserted == 0) {
             var existingWallet = wallets.findByMemberIdForUpdate(memberId);
             var grant = entries.findByEventKeyForUpdate(WalletEntry.initialGrantKey(memberId));

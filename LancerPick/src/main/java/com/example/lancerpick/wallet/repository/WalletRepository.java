@@ -2,7 +2,6 @@ package com.example.lancerpick.wallet.repository;
 
 import com.example.lancerpick.wallet.entity.Wallet;
 import jakarta.persistence.LockModeType;
-import java.time.LocalDateTime;
 import java.time.Instant;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,7 +26,7 @@ public interface WalletRepository extends JpaRepository<Wallet, Long> {
     @Modifying(flushAutomatically = true)
     @Query(value = "INSERT IGNORE INTO wallets(member_id, balance, updated_at) VALUES (:memberId, :balance, :updatedAt)", nativeQuery = true)
     int insertInitialWalletIfAbsent(@Param("memberId") long memberId,
-            @Param("balance") long balance, @Param("updatedAt") LocalDateTime updatedAt);
+            @Param("balance") long balance, @Param("updatedAt") Instant updatedAt);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select wallet from Wallet wallet where wallet.memberId = :memberId")

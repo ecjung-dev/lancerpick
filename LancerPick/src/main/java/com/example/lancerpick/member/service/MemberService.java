@@ -10,6 +10,7 @@ import com.example.lancerpick.wallet.service.WalletInitializationService;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -59,7 +60,7 @@ public class MemberService {
             throw emailAlreadyExists();
         }
 
-        LocalDateTime now = LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
         Member member = Member.create(email, passwordEncoder.encode(request.password()), displayName, now);
 
         try {

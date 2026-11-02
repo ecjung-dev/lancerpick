@@ -10,6 +10,7 @@
 - 최초 내역은 `INITIAL_GRANT`, `payment_id=NULL`, `amount_delta=1000000`, `balance_after=1000000`.
 - 고정 이벤트 키는 `INITIAL_GRANT:{memberId}`.
 - 지갑·원장에는 같은 UTC 시각을 사용하고 마이크로초로 절삭한다.
+- `Wallet.updatedAt`·`WalletEntry.createdAt`은 `LOCAL_DATE_TIME` JDBC 매핑으로 UTC 원문을 보존한다. 네이티브 지갑 INSERT에는 UTC로 변환한 `Instant`를 전달한다. `LocalDateTime` 파라미터를 그대로 바인딩하면 JVM 시간대에 따라 DB 원문이 이동할 수 있다.
 - 기존 정상 지급 건을 재호출해도 현재 잔액·시각·기존 내역을 변경하지 않는다.
 
 이 작업만으로 회원가입·로그인·잔액 조회 화면·주문 결제·환불·정산·외부 충전이 완성되는 것은 아니다. 실제 회원 Entity와 회원가입 서비스는 회원 담당자가 구현한다.
@@ -101,6 +102,6 @@ cd C:\project\LancerPick
 
 검증 환경은 기존 개인 DB와 분리한 임시 Docker MySQL 8.4.13, REPEATABLE READ다. 기존 Flyway V1 적용과 지갑·원장 두 Entity의 Hibernate validate를 확인했다. 나머지 14개 테이블의 업무 Entity 매핑 검증으로 확대해 표현하지 않는다.
 
-최종 실행 결과는 [작업표](work-plan.md)의 이번 작업 기록을 따른다. 실제 회원가입 API 연결·권한·잔액 조회·결제·외부 충전·원격 CI·다른 팀원 환경은 별도 검증 대상이다.
+위 검증은 초기 지급 구현 당시의 범위다. 후속 회원가입·초기 지급 UTC SQL 원문 재검증과 최신 실행 결과는 [작업표](work-plan.md)를 따른다. 실제 회원 인증·외부 제공자 호출·원격 CI·다른 팀원 환경 검증과는 구분한다.
 
 DB 없는 메모리 예시(`demo`)에서는 초기화 서비스 빈을 만들지 않는다. DB를 제외하는 기본 프로필 HTTP 테스트에서는 이 서비스를 모의 빈으로 대체하고, 실제 서비스 동작은 위 MySQL 통합 테스트에서 확인한다.

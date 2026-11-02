@@ -39,9 +39,12 @@ public class Member {
     @Column(name = "role", nullable = false, length = 10)
     private MemberRole role;
 
+    // UTC LocalDateTime을 JVM 기본 시간대로 재해석하지 않고 DATETIME에 직접 저장한다.
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;                      // UTC 기준
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;                      // UTC 기준
 
