@@ -1,6 +1,6 @@
 # 랜서픽 프런트엔드
 
-React + TypeScript + Vite 개발 환경입니다. 상품·거래·로그인 경로에 안내 화면을 연결했습니다. 업무 기능과 인증은 아직 구현하지 않았습니다.
+React + TypeScript + Vite 개발 환경입니다. 2026-11-02 기준 공통 요청·UI와 서버 메모리 예시 상품 조회 화면이 구현되어 있습니다. 실제 상품 DB·회원 인증·주문·결제는 아직 미구현입니다.
 
 ## 설치 기준
 
@@ -29,16 +29,18 @@ src/
       api.ts                   # 해당 기능의 API 요청
       types.ts                 # 요청·응답 타입
   shared/
-    api/client.ts              # 공통 HTTP 처리 구현 위치
+    api/client.ts              # 쿠키·CSRF·204·공통 오류 처리
+    api/types.ts               # 공통 목록 응답 타입
     components/                # 공통 레이아웃·UI
-    utils/                     # 공통 금액·날짜 표시 등
+    lib/                       # 금액·한국 시간 표시·문자열 정규화
+    utils/                     # 추가 유틸리티용 빈 폴더
   main.tsx                     # 앱 실행
   index.css                    # 전역 스타일
 ```
 
-auth와 products도 orders와 같은 하위 구조를 사용합니다. api.ts·types.ts·공통 client.ts는 구현 위치만 준비한 상태입니다. 실제로 반복되는 로직이 생기면 hooks를, 조회·갱신 로직이 늘면 queries.ts를 분리합니다. 업무 화면의 스타일은 해당 컴포넌트 옆에 *.module.css로 둡니다.
+auth와 products도 orders와 같은 기능별 구조를 사용합니다. 공통 client.ts와 types.ts는 구현되어 있고 products에는 예시 조회용 api.ts·types.ts·queries.ts·카드·미리보기가 있습니다. auth·orders의 api.ts·types.ts는 아직 골격입니다. 공통 코드를 복사하지 말고 기능에서 재사용합니다. 업무 화면의 스타일은 해당 컴포넌트 옆에 *.module.css로 둡니다.
 
-현재 경로는 / (상품), /orders (거래), /login (로그인)입니다. 거래 화면은 안내만 표시하며 실제 주문 데이터를 요청하지 않습니다. 인증 및 거래 접근 제어는 구현 시 별도로 연결합니다.
+현재 `/`는 `/api/demo/categories`, `/api/demo/products`에서 메모리 예시 데이터를 받아 검색·카테고리·페이지·미리보기를 표시합니다. `/orders`, `/login`, `/signup`은 안내 화면이며 실제 주문·인증 요청을 하지 않습니다. 상품 카드는 실제 상세 API가 아닌 임시 미리보기입니다. 상품 담당자가 실제 `/api/products`를 구현하면 API 경로·타입·조회 키·예시 표시를 함께 전환합니다.
 
 ## 팀원 실행
 
@@ -58,6 +60,7 @@ npm.cmd run dev
 ## 검사
 
 ```powershell
+npm.cmd run test:api
 npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd run build
@@ -65,8 +68,8 @@ npm.cmd run build
 
 ## 백엔드 연결 준비
 
-Vite는 /api 요청을 http://localhost:8080 으로 전달합니다. 백엔드는 별도로 실행해야 합니다. 프런트 코드에서는 /api 상대 경로를 사용합니다. 이 프록시는 개발용이며 배포 환경은 Nginx 등에서 별도 설정합니다.
+Vite는 /api 요청을 기본 http://127.0.0.1:8080 으로 전달합니다. 포트 변경 시 셸의 API_PROXY_TARGET을 사용하고 [프런트 가이드](../docs/frontend-common-guide.md#2-3-백엔드-포트가-8081일-때만)를 따릅니다. 백엔드는 별도로 실행해야 합니다. 프런트 코드에서는 /api 상대 경로를 사용합니다. 이 프록시는 개발용이며 배포 환경은 Nginx 등에서 별도 설정합니다.
 
-백엔드 연결·세션 로그인·CSRF 검증은 아직 수행하지 않았습니다. JDK는 백엔드 기준인 25를 따르며 React 실행에는 Node.js를 사용합니다.
+공통 요청의 CSRF·204·오류·중복 토큰 조회 등의 동작은 `test:api`로 검사합니다. 실제 로그인·로그아웃·계정 전환과 주문·결제 연결은 미구현이며 브라우저·실제 DB의 종단 간 검증 완료를 뜻하지 않습니다. 현재 CI에는 test:api가 포함되지 않습니다. JDK는 백엔드 기준인 25를 따르며 React 실행에는 Node.js를 사용합니다. 자세한 구현 방법은 [프런트 공통 가이드](../docs/frontend-common-guide.md)를 참고합니다.
 
 package.json과 package-lock.json은 함께 커밋합니다. node_modules와 dist, 실제 환경변수 비밀값은 커밋하지 않습니다.

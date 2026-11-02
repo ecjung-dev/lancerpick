@@ -10,10 +10,11 @@
 | --- | --- | --- |
 | 공통 | LancerPick/src/main/resources/application.properties | OSIV=false, ddl-auto=validate, JDBC UTC, Flyway 활성화 |
 | 일반 로컬 실행 | application-default.properties | 기존 local-application.properties를 선택적으로 import, DB_* 사용 |
+| demo 예시 실행 | application-demo.properties | DB·JPA·Flyway 자동 설정 제외, 개인 파일 import 없음, 로컬 127.0.0.1 수신 |
 | 통합 테스트 | src/test/resources/application-test.properties | TEST_DB_* 사용, 일반 개인 파일 import 없음 |
 | CI | .github/workflows/ci.yml | 임시 lancerpick_ci와 TEST_DB_*, JPA 공통 설정 재사용 |
 
-`@IntegrationTest`는 `@SpringBootTest`, `@ActiveProfiles("test")`, DB 접속 전 검사 Initializer를 묶은 테스트 어노테이션이다. 새 Spring 통합 테스트에도 이를 사용한다. 순수 단위 테스트에는 필요하지 않다. 애플리케이션 실행 프로필을 별도로 지정한다면 default 프로필의 개인 파일 import가 적용되지 않으므로 DB_* 환경변수를 제공한다.
+`@IntegrationTest`는 `@SpringBootTest`, `@ActiveProfiles("test")`, DB 접속 전 검사 Initializer를 묶은 테스트 어노테이션이다. DB를 사용하는 새 Spring 통합 테스트에도 이를 사용한다. 순수 단위 테스트와 DB를 명시적으로 제외한 공통 HTTP 테스트에는 적용하지 않는다. DB를 사용하는 애플리케이션 실행 프로필을 별도로 지정하면 default 프로필의 개인 파일 import가 적용되지 않으므로 DB_* 환경변수를 제공한다. demo는 의도적으로 DB 자동 설정을 제외하므로 DB_*가 필요 없다. prod는 배포용 이름이며 현재 파일만으로 배포 환경·인증·쿠키 정책이 완성되지는 않는다. 예시 API는 prod에서 제외된다.
 
 ## 2. 로컬 테스트 DB 준비
 
@@ -52,6 +53,21 @@ $testDbCredential = $null
 테스트 URL은 단일 MySQL 호스트와 DB 이름 `lancerpick_test` 또는 `lancerpick_ci`만 허용한다. 개발 DB·유사한 접미 이름·다른 DB 드라이버는 컨텍스트 초기화 단계에서 거부한다. 커스텀 TEST_DB_URL에는 `connectionTimeZone=UTC`를 유지한다. IPv6·다중 호스트 등 다른 URL 형식이 필요하면 검토 후 검사와 테스트를 함께 수정한다.
 
 ## 4. 검사 구분
+
+검사는 실행 대상에 따라 아래처럼 구분한다.
+
+| 검사 | DB·개인 파일 사용 | 확인하는 것 |
+| --- | --- | --- |
+| common 패키지 테스트 | 없음; 기본 프로필 검사도 테스트 설정으로 DB·개인 import 제외 | 예시 API·401/403·CSRF·204·정규화 |
+| TestDatabaseInitializerTests | 없음 | 테스트 DB URL·설정 보호 |
+| @IntegrationTest 전체 컨텍스트·업무 DB 테스트 | TEST_DB_*와 전용 MySQL 필요 | 컨텍스트·마이그레이션·해당 업무 검증 |
+| CI 전체 빌드 | 임시 lancerpick_ci | 저장소에 실제 포함된 테스트; 미구현 기능 검증은 아님 |
+
+DB 없는 공통 검사는 다음과 같다.
+
+```powershell
+.\gradlew.bat test --tests "com.example.lancerpick.common.*" --tests "com.example.lancerpick.support.TestDatabaseInitializerTests"
+```
 
 DB 없이 보호 검사만 실행하려면 백엔드 폴더에서 다음 명령을 사용한다.
 

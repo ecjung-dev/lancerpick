@@ -1,6 +1,6 @@
 # 랜서픽 LancerPick
 
-고정 가격 프리랜서 서비스의 주문·결제·납품·구매 확정·판매 수익을 관리하는 4인 팀 프로젝트입니다. 현재는 개발환경과 패키지 골격을 구성하는 단계입니다.
+고정 가격 프리랜서 서비스의 주문·결제·납품·구매 확정·판매 수익을 관리하는 4인 팀 프로젝트입니다. 2026-11-02 기준 공통 HTTP·Security 기반과 메모리 예시 상품 조회·화면이 구현되어 있습니다. 실제 회원 인증·상품 DB·주문·결제 등 업무 기능은 후속 구현 대상입니다.
 
 ## 팀 역할
 
@@ -57,7 +57,7 @@ MySQL을 실행하고 `lancerpick` 데이터베이스와 접속 가능한 개인
 CREATE DATABASE IF NOT EXISTS lancerpick CHARACTER SET utf8mb4;
 ```
 
-DB 계정에는 해당 데이터베이스에서 개발 및 Flyway 마이그레이션에 필요한 권한이 있어야 합니다. 업무 테이블은 아직 작성하지 않았으며, 이후 검토된 Flyway SQL로 관리합니다.
+DB 계정에는 해당 데이터베이스에서 개발 및 Flyway 마이그레이션에 필요한 권한이 있어야 합니다. 16개 업무 테이블의 검토용 SQL은 [docs/sql/V1__init.sql](docs/sql/V1__init.sql)에 있습니다. 아직 실행용 Flyway 경로에는 적용하지 않았으며 실제 MySQL 적용·엔티티 매핑 검증은 남아 있습니다.
 
 ### 2. 개인 접속 정보 작성
 
@@ -92,7 +92,15 @@ DB_PASSWORD=본인의_DB비밀번호
 
 IntelliJ에서는 `LancerPick`을 Gradle 프로젝트로 열고 Project SDK와 Gradle JVM을 모두 25로 지정합니다. `LancerPickApplication`을 실행하며 Working directory는 `build.gradle`이 있는 `LancerPick` 폴더로 설정합니다. 개인 설정의 상대 경로는 이 폴더를 기준으로 읽습니다.
 
-현재 업무 API와 로그인은 미구현입니다. Spring Security 기본 로그인 화면이나 401/403 응답은 업무 기능 구현 완료를 의미하지 않습니다. 백엔드 실행·DB 연결 검증 결과는 실제 실행 후 별도로 기록합니다.
+현재 메모리 예시 조회 `/api/demo/categories`, `/api/demo/products`와 CSRF 토큰 조회 `/api/auth/csrf`, 공통 오류 응답은 구현되어 있습니다. formLogin·httpBasic·기본 logout은 비활성화되어 있고 실제 회원 인증·세션 로그인·업무 API는 미구현입니다. 401/403·CSRF 검사 통과를 실제 로그인 구현 완료로 해석하지 않습니다. 실제 DB 연결 결과는 별도로 기록합니다.
+
+DB 없이 예시 화면만 확인하려면 이 폴더에서 선택적으로 실행합니다.
+
+```powershell
+.\gradlew.bat bootRun --args="--spring.profiles.active=demo"
+```
+
+`demo`는 DB·JPA·Flyway 자동 설정과 개인 DB 파일 import를 사용하지 않으며 127.0.0.1에서만 수신합니다. DB 검증·운영 배포용 프로필이 아닙니다. 기본 실행은 개인 DB 설정이 필요합니다. [실행 방식 구분](docs/test-database.md#1-설정-구분)을 참고합니다.
 
 ## 프런트엔드 실행
 
@@ -108,7 +116,7 @@ npm.cmd run dev
 
 PowerShell에서 `npm.ps1` 실행 정책 오류가 없다면 `npm.cmd` 대신 `npm`을 사용해도 됩니다. 5173 포트가 사용 중이면 기존 Vite 서버를 종료한 뒤 다시 실행합니다.
 
-현재 `/`, `/orders`, `/login`에는 안내 화면이 연결되어 있습니다. 안내 화면은 백엔드 없이도 열 수 있습니다. 실제 API 기능 개발 시에는 백엔드도 함께 실행해야 합니다.
+현재 `/`는 서버의 메모리 예시 상품을 조회하며 검색·카테고리·페이지·상품 미리보기를 제공합니다. `/orders`, `/login`, `/signup`은 안내 화면입니다. 상품 화면의 조회에는 백엔드가 필요하며, 연결 실패를 프런트 샘플로 자동 대체하지 않습니다. 실제 상품 DB 조회·상세·주문은 아직 미구현입니다.
 
 ## 프런트와 백엔드 연결
 
@@ -116,19 +124,26 @@ PowerShell에서 `npm.ps1` 실행 정책 오류가 없다면 `npm.cmd` 대신 `n
 브라우저 → localhost:5173 → /api 요청 프록시 → localhost:8080
 ```
 
-프런트에서는 `/api/...` 상대 경로로 요청합니다. 개발 프록시는 `LancerPickFrontend/vite.config.ts`에 설정되어 있습니다. 세션 로그인·CSRF·실제 업무 API 연결은 후속 구현 대상입니다.
+프런트에서는 `/api/...` 상대 경로로 요청합니다. 개발 프록시는 `LancerPickFrontend/vite.config.ts`에 설정되어 있습니다. 공통 요청 함수는 세션 쿠키·CSRF 헤더·204·오류 처리를 제공합니다. 실제 로그인·로그아웃 후 인증 상태 및 캐시 연동과 업무 API 연결은 후속 구현 대상입니다. 백엔드 포트를 바꾸면 [API_PROXY_TARGET 설정](docs/frontend-common-guide.md#2-3-백엔드-포트가-8081일-때만)을 따릅니다.
 
 ## 빌드와 검사
 
 프런트 폴더에서 실행합니다.
 
 ```powershell
+npm.cmd run test:api
 npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd run build
 ```
 
-백엔드 폴더에서 실행합니다.
+아래 Gradle 명령은 백엔드 폴더에서 실행합니다. 공통 HTTP·Security·정규화 검사는 DB 없이 실행할 수 있습니다. 개인 DB 파일을 읽지 않는 테스트 구성을 사용하며 실제 DB 연결·회원 로그인·업무 기능 검증을 대신하지 않습니다.
+
+```powershell
+.\gradlew.bat test --tests "com.example.lancerpick.common.*" --tests "com.example.lancerpick.support.TestDatabaseInitializerTests"
+```
+
+전체 빌드는 아래 테스트 전용 DB 설정을 준비한 뒤 백엔드 폴더에서 실행합니다.
 
 ```powershell
 .\gradlew.bat clean build
@@ -149,7 +164,7 @@ npm.cmd run build
 
 CI는 실행마다 `lancerpick_ci` DB를 만들고 종료 시 폐기합니다. 워크플로는 `TEST_DB_*`를 전달하며 JPA 설정은 백엔드 공통 파일을 사용합니다. 워크플로의 `ci_only_*` 값은 격리된 테스트 전용 값이며 실제 접속 정보가 아닙니다. 개인 설정 파일이나 로컬 DB를 사용하지 않고 별도 Secrets 등록도 필요하지 않습니다. JDBC의 공개키 조회 허용·TLS 비활성화 옵션은 CI 임시 DB 전용입니다.
 
-테이블을 추가할 때는 엔티티와 Flyway SQL을 함께 반영해야 합니다. CI는 테스트를 생략하거나 스키마를 자동 생성해 검사를 우회하지 않습니다. 현재 프런트 자동 테스트 스크립트는 없으므로 타입·린트·빌드를 검사하고, 기능 테스트가 생기면 해당 명령을 추가합니다.
+테이블을 추가할 때는 엔티티와 Flyway SQL을 함께 반영해야 합니다. CI는 테스트를 생략하거나 스키마를 자동 생성해 검사를 우회하지 않습니다. 프런트에는 `test:api` 자동 테스트가 있으나 현재 CI는 타입·린트·빌드만 실행합니다. `test:api`와 docs SQL 검사 스크립트는 현재 CI에 연결되어 있지 않습니다. CI 성공을 이 검사들의 실행이나 검토용 16개 테이블의 적용 성공으로 해석하지 않습니다. 이번 문서 갱신에서는 CI 설정을 변경하지 않습니다.
 
 이 구성은 자동 검사만 수행합니다. 실제 GitHub 실행 결과는 push 또는 PR 후 확인해야 합니다. PR 병합 시 두 검사를 필수로 강제하려면 저장소에서 브랜치 보호 또는 규칙을 별도로 설정합니다.
 
@@ -165,3 +180,5 @@ CI는 실행마다 `lancerpick_ci` DB를 만들고 종료 시 폐기합니다. �
 | `/api` 연결 거부 | 8080 백엔드가 실행 중인지 확인 |
 
 세부 구조는 [백엔드 README](LancerPick/README.md)와 [프런트엔드 README](LancerPickFrontend/README.md)를 참고합니다.
+
+기능 구현 방법은 [백엔드 공통 가이드](docs/backend-common-guide.md)와 [프런트 공통 가이드](docs/frontend-common-guide.md), 개발 착수 순서·남은 결정은 [작업표](docs/work-plan.md#5-개발-착수-순서와-연결-계약)를 참고합니다.
