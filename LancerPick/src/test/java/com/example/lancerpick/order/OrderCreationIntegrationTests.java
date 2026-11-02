@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.RepeatedTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -48,12 +49,13 @@ class OrderCreationIntegrationTests {
     @Autowired OrderCreationService service;
     @Autowired OrderSnapshotRepository snapshots;
     @MockitoSpyBean OrderHistoryRepository histories;
-    @Autowired OrderCreationQueries source;
+    @MockitoSpyBean OrderCreationQueries source;
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager transactionManager;
     @MockitoSpyBean OrderTerms terms;
 
     private final List<Long> members = new ArrayList<>();
+    private final List<Long> extraProducts = new ArrayList<>();
     private long buyerId;
     private long sellerId;
     private long categoryId;
@@ -76,11 +78,14 @@ class OrderCreationIntegrationTests {
     void cleanup() {
         reset(terms);
         reset(histories);
-        if (productId != 0) {
-            jdbc.update("DELETE FROM order_histories WHERE order_id IN (SELECT id FROM orders WHERE product_id = ?)", productId);
-            jdbc.update("DELETE FROM order_snapshots WHERE order_id IN (SELECT id FROM orders WHERE product_id = ?)", productId);
-            jdbc.update("DELETE FROM orders WHERE product_id = ?", productId);
-            jdbc.update("DELETE FROM products WHERE id = ?", productId);
+        reset(source);
+        var products = new ArrayList<>(extraProducts);
+        if (productId != 0) products.add(productId);
+        for (long id : products) {
+            jdbc.update("DELETE FROM order_histories WHERE order_id IN (SELECT id FROM orders WHERE product_id = ?)", id);
+            jdbc.update("DELETE FROM order_snapshots WHERE order_id IN (SELECT id FROM orders WHERE product_id = ?)", id);
+            jdbc.update("DELETE FROM orders WHERE product_id = ?", id);
+            jdbc.update("DELETE FROM products WHERE id = ?", id);
         }
         if (categoryId != 0) jdbc.update("DELETE FROM categories WHERE id = ?", categoryId);
         for (long id : members) jdbc.update("DELETE FROM members WHERE id = ?", id);
@@ -283,6 +288,45 @@ class OrderCreationIntegrationTests {
         assertThat(results).allMatch(OrderCreationService.Result::created);
         assertThat(results.stream().map(OrderCreationService.Result::orderId).distinct().count()).isEqualTo(2L);
         assertCounts(2);
+    }
+
+    @RepeatedTest(5)
+    void twoMembersCanBuyEachOthersProductsConcurrently() throws Exception {
+        long buyersProduct = insert("""
+                INSERT INTO products(seller_id, category_id, title, description, scope_description,
+                    preparation_description, price, duration_days, created_at, updated_at)
+                VALUES (?, ?, 'buyer product', 'description', 'scope', 'preparation', 100000, 3, ?, ?)
+                """, buyerId, categoryId, FIXTURE_TIME, FIXTURE_TIME);
+        extraProducts.add(buyersProduct);
+        var bothReadSeller = new java.util.concurrent.CyclicBarrier(2);
+        // 두 요청 모두 상대 판매자를 발견한 뒤 잠금 경쟁을 시작한다. 서비스·DB 저장은 실제 코드다.
+        doAnswer(invocation -> {
+            Object result = invocation.callRealMethod();
+            bothReadSeller.await(10, TimeUnit.SECONDS);
+            return result;
+        }).when(source).findProductSellerId(org.mockito.ArgumentMatchers.anyLong());
+        var key = UUID.randomUUID().toString();
+        List<OrderCreationService.Result> results = runTogether(List.of(
+                () -> service.create(buyerId, new CreateOrderRequest(Long.toString(productId), 0L, "A buys B", key)),
+                () -> service.create(sellerId, new CreateOrderRequest(Long.toString(buyersProduct), 0L, "B buys A", key))));
+
+        assertThat(results).allMatch(OrderCreationService.Result::created);
+        assertThat(results.stream().map(OrderCreationService.Result::orderId).distinct().count()).isEqualTo(2L);
+        for (var result : results) {
+            assertThat(snapshots.findById(result.orderId())).isPresent();
+            assertThat(histories.findByOrderIdOrderByCreatedAtAscIdAsc(result.orderId())).hasSize(1);
+        }
+        assertCounts(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE product_id = ?", Long.class, buyersProduct))
+                .isEqualTo(1L);
+    }
+
+    @Test
+    void changedSellerAfterPreReadIsRejectedBeforeAnyInsert() {
+        // 판매자 사전 조회가 오래된 경우를 유도해 잠그지 않은 회원을 참조하기 전에 거절하는지 확인한다.
+        doReturn(java.util.Optional.of(buyerId)).when(source).findProductSellerId(productId);
+        assertBusiness(() -> service.create(buyerId, request(UUID.randomUUID(), "text")), "PRODUCT_VERSION_CONFLICT");
+        assertCounts(0);
     }
 
     @Test

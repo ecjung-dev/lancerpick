@@ -58,8 +58,9 @@ public class OrderCreationService {
         String key = request.requestKeyAsUuid().toString();
         String requirements = request.normalizedRequirements();
 
-        // 같은 구매자는 회원 행에서 직렬화하고, 기존 키와 스냅샷은 현재값으로 잠금 조회한다.
-        if (!source.lockBuyer(buyerId)) throw authenticationRequired();
+        // 판매자 ID만 사전 조회해 회원 잠금 순서를 정한다. 상품 상태·버전 검사는 기존 키 확인 후다.
+        Long sellerIdForLock = source.findProductSellerId(productId).orElse(null);
+        if (!source.lockParticipants(buyerId, sellerIdForLock)) throw authenticationRequired();
         var existing = orders.findForCreation(buyerId, key);
         if (existing.isPresent()) {
             Order order = existing.get();
@@ -75,6 +76,10 @@ public class OrderCreationService {
 
         var product = source.lockProduct(productId).orElseThrow(OrderCreationService::productNotFound);
         if (product.hidden()) throw productNotFound();
+        // 사전 조회 후 소유자가 바뀌면 잠그지 않은 회원의 FK를 참조하지 않는다.
+        if (sellerIdForLock == null || product.sellerId() != sellerIdForLock) {
+            throw new BusinessException(HttpStatus.CONFLICT, "PRODUCT_VERSION_CONFLICT", "변경된 상품 정보를 다시 확인해 주세요.");
+        }
         if (!"ON_SALE".equals(product.saleStatus())) {
             throw new BusinessException(HttpStatus.CONFLICT, "PRODUCT_NOT_ORDERABLE", "현재 주문할 수 없는 상품입니다.");
         }

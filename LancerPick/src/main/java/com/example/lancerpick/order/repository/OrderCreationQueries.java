@@ -15,9 +15,25 @@ public class OrderCreationQueries {
         this.jdbc = jdbc;
     }
 
-    public boolean lockBuyer(long buyerId) {
+    public Optional<Long> findProductSellerId(long productId) {
+        return jdbc.query("SELECT seller_id FROM products WHERE id = ?",
+                (rs, row) -> rs.getLong("seller_id"), productId).stream().findFirst();
+    }
+
+    /** FK가 참조할 두 회원을 전역 ID 순서로 잠가 교차 구매의 잠금 역전을 막는다. */
+    public boolean lockParticipants(long buyerId, Long sellerId) {
+        if (sellerId == null || buyerId <= sellerId) {
+            boolean buyerExists = lockMember(buyerId);
+            if (sellerId != null && sellerId != buyerId) lockMember(sellerId);
+            return buyerExists;
+        }
+        lockMember(sellerId);
+        return lockMember(buyerId);
+    }
+
+    private boolean lockMember(long memberId) {
         return !jdbc.query("SELECT id FROM members WHERE id = ? FOR UPDATE",
-                (rs, row) -> rs.getLong("id"), buyerId).isEmpty();
+                (rs, row) -> rs.getLong("id"), memberId).isEmpty();
     }
 
     public Optional<ProductForOrder> lockProduct(long productId) {
