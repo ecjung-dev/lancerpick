@@ -11,6 +11,8 @@ import com.example.lancerpick.order.service.OrderDecisionService;
 import com.example.lancerpick.order.dto.RejectOrderRequest;
 import com.example.lancerpick.order.dto.CreateDeliveryRequest;
 import com.example.lancerpick.order.service.OrderDeliveryService;
+import com.example.lancerpick.order.service.OrderRevisionService;
+import com.example.lancerpick.order.dto.CreateRevisionRequest;
 import com.example.lancerpick.order.service.OrderCreationApiService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -37,14 +39,23 @@ public class OrderController {
     private final OrderQueryService queries;
     private final OrderDecisionService decisions;
     private final OrderDeliveryService deliveries;
+    private final OrderRevisionService revisions;
 
     public OrderController(OrderCreationApiService orders, CurrentMemberId currentMember, OrderQueryService queries,
-            OrderDecisionService decisions, OrderDeliveryService deliveries) {
+            OrderDecisionService decisions, OrderDeliveryService deliveries, OrderRevisionService revisions) {
         this.orders = orders;
         this.currentMember = currentMember;
         this.queries = queries;
         this.decisions = decisions;
         this.deliveries = deliveries;
+        this.revisions = revisions;
+    }
+
+    @PostMapping("/{id}/revision-request")
+    public ResponseEntity<OrderDetailResponse> revision(Authentication authentication, @PathVariable String id,
+            @Valid @RequestBody CreateRevisionRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(revisions.request(currentMember.require(authentication), id, request));
     }
 
     @PostMapping("/{id}/deliveries")

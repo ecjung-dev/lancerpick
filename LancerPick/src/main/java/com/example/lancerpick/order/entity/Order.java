@@ -192,6 +192,19 @@ public class Order {
     }
 
     public Long getSellerId() { return sellerId; }
+    public Long getBuyerId() { return buyerId; }
+    public int getDurationDaysSnapshot() { return durationDaysSnapshot; }
+
+    public void requestRevision(LocalDateTime at) {
+        if (status != OrderStatus.AWAITING_CONFIRMATION) {
+            throw new BusinessException(HttpStatus.CONFLICT, "ORDER_STATE_CONFLICT", "납품 확인 대기 주문만 수정 요청할 수 있습니다.");
+        }
+        if (at == null || at.getYear() < 1000 || at.getYear() > 9999 || at.isBefore(updatedAt)) {
+            throw new IllegalStateException("Invalid revision clock");
+        }
+        status = OrderStatus.REVISION_IN_PROGRESS;
+        updatedAt = at.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+    }
 
     public void deliver(LocalDateTime at) {
         if (status != OrderStatus.IN_PROGRESS && status != OrderStatus.REVISION_IN_PROGRESS) {

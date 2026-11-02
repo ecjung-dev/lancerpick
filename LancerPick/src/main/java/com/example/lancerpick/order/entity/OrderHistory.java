@@ -93,6 +93,15 @@ public class OrderHistory {
         return history;
     }
 
+    public static OrderHistory revisionRequested(Long orderId, Long buyerId, LocalDateTime at, String reason) {
+        if (reason == null) throw invalidInput("수정 사유가 필요합니다.");
+        String normalized = com.example.lancerpick.common.text.TextNormalizer.normalize(reason);
+        if (normalized.isEmpty() || normalized.codePointCount(0, normalized.length()) > 1000) throw invalidInput("수정 사유는 1~1000자여야 합니다.");
+        OrderHistory history = decision(orderId, buyerId, at, OrderHistoryAction.REVISION_REQUESTED, OrderStatus.REVISION_IN_PROGRESS, normalized);
+        history.fromStatus = OrderStatus.AWAITING_CONFIRMATION;
+        return history;
+    }
+
     public static OrderHistory rejected(Long orderId, Long sellerId, LocalDateTime at, String reason) {
         if (reason == null) throw invalidInput("거절 사유가 필요합니다.");
         String normalized = com.example.lancerpick.common.text.TextNormalizer.normalize(reason);

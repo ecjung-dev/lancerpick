@@ -1,6 +1,6 @@
 # 최초 납품·재납품 API
 
-작성일: 2026-11-03. 담당: 정은찬. 백엔드 API 구현이며 React 주문 화면·실제 로그인·주문 결제·수정 요청 쓰기는 별도다.
+작성일: 2026-11-03. 담당: 정은찬. 백엔드 API 구현이며 React 주문 화면·실제 로그인·주문 결제는 별도다. 구매자 수정 요청은 [수정 요청 API](order-revision.md)에 연결했다.
 
 ## HTTP 계약
 
@@ -24,7 +24,7 @@ POST /api/orders/{id}/deliveries
 
 이미 제출한 회차는 내용이 같거나 현재 상태가 수정 진행으로 바뀌었어도 409 DELIVERY_ALREADY_SUBMITTED다. 미존재 회차라도 상태와 맞지 않으면 409 DELIVERY_SEQUENCE_CONFLICT, 대기 취소 요청이 있으면 409 CANCELLATION_PENDING이다. 클라이언트는 같은 회차의 재전송을 다음 회차로 바꾸지 않고 GET 상세로 실제 기록을 확인한다.
 
-재납품은 같은 주문의 최초 1회차 납품을 참조한 수정 요청 1건이 있어야 한다. 상태만 REVISION_IN_PROGRESS인데 이 근거가 누락되거나 연결이 틀리면 500 DATA_INTEGRITY_ERROR다. 수정 요청 쓰기 API는 후속 작업이다.
+재납품은 같은 주문의 최초 1회차 납품을 참조한 수정 요청 1건이 있어야 한다. 상태만 REVISION_IN_PROGRESS인데 이 근거가 누락되거나 연결이 틀리면 500 DATA_INTEGRITY_ERROR다. 수정 요청 쓰기는 [구매자 수정 요청 API](order-revision.md)를 따른다.
 
 Delivery는 기존 deliveries에 설명·URL·회차·UTC 마이크로초 제출 시각을 저장한다. DELIVERED 이력의 actor는 판매자, fromStatus는 IN_PROGRESS/REVISION_IN_PROGRESS, toStatus는 AWAITING_CONFIRMATION, reason은 null이다. 주문 updated_at을 갱신하고 최초/수정 납기·결제 시각·금액은 보존한다. 제출 시각과 기한을 사용한 화면의 지연 표시는 후속 구현이다.
 
@@ -34,4 +34,4 @@ READ_COMMITTED 트랜잭션 안에서 납품·주문 상태·이력·상세 응�
 
 OrderDeliveryApiIntegrationTests는 실제 HTTP 필터·Controller·Service·MySQL을 사용한다. 로그인은 테스트 principal, 결제·수정 요청·취소 요청의 선행 상태는 SQL fixture다. 정상 1/2회차·이전 회차 재전송·현재 상태/취소 요청 충돌·URL/문자열/회차/ID 경계·권한/CSRF·동시 제출·실제 DB 제약 실패 및 응답 조립 실패의 롤백을 확인한다. 전체 실행 결과는 [작업표](work-plan.md)를 따른다.
 
-스키마·V1/V2·프런트 코드는 변경하지 않았다. 실제 결제/수정 요청 API 연결·브라우저·원격 CI·다중 서버 부하·모든 상태 변경 간 경쟁은 별도 검증 대상이다.
+스키마·V1/V2·프런트 코드는 변경하지 않았다. 후속 수정 요청 통합 테스트에서 실제 최초 납품→수정 요청→재납품 연결도 확인했다. 실제 결제 API 연결·브라우저·원격 CI·다중 서버 부하·모든 상태 변경 간 경쟁은 별도 검증 대상이다.
