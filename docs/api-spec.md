@@ -100,7 +100,7 @@ ProductPatch는 ProductInput의 7개 필드 중 바꿀 필드만 보내는 JSON 
 
 ## 4 주문 조회와 생성 정은찬
 
-2026-11-02 구현 후속: [주문 생성 내부 서비스](order-creation.md)에 저장·재전송·잠금·오류 우선순위와 검증 범위를 기록한다. 내부 서비스 구현이며 아래 HTTP API·OrderDetail 응답의 구현 완료를 뜻하지 않는다.
+2026-11-02 구현 후속: [주문 생성 서비스·HTTP 연결](order-creation.md)에 저장·재전송·잠금·응답과 검증 범위를 기록한다. POST /orders의 인증 principal 연결·201/200 OrderDetail 응답을 구현했다. 실제 로그인, GET 주문 목록/상세, 후속 주문 명령·React 연결은 별도다.
 
 | 메서드·경로 | 입력·권한 | 출력 |
 | --- | --- | --- |
@@ -126,7 +126,7 @@ deliveries 항목: id,sequenceNo,description,resultUrl,submittedAt. revisionRequ
 
 payment: id,amount,feeRateBps,status,paidAt,refundedAt. review는 8절의 Review 계약을 따른다. cancellationRequests는 6절 cancellationRequest 계약의 배열이다.
 
-생성 전 단일 객체 payment·revisionRequest·review는 null, 이력·납품·취소 요청·allowedActions는 빈 배열로 표현한다. 미발생 시각 acceptedAt·buyerConfirmedTermsAt·paidAt·originalDueAt·revisionDueAt·currentDueAt·completedAt·cancelledAt 및 refundedAt·resolvedAt·resolvedBy는 null이다. 선택 입력 portfolioUrl·review.content·responseReason은 미입력 시 null이다. 나머지 필수 필드는 생략하지 않는다.
+하위 기록이 아직 없으면 단일 객체 payment·revisionRequest·review는 null, 이력·납품·취소 요청은 빈 배열로 표현한다. 최초 주문 생성 응답에는 CREATED 이력 1건이 있으며 allowedActions는 현재 상태·실행자에 따라 계산한다(신규 REQUESTED 주문의 구매자는 CANCEL). 허용 행동이 없으면 빈 배열이다. 미발생 시각 acceptedAt·buyerConfirmedTermsAt·paidAt·originalDueAt·revisionDueAt·currentDueAt·completedAt·cancelledAt 및 refundedAt·resolvedAt·resolvedBy는 null이다. 선택 입력 portfolioUrl·review.content·responseReason은 미입력 시 null이다. 나머지 필수 필드는 생략하지 않는다.
 
 ## 5 주문 명령 정은찬과 황준범
 

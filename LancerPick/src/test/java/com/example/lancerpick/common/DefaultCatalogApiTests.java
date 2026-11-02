@@ -8,7 +8,9 @@ import com.example.lancerpick.member.service.MemberService;
 import com.example.lancerpick.wallet.service.WalletInitializationService;
 import com.example.lancerpick.wallet.service.WalletQueryService;
 import com.example.lancerpick.order.service.OrderCreationService;
+import com.example.lancerpick.order.service.OrderCreationApiService;
 import com.example.lancerpick.order.repository.OrderCreationQueries;
+import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.wallet.service.WalletTopupService;
 import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
 
@@ -23,6 +25,11 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
                 + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
 })
 class DefaultCatalogApiTests extends CommonApiTests {
+    @MockitoBean
+    OrderCreationApiService orderCreationApiService;
+
+    @MockitoBean
+    OrderDetailQueries orderDetailQueries;
     // DB 없는 공통 HTTP 검사에서는 실제 카테고리 DB 조회를 사용하지 않는다.
     @MockitoBean
     private CategoryService categoryService;

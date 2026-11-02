@@ -28,7 +28,7 @@
 
 ## 현재 프로젝트와 실행
 
-- [주문 생성 내부 서비스](order-creation.md): 원자적 생성·재전송·잠금과 UTC 원문 저장 검증. 공개 API·인증·실제 상품 쓰기 연동과 구분한다.
+- [주문 생성 서비스·HTTP 연결](order-creation.md): 원자적 생성·재전송·잠금, POST 주문 생성의 201/200 상세 응답과 UTC 검증. 실제 로그인·상품 쓰기·후속 주문 명령과 구분한다.
 
 - [최초 Flyway V1](../LancerPick/src/main/resources/db/migration/V1__init.sql) · [스키마 확인 쿼리](sql/inspect-physical-schema.sql): 16개 테이블 기준. 2026-11-02 실행용 경로로 이동했으며 docs에 SQL 복사본을 유지하지 않는다. MySQL 8.0.46 테스트 DB의 V1 적용·전체 빌드 성공은 사용자 실행 결과로 확인했다. [검증 기록](physical-db.md#2026-11-02-사용자-실행-검증-결과)을 참고하고 기준 8.4 재현·엔티티 매핑·업무 검증은 별도로 진행한다. 일반 실행·DB 통합 테스트 전 대상 DB·기존 이력을 확인한다.
 

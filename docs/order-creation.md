@@ -1,10 +1,10 @@
-# 주문 생성 내부 서비스
+# 주문 생성 서비스·HTTP 연결
 
 작성일: 2026-11-02. 담당: 정은찬. 브랜치: `codex/order-create-service`.
 
 ## 구현 범위
 
-API 명세 4·10·11절과 기존 SQL을 바탕으로 `OrderCreationService.create(buyerId, request)`를 구현했다. 주문·스냅샷·최초 이력을 실제 서비스 트랜잭션으로 저장한다. 반환값은 `Result(orderId, created)`이며 HTTP `OrderDetail` 응답이 아니다. Controller·인증·조회 DTO·React 연결은 아직 없다. `created=true`는 신규 생성, false는 동일 입력 재전송을 뜻하며 HTTP 연결 시 각각 201·200으로 변환해야 한다.
+API 명세 4·10·11절과 기존 SQL을 바탕으로 `OrderCreationService.create(buyerId, request)`를 구현했다. 주문·스냅샷·최초 이력을 실제 서비스 트랜잭션으로 저장한다. 내부 반환값은 `Result(orderId, created)`이며 HTTP `OrderDetail` 응답이 아니다. 후속 `OrderCreationApiService`와 Controller가 인증 principal의 회원 ID를 제공하고 상세 DTO로 조립해 신규 생성은 201, 동일 입력 재전송은 200으로 반환한다. 실제 로그인·주문 GET API·React 연결은 아직 없다.
 
 현재 main에 실제 회원·상품 Entity가 없어 해당 영역을 중복 구현하지 않았다. 주문 전용 `OrderCreationQueries`가 기존 members·products를 조회한다. 테스트 회원·상품은 SQL fixture이며 실제 가입·상품 등록 기능 완료를 의미하지 않는다.
 
@@ -57,4 +57,22 @@ API 명세 4·10·11절과 기존 SQL을 바탕으로 `OrderCreationService.crea
 - 서로의 상품을 구매하는 두 회원의 동시 생성 5회, 사전 조회 후 판매자 변경 시 무저장 거절
 - 상품 변경 트랜잭션과의 직렬화, 호환/비호환 상위 트랜잭션
 
-이력 실패 검사는 Repository spy에서 실제 FK 위반 SQL을 실행해 서비스의 실패 전파·롤백을 확인한다. 정상 이력 저장은 실제 Repository를 사용한다. 공개 API·세션 인증·JSON 엄격 타입·필드별 오류·화면·실제 회원/상품 쓰기 연동·결제/취소 동시 실행·다중 서버 부하·원격 CI는 별도다. 스키마와 기존 V1·V2는 변경하지 않았다.
+이력 실패 검사는 Repository spy에서 실제 FK 위반 SQL을 실행해 서비스의 실패 전파·롤백을 확인한다. 정상 이력 저장은 실제 Repository를 사용한다. 아래 HTTP 후속 검증과 구분한다. 실제 로그인·화면·실제 상품 쓰기 연동·결제/취소 동시 실행·다중 서버 부하·원격 CI는 별도다. 스키마와 기존 V1·V2는 변경하지 않았다.
+
+## HTTP 생성 API 후속 구현
+
+`POST /api/orders`는 `CurrentMemberId`가 검증한 `AuthenticatedMember.memberId()`만 구매자로 사용한다. 요청의 buyerId·가격·상태·조건 원문은 신뢰하지 않는다. 기존 세션/CSRF 보안을 재사용하며 로그인 구현 자체를 추가하지 않았다. `demo`에서는 Controller·DB 조회 Bean을 만들지 않는다.
+
+요청 예시(상품 ID·버전은 실제 조회 결과로 교체):
+
+```json
+{"productId":"15","expectedProductVersion":0,"requirements":"파란색으로 제작해 주세요.","requestKey":"c00af24a-391c-48d8-9754-d5591ce7df22"}
+```
+
+주문 입력에만 전용 JSON 역직렬화를 적용한다. productId·requirements·requestKey는 문자열, expectedProductVersion은 Long 범위의 JSON 정수만 받는다. 문자열/소수/boolean 버전·숫자 ID를 묵시적으로 변환하지 않는다. 필수값/음수/공백은 Bean Validation, ID·UUID·정규화 후 요구사항 길이는 기존 DTO 검증을 따른다. 공통 오류 응답의 code·message·fieldErrors·traceId를 재사용한다.
+
+`OrderCreationApiService`는 READ_COMMITTED 생성 트랜잭션에서 생성 서비스와 상세 조회를 함께 실행한다. 신규 생성/재전송 결과에 따라 201/200, Cache-Control: no-store를 반환한다. DTO 조립 실패는 새 주문·스냅샷·이력까지 롤백한다. 직렬화 이후 네트워크 실패까지 롤백한다는 의미는 아니며, 응답 유실 시 같은 키·입력으로 재전송한다.
+
+`OrderDetailQueries`는 주문 참여자 조건을 확인하고 저장한 스냅샷·현재 상태·현재 참여자 표시 이름·이력·납품·수정·취소 요청·주문 결제·후기를 조립한다. 상품의 현재 설명으로 스냅샷을 재작성하지 않는다. 모든 ID는 문자열, DATETIME은 JDBC LocalDateTime 원문에서 UTC OffsetDateTime으로 변환한다. 미발생 단일 객체/시각은 null, 없는 하위 목록은 빈 배열이다. 서비스의 `OrderAllowedActions` 정책으로 현재 허용 행동을 붙이지만 수락·결제 등 해당 명령 API의 구현 완료를 뜻하지 않는다. 최초 구매자 응답은 REQUESTED·CREATED 이력 1건·allowedActions=[CANCEL]이다.
+
+주문 상태가 바뀐 뒤 같은 생성 요청을 재전송해도 현재 주문 상세를 반환한다. 후속 상태의 읽기 검사는 SQL fixture로 수행하며 후속 업무 서비스를 실행한 검증은 아니다. 원격 CI·실제 로그인·브라우저 검증은 별도다. 최종 테스트 수와 실행 결과는 [작업표](work-plan.md)를 따른다.

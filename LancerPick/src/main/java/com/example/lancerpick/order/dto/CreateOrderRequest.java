@@ -8,19 +8,24 @@ import org.springframework.http.HttpStatus;
 import com.example.lancerpick.common.text.TextNormalizer;
 
 import java.util.UUID;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 public record CreateOrderRequest(
         @NotBlank
+        @JsonDeserialize(using = OrderRequestJson.StringValue.class)
         String productId,
 
         @NotNull
         @PositiveOrZero
+        @JsonDeserialize(using = OrderRequestJson.VersionValue.class)
         Long expectedProductVersion,
 
         @NotBlank
+        @JsonDeserialize(using = OrderRequestJson.StringValue.class)
         String requirements,
 
         @NotBlank
+        @JsonDeserialize(using = OrderRequestJson.StringValue.class)
         String requestKey
 ) {
     public Long productIdAsLong() {
