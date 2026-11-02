@@ -10,6 +10,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import com.example.lancerpick.common.exception.BusinessException;
 import org.springframework.http.HttpStatus;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -36,6 +38,7 @@ public class Order {
     private String requestKey;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "status", nullable = false, length = 32)
     private OrderStatus status;
 
@@ -156,6 +159,10 @@ public class Order {
 
     public OrderStatus getStatus() {
         return status;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public String getRequestKey() {

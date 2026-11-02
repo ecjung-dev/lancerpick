@@ -4,6 +4,10 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.PostLoad;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.Transient;
+import org.springframework.data.domain.Persistable;
 import com.example.lancerpick.common.exception.BusinessException;
 import org.springframework.http.HttpStatus;
 import com.example.lancerpick.common.text.TextNormalizer;
@@ -11,7 +15,11 @@ import com.example.lancerpick.common.text.TextNormalizer;
 /** 상품 변경과 관계없이 주문 당시 상품·거래 조건을 보존한다. */
 @Entity
 @Table(name = "order_snapshots")
-public class OrderSnapshot {
+public class OrderSnapshot implements Persistable<Long> {
+
+    // 공유 PK는 생성 시 이미 존재한다. 신규 스냅샷을 merge하여 기존 원문을 덮어쓰지 않는다.
+    @Transient
+    private boolean newEntity = true;
 
     // 주문 ID를 기본 키로 함께 사용하며 별도 ID를 생성하지 않는다.
     @Id
@@ -47,6 +55,22 @@ public class OrderSnapshot {
     private String requirements;
 
     protected OrderSnapshot() {
+    }
+
+    @Override
+    public Long getId() {
+        return orderId;
+    }
+
+    @Override
+    public boolean isNew() {
+        return newEntity;
+    }
+
+    @PostLoad
+    @PostPersist
+    private void markExisting() {
+        newEntity = false;
     }
 
     public static OrderSnapshot create(
