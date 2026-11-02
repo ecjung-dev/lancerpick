@@ -130,7 +130,7 @@ payment: id,amount,feeRateBps,status,paidAt,refundedAt. review는 8절의 Review
 
 ## 5 주문 명령 정은찬과 황준범
 
-2026-11-03 구현 후속: [판매자 수락·거절](order-decision.md)의 두 POST API를 구현했다. 판매자 권한·REQUESTED 상태·사유·이력·UTC 시각과 동시 실행을 검증하며, 나머지 명령·React 화면·실제 로그인은 별도다.
+2026-11-03 구현 후속: [판매자 수락·거절](order-decision.md)과 [최초 납품·재납품](order-delivery.md)의 POST API를 구현했다. 권한·상태/회차·사유/URL·이력·UTC 시각과 동시 실행을 검증하며, 결제·수정 요청·취소·확정 명령·React 화면·실제 로그인은 별도다.
 
 | POST 경로 | 실행자·입력 | 조건·결과 |
 | --- | --- | --- |

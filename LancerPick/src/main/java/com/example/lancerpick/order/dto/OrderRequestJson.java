@@ -29,4 +29,14 @@ public final class OrderRequestJson {
             return parser.getLongValue();
         }
     }
+
+    public static final class SequenceValue extends ValueDeserializer<Integer> {
+        @Override
+        public Integer deserialize(JsonParser parser, DeserializationContext context) {
+            if (!parser.hasToken(JsonToken.VALUE_NUMBER_INT)) {
+                throw MismatchedInputException.from(parser, Integer.class, "정수 회차가 필요합니다.");
+            }
+            return parser.getIntValue();
+        }
+    }
 }

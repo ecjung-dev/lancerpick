@@ -9,6 +9,8 @@ import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.order.service.OrderQueryService;
 import com.example.lancerpick.order.service.OrderDecisionService;
 import com.example.lancerpick.order.dto.RejectOrderRequest;
+import com.example.lancerpick.order.dto.CreateDeliveryRequest;
+import com.example.lancerpick.order.service.OrderDeliveryService;
 import com.example.lancerpick.order.service.OrderCreationApiService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -34,13 +36,22 @@ public class OrderController {
     private final CurrentMemberId currentMember;
     private final OrderQueryService queries;
     private final OrderDecisionService decisions;
+    private final OrderDeliveryService deliveries;
 
     public OrderController(OrderCreationApiService orders, CurrentMemberId currentMember, OrderQueryService queries,
-            OrderDecisionService decisions) {
+            OrderDecisionService decisions, OrderDeliveryService deliveries) {
         this.orders = orders;
         this.currentMember = currentMember;
         this.queries = queries;
         this.decisions = decisions;
+        this.deliveries = deliveries;
+    }
+
+    @PostMapping("/{id}/deliveries")
+    public ResponseEntity<OrderDetailResponse> deliver(Authentication authentication, @PathVariable String id,
+            @Valid @RequestBody CreateDeliveryRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(deliveries.submit(currentMember.require(authentication), id, request));
     }
 
     @PostMapping("/{id}/accept")

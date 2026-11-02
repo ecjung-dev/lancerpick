@@ -193,6 +193,17 @@ public class Order {
 
     public Long getSellerId() { return sellerId; }
 
+    public void deliver(LocalDateTime at) {
+        if (status != OrderStatus.IN_PROGRESS && status != OrderStatus.REVISION_IN_PROGRESS) {
+            throw new BusinessException(HttpStatus.CONFLICT, "DELIVERY_SEQUENCE_CONFLICT", "현재 상태에서 제출할 수 없는 납품 회차입니다.");
+        }
+        if (at == null || at.getYear() < 1000 || at.getYear() > 9999 || at.isBefore(updatedAt)) {
+            throw new IllegalStateException("Invalid delivery clock");
+        }
+        status = OrderStatus.AWAITING_CONFIRMATION;
+        updatedAt = at.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+    }
+
     public Long getId() {
         return id;
     }

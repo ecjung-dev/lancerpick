@@ -1,6 +1,6 @@
 # 랜서픽 백엔드
 
-Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 공통 HTTP·Security·문자열·시간 처리와 메모리 예시 상품 조회, 카테고리 DB 조회를 구현했습니다. 회원가입은 회원·지갑·초기 적립금 생성까지 연결되어 있으며 지갑 잔액·내역 조회와 React 마이페이지 기반도 있습니다. 주문 생성 서비스와 `POST /api/orders`는 원자적 저장·중복 요청 처리·인증 principal 계약·201/200 주문 상세 응답을 구현했습니다. 판매자 수락·거절 API와 상태/시각·이력의 원자적 변경도 구현했습니다([명령 계약](../docs/order-decision.md)). 납품·취소·확정 등 후속 상태 변경은 별도 작업입니다. 구매/판매 주문 목록과 참여자 전용 상세 GET API도 연결했습니다([조회 계약](../docs/order-query.md)). 실제 로그인·프런트 인증 연결·주문 결제는 아직 구현하지 않았습니다. 잠금·격리 수준·연동 조건과 검증 한계는 [주문 생성 서비스·HTTP 연결](../docs/order-creation.md)을 따릅니다. 공통 코드는 [백엔드 기능 개발 가이드](../docs/backend-common-guide.md)를 따라 재사용하고, 지갑 연결은 [초기 지급 계약](../docs/wallet-initialization.md)·[조회 연결 계약](../docs/wallet-query.md)을 참고합니다.
+Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 공통 HTTP·Security·문자열·시간 처리와 메모리 예시 상품 조회, 카테고리 DB 조회를 구현했습니다. 회원가입은 회원·지갑·초기 적립금 생성까지 연결되어 있으며 지갑 잔액·내역 조회와 React 마이페이지 기반도 있습니다. 주문 생성 서비스와 `POST /api/orders`는 원자적 저장·중복 요청 처리·인증 principal 계약·201/200 주문 상세 응답을 구현했습니다. 판매자 수락·거절 API와 상태/시각·이력의 원자적 변경도 구현했습니다([명령 계약](../docs/order-decision.md)). 최초 납품·재납품 API도 구현했습니다([납품 계약](../docs/order-delivery.md)). 수정 요청·취소·확정 등 후속 상태 변경은 별도 작업입니다. 구매/판매 주문 목록과 참여자 전용 상세 GET API도 연결했습니다([조회 계약](../docs/order-query.md)). 실제 로그인·프런트 인증 연결·주문 결제는 아직 구현하지 않았습니다. 잠금·격리 수준·연동 조건과 검증 한계는 [주문 생성 서비스·HTTP 연결](../docs/order-creation.md)을 따릅니다. 공통 코드는 [백엔드 기능 개발 가이드](../docs/backend-common-guide.md)를 따라 재사용하고, 지갑 연결은 [초기 지급 계약](../docs/wallet-initialization.md)·[조회 연결 계약](../docs/wallet-query.md)을 참고합니다.
 
 ## 패키지 구조
 

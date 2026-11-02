@@ -86,6 +86,13 @@ public class OrderHistory {
         return decision(orderId, sellerId, at, OrderHistoryAction.ACCEPTED, OrderStatus.AWAITING_PAYMENT, null);
     }
 
+    public static OrderHistory delivered(Long orderId, Long sellerId, OrderStatus from, LocalDateTime at) {
+        if (from != OrderStatus.IN_PROGRESS && from != OrderStatus.REVISION_IN_PROGRESS) throw invalidInput("납품 이전 상태가 올바르지 않습니다.");
+        OrderHistory history = decision(orderId, sellerId, at, OrderHistoryAction.DELIVERED, OrderStatus.AWAITING_CONFIRMATION, null);
+        history.fromStatus = from;
+        return history;
+    }
+
     public static OrderHistory rejected(Long orderId, Long sellerId, LocalDateTime at, String reason) {
         if (reason == null) throw invalidInput("거절 사유가 필요합니다.");
         String normalized = com.example.lancerpick.common.text.TextNormalizer.normalize(reason);
