@@ -11,7 +11,7 @@ import type { WalletBalance, WalletEntry, WalletEntryType } from '../types'
 import styles from './WalletPage.module.css'
 
 const labels: Record<WalletEntryType, string> = {
-  INITIAL_GRANT: '가입 적립금', PAYMENT: '서비스 결제', REFUND: '결제 환불',
+  INITIAL_GRANT: '가입 적립금', PAYMENT: '서비스 결제', REFUND: '결제 환불', TOPUP: '테스트 결제 충전',
 }
 
 /** 인증 연결 전 기본 진입점. 예시 잔액을 실제 잔액처럼 표시하지 않는다. */

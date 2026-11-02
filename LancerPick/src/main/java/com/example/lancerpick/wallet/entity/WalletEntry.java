@@ -27,6 +27,9 @@ public class WalletEntry {
     @Column(name = "payment_id")
     private Long paymentId;
 
+    @Column(name = "topup_id")
+    private Long topupId;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 16)
@@ -62,7 +65,7 @@ public class WalletEntry {
     }
 
     public boolean isInitialGrantFor(long memberId) {
-        return this.memberId == memberId && paymentId == null
+        return this.memberId == memberId && paymentId == null && topupId == null
                 && type == WalletEntryType.INITIAL_GRANT
                 && amountDelta == Wallet.INITIAL_GRANT_AMOUNT
                 && balanceAfter == Wallet.INITIAL_GRANT_AMOUNT
@@ -72,6 +75,7 @@ public class WalletEntry {
     public Long getId() { return id; }
     public Long getMemberId() { return memberId; }
     public Long getPaymentId() { return paymentId; }
+    public Long getTopupId() { return topupId; }
     public WalletEntryType getType() { return type; }
     public long getAmountDelta() { return amountDelta; }
     public long getBalanceAfter() { return balanceAfter; }

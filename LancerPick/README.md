@@ -1,8 +1,10 @@
 # 랜서픽 백엔드
 
-Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 공통 기반·메모리 예시 상품 조회·지갑 최초 지급과 잔액/내역 조회 서비스·보호 Controller가 구현되어 있습니다. 인증 principal의 회원 ID 계약과 React 마이페이지도 준비했습니다. 주문 엔티티(`order/entity/Order`·`OrderStatus`·`OrderSnapshot`)와 생성 요청 DTO의 초안·단위 테스트를 추가했습니다. 실제 로그인·회원가입 호출부·프런트 인증 상태 연결·주문 저장 서비스·주문 API·결제는 별도 작업이며, 새 주문 엔티티의 실제 DB 매핑·저장은 검증 전입니다. 공통 코드는 [백엔드 기능 개발 가이드](../docs/backend-common-guide.md)를 따라 재사용하고, 지갑 연결은 [초기 지급 계약](../docs/wallet-initialization.md)·[조회 연결 계약](../docs/wallet-query.md)을 참고합니다.
+Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 공통 HTTP·Security·문자열·시간 처리와 메모리 예시 상품 조회가 구현되어 있습니다. 지갑 최초 지급과 잔액·내역 조회 서비스·보호 Controller도 구현했으며, 인증 principal의 회원 ID 계약과 React 마이페이지를 준비했습니다. 주문 엔티티(`order/entity/Order`·`OrderStatus`·`OrderSnapshot`)와 생성 요청 DTO의 초안·단위 테스트를 추가했습니다. 실제 로그인·회원가입 호출부·프런트 인증 상태 연결·주문 저장 서비스·주문 API·결제는 별도 작업이며, 새 주문 엔티티의 실제 DB 매핑·저장은 검증 전입니다. 공통 코드는 [백엔드 기능 개발 가이드](../docs/backend-common-guide.md)를 따라 재사용하고, 지갑 연결은 [초기 지급 계약](../docs/wallet-initialization.md)·[조회 연결 계약](../docs/wallet-query.md)을 참고합니다.
 
 ## 패키지 구조
+
+토스 테스트 충전의 [V2 저장 구조](../docs/wallet-topup-schema.md)·Entity/Repository를 추가했습니다. 일반 실행 시 Flyway가 V2를 적용할 수 있으므로 연결 대상 DB를 확인합니다. 현재는 충전 신청·승인 API나 지급 서비스가 없어 적립금이 자동 증가하지 않습니다.
 
 기본 패키지는 `com.example.lancerpick`입니다.
 

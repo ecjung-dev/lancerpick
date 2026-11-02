@@ -4,7 +4,7 @@ export interface WalletBalance {
   isTest: boolean
 }
 
-export type WalletEntryType = 'INITIAL_GRANT' | 'PAYMENT' | 'REFUND'
+export type WalletEntryType = 'INITIAL_GRANT' | 'PAYMENT' | 'REFUND' | 'TOPUP'
 
 export interface WalletEntry {
   id: string

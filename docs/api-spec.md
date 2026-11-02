@@ -196,7 +196,7 @@ PAYMENT_ALREADY_REFUNDED 응답에는 재결제 성공 의미를 담지 않는�
 | GET /me/settlements/summary | 본인 판매 수익 | completedCount,grossAmount,feeAmount,sellerAmount |
 | POST /orders/{id}/review | 완료 주문 구매자; rating,content | 201 Review |
 
-WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급의 orderId는 null. Settlement: id,orderId,grossAmount,feeRateBps,feeAmount,sellerAmount,createdAt. Review: id,orderId,authorDisplayName,rating,content,createdAt. 공개 리뷰 조회에는 orderId를 제외한다. 별점 1~5 필수, 본문 선택, 주문당 1개.
+WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급의 orderId는 null. V2 테스트 충전 저장 확장으로 type에 TOPUP을 추가하며 해당 내역의 orderId도 null이다. [충전 저장 구조](wallet-topup-schema.md)를 따르고 충전 신청/승인 API는 아직 미구현이다. Settlement: id,orderId,grossAmount,feeRateBps,feeAmount,sellerAmount,createdAt. Review: id,orderId,authorDisplayName,rating,content,createdAt. 공개 리뷰 조회에는 orderId를 제외한다. 별점 1~5 필수, 본문 선택, 주문당 1개.
 
 ## 9 관리자 상품 운영 김창재
 
