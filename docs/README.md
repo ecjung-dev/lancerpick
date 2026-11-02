@@ -28,6 +28,8 @@
 
 ## 현재 프로젝트와 실행
 
+- [주문 생성 내부 서비스](order-creation.md): 원자적 생성·재전송·잠금과 UTC 원문 저장 검증. 공개 API·인증·실제 상품 쓰기 연동과 구분한다.
+
 - [최초 Flyway V1](../LancerPick/src/main/resources/db/migration/V1__init.sql) · [스키마 확인 쿼리](sql/inspect-physical-schema.sql): 16개 테이블 기준. 2026-11-02 실행용 경로로 이동했으며 docs에 SQL 복사본을 유지하지 않는다. MySQL 8.0.46 테스트 DB의 V1 적용·전체 빌드 성공은 사용자 실행 결과로 확인했다. [검증 기록](physical-db.md#2026-11-02-사용자-실행-검증-결과)을 참고하고 기준 8.4 재현·엔티티 매핑·업무 검증은 별도로 진행한다. 일반 실행·DB 통합 테스트 전 대상 DB·기존 이력을 확인한다.
 
 - [루트 README](../README.md): 현재 저장소 복제 후 실행 절차. 프로젝트 생성 명령을 반복하지 않는다.
@@ -38,6 +40,11 @@
 - [토스 테스트 키 설정 안내](toss-test-payment-setup.md): 클라이언트·서버 키의 개인 설정 위치와 Git 제외 확인. 실제 키는 황준범이 별도로 전달하며 외부 결제 연동 구현 완료와 구분한다.
 - [지갑 생성·최초 지급 구현](wallet-initialization.md): 회원가입에서 호출할 내부 서비스 계약, 기존 V1 매핑, 동시 초기화·실패 롤백 검증. 실제 회원가입·결제 API 연결과 구분한다.
 - [잔액·적립금 내역 조회 준비](wallet-query.md): 조회 서비스·보호 Controller·인증 principal 계약, React 마이페이지·조회 훅·캐시 정리. 실제 로그인·가입 호출부·프런트 인증 상태 연결은 후속 작업이다.
+- [토스 테스트 충전 저장 구조](wallet-topup-schema.md): V2 충전 신청 테이블·원장 참조·Entity/Repository·DB 검증. 토스 승인·실제 지급·충전 화면은 후속 구현이다.
+- [토스 충전 신청·조회 API](wallet-topup-api.md): 인증·CSRF 기반 READY 신청 저장과 본인 조회. 신청 자체는 잔액을 증가시키지 않으며 지급은 승인 API를 따른다.
+- [토스 승인·지급·재확인](wallet-topup-approval.md): 외부 호출과 DB 트랜잭션 분리, 멱등 지급·본인 복구 API. 외부 제공자 대역으로 검증하며 실제 결제·인증 통합·자동 복구는 후속이다.
+- [React 토스 충전 화면](wallet-topup-frontend.md): 금액·SDK·복귀 검증·서버 승인·결과 재확인 화면. keys.env 연결과 SDK UI 로딩을 확인했으며 실제 결제·인증 통합은 검증 전이다.
+- [황준범 담당 진행 현황](wallet-payment-progress.md): 지갑·토스 충전·결제·환불·정산의 남은 작업과 가중치 기반 진행률 추정.
 
 ## 문서 간 기준
 

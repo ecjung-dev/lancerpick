@@ -29,7 +29,7 @@ export function AppLayout() {
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <div><strong>랜서픽</strong><p>좋은 시작이, 좋은 결과로 이어지도록.</p></div>
-          <div><p>학습용 팀 프로젝트 · 예시 상품이 표시됩니다.</p><p>테스트 적립금만 사용하며 실제 현금 가치·충전·출금은 없습니다.</p></div>
+          <div><p>학습용 팀 프로젝트 · 예시 상품이 표시됩니다.</p><p>테스트 적립금만 사용하며 실제 현금 거래·출금은 없습니다.</p></div>
           <small>© 2026 LancerPick Team</small>
         </div>
       </footer>

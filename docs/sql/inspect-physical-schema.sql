@@ -35,8 +35,10 @@ FROM information_schema.CHECK_CONSTRAINTS
 WHERE CONSTRAINT_SCHEMA = DATABASE()
 ORDER BY CONSTRAINT_NAME;
 
--- Expected design: 16 application tables. Flyway metadata is excluded.
-SELECT COUNT(*) AS application_table_count, 16 AS expected_application_table_count
+-- V1: 16 application tables; V2 top-up extension: 17. Flyway metadata is excluded.
+SELECT COUNT(*) AS application_table_count,
+       16 + EXISTS(SELECT 1 FROM information_schema.TABLES
+                   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'wallet_topups') AS expected_application_table_count
 FROM information_schema.TABLES
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
   AND TABLE_NAME <> 'flyway_schema_history';

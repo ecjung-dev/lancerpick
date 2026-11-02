@@ -6,6 +6,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.example.lancerpick.member.service.MemberService;
 import com.example.lancerpick.wallet.service.WalletInitializationService;
 import com.example.lancerpick.wallet.service.WalletQueryService;
+import com.example.lancerpick.order.service.OrderCreationService;
+import com.example.lancerpick.order.repository.OrderCreationQueries;
+import com.example.lancerpick.wallet.service.WalletTopupService;
+import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
 
 /** 기본 프로필에도 공개 메인이 동작하는지 동일한 HTTP·Security 계약을 검사한다. */
 @ActiveProfiles(value = "default", inheritProfiles = false)
@@ -25,6 +29,18 @@ class DefaultCatalogApiTests extends CommonApiTests {
 
     @MockitoBean
     WalletQueryService walletQueryService;
+
+    @MockitoBean
+    OrderCreationService orderCreationService;
+
+    @MockitoBean
+    OrderCreationQueries orderCreationQueries;
+
+    @MockitoBean
+    WalletTopupService walletTopupService;
+
+    @MockitoBean
+    TopupApprovalTransactions topupApprovalTransactions;
 
     // 회원가입 서비스도 DB(MemberRepository)를 사용하므로 이 컨텍스트에서는 대체한다.
     // 실제 회원가입 처리는 MySQL을 사용하는 별도 검증에서 확인한다.

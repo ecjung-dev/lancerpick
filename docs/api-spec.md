@@ -100,6 +100,8 @@ ProductPatch는 ProductInput의 7개 필드 중 바꿀 필드만 보내는 JSON 
 
 ## 4 주문 조회와 생성 정은찬
 
+2026-11-02 구현 후속: [주문 생성 내부 서비스](order-creation.md)에 저장·재전송·잠금·오류 우선순위와 검증 범위를 기록한다. 내부 서비스 구현이며 아래 HTTP API·OrderDetail 응답의 구현 완료를 뜻하지 않는다.
+
 | 메서드·경로 | 입력·권한 | 출력 |
 | --- | --- | --- |
 | GET /orders | 회원; side=BUYER 또는 SELLER 필수, status 선택, page,size | OrderSummary 목록 |
@@ -192,11 +194,15 @@ PAYMENT_ALREADY_REFUNDED 응답에는 재결제 성공 의미를 담지 않는�
 | --- | --- | --- |
 | GET /me/wallet | 회원 | balance,currency=KRW,isTest=true |
 | GET /me/wallet/entries | 회원; page,size | WalletEntry 목록 |
+| POST /me/wallet/topups | 회원+CSRF; amount 정수 1~1000000 | 201 충전 신청, READY; 잔액 무변경 |
+| GET /me/wallet/topups/{id} | 본인; 양수 충전 ID | 충전 신청/현재 상태, 타인·없음은 404 |
+| POST /me/wallet/topups/{id}/confirm | 본인+CSRF; paymentKey,orderId,amount | 충전 승인·지급 결과; 완료/종료 200, 확인 중 202 |
+| POST /me/wallet/topups/{id}/reconcile | 본인+CSRF; 본문 없음 | 저장된 결제 키 외부 조회·지급 복구; 확인 중 202 |
 | GET /me/settlements | 본인 판매 수익; page,size | Settlement 목록 |
 | GET /me/settlements/summary | 본인 판매 수익 | completedCount,grossAmount,feeAmount,sellerAmount |
 | POST /orders/{id}/review | 완료 주문 구매자; rating,content | 201 Review |
 
-WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급의 orderId는 null. Settlement: id,orderId,grossAmount,feeRateBps,feeAmount,sellerAmount,createdAt. Review: id,orderId,authorDisplayName,rating,content,createdAt. 공개 리뷰 조회에는 orderId를 제외한다. 별점 1~5 필수, 본문 선택, 주문당 1개.
+WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급과 V2 TOPUP 내역의 orderId는 null이다. [충전 신청·조회 계약](wallet-topup-api.md)과 [승인·지급·재확인 계약](wallet-topup-approval.md)을 따른다. 실제 키 결제창 연동은 검증 전이다. WalletTopupResponse: id,tossOrderId,amount,currency,isTest,status,createdAt. 신청 POST는 호출마다 별도 READY 건을 만들며 멱등 재요청은 아직 제공하지 않는다. 승인 POST는 같은 신청·같은 조건이면 기존 처리 상태를 반환하며 중복 승인/지급하지 않는다. 외부 결과 불명확·진행 중은 202, 불일치는 502 TOPUP_PAYMENT_MISMATCH, 조건/결제 키 충돌은 409다. 제공자 기본 비활성화 시 새 승인은 503이다. 내부 승인 멱등키와 paymentKey는 응답하지 않는다. Settlement: id,orderId,grossAmount,feeRateBps,feeAmount,sellerAmount,createdAt. Review: id,orderId,authorDisplayName,rating,content,createdAt. 공개 리뷰 조회에는 orderId를 제외한다. 별점 1~5 필수, 본문 선택, 주문당 1개.
 
 ## 9 관리자 상품 운영 김창재
 

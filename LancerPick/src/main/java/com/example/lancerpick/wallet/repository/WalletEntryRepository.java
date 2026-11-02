@@ -4,9 +4,11 @@ import com.example.lancerpick.wallet.entity.WalletEntry;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import java.util.List;
+import java.time.Instant;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
 public interface WalletEntryRepository extends JpaRepository<WalletEntry, Long> {
@@ -16,6 +18,17 @@ public interface WalletEntryRepository extends JpaRepository<WalletEntry, Long> 
     Optional<WalletEntry> findByEventKeyForUpdate(@Param("eventKey") String eventKey);
 
     long countByMemberId(long memberId);
+    boolean existsByTopupId(long topupId);
+    boolean existsByEventKey(String eventKey);
+
+    @Modifying(flushAutomatically = true)
+    @Query(value = """
+            INSERT INTO wallet_entries(member_id,topup_id,type,amount_delta,balance_after,event_key,created_at)
+            VALUES (:memberId,:topupId,'TOPUP',:amount,:balance,:eventKey,:at)
+            """, nativeQuery = true)
+    int insertTopup(@Param("memberId") long memberId, @Param("topupId") long topupId,
+            @Param("amount") long amount, @Param("balance") long balance,
+            @Param("eventKey") String eventKey, @Param("at") Instant at);
 
     /**
      * payment_id → payments.order_id로 조회한다. 초기 지급은 결제 참조가 없어 LEFT JOIN한다.
