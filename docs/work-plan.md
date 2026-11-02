@@ -115,6 +115,14 @@ Repository·주문 저장 서비스·스냅샷·최초 이력 동시 저장·중
 
 후속으로 OrderSnapshot 엔티티와 생성 검증을 추가했다. 주문 ID 공유 기본 키, 상품 버전, 주문 당시 상품·거래 조건·요구사항을 매핑했다. 사용자 실행으로 생성·정규화, 잘못된 ID·버전, 여섯 문자열의 필수값·코드 포인트 길이 경계 테스트와 주문 관련 테스트 실행 성공을 확인했다. 실제 MySQL 저장·조회와 주문·스냅샷·최초 이력의 원자적 저장은 아직 검증하지 않았다.
 
+### 주문 최초 이력 기반 구현
+
+2026-11-02 `codex/order-history`에서 기존 V1의 order_histories에 대응하는 OrderHistory·OrderHistoryAction을 추가했다. action·from_status·to_status는 VARCHAR로 매핑하고, reason·created_at을 포함한 기존 컬럼을 매핑했다. 최초 생성 팩터리 `OrderHistory.created(orderId, buyerId, createdAt)`는 CREATED / fromStatus=null / toStatus=REQUESTED / reason=null을 고정하고, 양수 ID와 MySQL DATETIME 범위의 시각을 검사한다. 서비스가 UTC 시각과 실제 주문 구매자 ID를 제공해야 하며, 팩터리는 시각을 마이크로초로 절삭한다. 시각 자체에 시간대가 붙는 것은 아니다.
+
+검증: 주문 관련 단위 테스트 31개(OrderTests 10·CreateOrderRequestTests 10·OrderSnapshotTests 5·OrderHistoryTests 6)를 에이전트가 함께 실행하여 실패·오류 0, BUILD SUCCESSFUL을 확인했다. 이력 테스트는 최초 상태 조합·ID 오류·시각 누락/범위·마이크로초 절삭을 검사한다.
+
+수락·결제·취소 등 후속 행동은 enum 값만 정의했으며 해당 이력 생성 메서드·상태 전이 검증은 미구현이다. reason의 후속 사유 입력·정규화도 아직 구현하지 않았다. Repository·실제 MySQL 저장/조회·FK 검증·주문과 스냅샷 및 최초 이력의 단일 트랜잭션·실패 롤백·중복 생성 방지는 후속 작업이다. 이번 실행은 DB 없는 단위 테스트이며 전체 clean build·원격 CI·업무 기능 완료로 해석하지 않는다. API 계약·V1 SQL·ERD는 변경하지 않았다.
+
 ## 7. 2026-11-02 지갑 초기 지급 구현·검증
 
 | 작업 | 담당 | 상태 | 완료 근거 | 남은 연결 |
