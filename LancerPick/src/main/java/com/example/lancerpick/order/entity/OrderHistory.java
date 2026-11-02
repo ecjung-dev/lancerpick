@@ -49,6 +49,7 @@ public class OrderHistory {
     @Column(name = "reason", updatable = false, length = 1000)
     private String reason;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "created_at", nullable = false, updatable = false,
             columnDefinition = "DATETIME(6)")
     private LocalDateTime createdAt;

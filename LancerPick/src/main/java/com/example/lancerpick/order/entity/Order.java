@@ -48,27 +48,35 @@ public class Order {
     @Column(name = "duration_days_snapshot", nullable = false, updatable = false)
     private Integer durationDaysSnapshot;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "accepted_at")
     private LocalDateTime acceptedAt;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "buyer_confirmed_terms_at")
     private LocalDateTime buyerConfirmedTermsAt;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "due_at")
     private LocalDateTime dueAt;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "cancelled_at")
     private LocalDateTime cancelledAt;
 
@@ -163,6 +171,10 @@ public class Order {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getProductId() {
+        return productId;
     }
 
     public String getRequestKey() {

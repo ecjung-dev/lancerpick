@@ -1,6 +1,6 @@
 # 랜서픽 백엔드
 
-Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 공통 HTTP·Security·문자열·시간 처리와 메모리 예시 상품 조회가 구현되어 있습니다. 지갑 최초 지급과 잔액·내역 조회 서비스·보호 Controller도 구현했으며, 인증 principal의 회원 ID 계약과 React 마이페이지를 준비했습니다. 주문 엔티티(`order/entity/Order`·`OrderStatus`·`OrderSnapshot`·`OrderHistory`·`OrderHistoryAction`)와 생성 요청 DTO의 초안·단위 테스트를 추가했습니다. 주문 이력은 최초 생성(`CREATED`) 팩터리까지 구현했으며 후속 행동의 이력 생성은 별도 작업입니다. 실제 로그인·회원가입 호출부·프런트 인증 상태 연결·주문 저장 서비스·주문 API·결제는 별도 작업이며, 주문·스냅샷·최초 이력의 Repository와 MySQL 저장·재조회 통합 테스트를 추가했습니다. 실제 주문 생성 서비스의 원자성·중복 요청 응답·동시성 검증은 후속 작업입니다. 공통 코드는 [백엔드 기능 개발 가이드](../docs/backend-common-guide.md)를 따라 재사용하고, 지갑 연결은 [초기 지급 계약](../docs/wallet-initialization.md)·[조회 연결 계약](../docs/wallet-query.md)을 참고합니다.
+Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 공통 HTTP·Security·문자열·시간 처리와 메모리 예시 상품 조회가 구현되어 있습니다. 지갑 최초 지급과 잔액·내역 조회 서비스·보호 Controller도 구현했으며, 인증 principal의 회원 ID 계약과 React 마이페이지를 준비했습니다. 주문 엔티티(`order/entity/Order`·`OrderStatus`·`OrderSnapshot`·`OrderHistory`·`OrderHistoryAction`)와 생성 요청 DTO의 초안·단위 테스트를 추가했습니다. 주문 이력은 최초 생성(`CREATED`) 팩터리까지 구현했으며 후속 행동의 이력 생성은 별도 작업입니다. 주문 생성 내부 서비스의 원자적 저장·재전송·동시 요청 처리와 MySQL 통합 테스트를 추가했습니다. 실제 로그인·회원가입 호출부·프런트 인증 상태 연결·주문 HTTP API·결제는 후속 작업입니다. 잠금·격리 수준·연동 조건과 검증 한계는 [주문 생성 서비스](../docs/order-creation.md)를 따릅니다. 공통 코드는 [백엔드 기능 개발 가이드](../docs/backend-common-guide.md)를 따라 재사용하고, 지갑 연결은 [초기 지급 계약](../docs/wallet-initialization.md)·[조회 연결 계약](../docs/wallet-query.md)을 참고합니다.
 
 ## 패키지 구조
 

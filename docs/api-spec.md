@@ -100,6 +100,8 @@ ProductPatch는 ProductInput의 7개 필드 중 바꿀 필드만 보내는 JSON 
 
 ## 4 주문 조회와 생성 정은찬
 
+2026-11-02 구현 후속: [주문 생성 내부 서비스](order-creation.md)에 저장·재전송·잠금·오류 우선순위와 검증 범위를 기록한다. 내부 서비스 구현이며 아래 HTTP API·OrderDetail 응답의 구현 완료를 뜻하지 않는다.
+
 | 메서드·경로 | 입력·권한 | 출력 |
 | --- | --- | --- |
 | GET /orders | 회원; side=BUYER 또는 SELLER 필수, status 선택, page,size | OrderSummary 목록 |
