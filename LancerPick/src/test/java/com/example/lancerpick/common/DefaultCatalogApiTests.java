@@ -11,6 +11,8 @@ import com.example.lancerpick.order.service.OrderCreationService;
 import com.example.lancerpick.order.service.OrderCreationApiService;
 import com.example.lancerpick.order.repository.OrderCreationQueries;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
+import com.example.lancerpick.order.repository.OrderListQueries;
+import com.example.lancerpick.order.service.OrderQueryService;
 import com.example.lancerpick.wallet.service.WalletTopupService;
 import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
 
@@ -25,6 +27,11 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
                 + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration"
 })
 class DefaultCatalogApiTests extends CommonApiTests {
+    @MockitoBean
+    OrderQueryService orderQueryService;
+
+    @MockitoBean
+    OrderListQueries orderListQueries;
     @MockitoBean
     OrderCreationApiService orderCreationApiService;
 

@@ -100,7 +100,7 @@ ProductPatch는 ProductInput의 7개 필드 중 바꿀 필드만 보내는 JSON 
 
 ## 4 주문 조회와 생성 정은찬
 
-2026-11-02 구현 후속: [주문 생성 서비스·HTTP 연결](order-creation.md)에 저장·재전송·잠금·응답과 검증 범위를 기록한다. POST /orders의 인증 principal 연결·201/200 OrderDetail 응답을 구현했다. 실제 로그인, GET 주문 목록/상세, 후속 주문 명령·React 연결은 별도다.
+2026-11-02 구현 후속: [주문 생성 서비스·HTTP 연결](order-creation.md)에 저장·재전송·잠금·응답을, [주문 조회](order-query.md)에 GET 목록/상세의 권한·필터·페이지·읽기 일관성과 검증 범위를 기록한다. POST /orders의 201/200 OrderDetail과 GET 목록/상세를 인증 principal 계약에 연결했다. 실제 로그인·후속 주문 명령·React 연결은 별도다.
 
 | 메서드·경로 | 입력·권한 | 출력 |
 | --- | --- | --- |

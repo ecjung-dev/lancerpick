@@ -4,7 +4,7 @@
 
 ## 구현 범위
 
-API 명세 4·10·11절과 기존 SQL을 바탕으로 `OrderCreationService.create(buyerId, request)`를 구현했다. 주문·스냅샷·최초 이력을 실제 서비스 트랜잭션으로 저장한다. 내부 반환값은 `Result(orderId, created)`이며 HTTP `OrderDetail` 응답이 아니다. 후속 `OrderCreationApiService`와 Controller가 인증 principal의 회원 ID를 제공하고 상세 DTO로 조립해 신규 생성은 201, 동일 입력 재전송은 200으로 반환한다. 실제 로그인·주문 GET API·React 연결은 아직 없다.
+API 명세 4·10·11절과 기존 SQL을 바탕으로 `OrderCreationService.create(buyerId, request)`를 구현했다. 주문·스냅샷·최초 이력을 실제 서비스 트랜잭션으로 저장한다. 내부 반환값은 `Result(orderId, created)`이며 HTTP `OrderDetail` 응답이 아니다. 후속 `OrderCreationApiService`와 Controller가 인증 principal의 회원 ID를 제공하고 상세 DTO로 조립해 신규 생성은 201, 동일 입력 재전송은 200으로 반환한다. GET 목록/상세는 [주문 조회 문서](order-query.md)를 따르며 실제 로그인·React 연결은 아직 없다.
 
 현재 main에 실제 회원·상품 Entity가 없어 해당 영역을 중복 구현하지 않았다. 주문 전용 `OrderCreationQueries`가 기존 members·products를 조회한다. 테스트 회원·상품은 SQL fixture이며 실제 가입·상품 등록 기능 완료를 의미하지 않는다.
 

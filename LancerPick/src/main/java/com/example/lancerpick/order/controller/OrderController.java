@@ -3,14 +3,23 @@ package com.example.lancerpick.order.controller;
 import com.example.lancerpick.common.security.CurrentMemberId;
 import com.example.lancerpick.order.dto.CreateOrderRequest;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
+import com.example.lancerpick.order.dto.OrderSide;
+import com.example.lancerpick.order.dto.OrderSummaryResponse;
+import com.example.lancerpick.common.web.PageResponse;
+import com.example.lancerpick.order.service.OrderQueryService;
 import com.example.lancerpick.order.service.OrderCreationApiService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,10 +30,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrderController {
     private final OrderCreationApiService orders;
     private final CurrentMemberId currentMember;
+    private final OrderQueryService queries;
 
-    public OrderController(OrderCreationApiService orders, CurrentMemberId currentMember) {
+    public OrderController(OrderCreationApiService orders, CurrentMemberId currentMember, OrderQueryService queries) {
         this.orders = orders;
         this.currentMember = currentMember;
+        this.queries = queries;
+    }
+
+    @GetMapping
+    public ResponseEntity<PageResponse<OrderSummaryResponse>> list(Authentication authentication,
+            @RequestParam OrderSide side, @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(queries.list(currentMember.require(authentication), side, status, page, size));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<OrderDetailResponse> detail(Authentication authentication, @PathVariable String id) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(queries.detail(currentMember.require(authentication), id));
     }
 
     @PostMapping
