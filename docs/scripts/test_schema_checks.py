@@ -9,7 +9,7 @@ import re
 import sqlite3
 import unittest
 
-SQL = (Path(__file__).resolve().parents[1] / "sql" / "V1__init.sql").read_text(encoding="utf-8")
+SQL = (Path(__file__).resolve().parents[2] / "LancerPick" / "src" / "main" / "resources" / "db" / "migration" / "V1__init.sql").read_text(encoding="utf-8")
 TABLES = dict(re.findall(r"(?ms)^CREATE TABLE (\w+) \(\n(.*?)^\) ENGINE=", SQL))
 
 

@@ -65,7 +65,7 @@ Copy-Item local-application.properties.example local-application.properties
 
 공통 `src/main/resources/application.properties`에는 `${DB_URL}` 등의 참조와 JPA·Flyway 기준이 있습니다. OSIV는 비활성화하고 스키마는 `validate`, JDBC 시각은 UTC로 설정합니다. 개인 접속 파일 import는 `application-default.properties`에서 관리하므로 활성 프로필이 없는 일반 로컬 실행에서만 적용됩니다. 개인 파일은 resources 밖에 두므로 기본 JAR 패키징에 포함되지 않습니다. IDE의 Working directory는 백엔드 루트로 설정합니다. 배포에서는 `DB_*` 환경변수를 제공하며 별도 프로필 사용 시 개인 파일을 자동으로 읽지 않습니다.
 
-예시 Controller·Service는 demo 패키지에 있고 기본(default)·demo에서만 동작하며 prod에서는 제외됩니다. 공통 Security 정책·CSRF 조회·401/403 JSON 응답은 구현되어 있지만 실제 로그인·로그아웃·비밀번호 인코더·회원 ID 조회 방식은 후속 구현 대상입니다. 검토용 SQL은 docs에 있으며 실행용 Flyway 마이그레이션은 아직 없습니다. DB 스키마·회원 인증·업무 API·동시성 검증 완료를 의미하지 않습니다. 실행 환경은 팀의 공통 개발 환경 구축 가이드를 따릅니다.
+예시 Controller·Service는 demo 패키지에 있고 기본(default)·demo에서만 동작하며 prod에서는 제외됩니다. 공통 Security 정책·CSRF 조회·401/403 JSON 응답은 구현되어 있지만 실제 로그인·로그아웃·비밀번호 인코더·회원 ID 조회 방식은 후속 구현 대상입니다. 최초 SQL은 [Flyway V1](src/main/resources/db/migration/V1__init.sql)에 있습니다. MySQL 8.0.46 테스트 DB에서 V1 적용·clean build 성공을 사용자 실행 결과로 확인했습니다. [검증 기록](../docs/physical-db.md#2026-11-02-사용자-실행-검증-결과)과 미검증 범위를 구분합니다. 일반 실행·DB 통합 테스트는 연결된 DB에 마이그레이션을 시도하므로 대상과 기존 이력을 먼저 확인합니다. 스키마 초기 적용 결과가 회원 인증·업무 API·엔티티 매핑·동시성 검증 완료를 의미하지는 않습니다. 실행 환경은 팀의 공통 개발 환경 구축 가이드를 따릅니다.
 
 ## 실행
 

@@ -10,11 +10,11 @@
 
 - [ERD PNG 원본](images/lancerpick-physical-erd.png) · [확대용 SVG](images/lancerpick-physical-erd.svg): DDL에서 생성한 16개 테이블·120개 컬럼·23개 FK 관계도. PK·FK·복합 UNIQUE 묶음·NULL 여부를 표시한다.
 
-- [DDL 원본](sql/V1__init.sql): 기존 논리 ERD의 16개 테이블, 자료형·NULL·기본값·PK·FK·UNIQUE·CHECK·인덱스.
+- [DDL 원본](../LancerPick/src/main/resources/db/migration/V1__init.sql): 기존 논리 ERD의 16개 테이블, 자료형·NULL·기본값·PK·FK·UNIQUE·CHECK·인덱스.
 - [읽기 전용 스키마 확인 SQL](sql/inspect-physical-schema.sql): 별도 테스트 DB에 적용한 뒤 구조를 확인할 때 사용.
 - [정적 검사 도구](scripts/check_physical_schema.py): 테이블·컬럼·FK·인덱스·안전한 파일 구성을 점검한다. MySQL 실행 검증을 대신하지 않는다.
 
-DDL은 docs에만 두었다. 자동 실행되는 `LancerPick/src/main/resources/db/migration`에는 아직 넣지 않았으며 기존 DB·계정·데이터를 변경하지 않았다. 엔티티·서비스·업무 API는 이번 설계 범위가 아니다.
+2026-11-02 최초 적용 준비: DDL을 `LancerPick/src/main/resources/db/migration/V1__init.sql`로 이동했다. docs에는 중복 SQL을 두지 않고 검사·ERD 생성 도구도 이 파일을 읽는다. 이후 MySQL 8.0.46 테스트 DB의 V1 적용·전체 빌드 성공을 사용자 실행 결과로 확인했다. [검증 상세](#2026-11-02-사용자-실행-검증-결과)를 참고하고 기준 8.4·엔티티 매핑·업무 검증은 구분한다. 일반 실행·DB 통합 테스트에서 마이그레이션을 시도하므로 연결 대상과 기존 이력을 먼저 확인한다. 엔티티·서비스·업무 API는 이번 이동에 포함하지 않는다.
 
 현재 구조를 유지하며 채팅·알림·소셜 로그인·외부 충전·파일·출금 테이블은 추가하지 않는다. 카테고리 실제 목록과 관리자·시연 회원 데이터도 임의로 만들지 않는다.
 
@@ -162,9 +162,9 @@ FK에 필요한 인덱스도 DDL에서 명시했다. 상품 키워드는 제목�
 
 1. 팀원이 보완된 API 계약과 이력 코드·JPA 매핑을 리뷰한다. 상품 PATCH 상세는 API 3절을 따르고, 실제 카테고리 목록·비밀번호 원문 정책은 별도로 결정한다.
 2. 실제 MySQL에서 VERSION(), sql_mode, @@session.time_zone을 확인한다. Workbench 연결명 MySQL80만으로 실제 서버 버전을 단정하지 않는다. 기준은 MySQL 8.4이며 8.0을 쓰면 최소 8.0.16 이상의 CHECK 집행과 차이를 따로 검증한다.
-3. 기존 업무 테이블이 없는 별도 테스트 스키마에 먼저 적용한다. docs/sql 파일을 실행하는 것과 Flyway 이력 등록은 다르다. 같은 DB에 수동 생성 후 V1을 다시 적용하거나 baseline/repair로 우회하지 않는다.
-4. 검증 후 아직 V1이 없는지 확인하고 DDL 원본을 `LancerPick/src/main/resources/db/migration/V1__init.sql`로 이동한다. 실행 경로와 docs에 복사본 두 개를 장기 유지하지 않는다. DB에 기존 업무 데이터가 있으면 별도 마이그레이션 계획을 세운다.
-5. 실제 Flyway 적용 후 16개 테이블과 flyway_schema_history를 확인한다. 엔티티를 같은 PR에서 작성하고 Hibernate validate로 매핑을 확인한다. 엔티티가 없을 때 시작 테스트만 성공한 것은 16개 매핑 검증이 아니다.
+3. 기존 업무 테이블이 없는 별도 테스트 스키마에 먼저 적용한다. DDL을 수동 실행하는 것과 Flyway 이력 등록은 다르다. 같은 DB에 수동 생성 후 V1을 다시 적용하거나 baseline/repair로 우회하지 않는다.
+4. V1은 실행용 경로에 있고 로컬 8.0.46 테스트 DB의 적용 결과는 아래 기록으로 확인했다. 다른 환경에서는 빈 격리 테스트 DB와 환경변수를 확인한 뒤 Flyway로 최초 적용하고 실제 결과를 검증한다. 같은 DB에 수동 생성 후 다시 V1을 실행하지 않는다. docs에 복사본을 유지하지 않으며, 기존 업무 데이터나 적용 이력이 있으면 별도 마이그레이션 계획을 세운다.
+5. 실제 Flyway 적용 후 16개 테이블과 flyway_schema_history를 확인한다. 현재 V1은 스키마 기반으로 먼저 적용했으며 업무 엔티티는 후속 기능 PR에서 매핑하고 Hibernate validate로 확인한다. 이후 스키마 변경이 필요한 기능은 해당 마이그레이션과 엔티티를 함께 검토한다. 엔티티가 없을 때 시작 테스트만 성공한 것은 16개 매핑 검증이 아니다.
 6. 아래 실패·동시성 시나리오를 검증하고 PR에 실제 결과를 기록한다. 공유 적용된 V1은 이후 수정하지 않고 V2 이상을 추가한다.
 
 | 시나리오 | 기대 결과 |
@@ -189,11 +189,35 @@ FK에 필요한 인덱스도 DDL에서 명시했다. 상품 키워드는 제목�
 
 이 논리 검사는 메모리 SQLite의 SQL 3값 논리로 문자열 비교와 길이 식만 평가한다. MySQL 테이블 생성·자료형·collation·FK·CHECK 집행·Flyway·동시성 검증이 아니며 이를 대체하지 않는다. `python docs/scripts/check_physical_schema.py`와 `python docs/scripts/test_schema_checks.py`로 실행한다.
 
-설계·정적 구조 검사와 실제 DB 실행 검증은 구분한다. 이번 작업에서는 개인 접속 파일·비밀번호를 읽지 않았고 실제 DB에 DDL을 실행하지 않았다. 로컬 MySQL 클라이언트와 Docker 명령은 사용할 수 없었으며, 파서 검사는 MySQL 실행 성공으로 표현하지 않는다. 앞서 사용자가 보고한 기존 clean build 성공은 이번 신규 스키마 적용 성공과 다르다.
+아래는 최초 정적 검토 당시 기록이며, 2026-11-02 후속 DB 결과는 다음 절에 별도로 기록한다. 설계·정적 구조 검사와 실제 DB 실행 검증은 구분한다. 당시 작업에서는 개인 접속 파일·비밀번호를 읽지 않았고 실제 DB에 DDL을 실행하지 않았다. 로컬 MySQL 클라이언트와 Docker 명령은 사용할 수 없었으며, 파서 검사는 MySQL 실행 성공으로 표현하지 않는다. 앞서 사용자가 보고한 기존 clean build 성공은 이번 신규 스키마 적용 성공과 다르다.
 
 ### 공식 근거
 
 CHECK의 허용 표현·NULL·다른 테이블 참조 제한은 [MySQL CHECK 문서](https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html), FK의 키·제한 동작은 [MySQL FK 문서](https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html), DATETIME 정밀도·시간대 특성은 [MySQL 시각 문서](https://dev.mysql.com/doc/refman/8.4/en/datetime.html)를 확인했다. TEXT·VARCHAR 행 크기 선택은 [InnoDB 제한](https://dev.mysql.com/doc/refman/8.4/en/innodb-limits.html)을 참고했다.
+
+### 2026-11-02 최초 적용 준비 기록
+
+실행용 경로 이동은 완료했으며 SQL 본문의 테이블·제약은 변경하지 않았다. 사용자 Workbench 확인 기준 로컬 서버는 MySQL 8.0.46으로 문서·CI 기준 8.4와 다르다. lancerpick_test에는 업무 테이블이 없고 flyway_schema_history의 적용 이력은 비어 있었다. Workbench 세션 시간대를 +00:00으로 설정하고 대상 DB를 lancerpick_test로 선택했다. 이는 사용자 화면·응답으로 확인한 사전 점검이며 실제 Flyway 적용 성공은 아니다. Workbench의 USE·세션 설정은 Spring JDBC 연결에 자동 전달되지 않으므로 TEST_DB_URL·전용 계정과 UTC 옵션을 별도로 확인한다. 8.0.46 실행 결과와 8.4 검증 결과는 구분해서 기록한다.
+
+### 2026-11-02 사용자 실행 검증 결과
+
+검증 실행자는 사용자(정은찬)이며, 아래 결과는 이 대화의 Workbench 화면·오류 출력·빌드 성공 회신을 근거로 한다. 에이전트가 해당 MySQL에 직접 접속한 결과가 아니다. 서버는 MySQL 8.0.46, 대상은 전용 lancerpick_test이며 문서·CI 기준 MySQL 8.4와 구분한다.
+
+| 항목 | 실행·확인 | 결과 |
+| --- | --- | --- |
+| 최초 적용 | LancerPickApplicationTests 선택 실행으로 Flyway 적용 후 이력 조회 | version=1, description=init, success=1 |
+| 생성 개수 | information_schema 조회 | 업무 테이블 16, FK 23, CHECK 74 |
+| CHECK 대표 사례 | categories의 display_order=-1 삽입 | 오류 3819, ck_categories_order 위반 |
+| FK 대표 사례 | members.id=-1 없음 확인 후 해당 member_id로 wallets 삽입 | 오류 1452, fk_wallets_member 위반 |
+| UNIQUE 대표 사례 | 같은 categories.name 두 번 삽입 | 두 번째 요청 오류 1062, uk_categories_name 위반 |
+| 초기 롤백 시도 | 중복 검사 후 ROLLBACK·조회 | 검증용 행이 남아 실패 원인은 확정하지 않음; 해당 ID·이름 조건으로 검증용 행 삭제 후 정리 확인 |
+| 독립 롤백 재검증 | 같은 연결에서 START TRANSACTION → 정상 INSERT → ROLLBACK → 조회를 한 단계씩 실행 | 명령 성공과 사용자 회신상 검증용 행 없음 확인 |
+| 전체 빌드 | TEST_DB_* 설정한 터미널에서 gradlew.bat clean build | 사용자 BUILD SUCCESSFUL 회신 |
+| 자격 정보 정리 | TEST_DB_PASSWORD 제거·자격 정보 변수 초기화 | 사용자 완료 회신; 비밀번호는 기록하지 않음 |
+
+CHECK·FK·UNIQUE는 위 대표 사례만 동작 검증했으며 모든 제약·인덱스 정의를 전수 검증한 것은 아니다. ROLLBACK의 0 rows affected 자체가 성공 증거는 아니며 마지막 SELECT의 행 부재 확인을 근거로 한다. AUTO_INCREMENT 번호는 실패·롤백 뒤 연속적이지 않을 수 있으므로 데이터 정리를 위해 ID를 초기화하지 않는다.
+
+업무 엔티티가 아직 없으므로 전체 빌드 성공을 16개 테이블의 Hibernate 매핑 검증으로 보지 않는다. MySQL 8.4의 신규 적용·원격 CI·다른 팀원 재현·전체 제약 경계·주문/결제/환불 동시성·업무 롤백은 남아 있다. V1 상단의 execution validation pending 주석은 적용 준비 시점에 작성된 기록이며 현재 검증 상태는 이 절을 따른다. 이미 로컬에 적용한 V1 파일은 체크섬 보존을 위해 이후 주석까지 포함해 수정하지 않고, 필요한 변경은 후속 마이그레이션으로 처리한다.
 
 ## 8. 테이블별 컬럼 사전
 

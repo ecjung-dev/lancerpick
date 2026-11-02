@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 DOCS = Path(__file__).resolve().parents[1]
 OUT = DOCS / "images"
-SQL = DOCS / "sql" / "V1__init.sql"
+SQL = DOCS.parent / "LancerPick" / "src" / "main" / "resources" / "db" / "migration" / "V1__init.sql"
 W, H, GRID = 4000, 3320, 20
 FONT = "C:/Windows/Fonts/malgun.ttf"
 MONO = "C:/Windows/Fonts/consola.ttf"
@@ -74,6 +74,9 @@ class Canvas:
         self.svg.append(f'<rect x="{x}" y="{y}" width="{xx-x}" height="{yy-y}" fill="{fill}" stroke="{outline or fill}"/>')
 
     def text(self, xy, value, size=20, color="#15233b", mono=False):
+        # No key flags means no visible text; omit empty SVG text nodes.
+        if not value:
+            return
         font = ImageFont.truetype(MONO if mono else FONT, size)
         self.draw.text(xy, value, fill=color, font=font, anchor="lt")
         family = "Consolas, monospace" if mono else "Malgun Gothic, sans-serif"
@@ -105,7 +108,7 @@ def render():
     canvas.rect((0, 0, W, 185), "#13223d")
     canvas.text((80, 32), "LancerPick | 물리 ERD", 46, "#ffffff")
     column_count = sum(len(t["cols"]) for t in tables.values())
-    canvas.text((80, 100), f"MySQL 8.4  ·  {len(tables)} tables  ·  {column_count} columns  ·  {len(edges)} foreign keys  |  설계 검토용 · 실제 DB 적용 미검증", 24, "#d8e3f6")
+    canvas.text((80, 100), f"MySQL 8.4  ·  {len(tables)} tables  ·  {column_count} columns  ·  {len(edges)} foreign keys  |  8.4 설계 기준 · 8.0.46 초기 적용 확인 · 상세 검증은 문서 참조", 24, "#d8e3f6")
     canvas.text((80, 204), "PK 기본키   FK 외래키   U1/U2 복합 UNIQUE 묶음   NN 필수   ? NULL 허용   AI 자동 증가", 24)
     canvas.text((80, 244), "관계선: 자식 FK → 부모 키  |  선 번호는 아래 FK 목록과 대응  |  점선은 NULL 허용 FK", 20, "#566880")
     rects = {}
@@ -214,7 +217,7 @@ def render():
         line=f"{index+1:02d}  {child}.{local}  ->  {parent}.{remote}   [{cardinality}]"
         canvas.text((x,y),line,18,COLORS[GROUP[child]],True)
     canvas.text((86,3225),"주의: 주문별 스냅샷·회원별 지갑 필수 생성, 취소 대기 1건, 최초 납품 대상 검증·금액 원자성은 서비스에서도 보장합니다.",21,"#566880")
-    canvas.text((86,3263),"SOURCE: docs/sql/V1__init.sql  |  2026-10-29  |  CHECK·기본값·일반 인덱스의 상세 구문은 SQL 원본을 확인하세요.",19,"#566880")
+    canvas.text((86,3263),"SOURCE: LancerPick/src/main/resources/db/migration/V1__init.sql  |  2026-10-29  |  CHECK·기본값·일반 인덱스의 상세 구문은 SQL 원본을 확인하세요.",19,"#566880")
     OUT.mkdir(exist_ok=True)
     canvas.image.save(OUT/"lancerpick-physical-erd.png",optimize=True)
     (OUT/"lancerpick-physical-erd.svg").write_text("\n".join(canvas.svg+["</svg>"]),encoding="utf-8")

@@ -2,7 +2,7 @@
 <rect width="100%" height="100%" fill="#f4f7fb"/>
 <rect x="0" y="0" width="4000" height="185" fill="#13223d" stroke="#13223d"/>
 <text x="80" y="32" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="46" fill="#ffffff">LancerPick | 물리 ERD</text>
-<text x="80" y="100" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="24" fill="#d8e3f6">MySQL 8.4  ·  16 tables  ·  120 columns  ·  23 foreign keys  |  설계 검토용 · 실제 DB 적용 미검증</text>
+<text x="80" y="100" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="24" fill="#d8e3f6">MySQL 8.4  ·  16 tables  ·  120 columns  ·  23 foreign keys  |  8.4 설계 기준 · 8.0.46 초기 적용 확인 · 상세 검증은 문서 참조</text>
 <text x="80" y="204" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="24" fill="#15233b">PK 기본키   FK 외래키   U1/U2 복합 UNIQUE 묶음   NN 필수   ? NULL 허용   AI 자동 증가</text>
 <text x="80" y="244" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="20" fill="#566880">관계선: 자식 FK → 부모 키  |  선 번호는 아래 FK 목록과 대응  |  점선은 NULL 허용 FK</text>
 <polyline points="1520,370 1560,370 1560,360 1580,360 1600,360 1620,360 1640,360 1640,370 1680,370" fill="none" stroke="#087f8c" stroke-width="3"/>
@@ -113,25 +113,20 @@
 <rect x="1681" y="414" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">password_hash</text>
 <text x="2002" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(255)</text>
-<text x="2170" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#475569"></text>
 <text x="2270" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="448" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">display_name</text>
 <text x="2002" y="448" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(30)</text>
-<text x="2170" y="448" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#475569"></text>
 <text x="2270" y="448" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1681" y="472" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">role</text>
 <text x="2002" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(10)</text>
-<text x="2170" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#475569"></text>
 <text x="2270" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">created_at</text>
 <text x="2002" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#475569"></text>
 <text x="2270" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1681" y="530" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="535" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">updated_at</text>
 <text x="2002" y="535" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="535" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#475569"></text>
 <text x="2270" y="535" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="564" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: email</text>
 <rect x="880" y="280" width="640" height="266" fill="#ffffff" stroke="#cad4e2"/>
@@ -145,25 +140,20 @@
 <text x="1470" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="892" y="390" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">introduction</text>
 <text x="1202" y="390" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="1370" y="390" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="1470" y="390" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="881" y="414" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="892" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">specialty</text>
 <text x="1202" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(100)</text>
-<text x="1370" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="1470" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="892" y="448" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">portfolio_url</text>
 <text x="1202" y="448" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(2048)</text>
-<text x="1370" y="448" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="1470" y="448" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <rect x="881" y="472" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="892" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">created_at</text>
 <text x="1202" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="1370" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="1470" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="892" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">updated_at</text>
 <text x="1202" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="1370" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="1470" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="80" y="280" width="640" height="204" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="80" y="280" width="640" height="76" fill="#087f8c" stroke="#087f8c"/>
@@ -181,7 +171,6 @@
 <rect x="81" y="414" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">display_order</text>
 <text x="402" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">INT</text>
-<text x="570" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="92" y="448" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: name</text>
 <rect x="80" y="1000" width="640" height="498" fill="#ffffff" stroke="#cad4e2"/>
@@ -204,52 +193,41 @@
 <text x="670" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="92" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">title</text>
 <text x="402" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(100)</text>
-<text x="570" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="81" y="1192" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">description</text>
 <text x="402" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="570" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="92" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">scope_description</text>
 <text x="402" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="570" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="81" y="1250" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">preparation_description</text>
 <text x="402" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="570" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="92" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">price</text>
 <text x="402" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="570" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="81" y="1308" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="1313" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">duration_days</text>
 <text x="402" y="1313" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">INT</text>
-<text x="570" y="1313" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1313" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="92" y="1342" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">sale_status</text>
 <text x="402" y="1342" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(10)</text>
-<text x="570" y="1342" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1342" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="81" y="1366" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="1371" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">is_hidden</text>
 <text x="402" y="1371" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BOOLEAN</text>
-<text x="570" y="1371" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1371" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="92" y="1400" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">version</text>
 <text x="402" y="1400" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="570" y="1400" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1400" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="81" y="1424" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="1429" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">created_at</text>
 <text x="402" y="1429" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="570" y="1429" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1429" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="92" y="1458" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">updated_at</text>
 <text x="402" y="1458" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="570" y="1458" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="1458" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1680" y="1000" width="640" height="581" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="1680" y="1000" width="640" height="76" fill="#3158b5" stroke="#3158b5"/>
@@ -280,52 +258,41 @@
 <text x="2270" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">status</text>
 <text x="2002" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(32)</text>
-<text x="2170" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1681" y="1250" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">price_amount</text>
 <text x="2002" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="2170" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">duration_days_snapshot</text>
 <text x="2002" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">INT</text>
-<text x="2170" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1681" y="1308" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1313" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">accepted_at</text>
 <text x="2002" y="1313" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="1313" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1313" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <text x="1692" y="1342" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">buyer_confirmed_terms_at</text>
 <text x="2002" y="1342" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="1342" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1342" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <rect x="1681" y="1366" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1371" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">paid_at</text>
 <text x="2002" y="1371" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="1371" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1371" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <text x="1692" y="1400" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">due_at</text>
 <text x="2002" y="1400" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="1400" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1400" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <rect x="1681" y="1424" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1429" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">completed_at</text>
 <text x="2002" y="1429" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="1429" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1429" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <text x="1692" y="1458" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">cancelled_at</text>
 <text x="2002" y="1458" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="1458" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1458" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <rect x="1681" y="1482" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1487" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">created_at</text>
 <text x="2002" y="1487" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="1487" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1487" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="1516" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">updated_at</text>
 <text x="2002" y="1516" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="1516" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1516" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="1545" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: buyer_id, request_key</text>
 <rect x="1680" y="1700" width="640" height="324" fill="#ffffff" stroke="#cad4e2"/>
@@ -339,34 +306,27 @@
 <text x="2270" y="1781" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="1810" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">product_version_snapshot</text>
 <text x="2002" y="1810" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="2170" y="1810" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1810" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1681" y="1834" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1839" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">product_title_snapshot</text>
 <text x="2002" y="1839" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(100)</text>
-<text x="2170" y="1839" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1839" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="1868" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">description_snapshot</text>
 <text x="2002" y="1868" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="2170" y="1868" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1868" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1681" y="1892" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1897" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">scope_snapshot</text>
 <text x="2002" y="1897" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="2170" y="1897" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1897" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="1926" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">preparation_snapshot</text>
 <text x="2002" y="1926" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="2170" y="1926" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1926" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1681" y="1950" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="1955" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">terms_snapshot</text>
 <text x="2002" y="1955" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="2170" y="1955" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1955" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="1984" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">requirements</text>
 <text x="2002" y="1984" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="2170" y="1984" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="1984" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="2480" y="2120" width="640" height="324" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="2480" y="2120" width="640" height="76" fill="#3158b5" stroke="#3158b5"/>
@@ -388,25 +348,20 @@
 <text x="3070" y="2259" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="2492" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">action</text>
 <text x="2802" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(40)</text>
-<text x="2970" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3070" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="2481" y="2312" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="2492" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">from_status</text>
 <text x="2802" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(32)</text>
-<text x="2970" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3070" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <text x="2492" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">to_status</text>
 <text x="2802" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(32)</text>
-<text x="2970" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3070" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="2481" y="2370" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="2492" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">reason</text>
 <text x="2802" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(1000)</text>
-<text x="2970" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3070" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <text x="2492" y="2404" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">created_at</text>
 <text x="2802" y="2404" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2970" y="2404" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3070" y="2404" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1680" y="2120" width="640" height="291" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="1680" y="2120" width="640" height="76" fill="#3158b5" stroke="#3158b5"/>
@@ -428,16 +383,13 @@
 <text x="2270" y="2259" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">description</text>
 <text x="2002" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="2170" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="1681" y="2312" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="1692" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">result_url</text>
 <text x="2002" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(2048)</text>
-<text x="2170" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">submitted_at</text>
 <text x="2002" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2170" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="2270" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="1692" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: order_id, sequence_no</text>
 <rect x="880" y="2120" width="640" height="316" fill="#ffffff" stroke="#cad4e2"/>
@@ -460,16 +412,13 @@
 <text x="1470" y="2259" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="892" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">reason</text>
 <text x="1202" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(1000)</text>
-<text x="1370" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="1470" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="881" y="2312" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="892" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">requested_at</text>
 <text x="1202" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="1370" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="1470" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="892" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">due_at</text>
 <text x="1202" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="1370" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="1470" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="892" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: order_id</text>
 <text x="892" y="2400" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U2: delivery_id</text>
@@ -498,20 +447,16 @@
 <rect x="3281" y="2312" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">reason</text>
 <text x="3602" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(1000)</text>
-<text x="3770" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3870" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="3292" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">status</text>
 <text x="3602" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(16)</text>
-<text x="3770" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3870" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="3281" y="2370" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">requested_at</text>
 <text x="3602" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="3770" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3870" y="2375" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="3292" y="2404" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">resolved_at</text>
 <text x="3602" y="2404" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="3770" y="2404" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3870" y="2404" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <rect x="3281" y="2428" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="2433" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">resolved_by</text>
@@ -520,7 +465,6 @@
 <text x="3870" y="2433" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <text x="3292" y="2462" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">response_reason</text>
 <text x="3602" y="2462" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(1000)</text>
-<text x="3770" y="2462" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#3158b5"></text>
 <text x="3870" y="2462" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <text x="3292" y="2491" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: order_id, requested_by, request_key</text>
 <rect x="2480" y="280" width="640" height="179" fill="#ffffff" stroke="#cad4e2"/>
@@ -534,12 +478,10 @@
 <text x="3070" y="361" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="2492" y="390" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">balance</text>
 <text x="2802" y="390" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="2970" y="390" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3070" y="390" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="2481" y="414" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="2492" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">updated_at</text>
 <text x="2802" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2970" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3070" y="419" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="2480" y="1000" width="640" height="320" fill="#ffffff" stroke="#cad4e2"/>
 <rect x="2480" y="1000" width="640" height="76" fill="#8852ad" stroke="#8852ad"/>
@@ -557,25 +499,20 @@
 <rect x="2481" y="1134" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="2492" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">amount</text>
 <text x="2802" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="2970" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3070" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="2492" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">fee_rate_bps</text>
 <text x="2802" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">INT</text>
-<text x="2970" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3070" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="2481" y="1192" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="2492" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">status</text>
 <text x="2802" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(10)</text>
-<text x="2970" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3070" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="2492" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">paid_at</text>
 <text x="2802" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2970" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3070" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="2481" y="1250" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="2492" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">refunded_at</text>
 <text x="2802" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="2970" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3070" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <text x="2492" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: order_id</text>
 <rect x="3280" y="280" width="640" height="374" fill="#ffffff" stroke="#cad4e2"/>
@@ -603,11 +540,9 @@
 <rect x="3281" y="472" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">amount_delta</text>
 <text x="3602" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="3770" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3870" y="477" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="3292" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">balance_after</text>
 <text x="3602" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="3770" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3870" y="506" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="3281" y="530" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="535" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">event_key</text>
@@ -616,7 +551,6 @@
 <text x="3870" y="535" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="3292" y="564" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">created_at</text>
 <text x="3602" y="564" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="3770" y="564" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3870" y="564" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="3292" y="593" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: event_key</text>
 <text x="3292" y="618" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U2: payment_id, type</text>
@@ -636,25 +570,20 @@
 <rect x="3281" y="1134" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">gross_amount</text>
 <text x="3602" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="3770" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3870" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="3292" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">fee_rate_bps</text>
 <text x="3602" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">INT</text>
-<text x="3770" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3870" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="3281" y="1192" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">fee_amount</text>
 <text x="3602" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="3770" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3870" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="3292" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">seller_amount</text>
 <text x="3602" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">BIGINT</text>
-<text x="3770" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3870" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="3281" y="1250" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="3292" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">created_at</text>
 <text x="3602" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="3770" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#8852ad"></text>
 <text x="3870" y="1255" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="3292" y="1284" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: order_id</text>
 <rect x="80" y="2120" width="640" height="262" fill="#ffffff" stroke="#cad4e2"/>
@@ -673,16 +602,13 @@
 <rect x="81" y="2254" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="2259" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">rating</text>
 <text x="402" y="2259" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">INT</text>
-<text x="570" y="2259" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="2259" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="92" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">content</text>
 <text x="402" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">TEXT</text>
-<text x="570" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="2288" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">?</text>
 <rect x="81" y="2312" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="92" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">created_at</text>
 <text x="402" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="570" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#087f8c"></text>
 <text x="670" y="2317" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="92" y="2346" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#566880">U1: order_id</text>
 <rect x="880" y="1000" width="640" height="266" fill="#ffffff" stroke="#cad4e2"/>
@@ -705,16 +631,13 @@
 <text x="1470" y="1139" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="892" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">action</text>
 <text x="1202" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(10)</text>
-<text x="1370" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#475569"></text>
 <text x="1470" y="1168" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="881" y="1192" width="638" height="29" fill="#f2f5fa" stroke="#f2f5fa"/>
 <text x="892" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">reason</text>
 <text x="1202" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">VARCHAR(1000)</text>
-<text x="1370" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#475569"></text>
 <text x="1470" y="1197" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <text x="892" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="19" fill="#15233b">created_at</text>
 <text x="1202" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#55667f">DATETIME(6)</text>
-<text x="1370" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="15" fill="#475569"></text>
 <text x="1470" y="1226" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="16" fill="#55667f">NN</text>
 <rect x="60" y="2810" width="3880" height="470" fill="#ffffff" stroke="#d5ddea"/>
 <text x="86" y="2830" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="28" fill="#15233b">FOREIGN KEY MAP · DDL에 실제 정의된 관계</text>
@@ -743,5 +666,5 @@
 <text x="2030" y="3136" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#475569">22  product_moderation_logs.product_id  -&gt;  products.id   [0..N]</text>
 <text x="2030" y="3160" dominant-baseline="text-before-edge" font-family="Consolas, monospace" font-size="18" fill="#475569">23  product_moderation_logs.admin_id  -&gt;  members.id   [0..N]</text>
 <text x="86" y="3225" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="21" fill="#566880">주의: 주문별 스냅샷·회원별 지갑 필수 생성, 취소 대기 1건, 최초 납품 대상 검증·금액 원자성은 서비스에서도 보장합니다.</text>
-<text x="86" y="3263" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#566880">SOURCE: docs/sql/V1__init.sql  |  2026-10-29  |  CHECK·기본값·일반 인덱스의 상세 구문은 SQL 원본을 확인하세요.</text>
+<text x="86" y="3263" dominant-baseline="text-before-edge" font-family="Malgun Gothic, sans-serif" font-size="19" fill="#566880">SOURCE: LancerPick/src/main/resources/db/migration/V1__init.sql  |  2026-10-29  |  CHECK·기본값·일반 인덱스의 상세 구문은 SQL 원본을 확인하세요.</text>
 </svg>

@@ -4,7 +4,7 @@ import argparse
 import re
 
 DOCS = Path(__file__).resolve().parents[1]
-SQL_PATH = DOCS / "sql" / "V1__init.sql"
+SQL_PATH = DOCS.parent / "LancerPick" / "src" / "main" / "resources" / "db" / "migration" / "V1__init.sql"
 EXPECTED = {
     "members", "seller_profiles", "categories", "products", "orders", "order_snapshots",
     "order_histories", "deliveries", "revision_requests", "cancellation_requests",

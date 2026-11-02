@@ -1,5 +1,5 @@
 -- LancerPick physical schema design, 2026-10-29, MySQL 8.4.
--- Review artifact: NOT in the application's Flyway migration directory.
+-- Flyway V1: moved to the runtime migration directory on 2026-11-02; execution validation pending.
 -- Target an empty, isolated test schema first. No database/user creation or seed data.
 -- All times are supplied by the application in UTC, truncated to microseconds.
 -- Foreign keys use the default restrictive action; there are no cascade deletes.

@@ -194,13 +194,21 @@ Controller 안에서 모든 DB 조회와 업무 처리를 작성하지 않습니
 허용하지 않는 입력에서는 공통 예외를 사용합니다.
 
 ```java
-throw new BusinessException(
-        HttpStatus.BAD_REQUEST,
-        "VALIDATION_FAILED",
-        "검색 조건과 페이지 범위를 확인해 주세요.");
+import com.example.lancerpick.common.exception.BusinessException;
+import org.springframework.http.HttpStatus;
+
+class SearchValidationExample {
+    // 실제 Service에서 입력이 잘못된 것으로 판단한 분기에서 실행합니다.
+    void rejectInvalidSearch() {
+        throw new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_FAILED",
+                "검색 조건과 페이지 범위를 확인해 주세요.");
+    }
+}
 ```
 
-이 코드는 Service 안의 사용 예입니다. 파일 전체 예제가 아니므로 사용하는 클래스에서 해당 import가 필요합니다.
+문법을 이해하기 위한 예시이며 별도 업무 클래스를 추가하라는 뜻은 아닙니다. 실제 Service의 입력 검증 실패 분기에서 throw를 사용합니다. throw 같은 실행문은 클래스 바깥에 단독으로 놓지 않고 메서드 안에 작성합니다.
 
 ### 5-4. 응답 DTO: 화면에 필요한 필드를 정합니다
 
@@ -245,10 +253,10 @@ code는 화면이 오류 종류를 구분하는 값입니다. traceId는 같은 
 
 ### 6-1. DB와 Flyway SQL을 확인합니다
 
-현재 검토용 원본은 `docs/sql/V1__init.sql`이며 애플리케이션 Flyway 경로에 적용된 파일이 아닙니다. 실제 적용은 [물리 DB 설계](physical-db.md)의 절차를 따릅니다.
+현재 원본은 [`LancerPick/src/main/resources/db/migration/V1__init.sql`](../LancerPick/src/main/resources/db/migration/V1__init.sql)입니다. 2026-11-02 실행용 경로로 이동했고 MySQL 8.0.46 테스트 DB의 V1 적용·clean build 성공은 [사용자 실행 결과](physical-db.md#2026-11-02-사용자-실행-검증-결과)로 확인했습니다. 기준 8.4·업무 엔티티 매핑은 별도 검증 대상입니다. 일반 실행·DB 통합 테스트에서 Flyway가 대상 DB에 생성을 시도하므로 [물리 DB 설계](physical-db.md)의 대상·이력 확인 절차를 먼저 따릅니다.
 
 - 기존 테이블·데이터·Flyway 적용 이력을 먼저 확인합니다.
-- 검토·검증 후 애플리케이션 마이그레이션에 반영합니다.
+- V1은 실행용 경로에 있습니다. 각 환경의 적용 여부를 확인하고 이미 적용한 V1은 변경하지 않습니다. 변경은 후속 버전으로 관리합니다.
 - 엔티티와 SQL을 같은 PR에서 맞춥니다.
 - 공유 DB에 적용한 마이그레이션은 수정하지 않고 다음 버전을 작성합니다.
 - 같은 DB에 수동 생성한 뒤 V1을 다시 적용하지 않습니다.

@@ -57,7 +57,7 @@ MySQL을 실행하고 `lancerpick` 데이터베이스와 접속 가능한 개인
 CREATE DATABASE IF NOT EXISTS lancerpick CHARACTER SET utf8mb4;
 ```
 
-DB 계정에는 해당 데이터베이스에서 개발 및 Flyway 마이그레이션에 필요한 권한이 있어야 합니다. 16개 업무 테이블의 검토용 SQL은 [docs/sql/V1__init.sql](docs/sql/V1__init.sql)에 있습니다. 아직 실행용 Flyway 경로에는 적용하지 않았으며 실제 MySQL 적용·엔티티 매핑 검증은 남아 있습니다.
+DB 계정에는 해당 데이터베이스에서 개발 및 Flyway 마이그레이션에 필요한 권한이 있어야 합니다. 16개 업무 테이블의 최초 SQL은 [Flyway V1](LancerPick/src/main/resources/db/migration/V1__init.sql) 한 곳에서 관리합니다. 2026-11-02 실행용 경로로 이동했고, MySQL 8.0.46 테스트 DB에서 V1 적용·clean build 성공을 사용자 실행 결과로 확인했습니다. 기준 MySQL 8.4 재현과 업무 엔티티 매핑은 아직 미검증입니다. [검증 상세](docs/physical-db.md#2026-11-02-사용자-실행-검증-결과)를 참고합니다. 이제 일반 실행이나 DB 통합 테스트 시 Flyway가 연결된 DB에 테이블 생성을 시도하므로 먼저 대상 DB와 적용 이력을 확인합니다. demo 실행은 DB를 사용하지 않습니다.
 
 ### 2. 개인 접속 정보 작성
 
@@ -151,7 +151,7 @@ npm.cmd run build
 
 백엔드 통합 테스트는 `@IntegrationTest`와 `test` 프로필을 사용합니다. 개발용 개인 접속 파일을 읽지 않고 `TEST_DB_URL`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD`로 테스트 전용 MySQL에 접속합니다. 테스트 전용 DB·계정 준비와 PowerShell 실행 방법은 [테스트 DB 안내](docs/test-database.md)를 따릅니다. 테스트용 URL을 생략하면 `localhost:3306/lancerpick_test`를 사용하며 계정·비밀번호는 반드시 별도로 지정합니다. 일반 실행의 `DB_*`로 대체하지 않습니다.
 
-공통 JPA 설정은 OSIV 비활성화, 스키마 검증(`validate`), JDBC 시각 UTC입니다. Flyway는 활성화하며 테이블은 SQL로 관리합니다. 아직 업무 엔티티·마이그레이션·인증 구현 완료를 의미하지 않습니다.
+공통 JPA 설정은 OSIV 비활성화, 스키마 검증(`validate`), JDBC 시각 UTC입니다. Flyway는 활성화하며 테이블은 SQL로 관리합니다. V1 적용은 앞서 링크한 검증 기록의 범위로 확인했지만 업무 엔티티·인증·거래 기능 구현 완료를 의미하지 않습니다.
 
 ## GitHub Actions CI
 
