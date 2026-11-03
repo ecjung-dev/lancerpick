@@ -66,6 +66,11 @@ class DefaultCatalogApiTests extends CommonApiTests {
     // DB 없는 공통 HTTP 검사에서는 실제 카테고리 DB 조회를 사용하지 않는다.
     @MockitoBean
     private CategoryService categoryService;
+    // 관리자 상품 운영도 DB(JdbcTemplate)를 사용하므로 DB 없는 이 컨텍스트에서는 대체한다.
+    @MockitoBean
+    com.example.lancerpick.admin.service.AdminProductService adminProductService;
+    @MockitoBean
+    com.example.lancerpick.admin.repository.AdminProductQueries adminProductQueries;
     // 이 컨텍스트는 DB 없는 HTTP 검사다. DB를 사용하는 내부 서비스만 대체한다.
     // 실제 지갑 처리는 별도 MySQL 통합 테스트에서 검증한다.
     @MockitoBean
