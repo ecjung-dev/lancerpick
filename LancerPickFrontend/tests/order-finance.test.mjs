@@ -4,9 +4,22 @@ import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder
 import { clearCsrfToken } from '../src/shared/api/client.ts'
 import { createCancellationRequest, resolveCancellationRequest } from '../src/features/orders/api.ts'
 import { describeHistory } from '../src/features/orders/history.ts'
+import { orderDeadlineView } from '../src/features/orders/deadlines.ts'
 const original = globalThis.fetch
 afterEach(() => { globalThis.fetch = original; clearCsrfToken() })
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
+
+test('active overdue and delivered late use distinct due dates and strict boundary', () => {
+  const due = '2026-11-03T00:00:00Z'
+  const base = { status: 'IN_PROGRESS', currentDueAt: due, originalDueAt: due, revisionDueAt: '2026-11-05T00:00:00Z', deliveries: [
+    { id: '1', sequenceNo: 1, submittedAt: due }, { id: '2', sequenceNo: 2, submittedAt: '2026-11-05T00:00:01Z' },
+  ] }
+  assert.equal(orderDeadlineView(base, Date.parse(due)).currentLate, false)
+  assert.deepEqual(orderDeadlineView(base, Date.parse(due) + 1).deliveries.map(item => item.late), [false, true])
+  assert.equal(orderDeadlineView({ ...base, status: 'AWAITING_CONFIRMATION' }, Date.parse(due) + 1).currentLate, false)
+  assert.equal(orderDeadlineView({ ...base, status: 'COMPLETED' }, Date.parse(due) + 1).currentLate, false)
+  assert.equal(orderDeadlineView({ ...base, status: 'REVISION_IN_PROGRESS', currentDueAt: base.revisionDueAt }, Date.parse(due) + 1).currentLate, false)
+})
 
 test('order history distinguishes state changes from events that leave state unchanged', () => {
   const order = { buyer: { id: '9007199254740993' }, seller: { id: '2' } }
