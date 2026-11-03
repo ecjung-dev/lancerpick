@@ -14,11 +14,11 @@ export function ProductPreview({ product, onClose }: { product: ProductSummary |
   return (
     <dialog ref={dialog} className={styles.dialog} onCancel={onClose} onClose={onClose} aria-labelledby="preview-title">
       {product && <>
-        <span className={styles.label}>예시 상품 미리보기</span>
+        <span className={styles.label}>상품 요약</span>
         <h2 id="preview-title">{product.title}</h2>
         <p>{product.category.name} · {product.seller.displayName}</p>
         <div className={styles.amount}>{formatWon(product.priceAmount)} <small>고정 가격 · {product.durationDays}일</small></div>
-        <p className={styles.notice}>API 연결을 확인하기 위한 예시입니다. 실제 상품 상세와 주문 기능은 후속 구현 예정입니다.</p>
+        <p className={styles.notice}>목록의 상품 정보를 표시합니다. 상세 조회와 이 화면에서의 주문은 준비 중입니다.</p>
         <Button onClick={onClose}>확인</Button>
       </>}
     </dialog>

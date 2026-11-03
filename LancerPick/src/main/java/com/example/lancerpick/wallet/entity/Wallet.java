@@ -9,6 +9,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /** 구매용 테스트 잔액. 판매 수익은 이 지갑에 합산하지 않는다. */
+@lombok.Getter
 @Entity
 @Table(name = "wallets")
 public class Wallet {
@@ -52,4 +53,5 @@ public class Wallet {
         updatedAt = at;
     }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void applyTopupBalance(long balance,LocalDateTime at){if(balance<this.balance || at==null || at.isBefore(updatedAt))throw new IllegalArgumentException("Invalid topup balance");this.balance=balance;updatedAt=at;}
 }

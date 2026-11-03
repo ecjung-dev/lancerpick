@@ -1,6 +1,11 @@
-import { apiRequest } from '../../shared/api/client'
+import { apiRequest } from '../../shared/api/client.ts'
 import type { PageResponse } from '../../shared/api/types'
 import type { WalletBalance, WalletEntry, WalletTopup, TopupConfirmation } from './types'
+
+/** 화면의 캐시 구분에만 사용한다. 지갑 요청에는 회원 ID를 보내지 않는다. */
+export function getWalletSession(signal?: AbortSignal) {
+  return apiRequest<{ id: string }>('/me', { signal })
+}
 
 // 본인 조회: 회원 ID는 보내지 않는다. 서버에서 인증 정보로 결정한다.
 export function getWallet(signal?: AbortSignal) {

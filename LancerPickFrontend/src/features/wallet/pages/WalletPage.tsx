@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
@@ -7,6 +8,7 @@ import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import type { PageResponse } from '../../../shared/api/types'
 import { previewBalance, previewEntries } from '../preview'
 import { useWallet, useWalletEntries } from '../queries'
+import { getWalletSession } from '../api'
 import type { WalletBalance, WalletEntry, WalletEntryType } from '../types'
 import styles from './WalletPage.module.css'
 
@@ -14,22 +16,38 @@ const labels: Record<WalletEntryType, string> = {
   INITIAL_GRANT: '가입 적립금', PAYMENT: '서비스 결제', REFUND: '결제 환불', TOPUP: '테스트 결제 충전',
 }
 
-/** 인증 연결 전 기본 진입점. 예시 잔액을 실제 잔액처럼 표시하지 않는다. */
+/** 서버 세션의 본인 확인 후 계정별 지갑 조회를 시작한다. */
 export function WalletPage() {
+  const session = useQuery({
+    queryKey: ['wallet', 'session'],
+    queryFn: ({ signal }) => getWalletSession(signal),
+    retry: false,
+    gcTime: 0,
+    staleTime: 0,
+  })
+  if (session.isFetching) return <WalletLayout><AsyncState title="로그인 상태를 확인하고 있어요" /></WalletLayout>
+  if (session.error instanceof ApiError && session.error.status === 401) return <WalletGuestPage />
+  if (session.isError) return <WalletLayout><AsyncState title="로그인 상태를 확인하지 못했어요" error={session.error} onRetry={() => { void session.refetch() }} /></WalletLayout>
+  if (!session.data) return <WalletLayout><AsyncState title="로그인 상태를 확인하고 있어요" /></WalletLayout>
+  return <ConnectedWalletPage key={session.data.id} sessionKey={session.data.id} />
+}
+
+function WalletGuestPage() {
   return <WalletLayout>
     <Link className={styles.previewLink} to="/mypage/settlements">판매 수익 확인 →</Link>
-    <AsyncState title="잔액 조회를 준비하고 있어요" description="로그인과 본인 조회 API가 연결되면 내 적립금과 이용 내역을 확인할 수 있습니다." />
+    <AsyncState title="로그인 후 지갑을 확인할 수 있어요" description="로그인한 계정의 적립금과 이용 내역을 표시합니다." />
+    <Link className={styles.previewLink} to="/login">로그인으로 이동 →</Link>
     <Link className={styles.previewLink} to="/mypage/wallet/preview">예시 데이터로 화면 미리보기 →</Link>
   </WalletLayout>
 }
 
-/** 인증 담당자가 세션 확인을 끝낸 뒤 연결할 화면. sessionKey는 API로 전송하지 않는다. */
+/** WalletPage의 서버 세션 확인 후 연결하는 화면. sessionKey는 API로 전송하지 않는다. */
 export function ConnectedWalletPage({ sessionKey }: { sessionKey: string }) {
   const [page, setPage] = useState(0)
   const balance = useWallet(sessionKey)
   const entries = useWalletEntries(sessionKey, page)
 
-  if (!sessionKey) return <WalletPage />
+  if (!sessionKey) return <WalletGuestPage />
   if ([balance.error, entries.error].some((error) => error instanceof ApiError && error.status === 401)) {
     return <WalletLayout>
       <AsyncState title="다시 로그인해 주세요" description="로그인 상태를 확인할 수 없어 잔액과 내역을 표시하지 않습니다." />
@@ -69,6 +87,7 @@ function WalletLayout({ children, preview = false }: { children: ReactNode; prev
         <div className={styles.account}><span className={styles.avatar} aria-hidden="true">L</span><strong>나의 공간</strong><small>{preview ? '예시 화면을 둘러보고 있어요' : '로그인 연동 준비 중'}</small></div>
         <nav className={styles.menu} aria-label="내 활동">
           <span className={styles.menuLabel}>내 활동</span>
+          <Link to="/mypage/seller-profile">판매자 프로필</Link>
           <span className={styles.active} aria-current="page">적립금 · 이용 내역 <span aria-hidden="true">↗</span></span>
           <span className={styles.disabled}>구매 내역 <small>준비 중</small></span>
           <span className={styles.disabled}>판매 내역 <small>준비 중</small></span>

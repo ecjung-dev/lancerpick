@@ -13,7 +13,6 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.sql.Connection;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -46,7 +45,7 @@ public class OrderCreationService {
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public Result create(Long buyerId, CreateOrderRequest request) {
         // 없는 요청 키의 RR 간격 잠금이 서로 다른 구매자의 INSERT를 막지 않도록 한다.
-        if (!Integer.valueOf(Connection.TRANSACTION_READ_COMMITTED).equals(
+        if (!Integer.valueOf(Isolation.READ_COMMITTED.value()).equals(
                 TransactionSynchronizationManager.getCurrentTransactionIsolationLevel())) {
             throw new IllegalTransactionStateException("Order creation requires a READ_COMMITTED transaction");
         }

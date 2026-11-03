@@ -15,6 +15,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 class OrderConfirmationIntegrationTests extends OrderCancellationIntegrationTests {
+    @Test void querydslTotalsAndTieOrderingUseOnlyOwnedSettlements() {
+        jdbc.update("UPDATE wallets SET balance=200000 WHERE member_id=?",buyer);
+        long other=newOrder();
+        for(long id:List.of(order,other)) {
+            payments.pay(buyer,""+id,true);
+            jdbc.update("UPDATE orders SET status='AWAITING_CONFIRMATION' WHERE id=?",id);
+            confirmations.confirm(buyer,""+id);
+        }
+        assertThat(settlements.summary(seller).grossAmount()).isEqualTo(100000);
+        assertThat(settlements.summary(seller).feeAmount()).isEqualTo(10000);
+        assertThat(settlements.summary(seller).sellerAmount()).isEqualTo(90000);
+        assertThat(settlements.list(seller,0,1).items().getFirst().orderId()).isEqualTo(Long.toString(other));
+        assertThat(settlements.list(seller,1,1).items().getFirst().orderId()).isEqualTo(Long.toString(order));
+        assertThat(settlements.summary(third).completedCount()).isZero();
+        assertThat(settlements.summary(third).sellerAmount()).isZero();
+        assertThat(settlements.list(third,0,20).items()).isEmpty();
+    }
     @Autowired OrderConfirmationService confirmations;
     @Autowired SettlementQueryService settlements;
     @AfterEach void removeSettlements(){for(long id:ids)jdbc.update("DELETE FROM settlements WHERE order_id=?",id);}

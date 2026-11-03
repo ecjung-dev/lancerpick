@@ -1,5 +1,7 @@
 # 주문 목록·상세 조회 API
 
+2026-11-03 저장소 후속 변경: [프로젝트 JPA·QueryDSL 통일](project-persistence.md)에 따라 현재 운영 구현에서 JdbcTemplate·네이티브 SQL을 제거했다. 아래 이전 SQL 구현 설명·실행 결과는 당시 기록으로 보존하며 현재 구조와 최종 검증 범위는 후속 문서를 따른다.
+
 ## 구현 범위
 
 정은찬 담당 GET /api/orders와 GET /api/orders/{id}를 구현했다. CurrentMemberId의 인증 principal 계약을 사용하며 실제 로그인 필터·React 주문 화면·후속 주문 상태 변경은 포함하지 않는다. 읽기 요청은 CSRF 토큰 없이 사용할 수 있고, 기존 Security의 인증 요구는 유지한다. 응답은 Cache-Control: no-store다. demo 프로필에서는 DB 기반 주문 Controller·서비스를 만들지 않는다.

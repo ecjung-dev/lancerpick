@@ -1,5 +1,7 @@
 # 로그인·로그아웃·내 정보 API
 
+현재 통합 상태 2026-11-03: `LoginMember` → `AuthenticatedMember` → `CurrentMemberId.require()` 계약으로 지갑·거래 API를 연결했다. 실제 가입/로그인 세션의 [지갑 검사](wallet-session-integration.md)와 [거래 검사](session-trade-integration.md)를 통과했다. 로그인·가입 폼·전역 인증 캐시는 후속이다. 세션 저장 뒤 판매자 프로필 조회 실패 시 응답/세션 일관성이라는 기존 검토 항목은 [현황표](current-status.md)의 미해결 항목으로 유지한다.
+
 작성일: 2026-11-03. 담당: 김창재. PR #31(병합). 프런트 로그인·회원가입 화면과 인증 캐시 연결은 별도다.
 
 ## 계약

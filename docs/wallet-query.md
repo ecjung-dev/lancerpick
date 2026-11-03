@@ -1,6 +1,10 @@
-# 잔액·적립금 내역 조회 준비
+# 잔액·적립금 내역 조회
 
-V2 저장 확장 후속: [충전 신청 스키마](wallet-topup-schema.md)에서 원장 TOPUP 유형을 추가했다. 기존 조회 응답 필드는 유지하고 해당 유형의 orderId는 null이다. React 유형·표시 문구도 준비했지만 실제 충전 지급 서비스는 미구현이다. 아래 검증 건수는 각 실행 당시 기록이다.
+현재 상태 2026-11-03: 가입 시 최초 지급·세션 로그인·내 정보 API가 구현되었다. 현재 로컬의 `/mypage`·`/mypage/wallet`은 세션 확인 후 실제 잔액·내역을 조회한다. [지갑 세션 연결](wallet-session-integration.md)과 [현황표](current-status.md)를 우선 확인한다. 아래 단계별 검증 기록은 당시 범위다.
+
+2026-11-03 저장소 후속 변경: [프로젝트 JPA·QueryDSL 통일](project-persistence.md)에 따라 현재 운영 구현에서 JdbcTemplate·네이티브 SQL을 제거했다. 아래 이전 SQL 구현 설명·실행 결과는 당시 기록으로 보존하며 현재 구조와 최종 검증 범위는 후속 문서를 따른다.
+
+V2 저장 확장 후속: [충전 신청 스키마](wallet-topup-schema.md)에서 원장 TOPUP 유형을 추가했다. 기존 조회 응답 필드는 유지하고 해당 유형의 orderId는 null이다. [승인·지급 서비스](wallet-topup-approval.md)와 화면은 구현되어 있으며 실제 토스 테스트 카드 검증은 별도다. 아래 검증 건수는 각 실행 당시 기록이다.
 
 작성일: 2026-11-02. 담당: 황준범. 현재 작업 브랜치: `feature/wallet-initial-grant`.
 
@@ -8,7 +12,7 @@ V2 저장 확장 후속: [충전 신청 스키마](wallet-topup-schema.md)에서
 
 [API 명세 8절](api-spec.md#8-지갑정산-담당-황준범-후기-담당-박소현)에 맞는 조회 DTO와 내부 `WalletQueryService`, 내역 조회 Repository를 준비했다. 초기 지급과 같은 지갑 기반 작업으로 현재 브랜치에서 이어서 작성했다.
 
-**조회 Controller와 인증 회원 ID 접근 계약까지 구현했다.** React 마이페이지·조회 함수·훅도 준비했지만, 실제 로그인 구현·회원가입 호출부·프런트 인증 상태 연결은 대기 중이다. 아래 경로는 인증이 필요한 실제 Controller이며, 현재 로그인 기능이 없어 일반 브라우저에서 본인 조회를 완료할 수는 없다. demo 프로필에서는 지갑 Controller·Service를 등록하지 않는다.
+**조회 Controller·인증 회원 ID 계약·마이페이지 세션 연결까지 구현했다.** 아래 경로는 인증이 필요한 실제 Controller다. 같은 origin의 유효한 로그인 세션으로 조회하며, 로그인·가입 폼과 전역 인증 상태 연결은 아직 남아 있다. demo 프로필에서는 지갑 Controller·Service를 등록하지 않는다.
 
 | 보호 경로 | 내부 서비스 | 응답 |
 | --- | --- | --- |

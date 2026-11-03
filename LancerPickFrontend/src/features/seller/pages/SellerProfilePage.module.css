@@ -1,0 +1,26 @@
+.page { max-width: 880px; margin: 0 auto; padding: 36px 0 80px; }
+.breadcrumb { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; }
+.breadcrumb a { color: inherit; text-decoration: none; }
+.heading { margin: 38px 0 30px; }
+.heading p { font-size: 11px; letter-spacing: .14em; font-weight: 700; }
+.heading h1 { margin: 10px 0 14px; font-size: clamp(26px, 4vw, 36px); letter-spacing: -.04em; }
+.heading > span { color: var(--muted); font-size: 14px; line-height: 1.7; }
+.card { padding: 34px; border: 1px solid var(--line); border-radius: 16px; background: white; }
+.mode { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 30px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+.mode span { font-size: 13px; color: var(--muted); }
+.form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.field { margin-bottom: 26px; }
+.field label { display: block; margin-bottom: 10px; font-size: 15px; font-weight: 650; }
+.field label span { margin-left: 7px; font-size: 11px; color: var(--muted); font-weight: 450; }
+.field textarea { width: 100%; resize: vertical; min-height: 160px; border: 1px solid var(--line); border-radius: 8px; padding: 13px; font: inherit; font-size: 14px; line-height: 1.7; }
+.field textarea[aria-invalid='true'] { border: 2px solid var(--ink); }
+.help { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.fieldError { margin: 6px 0 0; color: #9f2929; font-size: 12px; min-height: 0; }
+.fieldError:empty { display: none; }
+.actions { border-top: 1px solid var(--line); padding-top: 23px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.actions p { color: var(--muted); font-size: 12px; }
+.success { background: #f1f6f2; color: #285333; padding: 14px; border-radius: 8px; font-size: 14px; }
+.error { background: #fff4f3; color: #9f2929; padding: 14px; border-radius: 8px; font-size: 14px; overflow-wrap: anywhere; }
+.error small { display: block; margin-top: 6px; }
+.link { display: inline-block; margin-top: 20px; color: var(--ink); }
+@media (max-width: 600px) { .page { padding-top: 24px; } .card { padding: 22px 16px; } .heading { margin-top: 28px; } .actions { align-items: stretch; flex-direction: column; } .actions p { margin: 0; } }

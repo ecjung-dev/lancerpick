@@ -16,6 +16,7 @@ import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@lombok.Getter
 @Entity
 @Table(name = "orders")
 public class Order {

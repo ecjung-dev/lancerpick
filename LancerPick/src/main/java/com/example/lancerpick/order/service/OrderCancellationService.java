@@ -13,7 +13,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.*;
 
@@ -26,12 +25,12 @@ public class OrderCancellationService {
     private final PaymentRepository payments;
     private final WalletRepository wallets;
     private final WalletEntryRepository entries;
-    private final JdbcTemplate jdbc;
+    private final CancellationRequestRepository requests;
     private final Clock clock;
     public OrderCancellationService(OrderRepository orders, OrderHistoryRepository histories, OrderDetailQueries details,
-            PaymentRepository payments, WalletRepository wallets, WalletEntryRepository entries, JdbcTemplate jdbc, Clock clock) {
+            PaymentRepository payments, WalletRepository wallets, WalletEntryRepository entries, CancellationRequestRepository requests, Clock clock) {
         this.orders=orders; this.histories=histories; this.details=details; this.payments=payments;
-        this.wallets=wallets; this.entries=entries; this.jdbc=jdbc; this.clock=clock;
+        this.wallets=wallets; this.entries=entries; this.requests=requests; this.clock=clock;
     }
     @Transactional(isolation=Isolation.READ_COMMITTED)
     public OrderDetailResponse cancel(long memberId,String id,String rawReason) {
@@ -73,11 +72,13 @@ public class OrderCancellationService {
             if(payments.markRefunded(original.id(),at)!=1)throw integrity();
             entries.saveAndFlush(WalletEntry.refund(order.getBuyerId(),original.id(),original.amount(),wallet.getBalance(),at));
         }else if(payment.isPresent())throw integrity();
-        long pending=jdbc.queryForObject("SELECT COUNT(*) FROM cancellation_requests WHERE order_id=? AND status='PENDING'",Long.class,orderId);
-        if(pending>1 || (!paid && pending!=0))throw integrity();
-        if(pending==1) {
-            jdbc.update("UPDATE cancellation_requests SET status='APPROVED',resolved_at=?,resolved_by=?,response_reason=? WHERE order_id=? AND status='PENDING'",at,memberId,reason,orderId);
-            jdbc.update("INSERT INTO order_histories(order_id,actor_id,action,from_status,to_status,reason,created_at) VALUES (?,?,'CANCELLATION_APPROVED',?,?,?,?)",orderId,memberId,from.name(),from.name(),reason,at);
+        var pending=requests.findByOrderIdAndStatus(orderId,"PENDING");
+        if(pending.size()>1 || (!paid && !pending.isEmpty()))throw integrity();
+        if(!pending.isEmpty()) {
+            var request=pending.getFirst();
+            request.approve(memberId,reason,at);
+            requests.saveAndFlush(request);
+            histories.saveAndFlush(OrderHistory.cancellationRequestEvent(orderId,memberId,OrderHistoryAction.CANCELLATION_APPROVED,from,at,reason));
         }
         histories.saveAndFlush(OrderHistory.cancelled(orderId,memberId,from,at,reason));
         return response(orderId,memberId,buyer);

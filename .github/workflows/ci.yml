@@ -76,6 +76,7 @@ jobs:
       TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/lancerpick_ci?connectionTimeZone=UTC&allowPublicKeyRetrieval=true&sslMode=DISABLED
       TEST_DB_USERNAME: lancerpick_ci
       TEST_DB_PASSWORD: ci_only_password
+      TOSS_TOPUP_ENABLED: 'false'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

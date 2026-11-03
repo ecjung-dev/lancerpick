@@ -67,6 +67,8 @@ shared: 공통 UI·API 요청·공통 유틸리티
 
 기능 내부에서 Controller·Service·Repository·DTO의 책임을 구분한다.
 
+2026-11-03 사용자 확정: 프로덕션 데이터 접근은 JPA·QueryDSL로 통일한다. JdbcTemplate·직접 JDBC·JPA 네이티브 SQL을 새로 사용하지 않는다. Entity 저장·상태 변경은 JPA, 조인·검색·집계는 QueryDSL을 기본으로 한다. 지갑의 원자적 최초 생성에는 Hibernate HQL 충돌 처리를 사용하며 MySQL의 실제 변경 건수 설정을 함께 유지한다. Flyway SQL과 테스트 fixture·DB 원문 검사용 SQL은 이 운영 코드 규칙에서 구분한다.
+
 실제 반복되거나 공통 정책이 필요한 코드만 공통 영역으로 옮긴다.
 
 ### 버전 관리

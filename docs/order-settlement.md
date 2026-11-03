@@ -1,5 +1,7 @@
 # 구매 확정·판매 수익 정산
 
+저장소 후속 변경: [JPA·QueryDSL 전환](finance-persistence.md)에 따라 정산 생성은 Entity/JpaRepository, 수익 조회는 QueryDSL로 변경했다. API·수수료·동시성 정책은 유지한다.
+
 2026-11-03. 황준범. feature/order-settlement. 선행 결제·직접 취소/환불 브랜치를 포함한다.
 
 ## 구매 확정

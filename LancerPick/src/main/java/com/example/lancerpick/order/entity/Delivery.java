@@ -12,6 +12,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.http.HttpStatus;
 
 /** 제출 원문만 보존한다. 결과물 URL에 접속하거나 파일을 가져오지 않는다. */
+@lombok.Getter
 @Entity
 @Table(name = "deliveries")
 public class Delivery {

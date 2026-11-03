@@ -9,12 +9,12 @@ import java.util.Optional;
 public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     boolean existsByOrderIdAndSequenceNo(long orderId, int sequenceNo);
 
-    @Query(value = "SELECT sequence_no FROM deliveries WHERE id=:deliveryId AND order_id=:orderId", nativeQuery = true)
+    @Query(value = "select d.sequenceNo from Delivery d where d.id=:deliveryId and d.orderId=:orderId")
     Optional<Integer> sequenceForOrderDelivery(@Param("orderId") long orderId, @Param("deliveryId") long deliveryId);
 
-    @Query(value = "SELECT COUNT(*) FROM cancellation_requests WHERE order_id=:orderId AND status='PENDING'", nativeQuery = true)
+    @Query(value = "select count(c) from CancellationRequest c where c.orderId=:orderId and c.status='PENDING'")
     long pendingCancellations(@Param("orderId") long orderId);
 
-    @Query(value = "SELECT COUNT(*) FROM revision_requests r JOIN deliveries d ON d.id=r.delivery_id AND d.order_id=r.order_id AND d.sequence_no=1 WHERE r.order_id=:orderId", nativeQuery = true)
+    @Query(value = "select count(r) from RevisionRequest r join Delivery d on d.id=r.deliveryId and d.orderId=r.orderId and d.sequenceNo=1 where r.orderId=:orderId")
     long revisions(@Param("orderId") long orderId);
 }

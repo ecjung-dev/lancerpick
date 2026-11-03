@@ -18,6 +18,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /** 충전 신청 저장 구조. 신청 생성은 적립금 지급이나 외부 승인을 수행하지 않는다. */
+@lombok.Getter
 @Entity
 @Table(name = "wallet_topups")
 public class WalletTopup {

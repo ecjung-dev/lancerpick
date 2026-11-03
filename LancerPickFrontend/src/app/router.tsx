@@ -3,6 +3,7 @@ import { OrderDetailPage } from '../features/orders/pages/OrderDetailPage'
 import { SettlementPage } from '../features/settlements/SettlementPage'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { ProductListPage } from '../features/products/pages/ProductListPage'
+import { SellerProfilePage } from '../features/seller/pages/SellerProfilePage'
 import { OrderListPage } from '../features/orders/pages/OrderListPage'
 import { AppLayout } from '../shared/components/AppLayout'
 import { WalletPage, WalletPreviewPage } from '../features/wallet/pages/WalletPage'
@@ -19,6 +20,7 @@ export const router = createBrowserRouter([
       { path: 'orders', element: <OrderListPage /> },
       { path: 'orders/:id', element: <OrderDetailPage /> },
       { path: 'mypage', element: <WalletPage /> },
+      { path: 'mypage/seller-profile', element: <SellerProfilePage /> },
       { path: 'mypage/settlements', element: <SettlementPage /> },
       { path: 'mypage/wallet', element: <WalletPage /> },
       { path: 'mypage/wallet/preview', element: <WalletPreviewPage /> },

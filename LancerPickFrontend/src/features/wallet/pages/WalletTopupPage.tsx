@@ -45,7 +45,9 @@ function CheckoutForm({ preview = false }: { preview?: boolean }) {
   const [input, setInput] = useState(String(pending?.amount ?? 50000))
   const [step, setStep] = useState<'amount' | 'checkout'>('amount')
   const [loading, setLoading] = useState(false)
-  const [agreed, setAgreed] = useState(false)
+  // V2 웹 SDK는 초기 동의 상태 조회 API를 제공하지 않는다.
+  // 변경 이벤트 전에는 상태를 단정하지 않고 requestPayment의 약관 검증에 맡긴다.
+  const [agreed, setAgreed] = useState<boolean | null>(null)
   const [widgetsReady, setWidgetsReady] = useState(false)
   const [error, setError] = useState<unknown>()
   const [submittedId, setSubmittedId] = useState<string>()
@@ -64,26 +66,50 @@ function CheckoutForm({ preview = false }: { preview?: boolean }) {
   async function prepare() {
     if (!amount || busy.current) return
     if (preview) { setStep('checkout'); return }
-    busy.current = true; setLoading(true); setError(undefined); setAgreed(false); setWidgetsReady(false); setStep('checkout')
+    busy.current = true; setLoading(true); setError(undefined); setAgreed(null); setWidgetsReady(false); setStep('checkout')
     try {
       const storage = getCheckoutStorage()
       if (!storage) throw new Error('브라우저의 세션 저장소를 사용할 수 없습니다.')
       // 신청 저장 전에 저장소 사용 가능 여부를 확인한다. 토큰/시크릿은 저장하지 않는다.
       storage.setItem('lancerpick.wallet.storage-check', '1'); storage.removeItem('lancerpick.wallet.storage-check')
+      if (runtime.current) {
+        await runtime.current.destroy()
+        runtime.current = null
+      }
+      if (!alive.current) return
       const mounted = await mountTossCheckout(key, amount)
       if (!alive.current) { await mounted.destroy(); return }
       runtime.current = mounted
       setWidgetsReady(true)
-      mounted.agreement.on('agreementStatusChange', ({ agreedRequiredTerms }) => { if (alive.current) setAgreed(agreedRequiredTerms) })
-      mounted.methods.on('paymentMethodSelect', () => { if (alive.current) setError(undefined) })
+      mounted.agreement.on('agreementStatusChange', ({ agreedRequiredTerms }) => {
+        if (!alive.current || runtime.current !== mounted) return
+        setAgreed(agreedRequiredTerms)
+        if (agreedRequiredTerms) setError(undefined)
+      })
+      mounted.methods.on('paymentMethodSelect', () => { if (alive.current && runtime.current === mounted) setError(undefined) })
     } catch (failure) {
       if (alive.current) setError(failure instanceof Error && !isTossTestClientKey(key) ? failure : new Error('결제 수단을 불러오지 못했습니다. 테스트 키와 토스 결제 UI 설정을 확인해 주세요.'))
     } finally { busy.current = false; if (alive.current) setLoading(false) }
   }
 
+  async function changeAmount() {
+    // 신청을 만든 뒤에는 금액을 바꾸지 않고 해당 신청 상태부터 확인한다.
+    if (busy.current || pending || submittedId) return
+    busy.current = true; setLoading(true); setError(undefined); setWidgetsReady(false); setAgreed(null)
+    try {
+      if (runtime.current) {
+        await runtime.current.destroy()
+        runtime.current = null
+      }
+      if (alive.current) setStep('amount')
+    } catch {
+      if (alive.current) setError(new Error('결제 화면을 정리하지 못했습니다. 충전 금액 변경을 다시 눌러 주세요.'))
+    } finally { busy.current = false; if (alive.current) setLoading(false) }
+  }
+
   async function requestPayment() {
     const mounted = runtime.current
-    if (preview || !mounted || !amount || !agreed || busy.current || submittedId) return
+    if (preview || !widgetsReady || !mounted || !amount || agreed === false || busy.current || submittedId) return
     busy.current = true; setLoading(true); setError(undefined)
     try {
       if ((await mounted.methods.getSelectedPaymentMethod()).method !== 'CARD') {
@@ -123,11 +149,12 @@ function CheckoutForm({ preview = false }: { preview?: boolean }) {
         <div className={styles.presets}>{[10000, 30000, 50000, 100000].map((value) => <button key={value} type="button" disabled={step === 'checkout' || Boolean(pending)}
           aria-pressed={amount === value} onClick={() => setInput(String(value))}>{formatWon(value)}</button>)}</div>
         {step === 'amount' ? <Button disabled={!amount || loading || !preview && !isTossTestClientKey(key)} onClick={() => { void prepare() }}>결제 수단 선택 →</Button> : <>
+          {!pending && !submittedId && <Button variant="secondary" disabled={loading} onClick={() => { void changeAmount() }}>← 충전 금액 변경</Button>}
           <h2 className={styles.paymentHeading}>결제 수단을 선택해 주세요</h2><p className={styles.help}>카드로 처리되는 테스트 결제를 지원합니다. 입금 대기 수단은 지원하지 않습니다.</p>
           {preview ? <div className={styles.widgetPreview}><strong>카드 결제</strong><p>실제 화면에서는 토스 결제 수단과 약관이 표시됩니다.</p><span>미리보기에서는 결제를 실행할 수 없습니다.</span></div>
             : <div inert={loading}><div id="topup-payment-methods" /><div id="topup-agreement" /></div>}
           {loading && <p role="status">결제 화면을 준비하고 있어요…</p>}
-          <Button disabled={preview || loading || !agreed || Boolean(error) || Boolean(submittedId)} onClick={() => { void requestPayment() }}>테스트 결제하기</Button>
+          <Button disabled={preview || loading || !widgetsReady || agreed === false || Boolean(error) || Boolean(submittedId)} onClick={() => { void requestPayment() }}>테스트 결제하기</Button>
         </>}
         {!preview && !isTossTestClientKey(key) && <p className={styles.help}>토스 테스트 클라이언트 키가 준비되면 결제 수단을 선택할 수 있습니다.</p>}
         {error !== undefined && <div className={styles.error} role="alert"><strong>진행 상태를 확인해 주세요</strong><p>{error instanceof Error ? error.message : '요청을 처리하지 못했습니다.'}</p></div>}

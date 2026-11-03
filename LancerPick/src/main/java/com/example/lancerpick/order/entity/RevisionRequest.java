@@ -10,6 +10,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.http.HttpStatus;
 
 /** 주문당 최초 납품에 한 번만 요청하며, 최초 납기는 orders에 그대로 보존한다. */
+@lombok.Getter
 @Entity
 @Table(name = "revision_requests")
 public class RevisionRequest {

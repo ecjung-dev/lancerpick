@@ -9,7 +9,7 @@ public interface WalletEntryView {
     long getAmountDelta();
     long getBalanceAfter();
     Long getOrderId();
-    // native Timestamp를 LocalDateTime으로 직접 변환하면 JVM 기본 시간대가 섞일 수 있다.
-    // 공통 JDBC UTC 기준의 Instant로 받아 응답에서 UTC offset을 붙인다.
+    // QueryDSL로 읽은 UTC LocalDateTime 원문을 구현체에서 Instant로 변환한다.
+    // JVM 기본 시간대 대신 UTC를 명시하고 응답에서 UTC offset을 붙인다.
     Instant getCreatedAt();
 }

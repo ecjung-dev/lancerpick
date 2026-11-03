@@ -1,6 +1,6 @@
 # 토스 테스트 충전 저장 구조
 
-후속 API: [충전 신청·본인 조회](wallet-topup-api.md)와 [승인·지급·본인 재확인](wallet-topup-approval.md)을 추가했다. 아래 스키마 착수 기록과 구분하며, 실제 토스 테스트 결제창·로그인·프런트 연동·자동 복구는 아직 미검증/미구현이다.
+현재 상태 2026-11-03: [충전 신청·본인 조회](wallet-topup-api.md)·[승인·지급·본인 재확인](wallet-topup-approval.md)·[React 충전 화면](wallet-topup-frontend.md)을 구현했다. 서버 세션 인증도 존재하지만 실제 인증 화면을 통한 토스 테스트 카드 승인·복귀·지급 검증과 자동 복구는 완료되지 않았다. 스키마 준비와 전체 충전 완료를 구분하며 [현황표](current-status.md)를 따른다.
 
 작성일: 2026-11-02. 담당: 황준범. 작업 브랜치: `feature/wallet-topup-schema`.
 

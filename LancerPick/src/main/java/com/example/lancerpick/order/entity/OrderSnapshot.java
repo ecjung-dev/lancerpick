@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import com.example.lancerpick.common.text.TextNormalizer;
 
 /** 상품 변경과 관계없이 주문 당시 상품·거래 조건을 보존한다. */
+@lombok.Getter
 @Entity
 @Table(name = "order_snapshots")
 public class OrderSnapshot implements Persistable<Long> {

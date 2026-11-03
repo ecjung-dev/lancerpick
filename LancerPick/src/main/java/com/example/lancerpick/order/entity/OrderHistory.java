@@ -16,6 +16,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.http.HttpStatus;
 
 /** 발생한 행동과 당시 주문 상태를 기록하며 수정 메서드를 제공하지 않는다. */
+@lombok.Getter
 @Entity
 @Table(name = "order_histories")
 public class OrderHistory {
@@ -121,7 +122,8 @@ public class OrderHistory {
     public static OrderHistory cancellationRequestEvent(Long orderId, Long actorId, OrderHistoryAction action,
             OrderStatus status, LocalDateTime at, String reason) {
         if (action != OrderHistoryAction.CANCELLATION_REQUESTED && action != OrderHistoryAction.CANCELLATION_REJECTED
-                && action != OrderHistoryAction.CANCELLATION_WITHDRAWN) throw invalidInput("취소 요청 이력 행동이 올바르지 않습니다.");
+                && action != OrderHistoryAction.CANCELLATION_WITHDRAWN
+                && action != OrderHistoryAction.CANCELLATION_APPROVED) throw invalidInput("취소 요청 이력 행동이 올바르지 않습니다.");
         if (status != OrderStatus.IN_PROGRESS && status != OrderStatus.AWAITING_CONFIRMATION && status != OrderStatus.REVISION_IN_PROGRESS)
             throw invalidInput("유료 미완료 주문의 취소 요청만 기록합니다.");
         if (reason != null && (reason.isEmpty() || reason.codePointCount(0, reason.length()) > 1000)) throw invalidInput("취소 요청 사유가 올바르지 않습니다.");

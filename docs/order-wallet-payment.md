@@ -1,5 +1,7 @@
 # 주문 적립금 결제
 
+저장소 후속 변경: [JPA·QueryDSL 전환](finance-persistence.md)에 따라 Payment Entity·JpaRepository로 전환했다. 아래 최초 구현의 JDBC 설명은 변경 전 기록이며 현재 저장소 구조는 후속 문서를 따른다. API·잠금·금액 정책은 유지한다.
+
 작성일: 2026-11-03. 담당: 황준범. 브랜치: feature/order-wallet-payment.
 
 ## API와 연결

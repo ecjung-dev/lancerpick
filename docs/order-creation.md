@@ -1,5 +1,7 @@
 # 주문 생성 서비스·HTTP 연결
 
+2026-11-03 저장소 후속 변경: [프로젝트 JPA·QueryDSL 통일](project-persistence.md)에 따라 현재 운영 구현에서 JdbcTemplate·네이티브 SQL을 제거했다. 아래 이전 SQL 구현 설명·실행 결과는 당시 기록으로 보존하며 현재 구조와 최종 검증 범위는 후속 문서를 따른다.
+
 작성일: 2026-11-02. 담당: 정은찬. 브랜치: `codex/order-create-service`.
 
 ## 구현 범위

@@ -13,6 +13,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /** 적립금 원장. 수정·삭제 메서드와 공개 쓰기 API를 제공하지 않는다. */
+@lombok.Getter
 @Entity
 @Table(name = "wallet_entries")
 public class WalletEntry {
@@ -101,4 +102,5 @@ public class WalletEntry {
     public long getBalanceAfter() { return balanceAfter; }
     public String getEventKey() { return eventKey; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public static WalletEntry topup(long member,long topup,long amount,long balance,String key,LocalDateTime at){if(member<=0 || topup<=0 || amount<1 || amount>1000000 || balance<0 || at==null || !key.equals("TOPUP:"+topup))throw new IllegalArgumentException("Invalid topup entry");var e=new WalletEntry();e.memberId=member;e.topupId=topup;e.type=WalletEntryType.TOPUP;e.amountDelta=amount;e.balanceAfter=balance;e.eventKey=key;e.createdAt=at;return e;}
 }

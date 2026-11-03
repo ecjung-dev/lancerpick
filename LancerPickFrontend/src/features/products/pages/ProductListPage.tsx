@@ -19,6 +19,7 @@ export function ProductListPage() {
   const page = Number.isInteger(pageInput) && pageInput >= 0 && pageInput <= 2147483647 ? pageInput : 0
   const categories = useCategories()
   const products = useProducts({ keyword, categoryId, page, size: 4 })
+  const outOfRange = products.data !== undefined && page > 0 && page >= products.data.totalPages
 
   function changeFilter(key: string, value: string) {
     setParams((current) => {
@@ -66,19 +67,20 @@ export function ProductListPage() {
     </section>
     <section className={styles.catalog} id="services" aria-labelledby="services-title" aria-busy={products.isFetching}>
       <div className={styles.sectionHeading}>
-        <div><div className={styles.sectionEyebrow}>FIND YOUR NEXT EXPERT</div><h2 id="services-title">{keyword ? `'${keyword}' 검색 결과` : categoryId ? '카테고리 서비스' : '새로 등록된 서비스'} <span className={styles.demoBadge}>예시 데이터</span></h2></div>
+        <div><div className={styles.sectionEyebrow}>FIND YOUR NEXT EXPERT</div><h2 id="services-title">{keyword ? `'${keyword}' 검색 결과` : categoryId ? '카테고리 서비스' : '새로 등록된 서비스'}</h2></div>
         <span className={styles.total}>{products.data ? `${products.data.totalElements}개의 서비스` : '서비스 탐색'}</span>
       </div>
       {products.isPending ? <AsyncState title="서비스를 불러오고 있습니다." description="잠시만 기다려 주세요." />
         : products.isError ? <AsyncState title="서비스를 불러오지 못했습니다." error={products.error} onRetry={() => void products.refetch()} />
-        : products.data.items.length === 0 ? <AsyncState title="조건에 맞는 서비스가 없습니다." description="다른 검색어나 카테고리를 선택해 보세요." />
+        : products.data.items.length === 0 ? <AsyncState title={outOfRange ? '요청한 페이지에 서비스가 없습니다.' : '조건에 맞는 서비스가 없습니다.'} description={outOfRange ? '첫 페이지로 돌아가 서비스를 확인해 보세요.' : '다른 검색어나 카테고리를 선택해 보세요.'} />
         : <div className={styles.products}>{products.data.items.map((product) => <ProductCard key={product.id} product={product} onSelect={() => setSelected(product)} />)}</div>}
       {!products.isError && products.data && (products.data.totalPages > 1 || page > 0) && <nav className={styles.pagination} aria-label="서비스 페이지">
         <Button variant="secondary" disabled={page === 0 || products.isFetching} onClick={() => changeFilter('page', String(page - 1))}>이전</Button>
-        <span aria-live="polite">{page + 1} / {Math.max(products.data.totalPages, page + 1)}</span>
+        <span aria-live="polite">총 {products.data.totalPages}페이지 · 현재 요청 {page + 1}페이지</span>
         <Button variant="secondary" disabled={page + 1 >= products.data.totalPages || products.isFetching} onClick={() => changeFilter('page', String(page + 1))}>다음</Button>
       </nav>}
-      {(keyword || categoryId) && <button className={styles.reset} onClick={() => setParams({})}>검색 조건 초기화 ↗</button>}
+      {outOfRange && <Button variant="secondary" onClick={() => changeFilter('page', '')}>첫 페이지로</Button>}
+      {(keyword || categoryId || page > 0) && <button className={styles.reset} onClick={() => setParams({})}>검색 조건 초기화 ↗</button>}
     </section>
     <section className={styles.guide} aria-labelledby="guide-title">
       <div><span className={styles.sectionEyebrow}>HOW IT WORKS</span><h2 id="guide-title">시작부터 완료까지,<br />흐름은 간단하게.</h2></div>
