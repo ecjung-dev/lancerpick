@@ -88,4 +88,8 @@ class DefaultCatalogApiTests extends CommonApiTests {
     // 실제 회원가입 처리는 MySQL을 사용하는 별도 검증에서 확인한다.
     @MockitoBean
     MemberService memberService;
+
+    // 로그인 서비스도 DB(MemberRepository)를 사용하므로 이 컨텍스트에서는 대체한다.
+    @MockitoBean
+    com.example.lancerpick.auth.service.AuthService authService;
 }

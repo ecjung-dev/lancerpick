@@ -4,6 +4,7 @@ import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.member.dto.MemberResponse;
 import com.example.lancerpick.member.dto.SignupRequest;
+import com.example.lancerpick.member.dto.UpdateMeRequest;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.repository.MemberRepository;
 import com.example.lancerpick.wallet.service.WalletInitializationService;
@@ -80,6 +81,35 @@ public class MemberService {
         walletInitializationService.initializeForNewMember(member.getId());
 
         return MemberResponse.from(member, false);   // 방금 가입한 회원은 판매자 프로필이 없음
+    }
+
+    /** GET /api/me — 세션의 회원 ID로 내 정보를 조회한다. */
+    @Transactional(readOnly = true)
+    public MemberResponse getMe(long memberId) {
+        Member member = findLoggedInMember(memberId);
+        return MemberResponse.from(member, hasSellerProfile(memberId));
+    }
+
+    /** PATCH /api/me — 표시 이름만 수정한다. 같은 값이면 updated_at을 바꾸지 않는다. */
+    @Transactional
+    public MemberResponse updateMe(long memberId, UpdateMeRequest request) {
+        String displayName = normalizeDisplayName(request.displayName());
+        Member member = findLoggedInMember(memberId);
+        if (!displayName.equals(member.getDisplayName())) {
+            LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+            member.changeDisplayName(displayName, now);   // 트랜잭션 종료 시 변경 감지로 UPDATE
+        }
+        return MemberResponse.from(member, hasSellerProfile(memberId));
+    }
+
+    /** 세션에는 있는데 DB에 회원이 없으면(삭제 등) 로그인이 유효하지 않은 것으로 본다. */
+    private Member findLoggedInMember(long memberId) {
+        return memberRepository.findById(memberId).orElseThrow(() ->
+                new BusinessException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다."));
+    }
+
+    private boolean hasSellerProfile(long memberId) {
+        return memberRepository.countSellerProfiles(memberId) > 0;
     }
 
     /** 공백 제거 → 소문자화 → 3~254자(코드 포인트) + 형식 검사 */
