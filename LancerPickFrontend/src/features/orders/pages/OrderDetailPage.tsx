@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { formatWon, formatDateTime } from '../../../shared/lib/format'
 import { normalizeText, codePointLength } from '../../../shared/lib/text'
-import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder } from '../api'
+import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder, deliverOrder, requestOrderRevision } from '../api'
 import styles from './Orders.module.css'
 
 export function OrderDetailPage() {
@@ -21,25 +21,42 @@ function OrderDetail({ id }: { id: string }) {
   const [rejectionReason, setRejectionReason] = useState('')
   const rejectionLength = codePointLength(normalizeText(rejectionReason))
   const validRejection = rejectionLength > 0 && rejectionLength <= 1000
+  const [description, setDescription] = useState('')
+  const [resultUrl, setResultUrl] = useState('')
+  const [revisionReason, setRevisionReason] = useState('')
+  const descriptionLength = codePointLength(normalizeText(description))
+  const revisionLength = codePointLength(normalizeText(revisionReason))
+  const cleanUrl = normalizeText(resultUrl)
+  const validDelivery = descriptionLength > 0 && descriptionLength <= 5000 && cleanUrl.length > 0 && codePointLength(cleanUrl) <= 2048
+  const validRevision = revisionLength > 0 && revisionLength <= 1000
+  const sequence = query.data?.status === 'IN_PROGRESS' ? 1 : query.data?.status === 'REVISION_IN_PROGRESS' ? 2 : null
+  const firstDelivery = query.data?.deliveries.find(delivery => delivery.sequenceNo === 1)
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const lock = useRef(false)
-  async function act(action: 'PAY' | 'CANCEL' | 'CONFIRM' | 'ACCEPT' | 'REJECT') {
+  async function act(action: 'PAY' | 'CANCEL' | 'CONFIRM' | 'ACCEPT' | 'REJECT' | 'DELIVER' | 'REQUEST_REVISION') {
     if (lock.current || failure || !query.data?.allowedActions.includes(action)) return
     if ((action === 'PAY' && !agreed) || (action === 'CONFIRM' && !confirmed) || (action === 'CANCEL' && !reason.trim())) return
     if (action === 'REJECT' && !validRejection) return
+    if (action === 'DELIVER' && (!validDelivery || sequence === null)) return
+    if (action === 'REQUEST_REVISION' && (!validRevision || !firstDelivery)) return
     lock.current = true; setBusy(true); setMessage('')
     try {
       const result = action === 'PAY' ? await payOrder(id)
         : action === 'CANCEL' ? await cancelOrder(id, reason)
         : action === 'ACCEPT' ? await acceptOrder(id)
         : action === 'REJECT' ? await rejectOrder(id, rejectionReason)
+        : action === 'DELIVER' && sequence !== null ? await deliverOrder(id, description, resultUrl, sequence)
+        : action === 'REQUEST_REVISION' && firstDelivery ? await requestOrderRevision(id, firstDelivery.id, revisionReason)
         : await confirmOrder(id)
       // 변경 응답을 개인 캐시에 직접 넣지 않고 현재 세션으로 재조회한다.
       setMessage(`주문 상태가 ${result.status}(으)로 확인됐습니다.`)
       setAgreed(false); setConfirmed(false); setReason(''); setRejectionReason('')
+      setDescription(''); setResultUrl(''); setRevisionReason('')
     } catch (error) {
+      // 결과 불명확 후 재조회가 다음 회차를 보여도 이전 납품 내용을 그대로 보내지 않는다.
+      if (action === 'DELIVER') { setDescription(''); setResultUrl('') }
       setFailure(error instanceof ApiError ? `${error.message} (${error.code})` : '처리 결과를 확인하지 못했습니다. 다시 요청하기 전에 주문 상태를 조회해 주세요.')
     } finally {
       // 성공·실패 모두 조회로 금액/상태를 확인한다. 변경 요청은 자동 재전송하지 않는다.
@@ -60,7 +77,10 @@ function OrderDetail({ id }: { id: string }) {
     <h2>보관된 거래 조건</h2><p className={styles.text}>{order.productSnapshot.scopeDescription}</p><p>소요일 {order.durationDays}일{order.currentDueAt && ` · 납기 ${formatDateTime(order.currentDueAt)}`}</p><p className={styles.text}>{order.termsSnapshot}</p><h2>제출한 요구사항</h2><p className={styles.text}>{order.requirements}</p>
     <h2>납품 내역</h2>{order.deliveries.length === 0 ? <p>등록된 납품이 없습니다.</p> : order.deliveries.map(delivery => <article key={delivery.id}><h3>{delivery.sequenceNo}차 납품</h3><p className={styles.text}>{delivery.description}</p>{delivery.resultUrl.startsWith('https://') && <a href={delivery.resultUrl} target="_blank" rel="noopener noreferrer">결과물 확인</a>}</article>)}
     {message && <p role="status">{message}</p>}{failure && <p role="alert">{failure}</p>}
+    {order.revisionRequest && <article><h2>수정 요청</h2><p className={styles.text}>{order.revisionRequest.reason}</p><p>요청 시각 {formatDateTime(order.revisionRequest.requestedAt)} · 수정 기한 {formatDateTime(order.revisionRequest.dueAt)}</p></article>}
     <button disabled={busy || query.isFetching} onClick={() => { void refresh() }}>현재 상태 다시 조회</button>
+    {order.allowedActions.includes('DELIVER') && sequence !== null && <fieldset disabled={disabled}><legend>{sequence === 1 ? '최초 납품' : '재납품'}</legend><label>납품 설명<textarea value={description} onChange={e => setDescription(e.target.value)} /></label><p>{descriptionLength} / 5,000자</p><label>결과물 HTTPS 링크<input type="url" value={resultUrl} onChange={e => setResultUrl(e.target.value)} /></label><p>구매자가 열 수 있는 링크를 입력해 주세요. 제출 후 해당 회차를 덮어쓸 수 없습니다.</p><button disabled={!validDelivery} onClick={() => { void act('DELIVER') }}>{sequence}차 납품 제출</button></fieldset>}
+    {order.allowedActions.includes('REQUEST_REVISION') && firstDelivery && <fieldset disabled={disabled}><legend>최초 납품 수정 요청</legend><p>보관된 거래 범위 안에서 한 번 요청할 수 있습니다.</p><label>수정 사유<textarea value={revisionReason} onChange={e => setRevisionReason(e.target.value)} /></label><p>{revisionLength} / 1,000자</p><button disabled={!validRevision} onClick={() => { void act('REQUEST_REVISION') }}>수정 요청</button></fieldset>}
     {order.allowedActions.includes('ACCEPT') && <fieldset disabled={disabled}><legend>주문 수락</legend><p>보관된 거래 조건과 구매자의 요구사항을 확인해 주세요. 수락하면 구매자가 결제할 수 있습니다.</p><button onClick={() => { void act('ACCEPT') }}>주문 수락</button></fieldset>}
     {order.allowedActions.includes('REJECT') && <fieldset disabled={disabled}><legend>주문 거절</legend><label>거절 사유 (필수, 최대 1,000자)<textarea value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} /></label><p>{rejectionLength} / 1,000자</p><p>거절하면 이 주문은 종료됩니다. 작성한 사유는 구매자에게 전달됩니다.</p><button disabled={!validRejection} onClick={() => { void act('REJECT') }}>주문 거절</button></fieldset>}
     {order.allowedActions.includes('PAY') && <fieldset disabled={disabled}><legend>적립금 결제</legend><label><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} /> 위 거래 조건과 {formatWon(order.priceAmount)} 결제에 동의합니다.</label><button disabled={!agreed} onClick={() => { void act('PAY') }}>적립금으로 결제</button></fieldset>}

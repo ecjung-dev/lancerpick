@@ -14,3 +14,8 @@ export const cancelOrder = (id: string, reason: string) => apiRequest<OrderDetai
 export const confirmOrder = (id: string) => apiRequest<OrderDetail>(`${orderPath(id)}/confirm`, { method: 'POST' })
 export const acceptOrder = (id: string) => apiRequest<OrderDetail>(`${orderPath(id)}/accept`, { method: 'POST' })
 export const rejectOrder = (id: string, reason: string) => apiRequest<OrderDetail>(`${orderPath(id)}/reject`, { method: 'POST', json: { reason } })
+export const deliverOrder = (id: string, description: string, resultUrl: string, expectedSequenceNo: 1 | 2) => apiRequest<OrderDetail>(`${orderPath(id)}/deliveries`, { method: 'POST', json: { description, resultUrl, expectedSequenceNo } })
+export const requestOrderRevision = (id: string, deliveryId: string, reason: string) => {
+  orderPath(deliveryId)
+  return apiRequest<OrderDetail>(`${orderPath(id)}/revision-request`, { method: 'POST', json: { deliveryId, reason } })
+}

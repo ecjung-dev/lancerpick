@@ -1,10 +1,43 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder } from '../src/features/orders/api.ts'
+import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder, deliverOrder, requestOrderRevision } from '../src/features/orders/api.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
 const original = globalThis.fetch
 afterEach(() => { globalThis.fetch = original; clearCsrfToken() })
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
+
+test('delivery rounds and revision reference use the documented bodies with CSRF', async () => {
+  const calls = []
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/auth/csrf') return json({ token: 'test', headerName: 'X-CSRF-TOKEN' })
+    assert.equal(options.headers.get('X-CSRF-TOKEN'), 'test')
+    assert.equal(options.credentials, 'same-origin')
+    assert.equal(options.method, 'POST')
+    calls.push([url, JSON.parse(options.body)])
+    return json({ id: '9007199254740993', status: 'AWAITING_CONFIRMATION' })
+  }
+  await deliverOrder('9007199254740993', '최초', 'https://example.com/1', 1)
+  await requestOrderRevision('9007199254740993', '9007199254740994', '수정 사유')
+  await deliverOrder('9007199254740993', '수정', 'https://example.com/2', 2)
+  assert.deepEqual(calls, [
+    ['/api/orders/9007199254740993/deliveries', { description: '최초', resultUrl: 'https://example.com/1', expectedSequenceNo: 1 }],
+    ['/api/orders/9007199254740993/revision-request', { deliveryId: '9007199254740994', reason: '수정 사유' }],
+    ['/api/orders/9007199254740993/deliveries', { description: '수정', resultUrl: 'https://example.com/2', expectedSequenceNo: 2 }],
+  ])
+})
+
+test('delivery conflict does not advance round or retry and revision rejects invalid reference', async () => {
+  const rounds = []
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/auth/csrf') return json({ token: 'test', headerName: 'X-CSRF-TOKEN' })
+    rounds.push(JSON.parse(options.body).expectedSequenceNo)
+    return json({ code: 'DELIVERY_ALREADY_SUBMITTED', message: '이미 납품했습니다.', fieldErrors: [], traceId: 'test' }, 409)
+  }
+  await assert.rejects(deliverOrder('1', '설명', 'https://example.com', 1), error => error.code === 'DELIVERY_ALREADY_SUBMITTED')
+  assert.deepEqual(rounds, [1])
+  for (const id of ['0', '../me', '9223372036854775808']) assert.throws(() => requestOrderRevision('1', id, '수정'))
+  assert.deepEqual(rounds, [1])
+})
 
 test('seller decisions send CSRF and reason without client identity and preserve large IDs', async () => {
   const calls = []

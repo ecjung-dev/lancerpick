@@ -9,4 +9,5 @@ export interface OrderDetail {
   productSnapshot: { title: string; description: string; scopeDescription: string; preparationDescription: string; productVersion: number }
   termsSnapshot: string; durationDays: number; currentDueAt: string | null; allowedActions: string[]
   deliveries: { id: string; sequenceNo: number; description: string; resultUrl: string; submittedAt: string }[]
+  revisionRequest: { id: string; deliveryId: string; reason: string; requestedAt: string; dueAt: string } | null
 }
