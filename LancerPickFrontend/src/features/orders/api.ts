@@ -1,7 +1,7 @@
 // 이 기능의 서버 요청 함수를 구현합니다. 공통 요청 처리는 shared/api/client.ts에 둡니다.
 import { apiRequest } from '../../shared/api/client.ts'
 import type { PageResponse } from '../../shared/api/types'
-import type { OrderDetail, OrderSummary } from './types'
+import type { OrderDetail, OrderSummary, CancellationResult } from './types'
 
 function orderPath(id: string) {
   if (!/^[0-9]+$/.test(id) || BigInt(id) < 1n || BigInt(id) > 9223372036854775807n) throw new Error('주문 ID를 확인해 주세요.')
@@ -18,4 +18,11 @@ export const deliverOrder = (id: string, description: string, resultUrl: string,
 export const requestOrderRevision = (id: string, deliveryId: string, reason: string) => {
   orderPath(deliveryId)
   return apiRequest<OrderDetail>(`${orderPath(id)}/revision-request`, { method: 'POST', json: { deliveryId, reason } })
+}
+export const createCancellationRequest = (id: string, reason: string, requestKey: string) => apiRequest<CancellationResult>(`${orderPath(id)}/cancellation-requests`, { method: 'POST', json: { reason, requestKey } })
+export const resolveCancellationRequest = (id: string, requestId: string, action: 'approve' | 'reject' | 'withdraw', responseReason?: string) => {
+  orderPath(requestId)
+  return apiRequest<CancellationResult>(`${orderPath(id)}/cancellation-requests/${requestId}/${action}`, {
+    method: 'POST', ...(action === 'reject' && responseReason ? { json: { responseReason } } : {}),
+  })
 }

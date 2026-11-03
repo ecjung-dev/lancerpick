@@ -154,7 +154,7 @@ payment: id,amount,feeRateBps,status,paidAt,refundedAt. review는 8절의 Review
 
 ## 6 취소 요청과 재전송 계약
 
-2026-11-03 후속: [취소 요청 제출·승인·거절·철회](order-cancellation-requests.md)를 추가하고, 승인은 기존 [직접 취소·전액 적립금 환불](order-refund.md)에 연결했다. [구매 확정·정산](order-settlement.md)과의 경쟁도 검증한다. 기존 [거래 금융 화면](order-finance-ui.md)과 별개로 새 취소 요청 화면·실제 로그인 기반 브라우저 통합은 후속이다.
+2026-11-03 후속: [취소 요청 제출·승인·거절·철회](order-cancellation-requests.md)를 추가하고, 승인은 기존 [직접 취소·전액 적립금 환불](order-refund.md)에 연결했다. [구매 확정·정산](order-settlement.md)과의 경쟁도 검증한다. 기존 [거래 금융 화면](order-finance-ui.md)의 주문 상세에 취소 요청 제출·승인·거절·철회 UI를 연결했다. 실제 로그인 기반 브라우저 통합은 후속이다.
 
 | POST 경로 | 실행자·입력 | 결과 |
 | --- | --- | --- |

@@ -2,9 +2,48 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder, deliverOrder, requestOrderRevision } from '../src/features/orders/api.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
+import { createCancellationRequest, resolveCancellationRequest } from '../src/features/orders/api.ts'
 const original = globalThis.fetch
 afterEach(() => { globalThis.fetch = original; clearCsrfToken() })
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
+
+test('cancellation commands preserve UUID and IDs and omit optional empty rejection body', async () => {
+  const calls = []
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/auth/csrf') return json({ token: 'csrf', headerName: 'X-CSRF-TOKEN' })
+    assert.equal(options.headers.get('X-CSRF-TOKEN'), 'csrf')
+    assert.equal(options.credentials, 'same-origin')
+    assert.equal(options.method, 'POST')
+    calls.push([url, options.body && JSON.parse(options.body)])
+    return json({ cancellationRequest: { id: '9007199254740994' }, order: { id: '1' } })
+  }
+  const key = '1d15b8aa-4ad6-4e01-b13c-8598df53b42d'
+  await createCancellationRequest('1', '사유', key)
+  for (const action of ['approve', 'reject', 'withdraw']) await resolveCancellationRequest('1', '9007199254740994', action)
+  await resolveCancellationRequest('1', '9007199254740994', 'reject', '거절 사유')
+  assert.deepEqual(calls, [
+    ['/api/orders/1/cancellation-requests', { reason: '사유', requestKey: key }],
+    ...['approve', 'reject', 'withdraw'].map(action => [`/api/orders/1/cancellation-requests/9007199254740994/${action}`, undefined]),
+    ['/api/orders/1/cancellation-requests/9007199254740994/reject', { responseReason: '거절 사유' }],
+  ])
+})
+
+test('uncertain cancellation is not replayed automatically and explicit retry keeps supplied key', async () => {
+  const bodies = []
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/auth/csrf') return json({ token: 'csrf', headerName: 'X-CSRF-TOKEN' })
+    bodies.push(options.body)
+    throw new Error('connection lost')
+  }
+  const key = '1d15b8aa-4ad6-4e01-b13c-8598df53b42d'
+  await assert.rejects(createCancellationRequest('1', '사유', key))
+  assert.equal(bodies.length, 1)
+  await assert.rejects(createCancellationRequest('1', '사유', key))
+  assert.equal(bodies.length, 2)
+  assert.equal(bodies[0], bodies[1])
+  assert.throws(() => resolveCancellationRequest('1', '../me', 'approve'))
+  assert.equal(bodies.length, 2)
+})
 
 test('delivery rounds and revision reference use the documented bodies with CSRF', async () => {
   const calls = []

@@ -6,6 +6,8 @@ import { formatWon, formatDateTime } from '../../../shared/lib/format'
 import { normalizeText, codePointLength } from '../../../shared/lib/text'
 import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder, deliverOrder, requestOrderRevision } from '../api'
 import styles from './Orders.module.css'
+import { CancellationActions } from './CancellationActions'
+import type { OrderDetail as OrderDetailData } from '../types'
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
@@ -41,23 +43,29 @@ function OrderDetail({ id }: { id: string }) {
     if (action === 'REJECT' && !validRejection) return
     if (action === 'DELIVER' && (!validDelivery || sequence === null)) return
     if (action === 'REQUEST_REVISION' && (!validRevision || !firstDelivery)) return
-    lock.current = true; setBusy(true); setMessage('')
-    try {
-      const result = action === 'PAY' ? await payOrder(id)
+    await run(async () => action === 'PAY' ? await payOrder(id)
         : action === 'CANCEL' ? await cancelOrder(id, reason)
         : action === 'ACCEPT' ? await acceptOrder(id)
         : action === 'REJECT' ? await rejectOrder(id, rejectionReason)
         : action === 'DELIVER' && sequence !== null ? await deliverOrder(id, description, resultUrl, sequence)
         : action === 'REQUEST_REVISION' && firstDelivery ? await requestOrderRevision(id, firstDelivery.id, revisionReason)
-        : await confirmOrder(id)
+        : await confirmOrder(id))
+  }
+  async function run(command: () => Promise<OrderDetailData>): Promise<boolean> {
+    if (lock.current || failure || query.isFetching) return false
+    lock.current = true; setBusy(true); setMessage('')
+    try {
+      const result = await command()
       // 변경 응답을 개인 캐시에 직접 넣지 않고 현재 세션으로 재조회한다.
       setMessage(`주문 상태가 ${result.status}(으)로 확인됐습니다.`)
       setAgreed(false); setConfirmed(false); setReason(''); setRejectionReason('')
       setDescription(''); setResultUrl(''); setRevisionReason('')
+      return true
     } catch (error) {
       // 결과 불명확 후 재조회가 다음 회차를 보여도 이전 납품 내용을 그대로 보내지 않는다.
-      if (action === 'DELIVER') { setDescription(''); setResultUrl('') }
+      setDescription(''); setResultUrl('')
       setFailure(error instanceof ApiError ? `${error.message} (${error.code})` : '처리 결과를 확인하지 못했습니다. 다시 요청하기 전에 주문 상태를 조회해 주세요.')
+      return false
     } finally {
       // 성공·실패 모두 조회로 금액/상태를 확인한다. 변경 요청은 자동 재전송하지 않는다.
       await client.invalidateQueries({ queryKey: ['wallet'] })
@@ -86,6 +94,7 @@ function OrderDetail({ id }: { id: string }) {
     {order.allowedActions.includes('PAY') && <fieldset disabled={disabled}><legend>적립금 결제</legend><label><input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} /> 위 거래 조건과 {formatWon(order.priceAmount)} 결제에 동의합니다.</label><button disabled={!agreed} onClick={() => { void act('PAY') }}>적립금으로 결제</button></fieldset>}
     {order.allowedActions.includes('CANCEL') && <fieldset disabled={disabled}><legend>직접 취소</legend><p>결제된 주문은 전액 적립금 환불과 함께 취소됩니다.</p><label>취소 사유<textarea value={reason} onChange={e => setReason(e.target.value)} /></label><button disabled={!reason.trim()} onClick={() => { void act('CANCEL') }}>주문 취소</button></fieldset>}
     {order.allowedActions.includes('CONFIRM') && <fieldset disabled={disabled}><legend>구매 확정</legend><p>납품을 확인한 후 확정해 주세요. 확정 후에는 취소·환불할 수 없습니다.</p><label><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} /> 결과물을 확인했고 구매 확정에 동의합니다.</label><button disabled={!confirmed} onClick={() => { void act('CONFIRM') }}>구매 확정</button></fieldset>}
+    <CancellationActions key={order.cancellationRequests.map(item => `${item.id}:${item.status}`).join("|")} order={order} disabled={disabled} run={run} />
     <Link to="/mypage/settlements">판매 수익 확인 →</Link>
   </section>
 }

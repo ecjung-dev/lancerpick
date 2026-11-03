@@ -4,6 +4,7 @@ export interface OrderSummary {
   counterparty: { id: string; displayName: string }; createdAt: string; currentDueAt: string | null
 }
 export interface OrderDetail {
+  cancellationRequests: CancellationRequest[]
   id: string; status: string; priceAmount: number; requirements: string
   buyer: { id: string; displayName: string }; seller: { id: string; displayName: string }
   productSnapshot: { title: string; description: string; scopeDescription: string; preparationDescription: string; productVersion: number }
@@ -11,3 +12,9 @@ export interface OrderDetail {
   deliveries: { id: string; sequenceNo: number; description: string; resultUrl: string; submittedAt: string }[]
   revisionRequest: { id: string; deliveryId: string; reason: string; requestedAt: string; dueAt: string } | null
 }
+export interface CancellationRequest {
+  id: string; orderId: string; requestKey: string; reason: string
+  status: string; requestedAt: string; resolvedAt: string | null
+  resolvedBy: string | null; responseReason: string | null
+}
+export interface CancellationResult { cancellationRequest: CancellationRequest; order: OrderDetail }
