@@ -3,9 +3,18 @@ import { afterEach, test } from 'node:test'
 import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder, deliverOrder, requestOrderRevision } from '../src/features/orders/api.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
 import { createCancellationRequest, resolveCancellationRequest } from '../src/features/orders/api.ts'
+import { describeHistory } from '../src/features/orders/history.ts'
 const original = globalThis.fetch
 afterEach(() => { globalThis.fetch = original; clearCsrfToken() })
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
+
+test('order history distinguishes state changes from events that leave state unchanged', () => {
+  const order = { buyer: { id: '9007199254740993' }, seller: { id: '2' } }
+  const event = { id: '1', actorId: '9007199254740993', action: 'CANCELLATION_REQUESTED', fromStatus: 'IN_PROGRESS', toStatus: 'IN_PROGRESS', reason: '취소 사유', createdAt: '2026-11-03T00:00:00Z' }
+  assert.deepEqual(describeHistory(event, order), { action: '취소 요청', actor: '구매자', transition: '상태 유지: 진행 중', reason: '취소 사유' })
+  assert.equal(describeHistory({ ...event, actorId: '2', action: 'CANCELLED', toStatus: 'CANCELLED' }, order).transition, '진행 중 → 취소됨')
+  assert.equal(describeHistory({ ...event, action: 'CREATED', fromStatus: null, toStatus: 'REQUESTED', reason: null }, order).transition, '상태: 수락 대기')
+})
 
 test('cancellation commands preserve UUID and IDs and omit optional empty rejection body', async () => {
   const calls = []

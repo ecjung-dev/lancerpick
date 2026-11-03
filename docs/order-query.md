@@ -38,3 +38,7 @@ id는 양의 BIGINT 범위 10진 문자열이다. 형식·범위 오류는 400, 
 OrderQueryService는 readOnly·REPEATABLE_READ 트랜잭션을 사용해 count/목록과 상세의 여러 테이블을 같은 읽기 스냅샷으로 조회한다. FOR UPDATE를 추가하지 않으며 생성의 READ_COMMITTED와 쓰기 잠금 순서는 변경하지 않는다. 시각은 DATETIME 원문을 LocalDateTime으로 읽어 UTC OffsetDateTime으로 변환한다. 조회가 주문·지갑·이력을 생성하거나 상태를 바꾸지 않는다.
 
 필수 side 누락의 Spring 예외도 공통 400 VALIDATION_FAILED로 변환했다. 오류 응답의 fieldErrors·traceId 계약을 유지한다. 읽기 범위·입력 경계·DB 조합에 집중한 OrderQueryApiIntegrationTests를 추가했다. 후속 납기 상태는 SQL fixture로 구성했으며 실제 결제·수정 요청 서비스 실행 검증은 아니다. 최종 실행 결과는 [작업표](work-plan.md)를 따른다.
+
+## 주문 이력 화면 후속 (2026-11-03)
+
+`/orders/{id}`는 서버의 histories 배열을 받은 순서대로 표시한다. 서버 조회는 created_at·id 오름차순이다. 행동·구매자/판매자 역할·시각·이전/이후 상태를 보여주고, 상태가 그대로인 취소 요청·해결 이벤트는 상태 유지로 구분한다. reason이 null이면 사유를 표시하지 않으며 빈 배열은 안내 문구를 표시한다. 이력은 조회용이고 클라이언트에서 새 이력이나 상태를 만들지 않는다. 프런트 lint·build·API 테스트 33개 통과. 실제 브라우저 조작은 별도다.

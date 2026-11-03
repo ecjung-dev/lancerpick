@@ -8,6 +8,7 @@ import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder
 import styles from './Orders.module.css'
 import { CancellationActions } from './CancellationActions'
 import type { OrderDetail as OrderDetailData } from '../types'
+import { OrderHistoryList } from './OrderHistoryList'
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
@@ -95,6 +96,7 @@ function OrderDetail({ id }: { id: string }) {
     {order.allowedActions.includes('CANCEL') && <fieldset disabled={disabled}><legend>직접 취소</legend><p>결제된 주문은 전액 적립금 환불과 함께 취소됩니다.</p><label>취소 사유<textarea value={reason} onChange={e => setReason(e.target.value)} /></label><button disabled={!reason.trim()} onClick={() => { void act('CANCEL') }}>주문 취소</button></fieldset>}
     {order.allowedActions.includes('CONFIRM') && <fieldset disabled={disabled}><legend>구매 확정</legend><p>납품을 확인한 후 확정해 주세요. 확정 후에는 취소·환불할 수 없습니다.</p><label><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} /> 결과물을 확인했고 구매 확정에 동의합니다.</label><button disabled={!confirmed} onClick={() => { void act('CONFIRM') }}>구매 확정</button></fieldset>}
     <CancellationActions key={order.cancellationRequests.map(item => `${item.id}:${item.status}`).join("|")} order={order} disabled={disabled} run={run} />
+    <OrderHistoryList order={order} />
     <Link to="/mypage/settlements">판매 수익 확인 →</Link>
   </section>
 }

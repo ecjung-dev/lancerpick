@@ -11,6 +11,11 @@ export interface OrderDetail {
   termsSnapshot: string; durationDays: number; currentDueAt: string | null; allowedActions: string[]
   deliveries: { id: string; sequenceNo: number; description: string; resultUrl: string; submittedAt: string }[]
   revisionRequest: { id: string; deliveryId: string; reason: string; requestedAt: string; dueAt: string } | null
+  histories: OrderHistory[]
+}
+export interface OrderHistory {
+  id: string; actorId: string; action: string; fromStatus: string | null
+  toStatus: string; reason: string | null; createdAt: string
 }
 export interface CancellationRequest {
   id: string; orderId: string; requestKey: string; reason: string
