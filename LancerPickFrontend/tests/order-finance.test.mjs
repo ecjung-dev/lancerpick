@@ -1,11 +1,22 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { getOrder, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder, deliverOrder, requestOrderRevision } from '../src/features/orders/api.ts'
+import { getOrder, getOrders, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder, deliverOrder, requestOrderRevision } from '../src/features/orders/api.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
 import { createCancellationRequest, resolveCancellationRequest } from '../src/features/orders/api.ts'
 const original = globalThis.fetch
 afterEach(() => { globalThis.fetch = original; clearCsrfToken() })
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
+
+test('order list applies the selected status to the server and omits it for all states', async () => {
+  const urls = []
+  globalThis.fetch = async (url) => { urls.push(url); return json({ items: [], totalPages: 0 }) }
+  await getOrders('SELLER', 2, undefined, 'AWAITING_PAYMENT')
+  await getOrders('BUYER', 0)
+  assert.deepEqual(urls, [
+    '/api/orders?side=SELLER&status=AWAITING_PAYMENT&page=2&size=20',
+    '/api/orders?side=BUYER&page=0&size=20',
+  ])
+})
 
 test('cancellation commands preserve UUID and IDs and omit optional empty rejection body', async () => {
   const calls = []
