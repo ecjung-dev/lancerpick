@@ -12,6 +12,8 @@ export interface OrderDetail {
   deliveries: { id: string; sequenceNo: number; description: string; resultUrl: string; submittedAt: string }[]
   revisionRequest: { id: string; deliveryId: string; reason: string; requestedAt: string; dueAt: string } | null
   histories: OrderHistory[]
+  payment: { id: string; amount: number; feeRateBps: number; status: string; paidAt: string; refundedAt: string | null } | null
+  review: { id: string; orderId: string; authorDisplayName: string; rating: number; content: string | null; createdAt: string } | null
 }
 export interface OrderHistory {
   id: string; actorId: string; action: string; fromStatus: string | null
