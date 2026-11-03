@@ -12,3 +12,5 @@ export const getOrder = (id: string, signal?: AbortSignal) => apiRequest<OrderDe
 export const payOrder = (id: string) => apiRequest<OrderDetail>(`${orderPath(id)}/payment`, { method: 'POST', json: { agreedToTerms: true } })
 export const cancelOrder = (id: string, reason: string) => apiRequest<OrderDetail>(`${orderPath(id)}/cancel`, { method: 'POST', json: { reason } })
 export const confirmOrder = (id: string) => apiRequest<OrderDetail>(`${orderPath(id)}/confirm`, { method: 'POST' })
+export const acceptOrder = (id: string) => apiRequest<OrderDetail>(`${orderPath(id)}/accept`, { method: 'POST' })
+export const rejectOrder = (id: string, reason: string) => apiRequest<OrderDetail>(`${orderPath(id)}/reject`, { method: 'POST', json: { reason } })
