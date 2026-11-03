@@ -118,6 +118,19 @@ public class OrderHistory {
         return history;
     }
 
+    public static OrderHistory cancellationRequestEvent(Long orderId, Long actorId, OrderHistoryAction action,
+            OrderStatus status, LocalDateTime at, String reason) {
+        if (action != OrderHistoryAction.CANCELLATION_REQUESTED && action != OrderHistoryAction.CANCELLATION_REJECTED
+                && action != OrderHistoryAction.CANCELLATION_WITHDRAWN) throw invalidInput("취소 요청 이력 행동이 올바르지 않습니다.");
+        if (status != OrderStatus.IN_PROGRESS && status != OrderStatus.AWAITING_CONFIRMATION && status != OrderStatus.REVISION_IN_PROGRESS)
+            throw invalidInput("유료 미완료 주문의 취소 요청만 기록합니다.");
+        if (reason != null && (reason.isEmpty() || reason.codePointCount(0, reason.length()) > 1000)) throw invalidInput("취소 요청 사유가 올바르지 않습니다.");
+        if (action == OrderHistoryAction.CANCELLATION_REQUESTED && reason == null) throw invalidInput("취소 요청 사유가 필요합니다.");
+        OrderHistory history = decision(orderId, actorId, at, action, status, reason);
+        history.fromStatus = status;
+        return history;
+    }
+
     public static OrderHistory rejected(Long orderId, Long sellerId, LocalDateTime at, String reason) {
         if (reason == null) throw invalidInput("거절 사유가 필요합니다.");
         String normalized = com.example.lancerpick.common.text.TextNormalizer.normalize(reason);

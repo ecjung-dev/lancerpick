@@ -130,7 +130,7 @@ payment: id,amount,feeRateBps,status,paidAt,refundedAt. review는 8절의 Review
 
 ## 5 주문 명령 정은찬과 황준범
 
-2026-11-03 구현 후속: [판매자 수락·거절](order-decision.md), [최초 납품·재납품](order-delivery.md), [구매자 수정 요청](order-revision.md)의 POST API를 구현했다. 권한·상태/회차·사유/URL·이력·UTC 시각과 동시 실행을 검증하며, 결제·취소·확정 명령·React 화면·실제 로그인은 별도다.
+2026-11-03 구현 후속: [판매자 수락·거절](order-decision.md), [최초 납품·재납품](order-delivery.md), [구매자 수정 요청](order-revision.md)에 더해 [주문 결제](order-wallet-payment.md)·[직접 취소/환불](order-refund.md)·[확정/정산](order-settlement.md)이 main에 연결되었다. 세션 로그인·내 정보 API도 구현되었으며 실제 화면 통합·브라우저 검증과 구분한다.
 
 | POST 경로 | 실행자·입력 | 조건·결과 |
 | --- | --- | --- |
@@ -154,7 +154,7 @@ payment: id,amount,feeRateBps,status,paidAt,refundedAt. review는 8절의 Review
 
 ## 6 취소 요청과 재전송 계약
 
-2026-11-03 후속: [주문 적립금 결제](order-wallet-payment.md)와 [직접 취소·전액 적립금 환불](order-refund.md)을 구현했다. 아래 취소 요청 제출·승인·거절·철회 API 및 구매 확정·정산은 아직 별도 구현 대상이다. 직접 취소 시 이미 대기 중인 요청을 함께 해결하는 처리는 포함한다. 실제 인증·React 연결과 구분한다.
+2026-11-03 후속: [취소 요청 제출·승인·거절·철회](order-cancellation-requests.md)를 추가하고, 승인은 기존 [직접 취소·전액 적립금 환불](order-refund.md)에 연결했다. [구매 확정·정산](order-settlement.md)과의 경쟁도 검증한다. 기존 [거래 금융 화면](order-finance-ui.md)과 별개로 새 취소 요청 화면·실제 로그인 기반 브라우저 통합은 후속이다.
 
 | POST 경로 | 실행자·입력 | 결과 |
 | --- | --- | --- |
