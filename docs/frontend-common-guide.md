@@ -1,6 +1,6 @@
 # 프런트엔드 기능 개발 가이드
 
-2026-11-03 최신화: 아래 상품 예제는 현재 로컬의 demo 조회 학습용이다. PR #36은 공개 상품·카테고리 API와 별도 queryKey로 전환하며 별도 소스에서 검증했다. 로컬 반영 여부·화면별 상태는 [현황표](current-status.md)를 따른다. 7절 결제 예제는 설명용이며 실제 구현은 `features/orders/api.ts`·`queries.ts`와 [거래 금융 화면](order-finance-ui.md)을 먼저 확인한다. 현재 계정별 주문·정산 조회 키는 `wallet` 하위에 있어 예제의 `['orders', orderId]`를 그대로 복사하지 않는다.
+2026-11-04 최신화: 실제 메인은 공개 상품·카테고리 API를 사용한다. 아래 demo 주소·queryKey는 공통 기반 작성 당시의 학습 예제다. 현재 구현은 features/products/api.ts·queries.ts를 확인한다. 7절 결제 예제도 설명용이며 실제 구현은 features/orders/api.ts와 [거래 금융 화면](order-finance-ui.md)을 따른다. 주문·정산 조회 키는 wallet 하위다. 메뉴·구매/판매 URL 상태·CI 검사 범위는 [거래 통합](account-trade-integration.md)을 따른다.
 
 처음에는 **1~6절의 상품 조회**만 따라 읽으세요. 조회 흐름이 이해되면 **7절의 결제 요청**으로 넘어갑니다. 예제마다 현재 실행되는 코드인지, 앞으로 구현할 설명용 코드인지 구분했습니다.
 

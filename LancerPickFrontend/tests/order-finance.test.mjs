@@ -21,6 +21,18 @@ test('active overdue and delivered late use distinct due dates and strict bounda
   assert.equal(orderDeadlineView({ ...base, status: 'REVISION_IN_PROGRESS', currentDueAt: base.revisionDueAt }, Date.parse(due) + 1).currentLate, false)
 })
 
+test('delivery lateness preserves microseconds and timezone offsets', () => {
+  const due = '2026-11-03T00:00:00.123456Z'
+  const base = { status: 'AWAITING_CONFIRMATION', currentDueAt: due, originalDueAt: due, revisionDueAt: null, deliveries: [
+    { id: 'same', sequenceNo: 1, submittedAt: due },
+    { id: 'late', sequenceNo: 1, submittedAt: '2026-11-03T09:00:00.123457+09:00' },
+    { id: 'early', sequenceNo: 1, submittedAt: '2026-11-03T00:00:00.123455Z' },
+  ] }
+  assert.deepEqual(orderDeadlineView(base, Date.parse(due)).deliveries.map(item => item.late), [false, true, false])
+  assert.equal(orderDeadlineView({ ...base, status: 'IN_PROGRESS' }, Date.parse(due)).currentLate, false)
+  assert.equal(orderDeadlineView({ ...base, status: 'IN_PROGRESS' }, Date.parse(due) + 1).currentLate, true)
+})
+
 test('order history distinguishes state changes from events that leave state unchanged', () => {
   const order = { buyer: { id: '9007199254740993' }, seller: { id: '2' } }
   const event = { id: '1', actorId: '9007199254740993', action: 'CANCELLATION_REQUESTED', fromStatus: 'IN_PROGRESS', toStatus: 'IN_PROGRESS', reason: '취소 사유', createdAt: '2026-11-03T00:00:00Z' }

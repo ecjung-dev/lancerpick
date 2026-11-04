@@ -3,7 +3,8 @@ import { after, afterEach, test } from 'node:test'
 import { createServer } from 'vite'
 
 // Vite가 실제 앱과 같은 방식으로 TS 모듈을 읽는다. HTTP 서버는 열지 않는다.
-const server = await createServer({ configFile: false, server: { middlewareMode: true }, appType: 'custom' })
+const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-product-search',
+  server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
 const { getCategories, getProducts } = await server.ssrLoadModule('/src/features/products/api.ts')
 const originalFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = originalFetch })

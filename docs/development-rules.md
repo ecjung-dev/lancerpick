@@ -532,7 +532,7 @@ GitHub Actions를 이용하여 main 대상 Pull Request와 main 브랜치 Push �
 
 DB를 사용하는 테스트의 격리된 MySQL 환경 구성 및 Flyway 적용 검증
 
-프런트엔드 자동 테스트는 테스트 코드와 실행 스크립트가 준비된 기능부터 CI에 연결한다.
+프런트엔드 자동 테스트는 테스트 코드와 실행 스크립트가 준비된 기능부터 CI에 연결한다. 현재 `LancerPickFrontend/package.json`의 `test:api`를 Frontend checks에서 실행한다. 이 검사는 공통 요청·지갑·주문·상품·판매자 API 대역 테스트이며 실제 브라우저 거래나 외부 결제 검증을 의미하지 않는다.
 
 거래·결제·정산 등 데이터 무결성과 동시성이 중요한 기능은 해당 위험에 맞는 자동 테스트를 우선 작성한다.
 
