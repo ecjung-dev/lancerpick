@@ -7,6 +7,7 @@ import { ProductListPage } from '../features/products/pages/ProductListPage'
 import { ProductDetailPage } from '../features/products/pages/ProductDetailPage'
 import { ProductEditorPage } from '../features/products/pages/ProductEditorPage'
 import { ProductSaleStatusPage } from '../features/products/pages/ProductSaleStatusPage'
+import { MyProductsPage } from '../features/products/pages/MyProductsPage'
 import { OrderCreatePage } from '../features/orders/pages/OrderCreatePage'
 import { SellerProfilePage } from '../features/seller/pages/SellerProfilePage'
 import { MyProfilePage } from '../features/auth/pages/MyProfilePage'
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { index: true, element: <ProductListPage /> },
       { path: 'products/:id', element: <ProductDetailPage /> },
       { path: 'mypage/products/new', element: <ProductEditorPage /> },
+      { path: 'mypage/products', element: <MyProductsPage /> },
       { path: 'mypage/products/:id/edit', element: <ProductEditorPage /> },
       { path: 'mypage/products/:id/sale-status', element: <ProductSaleStatusPage /> },
       { path: 'products/:id/order', element: <OrderCreatePage /> },

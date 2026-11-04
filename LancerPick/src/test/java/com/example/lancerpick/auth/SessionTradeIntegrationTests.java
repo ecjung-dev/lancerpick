@@ -19,6 +19,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -73,6 +75,7 @@ class SessionTradeIntegrationTests {
             }
             jdbc.update("DELETE FROM orders WHERE id=?", order);
         }
+        jdbc.update("DELETE FROM product_moderation_logs WHERE product_id=?", product);
         jdbc.update("DELETE FROM products WHERE id=?", product);
         jdbc.update("DELETE FROM categories WHERE id=?", category);
         for (long member : members) {
@@ -182,6 +185,110 @@ class SessionTradeIntegrationTests {
         read(buyer, "/api/me/wallet").andExpect(jsonPath("$.balance").value(complete ? 999001 : 1000000));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"EDIT", "STOP", "HIDE"})
+    void productChangePreservesReplayAndExistingOrderThroughCompletion(String change) throws Exception {
+        var input = orderInput();
+        var created = json(write(buyer, "/api/orders", input).andExpect(status().isCreated()));
+        String order = created.get("id").asText();
+        changeProduct(change);
+
+        read(buyer, "/api/orders/" + order).andExpect(status().isOk());
+        var replay = json(write(buyer, "/api/orders", input).andExpect(status().isOk()));
+        assertSavedConditions(created, replay);
+        assertThat(replay.get("id").asText()).isEqualTo(order);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE product_id=?", Long.class, product)).isEqualTo(1);
+        var fresh = Map.of("productId", Long.toString(product), "expectedProductVersion", change.equals("EDIT") ? 0 : 1,
+                "requirements", "new request", "requestKey", UUID.randomUUID().toString());
+        var attempt = write(buyer, "/api/orders", fresh);
+        if (change.equals("HIDE")) attempt.andExpect(status().isNotFound());
+        else attempt.andExpect(status().isConflict()).andExpect(jsonPath("$.code")
+                .value(change.equals("EDIT") ? "PRODUCT_VERSION_CONFLICT" : "PRODUCT_NOT_ORDERABLE"));
+
+        write(seller, path(order, "accept"), null).andExpect(status().isOk());
+        var paid = json(write(buyer, path(order, "payment"), Map.of("agreedToTerms", true)).andExpect(status().isOk()));
+        assertSavedConditions(created, paid);
+        assertThat(paid.get("payment").get("amount").asLong()).isEqualTo(999);
+        assertThat(java.time.Duration.between(java.time.OffsetDateTime.parse(paid.get("paidAt").asText()),
+                java.time.OffsetDateTime.parse(paid.get("originalDueAt").asText()))).isEqualTo(java.time.Duration.ofDays(1));
+        String delivery = deliver(order, 1).get("deliveries").get(0).get("id").asText();
+        write(buyer, path(order, "revision-request"), Map.of("deliveryId", delivery, "reason", "revise"))
+                .andExpect(status().isOk());
+        deliver(order, 2);
+        var completed = json(write(buyer, path(order, "confirm"), null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED")));
+        assertSavedConditions(created, completed);
+        read(buyer, "/api/me/wallet").andExpect(jsonPath("$.balance").value(999001));
+        read(seller, "/api/me/settlements/summary").andExpect(jsonPath("$.completedCount").value(1))
+                .andExpect(jsonPath("$.grossAmount").value(999)).andExpect(jsonPath("$.feeAmount").value(99))
+                .andExpect(jsonPath("$.sellerAmount").value(900));
+        assertThat(count("settlements", order)).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"EDIT", "STOP", "HIDE"})
+    void productChangeKeepsDirectAndApprovedRefundsOnOriginalPrice(String change) throws Exception {
+        String direct = paidOrder();
+        String approved = paidOrder();
+        changeProduct(change);
+        deliver(direct, 1);
+        deliver(approved, 1);
+        String cancel = path(direct, "cancel");
+        write(seller, cancel, Map.of("reason", "cancel")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.payment.amount").value(999)).andExpect(jsonPath("$.status").value("CANCELLED"));
+        write(seller, cancel, Map.of("reason", "cancel")).andExpect(status().isOk());
+        var request = json(write(buyer, path(approved, "cancellation-requests"),
+                Map.of("reason", "cancel", "requestKey", UUID.randomUUID().toString())).andExpect(status().isCreated()));
+        String approve = path(approved, "cancellation-requests/" + request.get("cancellationRequest").get("id").asText() + "/approve");
+        write(seller, approve, null).andExpect(status().isOk()).andExpect(jsonPath("$.order.status").value("CANCELLED"))
+                .andExpect(jsonPath("$.order.payment.amount").value(999));
+        write(seller, approve, null).andExpect(status().isOk());
+        read(buyer, "/api/me/wallet").andExpect(jsonPath("$.balance").value(1000000));
+        for (String order : List.of(direct, approved)) {
+            assertThat(refunds(order)).isEqualTo(1);
+            assertThat(count("settlements", order)).isZero();
+            assertThat(jdbc.queryForObject("SELECT amount_delta FROM wallet_entries e JOIN payments p ON p.id=e.payment_id WHERE p.order_id=? AND e.type='REFUND'", Long.class, order)).isEqualTo(999);
+        }
+    }
+
+    private Map<String, Object> orderInput() {
+        return Map.of("productId", Long.toString(product), "expectedProductVersion", 0,
+                "requirements", "requirements", "requestKey", UUID.randomUUID().toString());
+    }
+
+    private void assertSavedConditions(JsonNode before, JsonNode after) {
+        for (String field : List.of("productSnapshot", "termsSnapshot", "priceAmount", "durationDays", "requirements")) {
+            assertThat(after.get(field)).as("saved %s", field).isEqualTo(before.get(field));
+        }
+    }
+
+    private void changeProduct(String change) throws Exception {
+        String endpoint = "/api/products/" + product;
+        if (change.equals("EDIT")) {
+            patchWithToken(seller, endpoint, Map.of("title", "changed", "description", "changed description",
+                    "scopeDescription", "changed scope", "preparationDescription", "changed prep",
+                    "priceAmount", 50000, "durationDays", 3, "expectedVersion", 0))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.version").value(1));
+            read(buyer, endpoint).andExpect(status().isOk()).andExpect(jsonPath("$.priceAmount").value(50000));
+        } else if (change.equals("STOP")) {
+            patchWithToken(seller, endpoint + "/sale-status", Map.of("saleStatus", "STOPPED", "expectedVersion", 0))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.saleStatus").value("STOPPED"));
+            read(buyer, endpoint).andExpect(status().isNotFound());
+        } else {
+            Account admin = registerAndLogin(true);
+            patchWithToken(admin, "/api/admin/products/" + product + "/visibility",
+                    Map.of("hidden", true, "reason", "moderation", "expectedVersion", 0))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.isHidden").value(true));
+            read(buyer, endpoint).andExpect(status().isNotFound());
+        }
+    }
+
+    private ResultActions patchWithToken(Account account, String path, Object body) throws Exception {
+        var token = token(account.session());
+        return mvc.perform(patch(path).session(account.session()).header(token.header(), token.value())
+                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(body)));
+    }
+
     private String paidOrder() throws Exception {
         var created = json(write(buyer, "/api/orders", Map.of("productId", Long.toString(product), "expectedProductVersion", 0,
                 "requirements", "requirements", "requestKey", UUID.randomUUID().toString())).andExpect(status().isCreated()));
@@ -198,6 +305,10 @@ class SessionTradeIntegrationTests {
     }
 
     private Account registerAndLogin() throws Exception {
+        return registerAndLogin(false);
+    }
+
+    private Account registerAndLogin(boolean admin) throws Exception {
         var session = new MockHttpSession();
         var anonymous = new Account(0, session);
         String email = "trade-" + UUID.randomUUID() + "@example.com";
@@ -205,6 +316,8 @@ class SessionTradeIntegrationTests {
                 .andExpect(status().isCreated()));
         long id = Long.parseLong(created.get("id").asText());
         members.add(id);
+        // 테스트 회원에만 관리자 권한을 준비하고 실제 로그인 API로 세션을 발급한다.
+        if (admin) jdbc.update("UPDATE members SET role='ADMIN' WHERE id=?", id);
         write(anonymous, "/api/auth/login", Map.of("email", email, "password", "abcd1234")).andExpect(status().isOk());
         return new Account(id, session);
     }

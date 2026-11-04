@@ -55,6 +55,7 @@
 
 ### 회원·상품·관리자
 
+- [내 상품 조회](my-products.md): 본인 전용 목록 API·관리 화면, 중지/숨김 포함·페이지·수정/상태 관리 연결과 검사 기록.
 - [로그인·로그아웃·내 정보 API](auth-login.md)
 - [판매자 프로필 관리](seller-profile.md)
 - [카테고리 공개 조회](category-query.md)
@@ -88,6 +89,8 @@
 - [React 토스 테스트 충전 화면](wallet-topup-frontend.md)
 
 ### 통합·검증·변경 이력
+
+- [상품 변경 후 기존 주문 유지 회귀 검사](order-product-change-regression.md)
 
 - [마이페이지 동선·거래 화면 통합](account-trade-integration.md)
 - [실제 로그인 세션 기반 거래 API 통합 검증](session-trade-integration.md)

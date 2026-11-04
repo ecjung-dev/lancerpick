@@ -1,7 +1,12 @@
 // 이 기능의 서버 요청 함수를 구현합니다. 공통 요청 처리는 shared/api/client.ts에 둡니다.
 import { apiRequest } from '../../shared/api/client'
 import type { PageResponse } from '../../shared/api/types'
-import type { Category, ProductDetail, ProductSearch, ProductSummary } from './types'
+import type { Category, OwnedProductSummary, ProductDetail, ProductSearch, ProductSummary } from './types'
+
+export function getMyProducts(page: number, signal?: AbortSignal) {
+  if (!Number.isInteger(page) || page < 0 || page > 2147483647) return Promise.reject(new Error('페이지를 확인해 주세요.'))
+  return apiRequest<PageResponse<OwnedProductSummary>>(`/me/products?page=${page}&size=20`, { signal })
+}
 
 export function getProductDetail(id: string, signal?: AbortSignal) {
   if (!/^[0-9]{1,19}$/.test(id) || BigInt(id) <= 0n || BigInt(id) > 9223372036854775807n) {

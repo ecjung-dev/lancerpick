@@ -9,6 +9,13 @@ export interface ProductSummary {
   seller: { id: string; displayName: string }
 }
 export interface ProductSearch { keyword: string; categoryId: string; page: number; size: number }
+export interface OwnedProductSummary extends ProductSummary {
+  saleStatus: 'ON_SALE' | 'STOPPED'
+  isHidden: boolean
+  version: number
+  createdAt: string
+  updatedAt: string
+}
 export interface ProductDetail extends ProductSummary {
   description: string
   scopeDescription: string
