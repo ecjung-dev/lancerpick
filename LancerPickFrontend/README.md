@@ -61,6 +61,8 @@ npm.cmd run dev
 
 판매자 프로필 관리는 `/mypage/seller-profile`에서 서버 세션 확인 후 조회·등록·수정합니다. 미등록 404는 빈 폼, 인증 만료는 로그인 안내, 통신 오류는 오류로 구분합니다. 마이페이지 메뉴에도 연결했으며 [구현·브라우저 검증 범위](../docs/seller-profile.md)를 참고합니다. 로그인·회원가입 화면은 구현됐고, 운영 로그인에서 판매자 프로필까지의 브라우저 통합 검증은 별도입니다.
 
+내 정보는 `/mypage/profile`에서 확인합니다. 표시 이름만 `PATCH /api/me`로 바꾸며, 저장 직전에 현재 세션이 같은 계정인지 다시 확인하고 성공하면 헤더 이름도 바로 바뀝니다. 마이페이지 메뉴의 "내 정보"와 연결했으며 [구현·검증 범위](../docs/auth-login.md#내-정보-화면-2026-11-04-featureprofile-display-name)를 참고합니다.
+
 ```powershell
 npm.cmd run test:api
 npm.cmd run typecheck
