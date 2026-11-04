@@ -39,3 +39,7 @@
 - [거래 화면 자동·임시 브라우저 검증](account-trade-integration.md)
 - [충전 중복·실패·세션 복구 자동 검사](wallet-topup-failure-verification.md)
 - [현재 구현·검증 현황](current-status.md)
+
+## 서버 자동 검사 후속 — 2026-11-04
+
+상품 변경·숨김 후 기존 주문 조건·완료·환불 유지의 서버/API·DB 자동 검사는 [상품 변경 회귀 검사](order-product-change-regression.md)에서 확인했다. 이 결과는 위 사용자 수동 확인에 합산하지 않으며 실제 브라우저 교차 확인·모바일 확인은 남겨 둔다.

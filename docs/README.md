@@ -92,6 +92,8 @@
 
 ### 통합·검증·변경 이력
 
+- [상품 변경 후 기존 주문 유지 회귀 검사](order-product-change-regression.md)
+
 - [마이페이지 동선·거래 화면 통합](account-trade-integration.md)
 - [실제 로그인 세션 기반 거래 API 통합 검증](session-trade-integration.md)
 - [실제 세션과 지갑 화면 연결](wallet-session-integration.md)
