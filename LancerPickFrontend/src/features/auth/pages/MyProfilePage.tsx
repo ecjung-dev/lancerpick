@@ -19,16 +19,39 @@ const PROFILE_PATH = '/mypage/profile'
 export function MyProfilePage() {
   const member = useCurrentMember()
   const [accountChanged, setAccountChanged] = useState(false)
-  return <Layout>
-    {member.isPending ? <AsyncState title="로그인 상태를 확인하고 있어요" />
-      : member.isError && !member.data ? <AsyncState title="로그인 상태를 확인하지 못했어요" error={member.error} onRetry={() => { void member.refetch() }} />
-        : !member.data ? <LoginNotice />
-          : <>
-            {accountChanged && <p className={styles.notice} role="alert">로그인 계정이 바뀌어 저장하지 않았어요. 지금 로그인한 계정의 정보를 보여드려요.</p>}
-            {/* 계정이 바뀌면 key가 바뀌어 입력 상태도 새로 시작한다(이전 계정 입력이 남지 않게). */}
-            <ProfileForm key={member.data.id} member={member.data} onAccountChanged={() => setAccountChanged(true)} />
-          </>}
-  </Layout>
+
+  if (member.isPending) {
+    return <Layout><AsyncState title="로그인 상태를 확인하고 있어요" /></Layout>
+  }
+  if (member.isError && !member.data) {
+    return (
+      <Layout>
+        <AsyncState
+          title="로그인 상태를 확인하지 못했어요"
+          error={member.error}
+          onRetry={() => { void member.refetch() }}
+        />
+      </Layout>
+    )
+  }
+  if (!member.data) {
+    return <Layout><LoginNotice /></Layout>
+  }
+  return (
+    <Layout>
+      {accountChanged && (
+        <p className={styles.notice} role="alert">
+          로그인 계정이 바뀌어 저장하지 않았어요. 지금 로그인한 계정의 정보를 보여드려요.
+        </p>
+      )}
+      {/* 계정이 바뀌면 key가 바뀌어 입력 상태도 새로 시작한다(이전 계정 입력이 남지 않게). */}
+      <ProfileForm
+        key={member.data.id}
+        member={member.data}
+        onAccountChanged={() => setAccountChanged(true)}
+      />
+    </Layout>
+  )
 }
 
 /**
@@ -88,42 +111,74 @@ function ProfileForm({ member, onAccountChanged }: { member: Member; onAccountCh
     save.mutate(result.displayName)
   }
 
-  return <form className={styles.form} onSubmit={submit} noValidate>
-    <dl className={styles.info}>
-      <div><dt>이메일</dt><dd>{member.email}</dd></div>
-      <div><dt>현재 표시 이름</dt><dd>{member.displayName}</dd></div>
-    </dl>
-    {saved && <p className={styles.success} role="status">표시 이름을 저장했어요.</p>}
-    {notice && <p className={styles.notice} role="status">{notice}</p>}
-    <fieldset disabled={save.isPending}>
-      <label htmlFor="profile-display-name">표시 이름 <span>필수</span></label>
-      <Input id="profile-display-name" value={name} autoComplete="nickname" aria-invalid={!!error}
-        aria-describedby="profile-display-name-help profile-display-name-error"
-        onChange={(e) => { setName(e.target.value); setError(undefined); setSaved(false) }} />
-      <p id="profile-display-name-help" className={styles.help}>
-        <span>주문·판매자 프로필에서 다른 회원에게 보여요. 다른 회원과 같아도 괜찮아요.</span>
-        <span>{codePointLength(normalizeText(name))} / {DISPLAY_NAME_MAX}자</span>
-      </p>
-      <p id="profile-display-name-error" className={styles.fieldError}>{error}</p>
-      <div className={styles.actions}>
-        <p>이메일과 비밀번호는 이 화면에서 바꿀 수 없어요.</p>
-        <Button type="submit">{save.isPending ? '저장 중…' : '표시 이름 저장'}</Button>
-      </div>
-    </fieldset>
-  </form>
+  return (
+    <form className={styles.form} onSubmit={submit} noValidate>
+      <dl className={styles.info}>
+        <div>
+          <dt>이메일</dt>
+          <dd>{member.email}</dd>
+        </div>
+        <div>
+          <dt>현재 표시 이름</dt>
+          <dd>{member.displayName}</dd>
+        </div>
+      </dl>
+      {saved && <p className={styles.success} role="status">표시 이름을 저장했어요.</p>}
+      {notice && <p className={styles.notice} role="status">{notice}</p>}
+      <fieldset disabled={save.isPending}>
+        <label htmlFor="profile-display-name">표시 이름 <span>필수</span></label>
+        <Input
+          id="profile-display-name"
+          value={name}
+          autoComplete="nickname"
+          aria-invalid={!!error}
+          aria-describedby="profile-display-name-help profile-display-name-error"
+          onChange={(e) => {
+            setName(e.target.value)
+            setError(undefined)
+            setSaved(false)
+          }}
+        />
+        <p id="profile-display-name-help" className={styles.help}>
+          <span>주문·판매자 프로필에서 다른 회원에게 보여요. 다른 회원과 같아도 괜찮아요.</span>
+          <span>{codePointLength(normalizeText(name))} / {DISPLAY_NAME_MAX}자</span>
+        </p>
+        <p id="profile-display-name-error" className={styles.fieldError}>{error}</p>
+        <div className={styles.actions}>
+          <p>이메일과 비밀번호는 이 화면에서 바꿀 수 없어요.</p>
+          <Button type="submit">{save.isPending ? '저장 중…' : '표시 이름 저장'}</Button>
+        </div>
+      </fieldset>
+    </form>
+  )
 }
 
 function LoginNotice() {
-  return <>
-    <AsyncState title="로그인 후 내 정보를 볼 수 있어요" description="로그인하면 이 화면으로 돌아와요." />
-    <Link className={styles.link} to={`/login?next=${encodeURIComponent(PROFILE_PATH)}`}>로그인으로 이동 →</Link>
-  </>
+  return (
+    <>
+      <AsyncState title="로그인 후 내 정보를 볼 수 있어요" description="로그인하면 이 화면으로 돌아와요." />
+      <Link className={styles.link} to={`/login?next=${encodeURIComponent(PROFILE_PATH)}`}>
+        로그인으로 이동 →
+      </Link>
+    </>
+  )
 }
 
 function Layout({ children }: { children: ReactNode }) {
-  return <section className={styles.page}>
-    <nav className={styles.breadcrumb} aria-label="현재 위치"><Link to="/">홈</Link><span>/</span><Link to="/mypage">마이페이지</Link><span>/ 내 정보</span></nav>
-    <header className={styles.heading}><p>MY ACCOUNT</p><h1>내 정보</h1><span>다른 회원에게 보이는 표시 이름을 바꿀 수 있어요.</span></header>
-    <div className={styles.card}>{children}</div>
-  </section>
+  return (
+    <section className={styles.page}>
+      <nav className={styles.breadcrumb} aria-label="현재 위치">
+        <Link to="/">홈</Link>
+        <span>/</span>
+        <Link to="/mypage">마이페이지</Link>
+        <span>/ 내 정보</span>
+      </nav>
+      <header className={styles.heading}>
+        <p>MY ACCOUNT</p>
+        <h1>내 정보</h1>
+        <span>다른 회원에게 보이는 표시 이름을 바꿀 수 있어요.</span>
+      </header>
+      <div className={styles.card}>{children}</div>
+    </section>
+  )
 }
