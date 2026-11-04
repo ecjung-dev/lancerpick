@@ -14,6 +14,11 @@ export interface LoginInput {
   password: string
 }
 
+/** PATCH /api/me 본문. 표시 이름만 바꿀 수 있다(API 2절). */
+export interface UpdateMeInput {
+  displayName: string
+}
+
 export interface SignupInput {
   email: string
   password: string

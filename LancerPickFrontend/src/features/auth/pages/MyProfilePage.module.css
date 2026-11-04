@@ -1,0 +1,24 @@
+.page { max-width: 720px; margin: 0 auto; padding: 36px 0 80px; overflow-wrap: anywhere; }
+.breadcrumb { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; }
+.breadcrumb a { color: inherit; text-decoration: none; }
+.heading { margin: 38px 0 30px; }
+.heading p { font-size: 11px; letter-spacing: .14em; font-weight: 700; }
+.heading h1 { margin: 10px 0 14px; font-size: clamp(26px, 4vw, 36px); letter-spacing: -.04em; }
+.heading > span { color: var(--muted); font-size: 14px; line-height: 1.7; }
+.card { padding: 34px; border: 1px solid var(--line); border-radius: 16px; background: white; }
+.info { display: grid; gap: 14px; margin: 0 0 28px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+.info div { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.info dt { min-width: 110px; color: var(--muted); font-size: 13px; }
+.info dd { margin: 0; font-size: 14px; font-weight: 600; }
+.form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.form label { display: block; margin-bottom: 10px; font-size: 15px; font-weight: 650; }
+.form label span { margin-left: 7px; font-size: 11px; color: var(--muted); font-weight: 450; }
+.help { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.fieldError { margin: 6px 0 0; color: #9f2929; font-size: 12px; }
+.fieldError:empty { display: none; }
+.actions { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 23px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.actions p { color: var(--muted); font-size: 12px; margin: 0; }
+.success { background: #f1f6f2; color: #285333; padding: 14px; border-radius: 8px; font-size: 14px; }
+.notice { background: #fff8ec; color: #6b4a12; padding: 14px; border-radius: 8px; font-size: 14px; }
+.link { display: inline-block; margin-top: 20px; color: var(--ink); }
+@media (max-width: 600px) { .page { padding: 24px 16px 60px; } .card { padding: 22px 16px; } .heading { margin-top: 28px; } .actions { align-items: stretch; flex-direction: column; } }
