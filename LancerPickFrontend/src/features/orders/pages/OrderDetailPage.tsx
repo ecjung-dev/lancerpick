@@ -240,7 +240,7 @@ function OrderDetail({ id }: { id: string }) {
                   (deadline.late ? ' · 기한 후 제출' : ' · 기한 내 제출')}
               </p>
               <p className={styles.text}>{delivery.description}</p>
-              {delivery.resultUrl.startsWith('https://') && (
+              {/^https:\/\//i.test(delivery.resultUrl) && (
                 <a
                   href={delivery.resultUrl}
                   target="_blank"
