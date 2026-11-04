@@ -4,6 +4,7 @@ import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.product.dto.ProductSummaryResponse;
+import com.example.lancerpick.product.dto.ProductDetailResponse;
 import com.example.lancerpick.product.repository.ProductSearchQueries;
 import java.util.List;
 import org.springframework.context.annotation.Profile;
@@ -43,6 +44,22 @@ public class ProductSearchService {
         return new PageResponse<>(
                 items, page, size, total, totalPages
         );
+    }
+
+    @Transactional(readOnly = true)
+    public ProductDetailResponse getPublicDetail(String productId) {
+        if (productId == null || !productId.matches("[0-9]{1,19}")) {
+            throw invalid("상품 번호는 양의 정수여야 합니다.");
+        }
+        long id;
+        try {
+            id = Long.parseLong(productId);
+        } catch (NumberFormatException exception) {
+            throw invalid("상품 번호가 허용 범위를 벗어났습니다.");
+        }
+        if (id <= 0) throw invalid("상품 번호는 양의 정수여야 합니다.");
+        return queries.findPublicDetail(id).orElseThrow(() -> new BusinessException(
+                HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "상품을 찾을 수 없습니다."));
     }
 
     private static void validatePage(int page, int size) {

@@ -2,6 +2,10 @@ package com.example.lancerpick.product.controller;
 
 import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.product.dto.ProductSummaryResponse;
+import com.example.lancerpick.product.dto.ProductDetailResponse;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import com.example.lancerpick.product.service.ProductSearchService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +23,12 @@ public class ProductSearchController {
     public ProductSearchController(
             ProductSearchService productSearchService) {
         this.productSearchService = productSearchService;
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductDetailResponse> detail(@PathVariable String id) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(productSearchService.getPublicDetail(id));
     }
 
     @GetMapping

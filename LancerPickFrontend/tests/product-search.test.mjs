@@ -5,11 +5,34 @@ import { createServer } from 'vite'
 // Vite가 실제 앱과 같은 방식으로 TS 모듈을 읽는다. HTTP 서버는 열지 않는다.
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-product-search',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
-const { getCategories, getProducts } = await server.ssrLoadModule('/src/features/products/api.ts')
+const { getCategories, getProducts, getProductDetail } = await server.ssrLoadModule('/src/features/products/api.ts')
 const originalFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = originalFetch })
 after(async () => { await server.close() })
 const json = (body) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
+
+test('detail preserves large string IDs, cookies and cancellation', async () => {
+  const controller = new AbortController()
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, '/api/products/9007199254740993')
+    assert.equal(options.signal, controller.signal)
+    assert.equal(options.credentials, 'same-origin')
+    return json({ id: '9007199254740993', description: '<script>text</script>' })
+  }
+  assert.equal((await getProductDetail('9007199254740993', controller.signal)).id, '9007199254740993')
+})
+
+test('invalid detail IDs never reach network; missing and server errors remain errors', async () => {
+  globalThis.fetch = async () => { throw new Error('unexpected network') }
+  for (const id of ['0', '-1', 'abc', '1.5', '9223372036854775808', '../me']) {
+    await assert.rejects(getProductDetail(id), /상품 번호/)
+  }
+  for (const status of [404, 500]) {
+    globalThis.fetch = async () => new Response(JSON.stringify({ code: 'RESOURCE_NOT_FOUND', message: '없음' }),
+      { status, headers: { 'Content-Type': 'application/json' } })
+    await assert.rejects(getProductDetail('1'), error => error.status === status)
+  }
+})
 
 test('categories use the real public API and preserve cancellation', async () => {
   const controller = new AbortController()

@@ -42,6 +42,21 @@ class ProductSearchControllerTests {
     }
 
     @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"0", "-1", "abc", "1.5", "9223372036854775808"})
+    void invalidDetailIdDoesNotQuery(String id) throws Exception {
+        mvc.perform(get("/api/products/" + id)).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+        verifyNoInteractions(queries);
+    }
+
+    @Test
+    void absentDetailIsPublic404() throws Exception {
+        when(queries.findPublicDetail(12L)).thenReturn(java.util.Optional.empty());
+        mvc.perform(get("/api/products/12")).andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    @ParameterizedTest
     @CsvSource({"page,-1", "page,abc", "page,2147483648", "size,0", "size,101",
             "size,abc", "categoryId,0", "categoryId,-1", "categoryId,abc",
             "categoryId,9223372036854775808", "categoryId,1.5"})

@@ -8,7 +8,8 @@ import { createServer } from 'vite'
 
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-account-navigation',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
-const { WalletPreviewPage } = await server.ssrLoadModule('/src/features/wallet/pages/WalletPage.tsx')
+const { WalletPreviewPage, ConnectedWalletPage } = await server.ssrLoadModule('/src/features/wallet/pages/WalletPage.tsx')
+const { SettlementPage } = await server.ssrLoadModule('/src/features/settlements/pages/SettlementPage.tsx')
 const { OrderListPage } = await server.ssrLoadModule('/src/features/orders/pages/OrderListPage.tsx')
 const { OrderDetailPage } = await server.ssrLoadModule('/src/features/orders/pages/OrderDetailPage.tsx')
 const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
@@ -106,6 +107,69 @@ test('direct cancellation explains whether a paid amount will be refunded', () =
   }
 })
 
+function renderFinance(kind, url, page, empty = false) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const orderId = '9007199254740993'
+  const createdAt = '2026-11-04T00:00:00Z'
+  const items = kind === 'wallet' ? [
+    { id: '1', orderId, type: 'PAYMENT', amountDelta: -999, balanceAfter: 999001, createdAt },
+    { id: '2', orderId, type: 'REFUND', amountDelta: 999, balanceAfter: 1000000, createdAt },
+    { id: '3', orderId: null, type: 'INITIAL_GRANT', amountDelta: 1000000, balanceAfter: 1000000, createdAt },
+    { id: '4', orderId: null, type: 'TOPUP', amountDelta: 50000, balanceAfter: 1050000, createdAt },
+  ] : [{ id: '1', orderId, grossAmount: 999, feeRateBps: 1000, feeAmount: 99, sellerAmount: 900, createdAt }]
+  const data = { items: empty ? [] : items, page, size: 20, totalElements: 60, totalPages: 3 }
+  if (kind === 'wallet') {
+    client.setQueryData(['wallet', 'member', 'balance'], { balance: 1050000, currency: 'KRW', isTest: true })
+    client.setQueryData(['wallet', 'member', 'entries', { page, size: 20 }], data)
+  } else {
+    client.setQueryData(['wallet', 'settlements', page], data)
+    client.setQueryData(['wallet', 'settlement-summary'], { completedCount: 60, grossAmount: 59940, feeAmount: 5940, sellerAmount: 54000 })
+  }
+  try {
+    return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [url] },
+      createElement(QueryClientProvider, { client }, kind === 'wallet'
+        ? createElement(ConnectedWalletPage, { sessionKey: 'member' }) : createElement(SettlementPage))))
+  } finally { client.clear() }
+}
+
+test('wallet restores URL page and links only entries associated with orders', () => {
+  const html = renderFinance('wallet', '/mypage?page=2', 2)
+  assert.match(html, /3 \/ 3/)
+  assert.equal((html.match(/href="\/orders\/9007199254740993"/g) ?? []).length, 2)
+  assert.doesNotMatch(html, /href="\/orders\/(null|undefined)"/)
+  assert.match(html, /가입 적립금/)
+  assert.match(html, /테스트 결제 충전/)
+})
+
+test('settlements restore URL page and preserve large order IDs in detail links', () => {
+  const html = renderFinance('settlements', '/mypage/settlements?page=2', 2)
+  assert.match(html, /3페이지/)
+  assert.match(html, /href="\/orders\/9007199254740993"/)
+  assert.match(html, /판매 수익 900원/)
+})
+
+test('finance lists reject invalid page values and keep the first page available', () => {
+  for (const kind of ['wallet', 'settlements']) {
+    for (const page of ['-1', '1.5', '2147483648', 'abc']) {
+      const html = renderFinance(kind, `/mypage?page=${page}`, 0)
+      assert.match(html, /주문 #9007199254740993 상세 보기/)
+      assert.match(html, kind === 'wallet' ? /1 \/ 3/ : /1페이지/)
+    }
+  }
+})
+
+test('out-of-range empty finance pages provide a first-page recovery action', () => {
+  for (const kind of ['wallet', 'settlements']) {
+    const html = renderFinance(kind, '/mypage?page=8', 8, true)
+    assert.match(html, /첫 페이지로/)
+    assert.doesNotMatch(html, /9 \/ 3|9페이지/)
+  }
+})
+
+test('preview order numbers never lead to real orders', () => {
+  const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(WalletPreviewPage)))
+  assert.doesNotMatch(html, /href="\/orders\/\d+"/)
+})
 test('empty filtered order list explains that no orders match', () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   client.setQueryData(['wallet', 'orders', 'BUYER', 'COMPLETED', 0], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })

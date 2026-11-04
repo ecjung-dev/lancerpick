@@ -1,9 +1,6 @@
-import { useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { useCategories, useProducts } from '../queries'
-import type { ProductSummary } from '../types'
 import { ProductCard } from '../components/ProductCard'
-import { ProductPreview } from '../components/ProductPreview'
 import { CategoryIcon } from '../components/CategoryIcon'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
@@ -12,7 +9,7 @@ import styles from './ProductListPage.module.css'
 
 export function ProductListPage() {
   const [params, setParams] = useSearchParams()
-  const [selected, setSelected] = useState<ProductSummary | null>(null)
+  const navigate = useNavigate()
   const keyword = params.get('keyword') ?? ''
   const categoryId = params.get('categoryId') ?? ''
   const pageInput = Number(params.get('page') ?? 0)
@@ -73,7 +70,7 @@ export function ProductListPage() {
       {products.isPending ? <AsyncState title="서비스를 불러오고 있습니다." description="잠시만 기다려 주세요." />
         : products.isError ? <AsyncState title="서비스를 불러오지 못했습니다." error={products.error} onRetry={() => void products.refetch()} />
         : products.data.items.length === 0 ? <AsyncState title={outOfRange ? '요청한 페이지에 서비스가 없습니다.' : '조건에 맞는 서비스가 없습니다.'} description={outOfRange ? '첫 페이지로 돌아가 서비스를 확인해 보세요.' : '다른 검색어나 카테고리를 선택해 보세요.'} />
-        : <div className={styles.products}>{products.data.items.map((product) => <ProductCard key={product.id} product={product} onSelect={() => setSelected(product)} />)}</div>}
+        : <div className={styles.products}>{products.data.items.map((product) => <ProductCard key={product.id} product={product} onSelect={() => navigate(`/products/${product.id}`, { state: { from: `/?${params.toString()}` } })} />)}</div>}
       {!products.isError && products.data && (products.data.totalPages > 1 || page > 0) && <nav className={styles.pagination} aria-label="서비스 페이지">
         <Button variant="secondary" disabled={page === 0 || products.isFetching} onClick={() => changeFilter('page', String(page - 1))}>이전</Button>
         <span aria-live="polite">총 {products.data.totalPages}페이지 · 현재 요청 {page + 1}페이지</span>
@@ -91,6 +88,5 @@ export function ProductListPage() {
         ['04', '납품·구매 확정', '결과물을 확인하고 거래를 완료하세요.'],
       ].map(([number, title, description]) => <li key={number}><span>{number}</span><strong>{title}</strong><p>{description}</p></li>)}</ol>
     </section>
-    <ProductPreview product={selected} onClose={() => setSelected(null)} />
   </>
 }

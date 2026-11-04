@@ -44,4 +44,8 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    // Contexts retain their datasources until eviction; bound the total DB footprint.
+    systemProperty 'spring.test.context.cache.maxSize', '8'
+    maxParallelForks = 1
+    systemProperty 'junit.jupiter.execution.parallel.enabled', 'false'
 }

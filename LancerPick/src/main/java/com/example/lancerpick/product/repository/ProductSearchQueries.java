@@ -3,6 +3,9 @@ package com.example.lancerpick.product.repository;
 import com.example.lancerpick.member.entity.QMember;
 import com.example.lancerpick.product.dto.CategoryResponse;
 import com.example.lancerpick.product.dto.ProductSummaryResponse;
+import com.example.lancerpick.product.dto.ProductDetailResponse;
+import java.time.ZoneOffset;
+import java.util.Optional;
 import com.example.lancerpick.product.entity.QCategory;
 import com.example.lancerpick.product.entity.QProduct;
 import com.querydsl.core.BooleanBuilder;
@@ -47,6 +50,24 @@ public class ProductSearchQueries {
                         new CategoryResponse(row.get(c.id).toString(), row.get(c.name), row.get(c.displayOrder)),
                         new ProductSummaryResponse.Seller(row.get(m.id).toString(), row.get(m.displayName))))
                 .toList();
+    }
+
+    public Optional<ProductDetailResponse> findPublicDetail(long id) {
+        var row = query.select(p.id, p.title, p.price, p.durationDays,
+                        c.id, c.name, c.displayOrder, m.id, m.displayName,
+                        p.description, p.scopeDescription, p.preparationDescription,
+                        p.version, p.saleStatus, p.createdAt, p.updatedAt)
+                .from(p).join(c).on(c.id.eq(p.categoryId))
+                .join(m).on(m.id.eq(p.sellerId))
+                .where(where(null, null).and(p.id.eq(id))).fetchOne();
+        if (row == null) return Optional.empty();
+        return Optional.of(new ProductDetailResponse(
+                row.get(p.id).toString(), row.get(p.title), row.get(p.price), row.get(p.durationDays),
+                new CategoryResponse(row.get(c.id).toString(), row.get(c.name), row.get(c.displayOrder)),
+                new ProductSummaryResponse.Seller(row.get(m.id).toString(), row.get(m.displayName)),
+                row.get(p.description), row.get(p.scopeDescription), row.get(p.preparationDescription),
+                row.get(p.version), row.get(p.saleStatus),
+                row.get(p.createdAt).atOffset(ZoneOffset.UTC), row.get(p.updatedAt).atOffset(ZoneOffset.UTC)));
     }
 
     private static BooleanBuilder where(String keyword, Long categoryId) {

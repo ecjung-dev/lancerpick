@@ -8,6 +8,16 @@
 
 ## 1. 설정 구분
 
+### 전체 검사에서 사용하는 자원 제한 (2026-11-04)
+
+테스트 프로필의 Hikari 풀은 최대 6개 연결·최소 유휴 1개로 제한한다. 현재 최대 4개 작업자를 사용하는 동시성 검사를 유지하면서, 서로 다른 Spring 컨텍스트가 각각 기본 크기의 연결 풀을 유지해 MySQL 연결 한도를 소진하는 문제를 줄인다. 운영·개발 DB 풀 설정은 바꾸지 않는다.
+
+Gradle test 작업은 `spring.test.context.cache.maxSize=8`을 테스트 JVM 시스템 속성으로 전달한다. Spring 테스트 컨텍스트 캐시는 test 프로필 설정 파일 대신 JVM 속성으로 제한한다. 캐시에서 제거된 컨텍스트의 연결 풀은 종료된다. 테스트 프로세스는 1개, JUnit 테스트 간 병렬 실행은 비활성화한다. 각 테스트 내부의 Executor·동시 요청 검사는 계속 실행한다. 여러 Gradle 실행을 같은 테스트 DB에 동시에 연결하는 것은 이 제한의 범위 밖이다.
+
+CI는 성공·실패 시 JUnit XML과 HTML 테스트 보고서를 `backend-test-reports` 아티팩트로 7일간 보관한다. 취소된 실행은 업로드를 생략하며, 컴파일 오류처럼 보고서가 생성되지 않은 경우 경고만 남기고 기존 빌드 실패를 유지한다. 저장 경로는 저장소 루트 기준이며 개인 설정 파일과 DB 접속 파일은 업로드하지 않는다. GitHub Actions 실행 결과의 Artifacts에서 내려받아 실패 원인을 확인한다.
+
+PR #48 커밋 `8f81f0a`의 전체 테스트에서 지갑 초기화 시간 초과와 충전 승인 컨텍스트 생성 중 `Too many connections`로 578건 중 26건이 실패했다. 같은 소스에 위 설정을 적용하고 격리 MySQL 8.4에서 `clean build`를 다시 실행해 578건 모두 통과했다(건너뜀 0).
+
 | 구분 | 설정 파일·입력 | 적용 내용 |
 | --- | --- | --- |
 | 공통 | LancerPick/src/main/resources/application.properties | OSIV=false, ddl-auto=validate, JDBC UTC, Flyway 활성화 |

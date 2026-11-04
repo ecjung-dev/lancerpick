@@ -84,6 +84,40 @@ class ProductSearchIntegrationTests {
         assertThat(service.search(null, Long.toString(Long.MAX_VALUE), 0, 20).totalElements()).isZero();
     }
 
+    @Test
+    void publicDetailReturnsContractAndUtcWithoutPrivateData() throws Exception {
+        long id = product("상세 상품", "첫 줄\n<script>문자 그대로</script>", category, "ON_SALE", false, NOW);
+        mvc.perform(get("/api/products/" + id)).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.id").value(Long.toString(id)))
+                .andExpect(jsonPath("$.title").value("상세 상품"))
+                .andExpect(jsonPath("$.description").value("첫 줄\n<script>문자 그대로</script>"))
+                .andExpect(jsonPath("$.scopeDescription").value("scope"))
+                .andExpect(jsonPath("$.preparationDescription").value("preparation"))
+                .andExpect(jsonPath("$.priceAmount").value(50000))
+                .andExpect(jsonPath("$.durationDays").value(3))
+                .andExpect(jsonPath("$.category.id").value(Long.toString(category)))
+                .andExpect(jsonPath("$.seller.id").value(Long.toString(seller)))
+                .andExpect(jsonPath("$.version").value(0))
+                .andExpect(jsonPath("$.saleStatus").value("ON_SALE"))
+                .andExpect(jsonPath("$.createdAt").value("2026-11-03T01:00:00Z"))
+                .andExpect(jsonPath("$.updatedAt").value("2026-11-03T01:00:00Z"))
+                .andExpect(jsonPath("$.isHidden").doesNotExist())
+                .andExpect(jsonPath("$.seller.email").doesNotExist())
+                .andExpect(jsonPath("$.seller.passwordHash").doesNotExist());
+    }
+
+    @Test
+    void stoppedHiddenAndMissingDetailsAreIndistinguishable() throws Exception {
+        long hidden = product(token, "秘密", category, "ON_SALE", true, NOW);
+        long stopped = product(token, "秘密", category, "STOPPED", false, NOW);
+        for (long id : new long[] {hidden, stopped, Long.MAX_VALUE}) {
+            mvc.perform(get("/api/products/" + id)).andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"))
+                    .andExpect(jsonPath("$.description").doesNotExist());
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"%", "_", "!", "\\", "' OR 1=1 --"})
     void wildcardEscapeAndSqlCharactersAreLiteralSearchText(String special) {

@@ -43,6 +43,8 @@
 .paymentIcon { background: #f3f3f3; border-color: #f3f3f3; }
 .entryDetail { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
 .entryDetail strong { font-size: 13px; }
+.orderLink { font-size: 11px; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.orderLink:hover, .orderLink:focus-visible { font-weight: 700; }
 .entryDetail time, .entryDetail small { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
 .entryAmount { margin-left: auto; text-align: right; display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .entryAmount strong { font-size: 15px; }

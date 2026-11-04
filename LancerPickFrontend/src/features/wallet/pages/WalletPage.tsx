@@ -5,6 +5,7 @@ import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
+import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
 import type { PageResponse } from '../../../shared/api/types'
 import { previewBalance, previewEntries } from '../preview'
 import { useWallet, useWalletEntries } from '../queries'
@@ -43,7 +44,7 @@ function WalletGuestPage() {
 
 /** WalletPage의 서버 세션 확인 후 연결하는 화면. sessionKey는 API로 전송하지 않는다. */
 export function ConnectedWalletPage({ sessionKey }: { sessionKey: string }) {
-  const [page, setPage] = useState(0)
+  const [page, setPage] = usePageSearchParam()
   const balance = useWallet(sessionKey)
   const entries = useWalletEntries(sessionKey, page)
 
@@ -60,7 +61,7 @@ export function ConnectedWalletPage({ sessionKey }: { sessionKey: string }) {
       : balance.data ? <BalanceCard balance={balance.data} /> : <AsyncState title="잔액을 불러오고 있어요" />}
     {entries.isError
       ? <AsyncState title="이용 내역을 불러오지 못했어요" error={entries.error} onRetry={() => { void entries.refetch() }} />
-      : entries.data ? <EntryList data={entries.data} onPageChange={setPage} /> : <AsyncState title="이용 내역을 불러오고 있어요" />}
+      : entries.data ? <EntryList data={entries.data} onPageChange={setPage} isFetching={entries.isFetching} /> : <AsyncState title="이용 내역을 불러오고 있어요" />}
   </WalletLayout>
 }
 
@@ -73,7 +74,7 @@ export function WalletPreviewPage() {
   }
   return <WalletLayout preview>
     <BalanceCard balance={previewBalance} preview />
-    <EntryList data={data} onPageChange={setPage} />
+    <EntryList data={data} onPageChange={setPage} preview />
   </WalletLayout>
 }
 
@@ -111,20 +112,21 @@ function BalanceCard({ balance, preview = false }: { balance: WalletBalance; pre
   </section>
 }
 
-function EntryList({ data, onPageChange }: { data: PageResponse<WalletEntry>; onPageChange: (page: number) => void }) {
+function EntryList({ data, onPageChange, preview = false, isFetching = false }: { data: PageResponse<WalletEntry>; onPageChange: (page: number) => void; preview?: boolean; isFetching?: boolean }) {
   return <section className={styles.history} aria-labelledby="history-title">
     <div className={styles.historyHeading}><h3 id="history-title">전체 이용 내역 <span>{data.totalElements}건</span></h3><span>최신순 · 한국 시간</span></div>
     {data.items.length === 0 ? <AsyncState title="표시할 이용 내역이 없어요" description="적립금의 지급·결제·환불 내역이 여기에 표시됩니다." /> : <ul className={styles.entries}>
       {data.items.map((entry) => <li key={entry.id} className={styles.entry}>
         <span className={`${styles.entryIcon} ${entry.type === 'PAYMENT' ? styles.paymentIcon : ''}`} aria-hidden="true">{entry.type === 'PAYMENT' ? '−' : '+'}</span>
-        <div className={styles.entryDetail}><strong>{labels[entry.type] ?? '적립금 변동'}</strong><time dateTime={entry.createdAt}>{formatDateTime(entry.createdAt)}</time>{entry.orderId && <small>주문 #{entry.orderId}</small>}</div>
+        <div className={styles.entryDetail}><strong>{labels[entry.type] ?? '적립금 변동'}</strong><time dateTime={entry.createdAt}>{formatDateTime(entry.createdAt)}</time>{entry.orderId && (preview ? <small>주문 #{entry.orderId}</small> : <Link className={styles.orderLink} to={`/orders/${entry.orderId}`}>주문 #{entry.orderId} 상세 보기</Link>)}</div>
         <div className={styles.entryAmount}><strong>{entry.amountDelta > 0 ? '+' : ''}{formatWon(entry.amountDelta)}</strong><small>처리 후 잔액 {formatWon(entry.balanceAfter)}</small></div>
       </li>)}
     </ul>}
-    {data.totalPages > 1 && <nav className={styles.pagination} aria-label="이용 내역 페이지">
-      <Button variant="secondary" disabled={data.page === 0} onClick={() => onPageChange(data.page - 1)}>이전</Button>
+    {data.items.length === 0 && data.page > 0 && <Button variant="secondary" disabled={isFetching} onClick={() => onPageChange(0)}>첫 페이지로</Button>}
+    {data.totalPages > 1 && data.page < data.totalPages && <nav className={styles.pagination} aria-label="이용 내역 페이지">
+      <Button variant="secondary" disabled={isFetching || data.page === 0} onClick={() => onPageChange(data.page - 1)}>이전</Button>
       <span aria-live="polite">{data.page + 1} / {data.totalPages}</span>
-      <Button variant="secondary" disabled={data.page + 1 >= data.totalPages} onClick={() => onPageChange(data.page + 1)}>다음</Button>
+      <Button variant="secondary" disabled={isFetching || data.page + 1 >= data.totalPages} onClick={() => onPageChange(data.page + 1)}>다음</Button>
     </nav>}
   </section>
 }

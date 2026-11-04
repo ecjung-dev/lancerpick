@@ -1,8 +1,11 @@
 import { createBrowserRouter } from 'react-router'
 import { OrderDetailPage } from '../features/orders/pages/OrderDetailPage'
-import { SettlementPage } from '../features/settlements/SettlementPage'
+import { SettlementPage } from '../features/settlements/pages/SettlementPage'
 import { LoginPage } from '../features/auth/pages/LoginPage'
+import { SignupPage } from '../features/auth/pages/SignupPage'
 import { ProductListPage } from '../features/products/pages/ProductListPage'
+import { ProductDetailPage } from '../features/products/pages/ProductDetailPage'
+import { OrderCreatePage } from '../features/orders/pages/OrderCreatePage'
 import { SellerProfilePage } from '../features/seller/pages/SellerProfilePage'
 import { OrderListPage } from '../features/orders/pages/OrderListPage'
 import { AppLayout } from '../shared/components/AppLayout'
@@ -15,8 +18,10 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <ProductListPage /> },
+      { path: 'products/:id', element: <ProductDetailPage /> },
+      { path: 'products/:id/order', element: <OrderCreatePage /> },
       { path: 'login', element: <LoginPage /> },
-      { path: 'signup', element: <section style={{ padding: '48px 0' }}><h1>회원가입</h1><p>회원가입은 준비 중입니다. 현재 화면은 예시 서비스 탐색용입니다.</p></section> },
+      { path: 'signup', element: <SignupPage /> },
       { path: 'orders', element: <OrderListPage /> },
       { path: 'orders/:id', element: <OrderDetailPage /> },
       { path: 'mypage', element: <WalletPage /> },

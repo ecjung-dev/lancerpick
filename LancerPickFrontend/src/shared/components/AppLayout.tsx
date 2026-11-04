@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate, useSearchParams } from 'react-router'
+import { Link, Outlet, useNavigate, useSearchParams } from 'react-router'
 import { Icon } from './Icon'
 import { Input } from './Input'
+import { MemberNav } from '../../features/auth/components/MemberNav'
 import { normalizeText } from '../lib/text'
 import styles from './AppLayout.module.css'
 
@@ -18,8 +19,7 @@ export function AppLayout() {
             <HeaderSearch key={keyword} initialKeyword={keyword} />
           </nav>
           <nav className={styles.nav} aria-label="회원 메뉴">
-            <NavLink to="/login">로그인</NavLink>
-            <Link to="/signup" className={styles.signup}>회원가입</Link>
+            <MemberNav signupClassName={styles.signup} buttonClassName={styles.navButton} />
           </nav>
         </div>
       </header>

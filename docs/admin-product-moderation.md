@@ -1,6 +1,6 @@
 # 관리자 상품 조회·숨김·복구 API
 
-2026-11-03 저장소 후속 변경: [프로젝트 JPA·QueryDSL 통일](project-persistence.md)에 따라 현재 운영 구현에서 JdbcTemplate·네이티브 SQL을 제거했다. 아래 이전 SQL 구현 설명·실행 결과는 당시 기록으로 보존하며 현재 구조와 최종 검증 범위는 후속 문서를 따른다.
+2026-11-04 갱신: [프로젝트 JPA·QueryDSL 통일](project-persistence.md)(황준범)으로 저장소 구현이 JdbcTemplate에서 QueryDSL·JPA 엔티티로 바뀌었다. Service의 처리 순서와 API 계약은 그대로이며, 아래 설명은 현재 구조 기준으로 고쳤다. 전환 후 같은 테스트 39건을 다시 실행해 통과를 확인했다.
 
 작성일: 2026-11-03. 담당: 김창재. PR #32. 계약은 [API 명세 9절](api-spec.md#9-관리자-상품-운영-김창재)을 따른다. 관리자 React 화면은 별도다.
 
@@ -32,9 +32,9 @@ AdminProductService는 READ_COMMITTED 트랜잭션에서 다음 순서로 처리
 3. `products` 행 `FOR UPDATE` 잠금
 4. 이미 요청한 hidden 상태이면 버전과 관계없이 현재 상세를 반환한다. 버전과 이력은 바꾸지 않는다.
 5. expectedVersion이 다르면 409 PRODUCT_VERSION_CONFLICT. 상태와 이력은 바꾸지 않는다.
-6. `is_hidden`, `version = version + 1`, `updated_at`을 변경하고 `product_moderation_logs`(HIDE/RESTORE, 정리한 reason, admin_id)를 같은 트랜잭션에서 저장한다. UPDATE에도 `AND version = ?` 조건을 함께 건다.
+6. `Product.moderate(hidden, expectedVersion, at)`가 버전을 다시 확인한 뒤 `hidden`, `version + 1`, `updatedAt`을 바꾸고, `ProductModerationLog`(HIDE/RESTORE, 정리한 reason, admin_id)를 `persist`한다. 둘 다 같은 트랜잭션에서 flush된다. 처리 시각이 기존 updated_at보다 과거면 변경하지 않고 실패한다.
 
-Product 엔티티는 상품 담당 영역이라 중복 정의하지 않았다. 주문 생성과 같은 방식으로 JdbcTemplate를 써서 `products`를 조회하고 잠근다. 상품 수정과 판매 상태 변경도 같은 상품 행 잠금과 version 검사를 사용해야 관리자 숨김과 동시에 실행돼도 안전하다(API 11절 시나리오). 새 테이블과 Flyway 변경은 없다.
+`AdminProductQueries`는 QueryDSL로 `Product`·`Category`·`Member`를 조인해 목록과 상세를 만든다. 잠금은 `LockModeType.PESSIMISTIC_WRITE`(MySQL `FOR UPDATE`)이고, keyword는 `like(pattern, '!')`로 이스케이프 문자를 지정한다. 범위를 벗어난 page는 목록 조회 없이 빈 배열을 돌려준다. 상품 수정과 판매 상태 변경도 같은 상품 행 잠금과 version 검사를 사용해야 관리자 숨김과 동시에 실행돼도 안전하다(API 11절 시나리오). 새 테이블과 Flyway 변경은 없다.
 
 ## 검증 범위
 

@@ -9,3 +9,12 @@ export interface ProductSummary {
   seller: { id: string; displayName: string }
 }
 export interface ProductSearch { keyword: string; categoryId: string; page: number; size: number }
+export interface ProductDetail extends ProductSummary {
+  description: string
+  scopeDescription: string
+  preparationDescription: string
+  version: number
+  saleStatus: 'ON_SALE'
+  createdAt: string
+  updatedAt: string
+}

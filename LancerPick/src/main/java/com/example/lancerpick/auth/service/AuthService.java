@@ -65,6 +65,10 @@ public class AuthService {
             throw invalidCredentials();
         }
 
+        // 응답에 필요한 DB 조회는 세션을 바꾸기 전에 끝낸다.
+        // 세션 저장 뒤에 조회가 실패하면 "화면은 실패, 서버는 로그인 상태"가 되어 앞뒤가 맞지 않는다.
+        MemberResponse result = MemberResponse.from(member, memberRepository.countSellerProfiles(member.getId()) > 0);
+
         // 세션 고정 공격 방지: 로그인 전에 쓰던 세션 ID를 새 ID로 바꾼다.
         if (request.getSession(false) != null) {
             request.changeSessionId();
@@ -86,7 +90,7 @@ public class AuthService {
         // 로그인 후 CSRF 토큰 교체. 프런트는 GET /api/auth/csrf로 새 토큰을 다시 받는다(API 2절).
         csrfTokenRepository.saveToken(null, request, response);
 
-        return MemberResponse.from(member, memberRepository.countSellerProfiles(member.getId()) > 0);
+        return result;
     }
 
     /** 세션을 무효화하고 인증 정보를 지운다. 세션에 있던 CSRF 토큰도 함께 사라진다. */

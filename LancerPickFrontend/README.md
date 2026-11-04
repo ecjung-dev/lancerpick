@@ -38,7 +38,7 @@ src/
   index.css                    # 전역 스타일
 ```
 
-auth와 products도 orders와 같은 기능별 구조를 사용합니다. 공통 client.ts와 types.ts는 구현되어 있고 products에는 예시 조회용 api.ts·types.ts·queries.ts·카드·미리보기가 있습니다. auth·orders의 api.ts·types.ts는 아직 골격입니다. 공통 코드를 복사하지 말고 기능에서 재사용합니다. 업무 화면의 스타일은 해당 컴포넌트 옆에 *.module.css로 둡니다.
+auth와 products도 orders와 같은 기능별 구조를 사용합니다. 공통 client.ts와 types.ts는 구현되어 있고 products에는 예시 조회용 api.ts·types.ts·queries.ts·카드·미리보기가 있습니다. auth에는 로그인·가입·로그아웃 api.ts·types.ts·queries.ts·session.ts·validation.ts가 있습니다. 공통 코드를 복사하지 말고 기능에서 재사용합니다. 업무 화면의 스타일은 해당 컴포넌트 옆에 *.module.css로 둡니다.
 
 현재 `/`는 `/api/categories`, `/api/products`에서 실제 목록을 받아 검색·카테고리·페이지·상품 요약을 표시합니다. DB가 없는 demo 프로필로 자동 전환하지 않으며 실패 시 오류를 표시합니다. 상품 카드는 상세 API 대신 목록 응답의 요약을 보여줍니다. 상품 상세·주문 진입은 후속입니다. API 경로와 함께 조회 키·예시 표시도 전환했습니다.
 
@@ -72,6 +72,6 @@ npm.cmd run build
 
 Vite는 /api 요청을 기본 http://127.0.0.1:8080 으로 전달합니다. 포트 변경 시 셸의 API_PROXY_TARGET을 사용하고 [프런트 가이드](../docs/frontend-common-guide.md#2-3-백엔드-포트가-8081일-때만)를 따릅니다. 백엔드는 별도로 실행해야 합니다. 프런트 코드에서는 /api 상대 경로를 사용합니다. 이 프록시는 개발용이며 배포 환경은 Nginx 등에서 별도 설정합니다.
 
-공통 요청의 CSRF·204·오류·중복 토큰 조회 등의 동작은 `test:api`로 검사합니다. 실제 로그인·로그아웃·계정 전환과 주문·결제 연결은 미구현이며 브라우저·실제 DB의 종단 간 검증 완료를 뜻하지 않습니다. 현재 CI에는 test:api가 포함되지 않습니다. JDK는 백엔드 기준인 25를 따르며 React 실행에는 Node.js를 사용합니다. 자세한 구현 방법은 [프런트 공통 가이드](../docs/frontend-common-guide.md)를 참고합니다.
+공통 요청의 CSRF·204·오류·중복 토큰 조회 등의 동작은 `test:api`로 검사합니다. 로그인·로그아웃 뒤 CSRF·캐시 정리는 `resetAccountState()`로 연결했고 `tests/auth.test.mjs`로 검사합니다. 자동 테스트 통과가 브라우저·실제 DB의 종단 간 검증 완료를 뜻하지는 않습니다. 현재 CI에는 test:api가 포함되지 않습니다. JDK는 백엔드 기준인 25를 따르며 React 실행에는 Node.js를 사용합니다. 자세한 구현 방법은 [프런트 공통 가이드](../docs/frontend-common-guide.md)를 참고합니다.
 
 package.json과 package-lock.json은 함께 커밋합니다. node_modules와 dist, 실제 환경변수 비밀값은 커밋하지 않습니다.
