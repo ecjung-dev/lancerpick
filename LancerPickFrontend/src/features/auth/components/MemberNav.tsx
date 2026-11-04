@@ -34,6 +34,8 @@ export function MemberNav({ signupClassName, buttonClassName }: { signupClassNam
   if (member.isPending) return <span aria-live="polite">확인 중…</span>
   if (member.data) {
     return <>
+      {/* 메뉴 표시는 편의일 뿐이다. 실제 관리자 권한은 서버가 /api/admin/** 요청마다 다시 확인한다. */}
+      {member.data.role === 'ADMIN' && <NavLink to="/admin/products">관리자</NavLink>}
       <NavLink to="/mypage">{member.data.displayName}님</NavLink>
       <button type="button" className={buttonClassName} disabled={out.isPending} onClick={() => out.mutate()}>
         {out.isPending ? '로그아웃 중…' : '로그아웃'}

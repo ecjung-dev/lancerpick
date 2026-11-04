@@ -9,6 +9,8 @@ import { OrderCreatePage } from '../features/orders/pages/OrderCreatePage'
 import { SellerProfilePage } from '../features/seller/pages/SellerProfilePage'
 import { OrderListPage } from '../features/orders/pages/OrderListPage'
 import { AppLayout } from '../shared/components/AppLayout'
+import { AdminProductListPage } from '../features/admin/pages/AdminProductListPage'
+import { AdminProductDetailPage } from '../features/admin/pages/AdminProductDetailPage'
 import { WalletPage, WalletPreviewPage } from '../features/wallet/pages/WalletPage'
 import { WalletTopupPage, WalletTopupPreviewPage } from '../features/wallet/pages/WalletTopupPage'
 import { WalletTopupResultPage } from '../features/wallet/pages/WalletTopupResultPage'
@@ -34,6 +36,8 @@ export const router = createBrowserRouter([
       { path: 'mypage/wallet/topup/:id/success', element: <WalletTopupResultPage outcome="success" /> },
       { path: 'mypage/wallet/topup/:id/fail', element: <WalletTopupResultPage outcome="fail" /> },
       { path: 'mypage/wallet/topup/:id/status', element: <WalletTopupResultPage outcome="status" /> },
+      { path: 'admin/products', element: <AdminProductListPage /> },
+      { path: 'admin/products/:id', element: <AdminProductDetailPage /> },
       { path: '*', element: <h1>페이지를 찾을 수 없습니다.</h1> },
     ],
   },
