@@ -32,6 +32,8 @@ function OrderDetail({ id }: { id: string }) {
   const [agreed, setAgreed] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [reason, setReason] = useState('')
+  const reasonLength = codePointLength(normalizeText(reason))
+  const validCancellation = reasonLength > 0 && reasonLength <= 1000
   const [rejectionReason, setRejectionReason] = useState('')
   const rejectionLength = codePointLength(normalizeText(rejectionReason))
   const validRejection = rejectionLength > 0 && rejectionLength <= 1000
@@ -75,7 +77,7 @@ function OrderDetail({ id }: { id: string }) {
     if (
       (action === 'PAY' && !agreed) ||
       (action === 'CONFIRM' && !confirmed) ||
-      (action === 'CANCEL' && !reason.trim())
+      (action === 'CANCEL' && !validCancellation)
     )
       return
     if (action === 'REJECT' && !validRejection) return
@@ -426,14 +428,15 @@ function OrderDetail({ id }: { id: string }) {
               : '결제 전 주문은 적립금 차감·환불 없이 취소됩니다.'}
           </p>
           <label>
-            취소 사유
+            취소 사유 (필수, 최대 1,000자)
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
             />
           </label>
+          <p>{reasonLength} / 1,000자</p>
           <button
-            disabled={!reason.trim()}
+            disabled={!validCancellation}
             onClick={() => {
               void act('CANCEL')
             }}

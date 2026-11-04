@@ -11,3 +11,14 @@ export function prepareOrderInput(input: CreateOrderInput): CreateOrderInput {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(input.requestKey)) throw new Error('주문 요청 키를 확인해 주세요.')
   return { productId: input.productId, expectedProductVersion: input.expectedProductVersion, requirements, requestKey: input.requestKey }
 }
+
+
+/** 직접 취소 사유도 서버와 같은 Unicode 정규화·코드 포인트 한도를 사용한다. */
+export function prepareCancellationReason(reason: string): string {
+  const normalized = normalizeText(reason)
+  const length = codePointLength(normalized)
+  if (length < 1 || length > 1000) {
+    throw new Error('취소 사유는 1~1,000자로 입력해 주세요.')
+  }
+  return normalized
+}
