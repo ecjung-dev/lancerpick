@@ -55,6 +55,20 @@ public class ProductManagementService {
         return response(product);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public OwnedProductResponse changeSaleStatus(long memberId, String id, JsonNode body) {
+        var input = ChangeSaleStatusInput.from(body);
+        Product product = owned(memberId, id, true);
+        // 같은 상태를 요청해도 조회 버전이 현재 버전과 일치해야 한다.
+        if (product.getVersion() != input.expectedVersion()) {
+            throw new BusinessException(HttpStatus.CONFLICT, "PRODUCT_VERSION_CONFLICT",
+                    "상품이 변경되었습니다. 최신 내용을 확인해 주세요.");
+        }
+        product.changeSaleStatus(input.saleStatus(), now());
+        em.flush();
+        return response(product);
+    }
+
     private Product owned(long memberId, String id, boolean lock) {
         long parsed = ProductWriteInput.id(id);
         Product product = lock ? em.find(Product.class, parsed, LockModeType.PESSIMISTIC_WRITE) : em.find(Product.class, parsed);

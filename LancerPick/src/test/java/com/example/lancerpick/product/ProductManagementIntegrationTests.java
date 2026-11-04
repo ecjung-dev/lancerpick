@@ -92,6 +92,78 @@ class ProductManagementIntegrationTests {
         assertThat(updated.isHidden()).isTrue(); assertThat(updated.saleStatus()).isEqualTo("STOPPED");
         assertThat(updated.version()).isEqualTo(1);
     }
+    @Test void saleStopResumeAndNoopRespectVersionAndVisibility() throws Exception {
+        var before = service.create(member, json.readTree(body()));
+        mvc.perform(patch("/api/products/" + before.id() + "/sale-status")
+                        .with(authentication(auth(member))).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"saleStatus\":\"STOPPED\",\"expectedVersion\":0}"))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.saleStatus").value("STOPPED"))
+                .andExpect(jsonPath("$.version").value(1));
+        var stopped = service.getMine(member, before.id());
+        assertThat(stopped.createdAt()).isEqualTo(before.createdAt());
+        assertThat(stopped.description()).isEqualTo(before.description());
+        assertThat(service.changeSaleStatus(member, before.id(), json.readTree("{\"saleStatus\":\"STOPPED\",\"expectedVersion\":1}"))).isEqualTo(stopped);
+        mvc.perform(get("/api/products/" + before.id())).andExpect(status().isNotFound());
+        mvc.perform(patch("/api/products/" + before.id() + "/sale-status").with(authentication(auth(member))).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"saleStatus\":\"STOPPED\",\"expectedVersion\":0}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PRODUCT_VERSION_CONFLICT"));
+        var resumed = service.changeSaleStatus(member, before.id(), json.readTree("{\"saleStatus\":\"ON_SALE\",\"expectedVersion\":1}"));
+        assertThat(resumed.version()).isEqualTo(2);
+        mvc.perform(get("/api/products/" + before.id())).andExpect(status().isOk());
+        em.clear();
+        jdbc.update("UPDATE products SET is_hidden=1 WHERE id=?", before.id());
+        service.changeSaleStatus(member, before.id(), json.readTree("{\"saleStatus\":\"STOPPED\",\"expectedVersion\":2}"));
+        var hidden = service.changeSaleStatus(member, before.id(), json.readTree("{\"saleStatus\":\"ON_SALE\",\"expectedVersion\":3}"));
+        assertThat(hidden.isHidden()).isTrue();
+        assertThat(hidden.version()).isEqualTo(4);
+        mvc.perform(get("/api/products/" + before.id())).andExpect(status().isNotFound());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{}", "null", "[]", "{\"saleStatus\":\"DELETED\",\"expectedVersion\":0}",
+            "{\"saleStatus\":null,\"expectedVersion\":0}", "{\"saleStatus\":true,\"expectedVersion\":0}",
+            "{\"saleStatus\":\"STOPPED\"}", "{\"saleStatus\":\"STOPPED\",\"expectedVersion\":null}",
+            "{\"saleStatus\":\"STOPPED\",\"expectedVersion\":\"0\"}", "{\"saleStatus\":\"STOPPED\",\"expectedVersion\":-1}",
+            "{\"saleStatus\":\"STOPPED\",\"expectedVersion\":1.5}", "{\"saleStatus\":\"STOPPED\",\"expectedVersion\":9223372036854775808}",
+            "{\"saleStatus\":\"STOPPED\",\"expectedVersion\":0,\"isHidden\":false}"})
+    void invalidSaleStatusRequestLeavesProductUnchanged(String body) throws Exception {
+        var before = service.create(member, json.readTree(body()));
+        mvc.perform(patch("/api/products/" + before.id() + "/sale-status").with(authentication(auth(member))).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest());
+        assertThat(service.getMine(member, before.id())).isEqualTo(before);
+    }
+
+    @Test void saleStatusRequiresSessionCsrfAndOwnership() throws Exception {
+        var before = service.create(member, json.readTree(body()));
+        String endpoint = "/api/products/" + before.id() + "/sale-status";
+        String body = "{\"saleStatus\":\"STOPPED\",\"expectedVersion\":0}";
+        mvc.perform(patch(endpoint).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isUnauthorized());
+        mvc.perform(patch(endpoint).with(authentication(auth(member))).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        mvc.perform(patch(endpoint).with(authentication(auth(member + 999))).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNotFound());
+        assertThat(service.getMine(member, before.id())).isEqualTo(before);
+    }
+
+    @Autowired com.example.lancerpick.order.service.OrderCreationApiService orders;
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
+    @Test void stoppingOnlyBlocksNewOrdersAndKeepsExistingSnapshotsAndReplay() throws Exception {
+        var product = service.create(member, json.readTree(body()));
+        long buyer = insert("INSERT INTO members(email,password_hash,display_name,role,created_at,updated_at) VALUES (?,'fixture','구매자','USER',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))", UUID.randomUUID() + "@test.invalid");
+        var request = new com.example.lancerpick.order.dto.CreateOrderRequest(product.id(), 0L, "요구사항", UUID.randomUUID().toString());
+        var created = orders.create(buyer, request);
+        service.changeSaleStatus(member, product.id(), json.readTree("{\"saleStatus\":\"STOPPED\",\"expectedVersion\":0}"));
+        var replay = orders.create(buyer, request);
+        assertThat(replay.created()).isFalse();
+        assertThat(replay.order().id()).isEqualTo(created.order().id());
+        assertThat(replay.order().productSnapshot()).isEqualTo(created.order().productSnapshot());
+        assertThat(replay.order().priceAmount()).isEqualTo(created.order().priceAmount());
+        mvc.perform(post("/api/orders").with(authentication(auth(buyer))).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":\"" + product.id() + "\",\"expectedProductVersion\":1,\"requirements\":\"새 주문\",\"requestKey\":\"" + UUID.randomUUID() + "\"}"))
+                .andExpect(status().isConflict());
+    }
+
     long insert(String sql,Object... args) {
         var key=new GeneratedKeyHolder(); jdbc.update(connection->{var statement=connection.prepareStatement(sql,Statement.RETURN_GENERATED_KEYS);for(int i=0;i<args.length;i++)statement.setObject(i+1,args[i]);return statement;},key);return key.getKey().longValue();
     }

@@ -6,6 +6,7 @@ import { SignupPage } from '../features/auth/pages/SignupPage'
 import { ProductListPage } from '../features/products/pages/ProductListPage'
 import { ProductDetailPage } from '../features/products/pages/ProductDetailPage'
 import { ProductEditorPage } from '../features/products/pages/ProductEditorPage'
+import { ProductSaleStatusPage } from '../features/products/pages/ProductSaleStatusPage'
 import { OrderCreatePage } from '../features/orders/pages/OrderCreatePage'
 import { SellerProfilePage } from '../features/seller/pages/SellerProfilePage'
 import { OrderListPage } from '../features/orders/pages/OrderListPage'
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: 'products/:id', element: <ProductDetailPage /> },
       { path: 'mypage/products/new', element: <ProductEditorPage /> },
       { path: 'mypage/products/:id/edit', element: <ProductEditorPage /> },
+      { path: 'mypage/products/:id/sale-status', element: <ProductSaleStatusPage /> },
       { path: 'products/:id/order', element: <OrderCreatePage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },
