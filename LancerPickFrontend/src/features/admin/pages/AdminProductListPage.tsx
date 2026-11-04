@@ -43,12 +43,14 @@ function FilterForm({ filter, onApply }: { filter: AdminProductFilter; onApply: 
     event.preventDefault()
     onApply({ ...filter, keyword: normalizeText(keyword) })
   }
+  // 선택 상자를 바꿀 때도 입력해 둔 검색어를 함께 적용한다(입력값이 사라지지 않게).
+  const typed = () => normalizeText(keyword)
   return <form className={styles.filters} role="search" onSubmit={submit}>
     <label>검색어 <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="제목 또는 설명" /></label>
-    <label>노출 <select value={filter.isHidden} onChange={(e) => onApply({ ...filter, isHidden: e.target.value as AdminProductFilter['isHidden'] })}>
+    <label>노출 <select value={filter.isHidden} onChange={(e) => onApply({ ...filter, keyword: typed(), isHidden: e.target.value as AdminProductFilter['isHidden'] })}>
       <option value="">전체</option><option value="false">공개</option><option value="true">숨김</option>
     </select></label>
-    <label>판매 상태 <select value={filter.saleStatus} onChange={(e) => onApply({ ...filter, saleStatus: e.target.value as AdminProductFilter['saleStatus'] })}>
+    <label>판매 상태 <select value={filter.saleStatus} onChange={(e) => onApply({ ...filter, keyword: typed(), saleStatus: e.target.value as AdminProductFilter['saleStatus'] })}>
       <option value="">전체</option><option value="ON_SALE">판매 중</option><option value="STOPPED">판매 중지</option>
     </select></label>
     <button type="submit">검색</button>

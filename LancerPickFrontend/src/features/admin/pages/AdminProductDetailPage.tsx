@@ -32,9 +32,14 @@ export function AdminProductDetailPage() {
     <Link to={back}>← 상품 운영 목록</Link>
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="상품을 찾을 수 없어요" description="상품 번호를 다시 확인해 주세요." />
-        : product.isError ? <AsyncState title="상품을 불러오지 못했어요" error={product.error} onRetry={() => { void product.refetch() }} />
+        : !product.data && product.isError ? <AsyncState title="상품을 불러오지 못했어요" error={product.error} onRetry={() => { void product.refetch() }} />
           : !product.data ? <AsyncState title="상품을 불러오고 있어요" />
             : <>
+              {/* 다시 조회만 실패했으면 입력 중인 사유를 잃지 않도록 화면은 두고 안내만 한다. */}
+              {product.isError && <div className={styles.notice} role="alert">
+                <p>최신 상태를 불러오지 못했어요. 아래 내용은 마지막으로 확인한 상태예요.</p>
+                <button type="button" disabled={product.isFetching} onClick={() => { void product.refetch() }}>다시 불러오기</button>
+              </div>}
               <ProductSummary product={product.data} refreshing={product.isFetching} />
               <VisibilityForm key={product.data.id} product={product.data} />
               <ModerationLogs id={product.data.id} />
@@ -67,10 +72,14 @@ function ProductSummary({ product, refreshing }: { product: AdminProductDetail; 
  * - 409(다른 관리자·판매자가 먼저 바꿈): 입력한 사유는 남기고 최신 상품을 다시 불러온다. 자동으로 덮어쓰지 않는다.
  * - 통신 오류·5xx: 서버가 처리했을 수 있으므로 실패로 단정하지 않고 상품·이력을 다시 조회한다.
  * - 응답이 화면을 떠난 뒤 도착하면 화면 상태는 바꾸지 않는다(캐시만 갱신).
+ * - 다른 관리자가 먼저 같은 상태로 바꿨으면 서버는 이력 없이 현재 상태를 돌려준다(200).
+ *   그래서 "내가 바꿨다"가 아니라 "지금 이 상태다"로 안내하고 운영 이력을 다시 불러온다.
+ * - 빠른 두 번 클릭은 렌더링 전에도 막도록 ref로 한 번 더 막는다.
  */
 function VisibilityForm({ product }: { product: AdminProductDetail }) {
   const client = useQueryClient()
   const active = useRef(true)
+  const sending = useRef(false)
   useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string>()
@@ -80,6 +89,7 @@ function VisibilityForm({ product }: { product: AdminProductDetail }) {
   const save = useMutation({
     retry: false,
     mutationFn: (input: VisibilityInput) => changeVisibility(product.id, input),
+    onSettled: () => { sending.current = false },
     onSuccess: (updated) => {
       client.setQueryData(adminKeys.detail(product.id), updated)
       if (active.current) setReason('')
@@ -109,11 +119,13 @@ function VisibilityForm({ product }: { product: AdminProductDetail }) {
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (save.isPending) return
+    if (save.isPending || sending.current) return
     const result = validateReason(reason)
     setError(result.error)
     setNotice(undefined)
-    if (!result.error) save.mutate({ hidden: nextHidden, reason: result.reason, expectedVersion: product.version })
+    if (result.error) return
+    sending.current = true
+    save.mutate({ hidden: nextHidden, reason: result.reason, expectedVersion: product.version })
   }
 
   return <form className={styles.form} onSubmit={submit} noValidate>
@@ -130,7 +142,7 @@ function VisibilityForm({ product }: { product: AdminProductDetail }) {
       <p id="moderation-reason-error" className={styles.fieldError}>{error}</p>
       <button type="submit">{save.isPending ? '처리 중…' : nextHidden ? '숨기기' : '복구하기'}</button>
     </fieldset>
-    {save.isSuccess && <p className={styles.success} role="status">{save.data.isHidden ? '상품을 숨겼어요.' : '숨김을 복구했어요.'}</p>}
+    {save.isSuccess && <p className={styles.success} role="status">{save.data.isHidden ? '숨김 상태예요.' : '공개 상태예요.'} 처리 내역은 운영 이력에서 확인할 수 있어요.</p>}
   </form>
 }
 

@@ -199,6 +199,21 @@ test('detail for a visible product offers hide, and invalid or missing IDs show 
   } finally { missing.clear() }
 })
 
+test('a failed refetch keeps the last product and the form instead of replacing the page', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
+  client.getQueryCache().build(client, { queryKey: ['admin', 'product', id] })
+    .setState({ status: 'error', fetchStatus: 'idle', data: detail, dataUpdatedAt: 1, error: apiError(ssr.ApiError, 500, 'INTERNAL_ERROR') })
+  client.setQueryData(['admin', 'logs', id, 0], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })
+  try {
+    const html = render(`/admin/products/${id}`, '/admin/products/:id', AdminProductDetailPage, client)
+    assert.match(html, /최신 상태를 불러오지 못했어요/)
+    assert.match(html, /다시 불러오기/)
+    assert.match(html, /로고 디자인/)
+    assert.match(html, /moderation-reason/)
+    assert.doesNotMatch(html, /상품을 불러오지 못했어요/)
+  } finally { client.clear() }
+})
+
 test('back link only returns to an admin list URL', () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
   client.setQueryData(['admin', 'product', id], detail)
