@@ -9,6 +9,7 @@ import { getOwnedProduct } from '../management'
 import { useSaleStatusProduct, useSaleStatusSession } from '../queries'
 import { changeProductSaleStatus, type SaleStatusChange } from '../saleStatus'
 import styles from './ProductSaleStatusPage.module.css'
+import { myProductsReturnPath } from '../myProductsNavigation'
 
 export function ProductSaleStatusPage() {
   const { id = '' } = useParams()
@@ -21,7 +22,8 @@ export function ProductSaleStatusPage() {
   if (session.isError) return <AsyncState title="계정을 확인하지 못했어요" error={session.error} onRetry={() => { void session.refetch() }} />
   if (!session.data) return <AsyncState title="계정 확인 중" />
   return <section className={styles.page}>
-    <Link to={`/mypage/products/${id}/edit`}>← 상품 수정</Link>
+    <Link to={myProductsReturnPath(location.state?.fromMyProducts)}>← 내 상품 조회</Link>
+    <p><Link to={`/mypage/products/${id}/edit`} state={{ fromMyProducts: myProductsReturnPath(location.state?.fromMyProducts) }}>상품 수정</Link></p>
     <h1>상품 판매 상태 관리</h1>
     {session.isFetching && <p role="status">계정을 다시 확인하고 있어요.</p>}
     <div hidden={session.isFetching}>

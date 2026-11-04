@@ -197,6 +197,7 @@ function WalletLayout({
             <span className={styles.menuLabel}>내 활동</span>
             <Link to="/mypage/seller-profile">판매자 프로필</Link>
             <Link to="/mypage/products/new">상품 등록</Link>
+            <Link to="/mypage/products">내 상품 조회</Link>
             <span className={styles.active} aria-current="page">
               적립금 · 이용 내역 <span aria-hidden="true">↗</span>
             </span>
