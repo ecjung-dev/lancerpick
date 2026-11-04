@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { after, test } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createServer } from 'vite'
 
@@ -10,6 +10,7 @@ const server = await createServer({ configFile: false, cacheDir: 'node_modules/.
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
 const { WalletPreviewPage } = await server.ssrLoadModule('/src/features/wallet/pages/WalletPage.tsx')
 const { OrderListPage } = await server.ssrLoadModule('/src/features/orders/pages/OrderListPage.tsx')
+const { OrderDetailPage } = await server.ssrLoadModule('/src/features/orders/pages/OrderDetailPage.tsx')
 after(async () => { await server.close() })
 
 test('mypage exposes buyer, seller and settlement destinations as real links', () => {
@@ -38,7 +39,7 @@ test('direct seller URL restores selected tab and page without converting order 
   assert.match(html, /aria-pressed="true">판매 내역/)
   assert.match(html, /SELLER saved page 2/)
   assert.match(html, /3페이지/)
-  assert.match(html, /href="\/orders\/9007199254740993"/)
+  assert.match(html, /href="\/orders\/9007199254740993\?side=SELLER&amp;page=2"/)
 })
 
 test('invalid side or page uses the buyer first page rather than an invalid API query', () => {
@@ -55,7 +56,26 @@ test('direct filtered URL restores status and page while invalid status selects 
   assert.match(filtered, /value="COMPLETED" selected=""/)
   assert.match(filtered, /SELLER saved page 2/)
   assert.match(filtered, /3페이지/)
+  assert.match(filtered, /href="\/orders\/9007199254740993\?side=SELLER&amp;status=COMPLETED&amp;page=2"/)
   const invalid = renderOrders('/orders?side=BUYER&status=UNKNOWN&page=0', 'BUYER', 0)
   assert.match(invalid, /value="" selected=""/)
   assert.match(invalid, /BUYER saved page 0/)
+})
+
+test('order detail returns to the filtered list and displays a Korean status', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(['wallet', 'order', '1'], {
+    id: '1', status: 'COMPLETED', priceAmount: 1000, requirements: '요구사항',
+    buyer: { id: '2', displayName: '구매자' }, seller: { id: '3', displayName: '판매자' },
+    productSnapshot: { title: '상품', description: '설명', scopeDescription: '범위', preparationDescription: '준비', productVersion: 0 },
+    termsSnapshot: '거래 규칙', durationDays: 1, originalDueAt: null, revisionDueAt: null, currentDueAt: null,
+    allowedActions: [], deliveries: [], revisionRequest: null, histories: [], payment: null, review: null, cancellationRequests: [],
+  })
+  try {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders/1?side=SELLER&status=COMPLETED&page=2'] },
+      createElement(QueryClientProvider, { client },
+        createElement(Routes, null, createElement(Route, { path: '/orders/:id', element: createElement(OrderDetailPage) })))))
+    assert.match(html, /href="\/orders\?side=SELLER&amp;status=COMPLETED&amp;page=2"/)
+    assert.match(html, /주문 #1 · 구매 확정/)
+  } finally { client.clear() }
 })

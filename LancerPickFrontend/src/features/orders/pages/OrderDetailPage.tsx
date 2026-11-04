@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router'
+import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { formatWon, formatDateTime } from '../../../shared/lib/format'
 import { normalizeText, codePointLength } from '../../../shared/lib/text'
@@ -10,12 +10,14 @@ import { CancellationActions } from './CancellationActions'
 import type { OrderDetail as OrderDetailData } from '../types'
 import { OrderHistoryList } from './OrderHistoryList'
 import { orderDeadlineView } from '../deadlines'
+import { orderStatusLabel } from '../status'
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
   return <OrderDetail key={id} id={id} />
 }
 function OrderDetail({ id }: { id: string }) {
+  const location = useLocation()
   const client = useQueryClient()
   const key = ['wallet', 'order', id]
   const query = useQuery({ queryKey: key, queryFn: ({ signal }) => getOrder(id, signal), retry: false, gcTime: 0 })
@@ -59,7 +61,7 @@ function OrderDetail({ id }: { id: string }) {
     try {
       const result = await command()
       // 변경 응답을 개인 캐시에 직접 넣지 않고 현재 세션으로 재조회한다.
-      setMessage(`주문 상태가 ${result.status}(으)로 확인됐습니다.`)
+      setMessage(`주문 상태가 ${orderStatusLabel(result.status)}(으)로 확인됐습니다.`)
       setAgreed(false); setConfirmed(false); setReason(''); setRejectionReason('')
       setDescription(''); setResultUrl(''); setRevisionReason('')
       return true
@@ -84,7 +86,7 @@ function OrderDetail({ id }: { id: string }) {
   const order = query.data
   const deadlines = orderDeadlineView(order, Date.now())
   const disabled = busy || !!failure || query.isFetching
-  return <section className={styles.orders}><Link to="/orders">← 거래 내역</Link><h1>{order.productSnapshot.title}</h1><p>주문 #{order.id} · {order.status}</p><h2>{formatWon(order.priceAmount)}</h2><p>구매자 {order.buyer.displayName} · 판매자 {order.seller.displayName}</p>
+  return <section className={styles.orders}><Link to={`/orders${location.search}`}>← 거래 내역</Link><h1>{order.productSnapshot.title}</h1><p>주문 #{order.id} · {orderStatusLabel(order.status)}</p><h2>{formatWon(order.priceAmount)}</h2><p>구매자 {order.buyer.displayName} · 판매자 {order.seller.displayName}</p>
     <h2>보관된 거래 조건</h2><h3>상품 설명</h3><p className={styles.text}>{order.productSnapshot.description}</p><h3>작업 범위</h3><p className={styles.text}>{order.productSnapshot.scopeDescription}</p><h3>준비 사항</h3><p className={styles.text}>{order.productSnapshot.preparationDescription}</p><p>소요일 {order.durationDays}일{order.currentDueAt && ` · 납기 ${formatDateTime(order.currentDueAt)}`}</p><h3>거래 규칙</h3><p className={styles.text}>{order.termsSnapshot}</p><h2>제출한 요구사항</h2><p className={styles.text}>{order.requirements}</p>
     {deadlines.currentLate && <p role="status">현재 작업 기한이 지났습니다. 주문 상태를 새로 조회해 확인해 주세요.</p>}
     <h2>납품 내역</h2>{order.deliveries.length === 0 ? <p>등록된 납품이 없습니다.</p> : order.deliveries.map(delivery => { const deadline = deadlines.deliveries.find(item => item.id === delivery.id); return <article key={delivery.id}><h3>{delivery.sequenceNo}차 납품</h3><p>제출 {formatDateTime(delivery.submittedAt)}{deadline?.dueAt && (deadline.late ? ' · 기한 후 제출' : ' · 기한 내 제출')}</p><p className={styles.text}>{delivery.description}</p>{delivery.resultUrl.startsWith('https://') && <a href={delivery.resultUrl} target="_blank" rel="noopener noreferrer">결과물 확인</a>}</article> })}
