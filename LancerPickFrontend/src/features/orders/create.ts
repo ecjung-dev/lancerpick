@@ -16,7 +16,7 @@ export function prepareOrderInput(input: CreateOrderInput): CreateOrderInput {
   const requirements = normalizeText(input.requirements)
   if (codePointLength(requirements) < 1 || codePointLength(requirements) > 5000) throw new Error('요구사항은 1~5,000자로 입력해 주세요.')
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(input.requestKey)) throw new Error('주문 요청 키를 확인해 주세요.')
-  return { ...input, requirements }
+  return { productId: input.productId, expectedProductVersion: input.expectedProductVersion, requirements, requestKey: input.requestKey }
 }
 
 export function createOrder(input: CreateOrderInput) {

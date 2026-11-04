@@ -8,6 +8,11 @@ afterEach(() => { globalThis.fetch = originalFetch; clearCsrfToken() })
 const key = 'b89eb754-8052-489f-ac52-e5d4a367d12f'
 const input = { productId: '9007199254740993', expectedProductVersion: 2, requirements: '  작업 요청  ', requestKey: key }
 
+test('restored input never forwards client identity, price or unknown fields', () => {
+  assert.deepEqual(prepareOrderInput({ ...input, buyerId: '999', sellerId: '888', priceAmount: 1 }),
+    { ...input, requirements: '작업 요청' })
+})
+
 test('a new order and an explicit identical retry keep the original key and normalized body', async () => {
   const calls = []
   globalThis.fetch = async (url, options) => {

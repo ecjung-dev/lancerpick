@@ -33,7 +33,7 @@ export function ProductDetailPage() {
             <aside className={styles.summary} aria-label="가격 및 작업 기간">
               <p>고정 가격</p><strong>{formatWon(product.data.priceAmount)}</strong>
               <dl><dt>작업 기간</dt><dd>{product.data.durationDays}일</dd><dt>판매 상태</dt><dd>판매 중</dd></dl>
-              <p>주문 요청 화면 연결은 준비 중이에요.</p>
+              <Link to={`/products/${product.data.id}/order`}>주문 요청 작성하기 →</Link>
             </aside>
           </div>
           <footer className={styles.dates}>등록 {formatDateTime(product.data.createdAt)} · 수정 {formatDateTime(product.data.updatedAt)}</footer>

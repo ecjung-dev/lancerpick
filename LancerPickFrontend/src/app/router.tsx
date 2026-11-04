@@ -4,6 +4,7 @@ import { SettlementPage } from '../features/settlements/SettlementPage'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { ProductListPage } from '../features/products/pages/ProductListPage'
 import { ProductDetailPage } from '../features/products/pages/ProductDetailPage'
+import { OrderCreatePage } from '../features/orders/pages/OrderCreatePage'
 import { SellerProfilePage } from '../features/seller/pages/SellerProfilePage'
 import { OrderListPage } from '../features/orders/pages/OrderListPage'
 import { AppLayout } from '../shared/components/AppLayout'
@@ -17,6 +18,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <ProductListPage /> },
       { path: 'products/:id', element: <ProductDetailPage /> },
+      { path: 'products/:id/order', element: <OrderCreatePage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <section style={{ padding: '48px 0' }}><h1>회원가입</h1><p>회원가입은 준비 중입니다. 현재 화면은 예시 서비스 탐색용입니다.</p></section> },
       { path: 'orders', element: <OrderListPage /> },
