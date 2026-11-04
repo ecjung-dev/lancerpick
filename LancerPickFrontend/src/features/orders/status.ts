@@ -6,3 +6,11 @@ export function orderStatusLabel(status: string) {
   const index = orderStatuses.findIndex(value => value === status)
   return index < 0 ? status : orderStatusNames[index]
 }
+
+const cancellationStatusNames: Record<string, string> = {
+  PENDING: '처리 대기', APPROVED: '승인됨', REJECTED: '거절됨', WITHDRAWN: '철회됨',
+}
+
+export function cancellationStatusLabel(status: string) {
+  return cancellationStatusNames[status] ?? status
+}

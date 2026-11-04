@@ -4,6 +4,7 @@ import type { OrderDetail } from '../types'
 import { normalizeText, codePointLength } from '../../../shared/lib/text'
 import { formatDateTime } from '../../../shared/lib/format'
 import { ApiError } from '../../../shared/api/client'
+import { cancellationStatusLabel } from '../status'
 
 interface Props {
   order: OrderDetail
@@ -50,7 +51,7 @@ export function CancellationActions({ order, disabled, run }: Props) {
   return <section>
     <h2>취소 요청 내역</h2>
     {order.cancellationRequests.length === 0 ? <p>취소 요청이 없습니다.</p> : order.cancellationRequests.map(item => <article key={item.id}>
-      <p>{item.status} · {formatDateTime(item.requestedAt)}</p><p style={{ whiteSpace: 'pre-wrap' }}>{item.reason}</p>
+      <p>{cancellationStatusLabel(item.status)} · {formatDateTime(item.requestedAt)}</p><p style={{ whiteSpace: 'pre-wrap' }}>{item.reason}</p>
       {item.responseReason && <p style={{ whiteSpace: 'pre-wrap' }}>처리 사유: {item.responseReason}</p>}
       {item.resolvedAt && <p>처리 시각 {formatDateTime(item.resolvedAt)}</p>}
     </article>)}
