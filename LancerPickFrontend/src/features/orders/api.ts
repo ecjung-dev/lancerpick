@@ -1,4 +1,4 @@
-import { prepareOrderInput } from './validation.ts'
+import { prepareCancellationReason, prepareOrderInput } from './validation.ts'
 import type { CreateOrderInput } from './types.ts'
 // 이 기능의 서버 요청 함수를 구현합니다. 공통 요청 처리는 shared/api/client.ts에 둡니다.
 import { apiRequest } from '../../shared/api/client.ts'
@@ -34,7 +34,7 @@ export const payOrder = (id: string) =>
 export const cancelOrder = (id: string, reason: string) =>
   apiRequest<OrderDetail>(`${orderPath(id)}/cancel`, {
     method: 'POST',
-    json: { reason },
+    json: { reason: prepareCancellationReason(reason) },
   })
 export const confirmOrder = (id: string) =>
   apiRequest<OrderDetail>(`${orderPath(id)}/confirm`, { method: 'POST' })
