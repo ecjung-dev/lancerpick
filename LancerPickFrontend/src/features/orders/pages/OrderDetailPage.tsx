@@ -80,7 +80,7 @@ function OrderDetail({ id }: { id: string }) {
     const result = await query.refetch()
     if (!result.error) { setFailure(null); setAgreed(false); setConfirmed(false) }
   }
-  if (query.error instanceof ApiError && query.error.status === 401) return <section className={styles.orders}><h1>주문 상세</h1><p>로그인이 필요합니다.</p><Link to="/login">로그인</Link><p><Link to={`/orders${location.search}`}>← 거래 내역</Link></p></section>
+  if (query.error instanceof ApiError && query.error.status === 401) return <section className={styles.orders}><h1>주문 상세</h1><p>로그인이 필요합니다.</p><Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}>로그인</Link><p><Link to={`/orders${location.search}`}>← 거래 내역</Link></p></section>
   if (query.isError) return <section className={styles.orders}><h1>주문을 확인할 수 없습니다.</h1><p role="alert">{query.error instanceof ApiError ? query.error.message : '주문을 불러오지 못했습니다.'}</p><button onClick={() => { void refresh() }}>다시 조회</button><p><Link to={`/orders${location.search}`}>← 거래 내역</Link></p></section>
   if (!query.data) return <p role="status">주문을 불러오는 중입니다.</p>
   const order = query.data
