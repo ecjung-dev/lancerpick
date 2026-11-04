@@ -198,6 +198,8 @@ PAYMENT_ALREADY_REFUNDED 응답에는 재결제 성공 의미를 담지 않는�
 
 ## 8 지갑·정산 담당 황준범, 후기 담당 박소현
 
+2026-11-04 후기 후속: `codex/reviews`에서 후기 작성·공개 조회 API와 주문/상품 상세 화면을 구현했다. 구현·검증·미병합 상태는 [후기 작성·조회](reviews.md)를 따른다. POST는 회원+CSRF, 구매 확정 주문 구매자만 허용하며 미완료409 ORDER_STATE_CONFLICT·중복409 REVIEW_ALREADY_EXISTS·판매자403·타인404다. 별점은 원본 JSON 정수1~5만 허용하고 content 생략/null을 허용한다. 공개 GET은 공개·판매 중 상품만 조회(그 외404), page0/size20 기본·size1~100·작성 시각/ID 내림차순이며 공개 응답에 orderId를 포함하지 않는다.
+
 2026-11-03 후속: [구매 확정·판매 수익 정산](order-settlement.md)의 POST /orders/{id}/confirm, GET /me/settlements, GET /me/settlements/summary 및 판매 수익 화면을 추가했다. 주문 상세의 구매 확정 버튼과 실제 세션 기반 서버 검사도 연결되었다. 인증 화면을 포함한 브라우저 검증은 별도이며, 아래 후기 API의 구현 완료를 뜻하지 않는다.
 
 | 메서드·경로 | 권한·입력 | 출력 |

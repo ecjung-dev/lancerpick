@@ -33,6 +33,10 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
 })
 class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
+    com.example.lancerpick.review.service.ReviewService reviewService;
+    @MockitoBean
+    com.example.lancerpick.review.repository.ReviewQueries reviewQueries;
+    @MockitoBean
     com.example.lancerpick.product.service.MyProductService myProductService;
     @MockitoBean
     com.example.lancerpick.product.repository.MyProductQueries myProductQueries;

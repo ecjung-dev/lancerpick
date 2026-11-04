@@ -1,0 +1,8 @@
+.reviews { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #ddd; }
+.reviews ul { list-style: none; padding: 0; }
+.reviews li { padding: 1rem 0; border-bottom: 1px solid #eee; }
+.reviews nav { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: 1rem; }
+.content { white-space: pre-wrap; overflow-wrap: anywhere; }
+.form { display: grid; gap: .75rem; margin: 1rem 0; }
+.form label { display: grid; gap: .5rem; }
+.form textarea { min-height: 8rem; width: 100%; box-sizing: border-box; }
