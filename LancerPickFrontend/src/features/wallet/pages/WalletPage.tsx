@@ -204,9 +204,7 @@ function WalletLayout({
             <Link to="/orders?side=BUYER">구매 내역</Link>
             <Link to="/orders?side=SELLER">판매 내역</Link>
             <Link to="/mypage/settlements">판매 수익</Link>
-            <span className={styles.disabled}>
-              내 정보 <small>준비 중</small>
-            </span>
+            <Link to="/mypage/profile">내 정보</Link>
           </nav>
         </aside>
         <div className={styles.content}>

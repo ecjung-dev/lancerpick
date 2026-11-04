@@ -16,6 +16,16 @@ const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*[0-9])[\x21-\x7E]{8,64}$/
 export type SignupErrors = Partial<Record<'email' | 'password' | 'passwordConfirm' | 'displayName', string>>
 export type LoginErrors = Partial<Record<'email' | 'password', string>>
 
+export const DISPLAY_NAME_MAX = 30
+
+/** 표시 이름: 공백 정리 후 1~30자(코드 포인트). 가입과 내 정보 수정이 같은 규칙을 쓴다. 중복은 허용한다. */
+export function validateDisplayName(value: string) {
+  const displayName = normalizeText(value)
+  const length = codePointLength(displayName)
+  const error = length < 1 || length > DISPLAY_NAME_MAX ? '표시 이름은 공백 정리 후 1~30자여야 해요.' : undefined
+  return { displayName, error }
+}
+
 export function normalizeEmail(value: string) {
   return normalizeText(value).toLowerCase()
 }
@@ -24,7 +34,7 @@ export function validateSignup(draft: { email: string; password: string; passwor
   const input: SignupInput = {
     email: normalizeEmail(draft.email),
     password: draft.password, // 비밀번호는 절대 정리하지 않는다
-    displayName: normalizeText(draft.displayName),
+    displayName: validateDisplayName(draft.displayName).displayName,
   }
   const errors: SignupErrors = {}
   const emailLength = codePointLength(input.email)
@@ -37,8 +47,8 @@ export function validateSignup(draft: { email: string; password: string; passwor
   if (!draft.passwordConfirm) errors.passwordConfirm = '비밀번호를 한 번 더 입력해 주세요.'
   else if (draft.passwordConfirm !== draft.password) errors.passwordConfirm = '비밀번호가 서로 달라요.'
 
-  const nameLength = codePointLength(input.displayName)
-  if (nameLength < 1 || nameLength > 30) errors.displayName = '표시 이름은 공백 정리 후 1~30자여야 해요.'
+  const nameError = validateDisplayName(draft.displayName).error
+  if (nameError) errors.displayName = nameError
 
   return { input, errors, valid: Object.keys(errors).length === 0 }
 }
