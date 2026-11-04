@@ -55,6 +55,7 @@
 
 ### 회원·상품·관리자
 
+- [내 상품 조회](my-products.md): 본인 전용 목록 API·관리 화면, 중지/숨김 포함·페이지·수정/상태 관리 연결과 검사 기록.
 - [로그인·로그아웃·내 정보 API](auth-login.md)
 - [판매자 프로필 관리](seller-profile.md)
 - [카테고리 공개 조회](category-query.md)

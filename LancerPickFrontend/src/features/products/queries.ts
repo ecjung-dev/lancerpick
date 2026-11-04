@@ -1,4 +1,4 @@
-import { getProductDetail, getCategories, getProducts } from './api'
+import { getProductDetail, getCategories, getProducts, getMyProducts } from './api'
 import { useQuery } from '@tanstack/react-query'
 import { getMemberSession } from '../auth/api'
 import { getOwnedProduct } from './management'
@@ -41,5 +41,19 @@ export function useSaleStatusProduct(memberId: string, id: string) {
     queryKey: ['product-sale-status', memberId, id],
     queryFn: ({ signal }) => getOwnedProduct(id, signal),
     retry: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: false,
+  })
+}
+
+export function useMyProductsSession() {
+  return useQuery({
+    queryKey: ['my-products-session'], queryFn: ({ signal }) => getMemberSession(signal),
+    retry: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: 'always',
+  })
+}
+
+export function useMyProducts(memberId: string, page: number) {
+  return useQuery({
+    queryKey: ['products', 'mine', memberId, page], queryFn: ({ signal }) => getMyProducts(page, signal),
+    retry: false, staleTime: 0, gcTime: 0,
   })
 }

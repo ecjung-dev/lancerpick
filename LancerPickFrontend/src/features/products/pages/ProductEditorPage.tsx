@@ -8,6 +8,7 @@ import { getCategories } from '../api'
 import { createProduct, getOwnedProduct, patchProduct, validateProduct, textLimits, type ProductInput, type OwnedProduct } from '../management'
 import type { Category } from '../types'
 import styles from './ProductEditorPage.module.css'
+import { myProductsReturnPath } from '../myProductsNavigation'
 
 export function ProductEditorPage() {
   const { id } = useParams()
@@ -20,18 +21,21 @@ export function ProductEditorPage() {
 }
 
 function Editor({ id, memberId, checking }: { id?: string; memberId: string; checking: boolean }) {
+  const location = useLocation()
+  const listPath = myProductsReturnPath(location.state?.fromMyProducts)
   const product = useQuery({ queryKey: ['product-editor', memberId, id], queryFn: ({ signal }) => getOwnedProduct(id!, signal), enabled: !!id, retry: false, gcTime: 0, refetchOnWindowFocus: false })
   const categories = useQuery({ queryKey: ['categories'], queryFn: ({ signal }) => getCategories(signal) })
   if (product.isError || categories.isError) return <AsyncState title="상품 정보를 불러오지 못했어요" error={product.error ?? categories.error} onRetry={() => { if (id) void product.refetch(); void categories.refetch() }} />
   if (!categories.data || (id && !product.data)) return <AsyncState title="상품 정보 확인 중" />
-  return <section className={styles.page}><Link to="/mypage">← 마이페이지</Link><h1>{id ? '상품 수정' : '상품 등록'}</h1>
-    {id && <p><Link to={`/mypage/products/${id}/sale-status`}>상품 판매 상태 관리 →</Link></p>}
+  return <section className={styles.page}><Link to={listPath}>← 내 상품 조회</Link><h1>{id ? '상품 수정' : '상품 등록'}</h1>
+    {id && <p><Link to={`/mypage/products/${id}/sale-status`} state={{ fromMyProducts: listPath }}>상품 판매 상태 관리 →</Link></p>}
     <ProductForm key={id ?? 'new'} initial={product.data} categories={categories.data} memberId={memberId} checking={checking} />
   </section>
 }
 
 const labels = { title: '상품명', description: '상품 설명', scopeDescription: '작업 범위', preparationDescription: '준비사항' }
 function ProductForm({ initial, categories, memberId, checking }: { initial?: OwnedProduct; categories: Category[]; memberId: string; checking: boolean }) {
+  const location = useLocation()
   const navigate = useNavigate()
   const client = useQueryClient()
   const [baseline, setBaseline] = useState(initial)
@@ -65,7 +69,7 @@ function ProductForm({ initial, categories, memberId, checking }: { initial?: Ow
       if (!active.current) return
       setBaseline(result); setDraft(toInput(result)); setSaved(true)
       void client.invalidateQueries({ queryKey: ['products'] })
-      navigate(`/mypage/products/${result.id}/edit`, { replace: true })
+      navigate(`/mypage/products/${result.id}/edit`, { replace: true, state: { fromMyProducts: myProductsReturnPath(location.state?.fromMyProducts) } })
     } catch (cause) {
       if (!active.current) return
       if (cause instanceof ApiError && cause.status === 401) setAccountInvalid(true)

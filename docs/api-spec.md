@@ -60,7 +60,7 @@ Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·
 | PUT /me/seller-profile | 회원; introduction,specialty,portfolioUrl | 생성 201 / 수정 200 |
 | GET /products | 전체; keyword,categoryId,page,size | ProductSummary 목록 |
 | GET /products/{id} | 전체; 공개·판매 중 상품 | ProductDetail |
-| GET /me/products | 회원; page,size | 본인 상품 목록; 중지·숨김 포함 |
+| GET /me/products | 회원; page,size | OwnedProductSummary 목록; 중지·숨김 포함 |
 | GET /me/products/{id} | 소유자 | 본인 ProductDetail |
 | POST /products | 판매자 프로필 보유; ProductInput | 201 ProductDetail |
 | PATCH /products/{id} | 소유자; ProductPatch,expectedVersion 필수 | ProductDetail |
@@ -72,6 +72,8 @@ SellerProfile: id(회원 ID),displayName,introduction,specialty,portfolioUrl. �
 ProductSummary: id,title,priceAmount,durationDays,category,seller. ProductDetail은 description,scopeDescription,preparationDescription,version,saleStatus,createdAt,updatedAt을 추가한다. 본인·관리자 조회는 isHidden 추가. 상품 변경·판매 상태 변경·숨김 변경은 버전 충돌 검사와 일관되게 관리한다. 숨김·중지 상품의 기존 거래는 주문 스냅샷으로 조회한다.
 
 ### 상품 등록·부분 수정 계약
+
+OwnedProductSummary는 ProductSummary에 saleStatus,isHidden,version,createdAt,updatedAt을 추가한다. 회원 ID는 인증 정보에서만 결정하며 타인의 숨김·중지 상품을 포함하지 않는다. 상품 상세 설명·판매자 이메일·비밀번호는 목록에 포함하지 않는다. 기본 최신 생성 시각·ID 내림차순, 공통 페이지 계약을 사용한다. 판매자 프로필이나 상품이 없는 회원에게도 빈 목록을 반환한다. 공개 ProductSummary에는 이 전용 필드를 추가하지 않는다.
 
 등록의 ProductInput은 categoryId,title,description,scopeDescription,preparationDescription,priceAmount,durationDays를 모두 필수로 받는다. 서버가 saleStatus=ON_SALE, isHidden=false, version=0으로 생성한다. 클라이언트가 sellerId·saleStatus·isHidden·version을 등록 본문으로 지정하지 않는다.
 
