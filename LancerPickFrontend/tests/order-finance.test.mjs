@@ -182,3 +182,27 @@ test('invalid identifiers never reach network and failed payment is not replayed
   await assert.rejects(payOrder('1'), error => error.code === 'INSUFFICIENT_BALANCE')
   assert.equal(writes, 1)
 })
+
+
+test('direct cancellation rejects invalid reasons before CSRF or mutation requests', () => {
+  let calls = 0
+  globalThis.fetch = async () => { calls++; return json({}) }
+  for (const reason of ['', ' \r\n\u0085\u3000 ', '가'.repeat(1001), '😀'.repeat(1001)]) {
+    assert.throws(() => cancelOrder('1', reason), /취소 사유/)
+  }
+  assert.equal(calls, 0)
+})
+
+test('direct cancellation normalizes reason and accepts 1000 Unicode code points', async () => {
+  const bodies = []
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/auth/csrf') return json({ token: 'test', headerName: 'X-CSRF-TOKEN' })
+    assert.equal(url, '/api/orders/1/cancel')
+    assert.equal(options.headers.get('X-CSRF-TOKEN'), 'test')
+    bodies.push(JSON.parse(options.body))
+    return json({ id: '1', status: 'CANCELLED' })
+  }
+  await cancelOrder('1', '\u0085😀\r\n취소\u3000')
+  await cancelOrder('1', '😀'.repeat(1000))
+  assert.deepEqual(bodies, [{ reason: '😀\n취소' }, { reason: '😀'.repeat(1000) }])
+})
