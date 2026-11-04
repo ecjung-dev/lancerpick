@@ -1,5 +1,7 @@
 # 구매 확정·판매 수익 정산
 
+후속 2026-11-04: 마이페이지에서 판매 수익 화면으로 직접 이동할 수 있다. 구매 확정·환불 이후 실제 HTTP/React 렌더링과 전체 회귀 범위는 [거래 통합 검증](account-trade-integration.md)을 따른다. 과거 실행 건수와 최신 합본 검증을 구분한다.
+
 저장소 후속 변경: [JPA·QueryDSL 전환](finance-persistence.md)에 따라 정산 생성은 Entity/JpaRepository, 수익 조회는 QueryDSL로 변경했다. API·수수료·동시성 정책은 유지한다.
 
 2026-11-03. 황준범. feature/order-settlement. 선행 결제·직접 취소/환불 브랜치를 포함한다.

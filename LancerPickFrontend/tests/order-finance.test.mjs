@@ -3,11 +3,13 @@ import { afterEach, test } from 'node:test'
 import { getOrder, getOrders, payOrder, cancelOrder, confirmOrder, acceptOrder, rejectOrder, deliverOrder, requestOrderRevision } from '../src/features/orders/api.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
 import { createCancellationRequest, resolveCancellationRequest } from '../src/features/orders/api.ts'
+import { describeHistory } from '../src/features/orders/history.ts'
+import { orderDeadlineView } from '../src/features/orders/deadlines.ts'
 const original = globalThis.fetch
 afterEach(() => { globalThis.fetch = original; clearCsrfToken() })
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 
-test('order list applies the selected status to the server and omits it for all states', async () => {
+test('order list sends selected status and omits it for all states', async () => {
   const urls = []
   globalThis.fetch = async (url) => { urls.push(url); return json({ items: [], totalPages: 0 }) }
   await getOrders('SELLER', 2, undefined, 'AWAITING_PAYMENT')
@@ -16,6 +18,38 @@ test('order list applies the selected status to the server and omits it for all 
     '/api/orders?side=SELLER&status=AWAITING_PAYMENT&page=2&size=20',
     '/api/orders?side=BUYER&page=0&size=20',
   ])
+})
+
+test('active overdue and delivered late use distinct due dates and strict boundary', () => {
+  const due = '2026-11-03T00:00:00Z'
+  const base = { status: 'IN_PROGRESS', currentDueAt: due, originalDueAt: due, revisionDueAt: '2026-11-05T00:00:00Z', deliveries: [
+    { id: '1', sequenceNo: 1, submittedAt: due }, { id: '2', sequenceNo: 2, submittedAt: '2026-11-05T00:00:01Z' },
+  ] }
+  assert.equal(orderDeadlineView(base, Date.parse(due)).currentLate, false)
+  assert.deepEqual(orderDeadlineView(base, Date.parse(due) + 1).deliveries.map(item => item.late), [false, true])
+  assert.equal(orderDeadlineView({ ...base, status: 'AWAITING_CONFIRMATION' }, Date.parse(due) + 1).currentLate, false)
+  assert.equal(orderDeadlineView({ ...base, status: 'COMPLETED' }, Date.parse(due) + 1).currentLate, false)
+  assert.equal(orderDeadlineView({ ...base, status: 'REVISION_IN_PROGRESS', currentDueAt: base.revisionDueAt }, Date.parse(due) + 1).currentLate, false)
+})
+
+test('delivery lateness preserves microseconds and timezone offsets', () => {
+  const due = '2026-11-03T00:00:00.123456Z'
+  const base = { status: 'AWAITING_CONFIRMATION', currentDueAt: due, originalDueAt: due, revisionDueAt: null, deliveries: [
+    { id: 'same', sequenceNo: 1, submittedAt: due },
+    { id: 'late', sequenceNo: 1, submittedAt: '2026-11-03T09:00:00.123457+09:00' },
+    { id: 'early', sequenceNo: 1, submittedAt: '2026-11-03T00:00:00.123455Z' },
+  ] }
+  assert.deepEqual(orderDeadlineView(base, Date.parse(due)).deliveries.map(item => item.late), [false, true, false])
+  assert.equal(orderDeadlineView({ ...base, status: 'IN_PROGRESS' }, Date.parse(due)).currentLate, false)
+  assert.equal(orderDeadlineView({ ...base, status: 'IN_PROGRESS' }, Date.parse(due) + 1).currentLate, true)
+})
+
+test('order history distinguishes state changes from events that leave state unchanged', () => {
+  const order = { buyer: { id: '9007199254740993' }, seller: { id: '2' } }
+  const event = { id: '1', actorId: '9007199254740993', action: 'CANCELLATION_REQUESTED', fromStatus: 'IN_PROGRESS', toStatus: 'IN_PROGRESS', reason: '취소 사유', createdAt: '2026-11-03T00:00:00Z' }
+  assert.deepEqual(describeHistory(event, order), { action: '취소 요청', actor: '구매자', transition: '상태 유지: 진행 중', reason: '취소 사유' })
+  assert.equal(describeHistory({ ...event, actorId: '2', action: 'CANCELLED', toStatus: 'CANCELLED' }, order).transition, '진행 중 → 취소됨')
+  assert.equal(describeHistory({ ...event, action: 'CREATED', fromStatus: null, toStatus: 'REQUESTED', reason: null }, order).transition, '상태: 수락 대기')
 })
 
 test('cancellation commands preserve UUID and IDs and omit optional empty rejection body', async () => {

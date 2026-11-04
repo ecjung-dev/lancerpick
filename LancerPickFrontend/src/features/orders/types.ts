@@ -8,9 +8,16 @@ export interface OrderDetail {
   id: string; status: string; priceAmount: number; requirements: string
   buyer: { id: string; displayName: string }; seller: { id: string; displayName: string }
   productSnapshot: { title: string; description: string; scopeDescription: string; preparationDescription: string; productVersion: number }
-  termsSnapshot: string; durationDays: number; currentDueAt: string | null; allowedActions: string[]
+  termsSnapshot: string; durationDays: number; originalDueAt: string | null; revisionDueAt: string | null; currentDueAt: string | null; allowedActions: string[]
   deliveries: { id: string; sequenceNo: number; description: string; resultUrl: string; submittedAt: string }[]
   revisionRequest: { id: string; deliveryId: string; reason: string; requestedAt: string; dueAt: string } | null
+  histories: OrderHistory[]
+  payment: { id: string; amount: number; feeRateBps: number; status: string; paidAt: string; refundedAt: string | null } | null
+  review: { id: string; orderId: string; authorDisplayName: string; rating: number; content: string | null; createdAt: string } | null
+}
+export interface OrderHistory {
+  id: string; actorId: string; action: string; fromStatus: string | null
+  toStatus: string; reason: string | null; createdAt: string
 }
 export interface CancellationRequest {
   id: string; orderId: string; requestKey: string; reason: string

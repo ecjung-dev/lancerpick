@@ -84,14 +84,14 @@ function WalletLayout({ children, preview = false }: { children: ReactNode; prev
     {preview && <div className={styles.notice} role="note"><strong>화면 미리보기</strong><span>아래 잔액과 내역은 예시입니다. 실제 계정·결제 정보가 아닙니다.</span><Link to="/mypage">미리보기 나가기</Link></div>}
     <div className={styles.columns}>
       <aside className={styles.sidebar} aria-label="마이페이지 메뉴">
-        <div className={styles.account}><span className={styles.avatar} aria-hidden="true">L</span><strong>나의 공간</strong><small>{preview ? '예시 화면을 둘러보고 있어요' : '로그인 연동 준비 중'}</small></div>
+        <div className={styles.account}><span className={styles.avatar} aria-hidden="true">L</span><strong>나의 공간</strong><small>{preview ? '예시 화면을 둘러보고 있어요' : '적립금과 거래 내역을 확인하세요'}</small></div>
         <nav className={styles.menu} aria-label="내 활동">
           <span className={styles.menuLabel}>내 활동</span>
           <Link to="/mypage/seller-profile">판매자 프로필</Link>
           <span className={styles.active} aria-current="page">적립금 · 이용 내역 <span aria-hidden="true">↗</span></span>
-          <span className={styles.disabled}>구매 내역 <small>준비 중</small></span>
-          <span className={styles.disabled}>판매 내역 <small>준비 중</small></span>
-          <span className={styles.disabled}>판매 수익 <small>준비 중</small></span>
+          <Link to="/orders?side=BUYER">구매 내역</Link>
+          <Link to="/orders?side=SELLER">판매 내역</Link>
+          <Link to="/mypage/settlements">판매 수익</Link>
           <span className={styles.disabled}>내 정보 <small>준비 중</small></span>
         </nav>
       </aside>
