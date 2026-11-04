@@ -81,6 +81,31 @@ test('order detail returns to the filtered list and displays a Korean status', (
   } finally { client.clear() }
 })
 
+test('direct cancellation explains whether a paid amount will be refunded', () => {
+  for (const [status, payment, expected, absent] of [
+    ['REQUESTED', null, /결제 전 주문은 적립금 차감·환불 없이 취소됩니다/, /전액 적립금 환불과 함께 취소됩니다/],
+    ['AWAITING_PAYMENT', null, /결제 전 주문은 적립금 차감·환불 없이 취소됩니다/, /전액 적립금 환불과 함께 취소됩니다/],
+    ['IN_PROGRESS', { status: 'PAID', amount: 1000, paidAt: '2026-11-04T00:00:00Z', refundedAt: null },
+      /결제된 주문은 전액 적립금 환불과 함께 취소됩니다/, /결제 전 주문은 적립금 차감·환불 없이 취소됩니다/],
+  ]) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(['wallet', 'order', '1'], {
+      id: '1', status, priceAmount: 1000, requirements: '요구사항',
+      buyer: { id: '2', displayName: '구매자' }, seller: { id: '3', displayName: '판매자' },
+      productSnapshot: { title: '상품', description: '설명', scopeDescription: '범위', preparationDescription: '준비', productVersion: 0 },
+      termsSnapshot: '거래 규칙', durationDays: 1, originalDueAt: null, revisionDueAt: null, currentDueAt: null,
+      allowedActions: ['CANCEL'], deliveries: [], revisionRequest: null, histories: [], payment, review: null, cancellationRequests: [],
+    })
+    try {
+      const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders/1?side=BUYER'] },
+        createElement(QueryClientProvider, { client },
+          createElement(Routes, null, createElement(Route, { path: '/orders/:id', element: createElement(OrderDetailPage) })))))
+      assert.match(html, expected)
+      assert.doesNotMatch(html, absent)
+    } finally { client.clear() }
+  }
+})
+
 test('empty filtered order list explains that no orders match', () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   client.setQueryData(['wallet', 'orders', 'BUYER', 'COMPLETED', 0], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })

@@ -2,7 +2,9 @@
 
 ## 현재 작업 상태 — 2026-11-04
 
-현재 소스 기준은 c438daf에서 시작한 feature/account-trade-integration이다. 구현·검증의 최신 범위는 [현황표](current-status.md)·[마이페이지/거래 통합](account-trade-integration.md)을 따른다. 아래 날짜별 실행 기록은 당시 결과로 보존한다.
+main de364e3에서 분기한 `codex/order-flow-verification`은 격리 MySQL·실제 API·React 브라우저로 구매/판매 주문 목록·상태 필터·상세 복귀와 수락→결제→1차 납품→수정→재납품→확정 흐름을 확인했다. DB의 완료 주문·7건 이력·수수료 99원·판매 수익 900원을 대조했다. 결제 전 직접 취소의 환불 안내 오류를 수정하고 프런트 검사 51건·lint·build를 통과했다. 운영 로그인·상품 상세에서 주문 작성·모바일·배포 검증은 후속이며, [현황표](current-status.md)에 범위를 기록했다.
+
+`feature/account-trade-integration`은 c438daf에서 시작한 당시 통합 기록이다. 구현·검증의 최신 범위는 [현황표](current-status.md), 당시 거래 검증 방법은 [마이페이지/거래 통합](account-trade-integration.md)을 따른다. 아래 날짜별 실행 기록은 당시 결과로 보존한다.
 
 `codex/order-list-status-filter`에서는 main 1c0d42e를 합쳐 목록 상태 필터·한국어 상태·주문 시각/납기를 기존 URL 기반 side·page 선택에 연결했다. status도 URL에 보존하고 구분·상태 변경 시 첫 페이지로 돌아간다. 주문 생성 요청 함수와 입력 검증은 준비했지만 상품 상세의 버전·조건 연결이 없어 실제 주문 작성 화면은 열지 않았다. 합친 브랜치의 프런트 API 검사 44건·lint·build가 통과했으며, 아래 576건/37건은 PR #44 당시 기록이다. 새 목록 화면·주문 작성의 브라우저 종단 간 검증과 원격 CI는 별도다.
 
