@@ -41,3 +41,9 @@ READ_COMMITTED 트랜잭션 안에서 납품·주문 상태·이력·상세 응�
 OrderDeliveryApiIntegrationTests는 실제 HTTP 필터·Controller·Service·MySQL을 사용한다. 로그인은 테스트 principal, 결제·수정 요청·취소 요청의 선행 상태는 SQL fixture다. 정상 1/2회차·이전 회차 재전송·현재 상태/취소 요청 충돌·URL/문자열/회차/ID 경계·권한/CSRF·동시 제출·실제 DB 제약 실패 및 응답 조립 실패의 롤백을 확인한다. 전체 실행 결과는 [작업표](work-plan.md)를 따른다.
 
 스키마·V1/V2·프런트 코드는 변경하지 않았다. 후속 수정 요청 통합 테스트에서 실제 최초 납품→수정 요청→재납품 연결도 확인했다. 실제 결제 API 연결·브라우저·원격 CI·다중 서버 부하·모든 상태 변경 간 경쟁은 별도 검증 대상이다.
+
+## 결과물 링크 스킴 표시 보완 — 2026-11-04
+
+서버 Delivery.create는 HTTPS 스킴을 대소문자 구분 없이 허용하지만 주문 상세 화면은 소문자 접두어만 표시해, HTTPS:// 또는 hTtPs://로 저장된 링크가 숨겨졌다. 화면의 HTTPS 접두어 판정을 대소문자 구분 없이 수행하도록 수정하고 저장 URL 원문과 새 창 링크의 noopener noreferrer를 유지한다. 서버 URL 검증·납품 저장·회차·권한은 변경하지 않는다.
+
+실제 OrderDetailPage의 React 서버 렌더링 회귀 검사로 소문자/대문자/혼합 HTTPS 링크 및 쿼리 escaping·새 창 속성을 확인한다. HTTP·javascript·data·스킴 생략·httpsx는 링크로 표시하지 않는다. 수정 전 대문자 링크 검사 실패를 재현했고 수정 후 프런트 전체 108건·lint·build(타입 검사 포함)를 통과했다. 실제 브라우저 클릭·외부 URL 접속·백엔드/DB 재검사는 실행하지 않았다.

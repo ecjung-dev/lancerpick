@@ -230,3 +230,37 @@ test('expired order detail session returns to the same order and list filters af
     assert.match(html, /href="\/orders\?side=SELLER&amp;status=COMPLETED&amp;page=2"/)
   } finally { client.clear() }
 })
+
+
+function renderDeliveryLink(resultUrl) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(['wallet', 'order', '1'], {
+    id: '1', status: 'AWAITING_CONFIRMATION', priceAmount: 1000, requirements: 'requirements',
+    buyer: { id: '2', displayName: 'buyer' }, seller: { id: '3', displayName: 'seller' },
+    productSnapshot: { title: 'product', description: 'description', scopeDescription: 'scope', preparationDescription: 'prep', productVersion: 0 },
+    termsSnapshot: 'terms', durationDays: 1, originalDueAt: null, revisionDueAt: null, currentDueAt: null,
+    allowedActions: [], deliveries: [{ id: '10', sequenceNo: 1, description: 'delivery', resultUrl, submittedAt: '2026-11-04T00:00:00Z' }],
+    revisionRequest: null, histories: [], payment: null, review: null, cancellationRequests: [],
+  })
+  try {
+    return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders/1'] },
+      createElement(QueryClientProvider, { client },
+        createElement(Routes, null, createElement(Route, { path: '/orders/:id', element: createElement(OrderDetailPage) })))))
+  } finally { client.clear() }
+}
+
+test('delivery links preserve HTTPS schemes regardless of letter case', () => {
+  for (const scheme of ['https', 'HTTPS', 'hTtPs']) {
+    const url = `${scheme}://example.com/result?file=1&version=2`
+    const html = renderDeliveryLink(url)
+    assert.ok(html.includes(`href="${scheme}://example.com/result?file=1&amp;version=2"`))
+    assert.match(html, /target="_blank" rel="noopener noreferrer"/)
+    assert.match(html, /결과물 확인/)
+  }
+})
+
+test('delivery result display does not link non-HTTPS schemes', () => {
+  for (const url of ['http://example.com/result', 'javascript:alert(1)', 'data:text/html,example', '//example.com/result', 'httpsx://example.com']) {
+    assert.doesNotMatch(renderDeliveryLink(url), /결과물 확인/)
+  }
+})
