@@ -20,6 +20,7 @@ import type { OrderDetail as OrderDetailData } from '../types'
 import { OrderHistoryList } from './OrderHistoryList'
 import { orderDeadlineView } from '../deadlines'
 import { orderStatusLabel } from '../status'
+import { ReviewForm } from '../../reviews/components/ReviewForm'
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
@@ -270,6 +271,9 @@ function OrderDetail({ id }: { id: string }) {
               ` · 환불 ${formatDateTime(order.payment.refundedAt)}`}
           </p>
         </section>
+      )}
+      {!order.review && order.allowedActions.includes('WRITE_REVIEW') && (
+        <ReviewForm orderId={order.id} productId={order.productId} />
       )}
       {order.review && (
         <section>

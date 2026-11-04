@@ -4,6 +4,7 @@ import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import styles from './ProductDetailPage.module.css'
+import { ProductReviews } from '../../reviews/components/ProductReviews'
 
 export function ProductDetailPage() {
   const { id = '' } = useParams()
@@ -76,6 +77,7 @@ export function ProductDetailPage() {
             등록 {formatDateTime(product.data.createdAt)} · 수정{' '}
             {formatDateTime(product.data.updatedAt)}
           </footer>
+          <ProductReviews key={product.data.id} productId={product.data.id} />
         </>
       )}
     </section>

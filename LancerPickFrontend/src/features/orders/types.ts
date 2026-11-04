@@ -4,6 +4,7 @@ export interface OrderSummary {
   counterparty: { id: string; displayName: string }; createdAt: string; currentDueAt: string | null
 }
 export interface OrderDetail {
+  productId: string
   cancellationRequests: CancellationRequest[]
   id: string; status: string; priceAmount: number; requirements: string
   buyer: { id: string; displayName: string }; seller: { id: string; displayName: string }
