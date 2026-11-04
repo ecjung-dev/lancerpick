@@ -124,6 +124,64 @@ class SessionTradeIntegrationTests {
     }
 
     @Test
+    void completedTradeReviewUsesRealSessionAndLeavesMoneyAndSnapshotUnchanged() throws Exception {
+        String order = paidOrder();
+        write(buyer, path(order, "review"), Map.of("rating", 5)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ORDER_STATE_CONFLICT"));
+        deliver(order, 1);
+        var completed = json(write(buyer, path(order, "confirm"), null).andExpect(status().isOk()));
+        var walletBefore = json(read(buyer, "/api/me/wallet").andExpect(status().isOk()));
+        var settlementBefore = json(read(seller, "/api/me/settlements/summary").andExpect(status().isOk()));
+        long historiesBefore = count("order_histories", order);
+
+        write(seller, path(order, "review"), Map.of("rating", 5)).andExpect(status().isForbidden());
+        write(outsider, path(order, "review"), Map.of("rating", 5)).andExpect(status().isNotFound());
+        mvc.perform(post(path(order, "review")).session(buyer.session())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"rating\":5}"))
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("CSRF_INVALID"));
+
+        var created = json(write(buyer, path(order, "review"),
+                Map.of("rating", 5, "content", "　좋아요\r\n감사합니다 😀　"))
+                .andExpect(status().isCreated()).andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.orderId").value(order))
+                .andExpect(jsonPath("$.content").value("좋아요\n감사합니다 😀")));
+        write(buyer, path(order, "review"), Map.of("rating", 1)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("REVIEW_ALREADY_EXISTS"));
+
+        var after = json(read(buyer, "/api/orders/" + order).andExpect(status().isOk())
+                .andExpect(jsonPath("$.review.id").value(created.get("id").asText()))
+                .andExpect(jsonPath("$.allowedActions").isEmpty()));
+        assertSavedConditions(completed, after);
+        assertThat(after.get("status").asText()).isEqualTo("COMPLETED");
+        assertThat(after.get("payment")).isEqualTo(completed.get("payment"));
+        assertThat(json(read(buyer, "/api/me/wallet"))).isEqualTo(walletBefore);
+        assertThat(json(read(seller, "/api/me/settlements/summary"))).isEqualTo(settlementBefore);
+        assertThat(count("reviews", order)).isEqualTo(1);
+        assertThat(count("order_histories", order)).isEqualTo(historiesBefore);
+        assertThat(count("settlements", order)).isEqualTo(1);
+
+        write(buyer, "/api/auth/logout", null).andExpect(status().isNoContent());
+        mvc.perform(get("/api/products/" + product + "/reviews"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(created.get("id").asText()))
+                .andExpect(jsonPath("$.items[0].orderId").doesNotExist())
+                .andExpect(jsonPath("$.items[0].authorId").doesNotExist());
+    }
+
+    @Test
+    void loggedOutReviewCannotBeReplayedWithNewAnonymousSession() throws Exception {
+        String order = paidOrder();
+        deliver(order, 1);
+        write(buyer, path(order, "confirm"), null).andExpect(status().isOk());
+        write(buyer, "/api/auth/logout", null).andExpect(status().isNoContent());
+        var anonymous = new Account(0, new MockHttpSession());
+        write(anonymous, path(order, "review"), Map.of("rating", 5))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        assertThat(count("reviews", order)).isZero();
+        read(seller, "/api/orders/" + order).andExpect(status().isOk())
+                .andExpect(jsonPath("$.review").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
     void rejectionWithdrawalAndOneRevisionCanContinueToCompletion() throws Exception {
         String order = paidOrder();
         var first = json(write(buyer, path(order, "cancellation-requests"), Map.of("reason", "first", "requestKey", UUID.randomUUID().toString()))
