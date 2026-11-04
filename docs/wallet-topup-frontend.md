@@ -1,6 +1,14 @@
 # React 토스 테스트 충전 화면
 
+> 문서 읽기 기준(2026-11-04): 아래 날짜·브랜치별 구현 및 검증 설명은 당시 기록이다. 현재 반영 여부·남은 작업은 [현황표](current-status.md), 실행 설정은 [루트 README](../README.md), API 계약은 [API 명세](api-spec.md)를 따른다. 과거의 미구현·병합 전 표현과 검사 수를 현재 상태로 확대하지 않는다.
+
 작성일: 2026-11-02. 담당: 황준범. 브랜치: `feature/wallet-topup-api`.
+
+## 현재 실행 설정 (2026-11-04 확인)
+
+공유 application.properties의 `toss.topup-enabled=${TOSS_TOPUP_ENABLED:true}`에 따라 일반 실행 기본값은 true다. 외부 호출을 끄려면 `TOSS_TOPUP_ENABLED=false`를 지정한다. test 프로필은 `toss.topup-enabled=false`로 덮어쓰며 CI도 외부 충전을 비활성화한다. 개인 시크릿은 Git 제외 설정 또는 서버 환경변수로 관리한다. 실제 제공자 호출에는 테스트 시크릿이 필요하다.
+
+확인 대상은 공유 application.properties·application-default.properties·application-test.properties 및 CI 워크플로다. 개인 설정의 최종 값이나 실제 결제 성공을 확인한 것은 아니다. 아래 11월 2일의 기본 비활성화 설명은 당시 기록이며 현재 실행 기본값으로 사용하지 않는다.
 
 ## 1. 구현 범위
 
@@ -40,7 +48,7 @@ VITE_TOSS_CLIENT_KEY=CHANGE_ME
 
 SDK와 Vite 설정은 테스트 gck만 허용하며 시크릿·라이브·개별 연동 ck 키는 거부한다. 클라이언트 키는 브라우저에 포함되는 공개 설정이다. gsk는 프런트에 넣지 않는다. keys.env는 Git에서 제외하고 Vite 기본 민감 파일 차단을 유지하면서 해당 원본 파일도 HTTP 제공을 차단한다. 파일을 public 폴더에 두지 않는다.
 
-백엔드는 기존 [키 설정 안내](toss-test-payment-setup.md)에 따라 같은 세트의 테스트 시크릿과 `TOSS_TOPUP_ENABLED=true`를 설정한다. 기본 비활성화에서는 승인 API가 503을 반환하며 READY를 유지한다. 실제 Spring Security 인증 principal과 회원가입 지갑 생성도 연결돼 있어야 한다.
+백엔드는 기존 [키 설정 안내](toss-test-payment-setup.md)에 따라 같은 세트의 테스트 시크릿과 `TOSS_TOPUP_ENABLED=true`를 설정한다. 명시적으로 비활성화한 경우 승인 API가 503을 반환하며 READY를 유지한다. 일반 실행의 현재 기본값과 test 프로필은 위 현재 실행 설정을 따른다. 실제 Spring Security 인증 principal과 회원가입 지갑 생성도 연결돼 있어야 한다.
 
 ## 4. 화면·SDK 흐름
 

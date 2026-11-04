@@ -1,5 +1,7 @@
 # 상품 판매 상태 관리
 
+> 현재 반영 상태(2026-11-04): PR #58이 main `cd67ff6`에 반영됐다. 아래 구현·검증 및 커밋 전 설명은 당시 작업 기록이며, 이번 문서 정리에서 업무 검사를 재실행한 것은 아니다.
+
 2026-11-04 박소현. 최신 main 92c4388에서 codex/product-sale-status 생성. API 명세 3·9·10절, 화면 흐름, 최신 프런트/백엔드 공통 가이드를 확인했다. 기존 stash `order-entry verification notes`와 `backup-category`는 변경하지 않는다.
 
 ## 구현

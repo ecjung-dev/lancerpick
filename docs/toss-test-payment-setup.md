@@ -1,8 +1,16 @@
 # 토스페이먼츠 테스트 키 설정 안내
 
+> 문서 읽기 기준(2026-11-04): 아래 날짜·브랜치별 구현 및 검증 설명은 당시 기록이다. 현재 반영 여부·남은 작업은 [현황표](current-status.md), 실행 설정은 [루트 README](../README.md), API 계약은 [API 명세](api-spec.md)를 따른다. 과거의 미구현·병합 전 표현과 검사 수를 현재 상태로 확대하지 않는다.
+
 작성일: 2026-11-02. 팀원의 로컬 개발 환경을 위한 설정 안내입니다.
 
 **실제 테스트 키는 황준범이 필요한 팀원에게 별도로 전달합니다.** 이 문서·예시 파일·PR·Git 저장소에는 실제 키 값을 기록하지 않습니다. 아래 `CHANGE_ME`는 실제 키가 아닌 자리 표시자입니다.
+
+## 현재 실행 설정 (2026-11-04 확인)
+
+공유 application.properties의 `toss.topup-enabled=${TOSS_TOPUP_ENABLED:true}`에 따라 일반 실행 기본값은 true다. 외부 호출을 끄려면 `TOSS_TOPUP_ENABLED=false`를 지정한다. test 프로필은 `toss.topup-enabled=false`로 덮어쓰며 CI도 외부 충전을 비활성화한다. 개인 시크릿은 Git 제외 설정 또는 서버 환경변수로 관리한다. 실제 제공자 호출에는 테스트 시크릿이 필요하다.
+
+확인 대상은 공유 application.properties·application-default.properties·application-test.properties 및 CI 워크플로다. 개인 설정의 최종 값이나 실제 결제 성공을 확인한 것은 아니다. 아래 11월 2일의 기본 비활성화 설명은 당시 기록이며 현재 실행 기본값으로 사용하지 않는다.
 
 ## 1. 이번 설정의 범위
 

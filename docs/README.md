@@ -1,90 +1,104 @@
 # 랜서픽 문서 안내
 
-역할 배정 갱신 2026-10-29: [확정 담당·지원 원칙·업무 비중](work-plan.md#확정-역할-배정)을 따른다. 상세 일정·검토자·배포 담당은 별도 확정한다.
+정리일: 2026-11-04. 문서 대조 기준은 로컬 main `cd67ff6`이다. 이번 정리는 문서 편집이며 소스 실행·테스트·원격 CI 재검증을 포함하지 않는다.
 
-2026-10-30 계약 보완: 문자열 검증·상품 부분 수정·관리자 목록의 최신 기준은 [API 명세](api-spec.md) 3·9·10절을 따른다. 기존 입력 길이·상품 기본값 제안을 이번 요청으로 채택했으며 실제 DB 생성·API 구현은 별도다.
+## 먼저 읽을 문서
 
-최신 상태 대조일: 2026-11-04, main cd86802. 먼저 [현재 구현·검증 현황](current-status.md)을 확인한다. 로그인·가입·상품 검색/상세·주문 작성·거래/정산 화면과 판매자 프로필이 현재 소스에 반영됐다. [마이페이지·거래 통합](account-trade-integration.md)은 당시 검증 근거이며, 과거 검토 기록은 당시 상태로 유지한다.
+1. [현재 구현·검증 현황](current-status.md): 구현된 기능, 남은 개발, 검증 한계.
+2. [작업표](work-plan.md): 확정 담당, 현재 작업, 과거 개발 기록.
+3. [루트 README](../README.md): 기존 저장소를 복제한 뒤 실행하는 절차.
+4. 아래 분야별 문서: 해당 기능의 정책·API·DB·구현 근거.
 
-검토일: 2026-10-29. 이 목록은 기획·구현 기준과 현재 파일 검토 결과를 연결한다. 실행·테스트 성공 기록은 해당 근거가 있을 때만 별도로 남긴다.
+## 문서별 기준
 
-## 읽는 순서와 기준 문서
+| 판단할 내용 | 기준 문서 |
+| --- | --- |
+| 기능 범위·업무 정책 | MVP 명세 |
+| 요청·응답·권한·중복 처리 | API 명세 |
+| 데이터 관계·컬럼 | ERD·물리 DB 설계. V1 기본 16개와 V2 포함 17개를 구분 |
+| 개발 방식·협업 | 공통 개발 규칙·공통 가이드·Git 협업 |
+| 구현 현황·미완료 | 현재 현황과 기능별 최신 기록 |
+| 담당 | 작업표. 고도화 배정·착수 조건은 확장 계획 |
+| 실행·검증 결과 | 날짜·소스·환경이 명시된 기능/통합 기록과 해당 PR/CI |
 
-| 순서 | 문서 | 관리하는 내용 |
-| --- | --- | --- |
-| 1 | [MVP 명세](mvp-spec.md) | 기능 범위·업무 정책·일정 목표·역할 자리 |
-| 2 | [화면 흐름](screen-flow.md) | 사용자 행동·예외 경로·화면 표시 |
-| 3 | [ERD](erd.md) | V1 16개 테이블·관계·저장 제약·원자성. V2 충전 포함 누적 17개 |
-| 4 | [API 명세](api-spec.md) | 요청·응답·권한·오류·중복 처리 계약 |
-| 5 | [공통 개발 규칙](development-rules.md) | 기술 선정·코드 책임·인증·검증·완료 조건 |
-| 6 | [Git 협업](git-workflow.md) | PR·리뷰·병합·충돌 해결 절차 |
-| 7 | [환경 구축 가이드](setup-guide.md) | 현재 설정값과 초기 구축 참고 예시 |
-| 8 | [확장 계획](expansion-plan.md) | MVP 이후 선택 기능·선행 조건·검증 |
-| 9 | [물리 DB 설계](physical-db.md) | V1 컬럼 사전·실행용 Flyway 원본·ERD 이미지, V2 확장 안내 |
-| 10 | [백엔드 공통 가이드](backend-common-guide.md) | 실행 방식·Controller/Service/DTO 예시·공통 코드 재사용·DB 전환 |
-| 11 | [프런트 공통 가이드](frontend-common-guide.md) | 공통 API·조회 훅·캐시·화면·오류 처리 |
+문서에 적힌 계약·목표·설정 예시는 구현 완료 증거가 아니다. 과거 기록의 ‘미구현’, ‘후속’, ‘병합 전’은 당시 상태다. 과거 테스트 수를 합산하거나 최신 커밋의 실행 결과로 표현하지 않는다. 불일치가 남으면 현재 현황과 해당 기능의 후속 기록을 함께 확인하고, 정책을 임의 변경하지 않는다.
 
-개발 착수 시에는 루트 README로 실행을 확인하고, 담당 영역의 공통 가이드 → API 명세 → ERD·물리 설계 → 작업표 순서로 읽는다. 확장 계획은 MVP 이후 선택 검토용이다.
+## 전체 문서 색인
 
-## 현재 프로젝트와 실행
+- [작업표](work-plan.md)
+- [현재 현황](current-status.md)
+- [백엔드 README](../LancerPick/README.md)
+- [프런트 README](../LancerPickFrontend/README.md)
+- [ERD 이미지 안내](images/README.md)
 
-- [주문 생성 서비스·HTTP 연결](order-creation.md): 원자적 생성·재전송·잠금, POST 주문 생성의 201/200 상세 응답과 UTC 검증. 현재 화면 연결·남은 검증은 [현황표](current-status.md)를 따른다.
-- [주문 목록·상세 조회](order-query.md): 구매/판매 범위·상태 필터·페이지, 참여자 전용 상세와 읽기 일관성. 화면 연결 후 브라우저 검증 범위는 [현황표](current-status.md)를 따른다.
-- [주문 수락·거절](order-decision.md): 판매자 전용 상태 변경·이력·시각·주문 잠금과 경쟁 처리. 입력 화면을 연결했고 격리 환경 브라우저에서 수락을 확인했다. 거절과 운영 로그인 동선은 별도다.
-- [최초 납품·재납품](order-delivery.md): 판매자 제출·1/2회차·재전송 충돌·HTTPS URL과 원자적 저장. 격리 환경 브라우저에서 두 납품 회차를 확인했다. 운영 로그인 동선은 별도다.
-- [구매자 수정 요청](order-revision.md): 최초 납품에 한 번, 주문 당시 소요일로 수정 기한 계산, 납품·재납품 연결과 롤백. 격리 환경 브라우저에서 수정 요청→재납품을 확인했다. 운영 로그인 동선은 별도다.
-- [취소 요청 제출·승인·거절·철회](order-cancellation-requests.md): 요청 키·권한·중복 해결·기존 전액 환불 연동과 경쟁 처리. 격리 환경 브라우저에서 제출→승인→환불을 확인했다. 거절·철회와 운영 로그인 동선은 별도다.
+### 기준·설계
 
-- [최초 Flyway V1](../LancerPick/src/main/resources/db/migration/V1__init.sql) · [스키마 확인 쿼리](sql/inspect-physical-schema.sql): 16개 테이블 기준. 2026-11-02 실행용 경로로 이동했으며 docs에 SQL 복사본을 유지하지 않는다. MySQL 8.0.46 테스트 DB의 V1 적용·전체 빌드 성공은 사용자 실행 결과로 확인했다. [검증 기록](physical-db.md#2026-11-02-사용자-실행-검증-결과)을 참고하고 기준 8.4 재현·엔티티 매핑·업무 검증은 별도로 진행한다. 일반 실행·DB 통합 테스트 전 대상 DB·기존 이력을 확인한다.
+- [랜서픽 MVP 기획 명세서 v1.0](mvp-spec.md)
+- [랜서픽 MVP 화면 흐름 v1.0 — 검토 반영본](screen-flow.md)
+- [랜서픽 MVP API 명세서](api-spec.md)
+- [랜서픽 MVP ERD 설계 v1.0](erd.md)
+- [랜서픽 MVP 물리 DB 설계](physical-db.md)
+- [랜서픽 공통 개발 규칙 v1.0](development-rules.md)
+- [랜서픽 Git 협업 및 Pull Request 운영 규칙](git-workflow.md)
+- [랜서픽 확장 계획서 v1.0](expansion-plan.md)
 
-- [루트 README](../README.md): 현재 저장소 복제 후 실행 절차. 프로젝트 생성 명령을 반복하지 않는다.
-- [프로젝트 구조 검토](project-review.md): 실제 파일 구조·설계와의 차이·후속 작업. 정적 검토이며 빌드 결과가 아니다.
-- [작업표](work-plan.md): 담당 배정·구현 전 결정·통합 검증. 기능 담당·조장·React 공통 담당은 확정했고, 검토자·배포 담당·날짜는 미확정으로 남겼다.
-- [문서 변경 기록](review-changes.md): 이번 검토의 수정 내용·판단·검증 범위.
-- [공통 JPA·테스트 DB 안내](test-database.md): 공통 설정, 테스트 전용 DB·계정 준비, 실행·보호 검사 방법.
-- [토스 테스트 키 설정 안내](toss-test-payment-setup.md): 클라이언트·서버 키의 개인 설정 위치와 Git 제외 확인. 실제 키는 황준범이 별도로 전달하며 외부 결제 연동 구현 완료와 구분한다.
-- [지갑 생성·최초 지급 구현](wallet-initialization.md): 가입 트랜잭션의 회원·지갑·최초 지급 원자 생성, 동시 초기화·실패 롤백 검증. 현재 저장 방식은 JPA/HQL이다.
-- [잔액·적립금 내역 조회](wallet-query.md): 보호 API·인증 principal, React 마이페이지의 실제 세션 확인 후 조회. 전역 인증 화면·캐시 연결은 후속이다.
-- [토스 테스트 충전 저장 구조](wallet-topup-schema.md): V2 충전 신청·원장 참조. 신청·승인·지급·화면 구현은 아래 후속 문서와 연결하며 실제 제공자 검증과 구분한다.
-- [토스 충전 신청·조회 API](wallet-topup-api.md): 인증·CSRF 기반 READY 신청 저장과 본인 조회. 신청 자체는 잔액을 증가시키지 않으며 지급은 승인 API를 따른다.
-- [토스 승인·지급·재확인](wallet-topup-approval.md): 외부 호출과 DB 트랜잭션 분리, 멱등 지급·본인 복구 API. 외부 제공자 대역으로 검증하며 실제 결제·인증 통합·자동 복구는 후속이다.
-- [React 토스 충전 화면](wallet-topup-frontend.md): 금액·SDK·복귀 검증·서버 승인·결과 재확인 화면. keys.env 연결과 SDK UI 로딩을 확인했으며 실제 결제·인증 통합은 검증 전이다.
-- [최신 main 반영 후 지갑·충전 회귀 검증](wallet-regression-20261102.md): 36a57ce 기준 백엔드 166건·프런트 15건과 lint·build 결과, 실제 인증/결제 미검증 범위.
+### 실행·개발
 
-- [주문 적립금 결제](order-wallet-payment.md): 서버 금액 기반 차감·중복 방지·동시 잔액 사용·롤백 검증.
-- [주문 직접 취소·환불](order-refund.md): 직접 취소와 전액 적립금 복구, 대기 취소 요청 동시 해결. 요청 제출·승인·거절·철회 API는 별도다.
-- [로그인·로그아웃·내 정보](auth-login.md): 세션 발급·세션 ID 변경·CSRF 교체, LoginMember principal, 실패 응답 통일. 로그인·가입 화면과 인증 캐시 연결도 반영됐으며 운영 브라우저 통합은 별도다.
-- [관리자 상품 조회·숨김·복구](admin-product-moderation.md): 목록 필터·검색 이스케이프, 상품 잠금·버전 충돌·같은 상태 재전송, 운영 이력. 관리자 화면은 별도다.
+- [랜서픽 공통 개발 환경 구축 가이드](setup-guide.md)
+- [백엔드 공통 개발 가이드](backend-common-guide.md)
+- [프런트엔드 공통 개발 가이드](frontend-common-guide.md)
+- [공통 JPA 설정과 테스트 DB 실행](test-database.md)
+- [토스페이먼츠 테스트 키 설정 안내](toss-test-payment-setup.md)
 
-## 문서 간 기준
+### 회원·상품·관리자
 
-- [상품 판매 상태 관리](product-sale-status.md): 소유자의 판매 중지·재개 API/화면, 버전·관리자 숨김 분리·기존 주문 보존과 검증 기록.
+- [로그인·로그아웃·내 정보 API](auth-login.md)
+- [판매자 프로필 관리](seller-profile.md)
+- [카테고리 공개 조회](category-query.md)
+- [공개 상품 검색 API](product-search.md)
+- [공개 상품 상세 조회](product-detail.md)
+- [상품 등록·수정·버전 관리](product-management.md)
+- [관리자 상품 조회·숨김·복구 API](admin-product-moderation.md)
+- [상품 판매 상태 관리](product-sale-status.md)
 
-- [상품 등록·수정·버전 관리](product-management.md): 등록·부분 수정·소유자 상세와 관리 화면. 구현·검증 범위 및 후속 업무를 구분한다.
+### 주문·거래
 
-- [판매자 프로필 관리](seller-profile.md): 공개/본인 API·관리 화면·JPA 동시성·입력 검사와 임시 계정의 브라우저 저장 검증. 운영 인증 화면 통합은 후속이다.
+- [상품 상세에서 주문 진입](order-entry.md)
+- [주문 생성 서비스·HTTP 연결](order-creation.md)
+- [주문 목록·상세 조회 API](order-query.md)
+- [주문 수락·거절 API](order-decision.md)
+- [최초 납품·재납품 API](order-delivery.md)
+- [구매자 수정 요청 API](order-revision.md)
+- [구매자 취소 요청·판매자 처리 API](order-cancellation-requests.md)
+- [주문 적립금 결제](order-wallet-payment.md)
+- [주문 직접 취소·적립금 환불](order-refund.md)
+- [구매 확정·판매 수익 정산](order-settlement.md)
+- [거래 조회·결제·취소·구매 확정 화면 연결](order-finance-ui.md)
 
-실제 로그인 세션으로 주문·결제·환불·수정·정산을 연결한 서버 검증은 [세션 거래 통합 검사](session-trade-integration.md)를 참고한다.
+### 지갑·충전
 
-실제 로그인 세션과 지갑 화면의 연결 범위·담당 협력·검증 결과는 [지갑 세션 연결](wallet-session-integration.md)을 따른다.
+- [지갑 생성·최초 테스트 적립금 지급](wallet-initialization.md)
+- [잔액·적립금 내역 조회](wallet-query.md)
+- [토스 테스트 충전 저장 구조](wallet-topup-schema.md)
+- [토스 테스트 충전 신청·본인 조회 API](wallet-topup-api.md)
+- [토스 테스트 충전 승인·지급·본인 재확인](wallet-topup-approval.md)
+- [React 토스 테스트 충전 화면](wallet-topup-frontend.md)
 
-운영 데이터 접근을 JPA·QueryDSL로 통일한 최신 범위와 주의점은 [프로젝트 저장소 전환](project-persistence.md)을 따른다.
+### 통합·검증·변경 이력
 
-결제·정산 저장소의 현재 JPA·QueryDSL 구조와 변경 이유는 [금액 처리 저장소 전환](finance-persistence.md)을 따른다.
+- [마이페이지 동선·거래 화면 통합](account-trade-integration.md)
+- [실제 로그인 세션 기반 거래 API 통합 검증](session-trade-integration.md)
+- [실제 세션과 지갑 화면 연결](wallet-session-integration.md)
+- [충전 중복·실패·세션 복구 검사](wallet-topup-failure-verification.md)
+- [최신 main 반영 후 지갑·충전 회귀 검증](wallet-regression-20261102.md)
+- [프로젝트 JPA·QueryDSL 통일](project-persistence.md)
+- [결제·정산의 JPA·QueryDSL 전환](finance-persistence.md)
+- [검증 이력](verification-history.md)
+- [랜서픽 실제 프로젝트 구조 검토](project-review.md)
+- [2026-10-29 문서 검토 반영 기록](review-changes.md)
 
-구매 확정·판매 수익 조회/화면의 구현 범위와 검증은 [정산 문서](order-settlement.md)를 참고한다.
+## 문서 관리
 
-- [카테고리 공개 조회](category-query.md): 실제 DB 카테고리 목록·정렬·공개 응답과 검증 범위. 상품 검색·프런트 연결과 구분한다.
-- [공개 상품 검색](product-search.md): 제목·설명 검색, 공개 상품 필터·카테고리·페이지·실제 MySQL 검사와 React 연결. 임시 DB의 브라우저 검색·페이지·복구 검증과 남은 CI 범위를 구분한다.
-- [공개 상품 상세](product-detail.md): 공개·판매 중 상세 API와 목록→상세 화면 연결. 테스트와 브라우저 검증을 구분한다.
-- [상품에서 주문 진입](order-entry.md): 요구사항 작성·기존 주문 API·동일 요청 재확인 연결. main 병합과 운영 인증·브라우저 통합 검증을 구분한다.
+현재 상태는 현황표에 모으고 상세 계약을 여러 문서에 복제하지 않는다. 기능 문서에는 구현 방식·검증 시점·제한을 남긴다. 실행 원본 DDL은 백엔드의 Flyway에서 관리하며 docs에 복사본을 만들지 않는다. 이미 적용한 마이그레이션은 수정하지 않는다.
 
-- [현재 구현·검증 현황](current-status.md): 현재 소스의 기능·화면·검증과 남은 연결 작업.
-- [마이페이지·거래 통합](account-trade-integration.md): 구매/판매·판매 수익 메뉴, URL 상태 복원, CI와 test 프로필, 실제 API/React 렌더링 검사.
-- [충전 실패·세션 복구](wallet-topup-failure-verification.md): 실제 로그인 세션의 중복 지급·실패·재확인 8건과 브라우저 미확인 범위.
-
-업무 정책은 MVP, 저장 구조는 ERD, 통신 계약은 API, 기술·완료 조건은 공통 개발 규칙을 기준으로 한다. 실제 실행 경로와 방법은 루트 README를 우선 확인한다. 기준 간 충돌이 있으면 임의로 해석하지 않고 관련 문서를 함께 수정한다.
-
-취소 요청 재전송·환불 후 결제 재요청·납품 회차의 상세 규칙은 API 명세 4~7절에 모은다. 다른 문서는 사용자 흐름이나 데이터 제약을 설명하고 해당 계약을 참조한다.
-
-확정 업무 정책, 구현 기준의 보완, 팀 결정이 필요한 제안, 실제 검증 결과를 구분한다. 회원 인증·주문·지갑·결제·환불·정산 API와 일부 화면은 구현되어 있으며, 미구현 화면·실제 토스 테스트 결제·배포는 후속이다. 로컬 구현·PR 검증·main 반영은 각각 확인한다. 최신 소스와 다른 과거 기록은 현재 구현 상태로 사용하지 않는다.
+과거 이력은 삭제하거나 현재 결과로 다시 쓰지 않는다. 새 개발·검증 결과가 생기면 기준 커밋·환경·실행 범위·남은 사항을 함께 기록한다. 추가 확장 작업은 이번 정리에서 착수하지 않는다.
