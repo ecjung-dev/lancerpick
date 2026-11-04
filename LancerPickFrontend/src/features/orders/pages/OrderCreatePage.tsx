@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { ApiError, apiRequest } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
@@ -15,9 +15,10 @@ type Member = { id: string; displayName: string }
 
 export function OrderCreatePage() {
   const { id = '' } = useParams()
+  const location = useLocation()
   const member = useQuery({ queryKey: ['order-entry-session'], queryFn: ({ signal }) => apiRequest<Member>('/me', { signal }), retry: false, gcTime: 0, staleTime: 0 })
   const product = useQuery({ queryKey: ['products', 'detail', id], queryFn: ({ signal }) => getProductDetail(id, signal), retry: false, gcTime: 0, staleTime: 0 })
-  if (member.error instanceof ApiError && member.error.status === 401) return <section className={styles.page}><h1>로그인이 필요해요</h1><Link to="/login">로그인으로 이동</Link><p><Link to={`/products/${id}`}>상품으로 돌아가기</Link></p></section>
+  if (member.error instanceof ApiError && member.error.status === 401) return <section className={styles.page}><h1>로그인이 필요해요</h1><Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}>로그인으로 이동</Link><p><Link to={`/products/${id}`}>상품으로 돌아가기</Link></p></section>
   if (member.isError || product.isError) return <section className={styles.page}><AsyncState title="주문 정보를 불러오지 못했어요" error={member.error ?? product.error} onRetry={() => { void member.refetch(); void product.refetch() }} /><Link to={`/products/${id}`}>상품으로 돌아가기</Link></section>
   if (!member.data || !product.data) return <AsyncState title="주문 정보를 확인하고 있어요" />
   if (member.data.id === product.data.seller.id) return <section className={styles.page}><h1>내 상품에는 주문할 수 없어요</h1><Link to={`/products/${id}`}>상품으로 돌아가기</Link></section>

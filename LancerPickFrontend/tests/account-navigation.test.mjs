@@ -210,8 +210,23 @@ test('order list separates expired login from server failure while keeping filte
         createElement(QueryClientProvider, { client }, createElement(OrderListPage))))
       assert.match(html, expected)
       assert.match(html, /value="COMPLETED" selected=""/)
-      if (status === 401) assert.match(html, /href="\/login"/)
+      if (status === 401) assert.match(html, /href="\/login\?next=%2Forders%3Fside%3DBUYER%26status%3DCOMPLETED"/)
       else assert.match(html, /다시 조회/)
     } finally { client.clear() }
   }
+})
+
+test('expired order detail session returns to the same order and list filters after login', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
+  const query = client.getQueryCache().build(client, { queryKey: ['wallet', 'order', '1'], queryFn: async () => undefined })
+  query.setState({ status: 'error', fetchStatus: 'idle', error: new ApiError(401, {
+    code: 'UNAUTHORIZED', message: '로그인이 필요합니다.', fieldErrors: [],
+  }) })
+  try {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders/1?side=SELLER&status=COMPLETED&page=2'] },
+      createElement(QueryClientProvider, { client },
+        createElement(Routes, null, createElement(Route, { path: '/orders/:id', element: createElement(OrderDetailPage) })))))
+    assert.match(html, /href="\/login\?next=%2Forders%2F1%3Fside%3DSELLER%26status%3DCOMPLETED%26page%3D2"/)
+    assert.match(html, /href="\/orders\?side=SELLER&amp;status=COMPLETED&amp;page=2"/)
+  } finally { client.clear() }
 })
