@@ -11,6 +11,7 @@ const server = await createServer({ configFile: false, cacheDir: 'node_modules/.
 const { WalletPreviewPage } = await server.ssrLoadModule('/src/features/wallet/pages/WalletPage.tsx')
 const { OrderListPage } = await server.ssrLoadModule('/src/features/orders/pages/OrderListPage.tsx')
 const { OrderDetailPage } = await server.ssrLoadModule('/src/features/orders/pages/OrderDetailPage.tsx')
+const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
 after(async () => { await server.close() })
 
 test('mypage exposes buyer, seller and settlement destinations as real links', () => {
@@ -78,4 +79,50 @@ test('order detail returns to the filtered list and displays a Korean status', (
     assert.match(html, /href="\/orders\?side=SELLER&amp;status=COMPLETED&amp;page=2"/)
     assert.match(html, /주문 #1 · 구매 확정/)
   } finally { client.clear() }
+})
+
+test('empty filtered order list explains that no orders match', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(['wallet', 'orders', 'BUYER', 'COMPLETED', 0], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })
+  try {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders?side=BUYER&status=COMPLETED'] },
+      createElement(QueryClientProvider, { client }, createElement(OrderListPage))))
+    assert.match(html, /이 조건에 맞는 거래 내역이 없습니다/)
+    assert.match(html, /value="COMPLETED" selected=""/)
+  } finally { client.clear() }
+})
+
+test('order detail failure shows server error and a route back to the filtered list', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
+  const query = client.getQueryCache().build(client, { queryKey: ['wallet', 'order', '1'], queryFn: async () => undefined })
+  query.setState({ status: 'error', fetchStatus: 'idle', error: new ApiError(502, {
+    code: 'HTTP_ERROR', message: '요청을 처리하지 못했습니다. 다시 시도해 주세요.', fieldErrors: [],
+  }) })
+  try {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders/1?side=SELLER&status=COMPLETED&page=2'] },
+      createElement(QueryClientProvider, { client },
+        createElement(Routes, null, createElement(Route, { path: '/orders/:id', element: createElement(OrderDetailPage) })))))
+    assert.match(html, /요청을 처리하지 못했습니다/)
+    assert.match(html, /href="\/orders\?side=SELLER&amp;status=COMPLETED&amp;page=2"/)
+    assert.doesNotMatch(html, /접근 권한이나 주문 상태/)
+  } finally { client.clear() }
+})
+
+test('order list separates expired login from server failure while keeping filters', () => {
+  for (const [status, message, expected] of [
+    [401, '로그인이 필요합니다.', /로그인 후 거래 내역을 확인할 수 있습니다/],
+    [502, '요청을 처리하지 못했습니다. 다시 시도해 주세요.', /요청을 처리하지 못했습니다/],
+  ]) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
+    const query = client.getQueryCache().build(client, { queryKey: ['wallet', 'orders', 'BUYER', 'COMPLETED', 0], queryFn: async () => undefined })
+    query.setState({ status: 'error', fetchStatus: 'idle', error: new ApiError(status, { code: 'HTTP_ERROR', message, fieldErrors: [] }) })
+    try {
+      const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders?side=BUYER&status=COMPLETED'] },
+        createElement(QueryClientProvider, { client }, createElement(OrderListPage))))
+      assert.match(html, expected)
+      assert.match(html, /value="COMPLETED" selected=""/)
+      if (status === 401) assert.match(html, /href="\/login"/)
+      else assert.match(html, /다시 조회/)
+    } finally { client.clear() }
+  }
 })

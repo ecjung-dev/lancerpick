@@ -44,7 +44,7 @@ function OrderList({ side, status, page, onPageChange }: { side: 'BUYER' | 'SELL
   const location = useLocation()
   const query = useQuery({ queryKey: ['wallet', 'orders', side, status, page], queryFn: ({ signal }) => getOrders(side, page, signal, status), retry: false, gcTime: 0 })
   if (query.error instanceof ApiError && query.error.status === 401) return <p>로그인 후 거래 내역을 확인할 수 있습니다. <Link to="/login">로그인</Link></p>
-  if (query.isError) return <div role="alert"><p>거래 내역을 불러오지 못했습니다.</p><button onClick={() => { void query.refetch() }}>다시 조회</button></div>
+  if (query.isError) return <div role="alert"><p>{query.error instanceof ApiError ? query.error.message : '거래 내역을 불러오지 못했습니다.'}</p><button onClick={() => { void query.refetch() }}>다시 조회</button></div>
   if (!query.data) return <p role="status">거래 내역을 불러오는 중입니다.</p>
   return <>
     {query.data.items.length === 0 ? <p>이 조건에 맞는 거래 내역이 없습니다.</p> : <ul>{query.data.items.map(order =>
