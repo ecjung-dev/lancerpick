@@ -1,10 +1,10 @@
 # 랜서픽 백엔드
 
-Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 공통 HTTP·Security·시간 처리, 회원가입/세션 로그인/내 정보, 메모리 예시 상품·카테고리 DB 조회와 지갑을 구현했습니다. 주문 생성·목록·상세·수락/거절·납품/수정 요청에 주문 결제·직접 취소/환불·구매 확정/정산이 연결되었습니다. [취소 요청 제출·승인·거절·철회](../docs/order-cancellation-requests.md)는 기존 전액 환불 서비스를 재사용합니다. 주문 상세의 수락/거절·납품/수정·취소 요청 화면은 연결했으며 실제 브라우저 인증/거래 통합과 주문 생성 화면은 후속입니다. 최신 범위·검증 한계는 [작업표](../docs/work-plan.md)를 따릅니다. 공통 코드는 [백엔드 기능 개발 가이드](../docs/backend-common-guide.md)를 재사용합니다.
+Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 회원가입·세션 인증·판매자 프로필·상품 검색/상세/등록/부분 수정, 주문·납품·수정·취소 요청, 적립금 결제·환불·확정/정산과 관리자 상품 API를 제공합니다. 연결 화면·미구현 기능·검증 한계는 [현황표](../docs/current-status.md)를 따릅니다. 구현 방식은 [백엔드 공통 가이드](../docs/backend-common-guide.md)를 사용합니다.
 
 ## 패키지 구조
 
-토스 테스트 충전의 [V2 저장 구조](../docs/wallet-topup-schema.md), [신청·본인 조회](../docs/wallet-topup-api.md), [승인·지급·본인 재확인](../docs/wallet-topup-approval.md)을 추가했습니다. 일반 실행 시 Flyway가 V2를 적용할 수 있으므로 연결 대상 DB를 확인합니다. 외부 호출은 기본 비활성화이며 TOSS_TOPUP_ENABLED=true와 테스트 시크릿으로 활성화합니다. 검증된 외부 DONE에서만 잔액을 늘리며, 실제 토스 결제창·로그인·프런트 연동은 아직 검증 전입니다.
+토스 테스트 충전의 [V2 저장 구조](../docs/wallet-topup-schema.md), [신청·본인 조회](../docs/wallet-topup-api.md), [승인·지급·본인 재확인](../docs/wallet-topup-approval.md)을 추가했습니다. 일반 실행 시 Flyway가 V2를 적용할 수 있으므로 연결 대상 DB를 확인합니다. 일반 개발 설정의 TOSS_TOPUP_ENABLED 기본값은 true이며 외부 호출을 끄려면 false를 지정합니다. test 프로필은 외부 호출을 비활성화합니다. 실제 키는 Git에서 제외한 개인 설정 또는 서버 환경변수로 관리합니다. 검증된 외부 DONE에서만 잔액을 늘리며, 사용자의 5만원 테스트 충전 확인과 별도 서버/화면 검사 범위는 [현황표](../docs/current-status.md)를 따릅니다.
 
 기본 패키지는 `com.example.lancerpick`입니다.
 
@@ -67,7 +67,7 @@ Copy-Item local-application.properties.example local-application.properties
 
 공통 `src/main/resources/application.properties`에는 `${DB_URL}` 등의 참조와 JPA·Flyway 기준이 있습니다. OSIV는 비활성화하고 스키마는 `validate`, JDBC 시각은 UTC로 설정합니다. 개인 접속 파일 import는 `application-default.properties`에서 관리하므로 활성 프로필이 없는 일반 로컬 실행에서만 적용됩니다. 개인 파일은 resources 밖에 두므로 기본 JAR 패키징에 포함되지 않습니다. IDE의 Working directory는 백엔드 루트로 설정합니다. 배포에서는 `DB_*` 환경변수를 제공하며 별도 프로필 사용 시 개인 파일을 자동으로 읽지 않습니다.
 
-예시 Controller·Service는 demo 패키지에 있고 기본(default)·demo에서만 동작하며 prod에서는 제외됩니다. 공통 Security 정책·CSRF 조회·401/403 JSON 응답과 인증 principal의 회원 ID 계약은 준비되어 있지만, 실제 로그인·로그아웃·비밀번호 인코더와 로그인 시 principal을 구성하는 연결은 후속 구현 대상입니다. 최초 SQL은 [Flyway V1](src/main/resources/db/migration/V1__init.sql)에 있습니다. MySQL 8.0.46 테스트 DB에서 V1 적용·clean build 성공을 사용자 실행 결과로 확인했습니다. [검증 기록](../docs/physical-db.md#2026-11-02-사용자-실행-검증-결과)과 미검증 범위를 구분합니다. 일반 실행·DB 통합 테스트는 연결된 DB에 마이그레이션을 시도하므로 대상과 기존 이력을 먼저 확인합니다. 스키마 초기 적용 결과가 회원 인증·업무 API·엔티티 매핑·동시성 검증 완료를 의미하지는 않습니다. 실행 환경은 팀의 공통 개발 환경 구축 가이드를 따릅니다.
+예시 Controller·Service는 demo 패키지에 있고 기본(default)·demo에서만 동작하며 prod에서는 제외됩니다. 공통 Security 정책·CSRF 조회·401/403 JSON 응답, 세션 로그인·로그아웃·비밀번호 인코더 및 LoginMember principal의 회원 ID 연결을 구현했습니다. 운영 브라우저 전체 거래 검증은 별도입니다. 최초 SQL은 [Flyway V1](src/main/resources/db/migration/V1__init.sql)에 있습니다. MySQL 8.0.46 테스트 DB에서 V1 적용·clean build 성공을 사용자 실행 결과로 확인했습니다. [검증 기록](../docs/physical-db.md#2026-11-02-사용자-실행-검증-결과)과 미검증 범위를 구분합니다. 일반 실행·DB 통합 테스트는 연결된 DB에 마이그레이션을 시도하므로 대상과 기존 이력을 먼저 확인합니다. 스키마 초기 적용 결과가 회원 인증·업무 API·엔티티 매핑·동시성 검증 완료를 의미하지는 않습니다. 실행 환경은 팀의 공통 개발 환경 구축 가이드를 따릅니다.
 
 ## 실행
 

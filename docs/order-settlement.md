@@ -1,5 +1,7 @@
 # 구매 확정·판매 수익 정산
 
+> 문서 읽기 기준(2026-11-04): 아래 날짜·브랜치별 구현 및 검증 설명은 당시 기록이다. 현재 반영 여부·남은 작업은 [현황표](current-status.md), 실행 설정은 [루트 README](../README.md), API 계약은 [API 명세](api-spec.md)를 따른다. 과거의 미구현·병합 전 표현과 검사 수를 현재 상태로 확대하지 않는다.
+
 후속 2026-11-04: 마이페이지에서 판매 수익 화면으로 직접 이동할 수 있다. 구매 확정·환불 이후 실제 HTTP/React 렌더링과 전체 회귀 범위는 [거래 통합 검증](account-trade-integration.md)을 따른다. 과거 실행 건수와 최신 합본 검증을 구분한다.
 
 저장소 후속 변경: [JPA·QueryDSL 전환](finance-persistence.md)에 따라 정산 생성은 Entity/JpaRepository, 수익 조회는 QueryDSL로 변경했다. API·수수료·동시성 정책은 유지한다.
