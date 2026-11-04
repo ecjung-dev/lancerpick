@@ -1,21 +1,29 @@
 # 토스 테스트 충전 승인·지급·본인 재확인
 
+> 문서 읽기 기준(2026-11-04): 아래 날짜·브랜치별 구현 및 검증 설명은 당시 기록이다. 현재 반영 여부·남은 작업은 [현황표](current-status.md), 실행 설정은 [루트 README](../README.md), API 계약은 [API 명세](api-spec.md)를 따른다. 과거의 미구현·병합 전 표현과 검사 수를 현재 상태로 확대하지 않는다.
+
 후속 화면: [React 충전·결과 화면](wallet-topup-frontend.md)을 추가했다. 아래 서버 단계 기록과 구분하며 실제 키·인증 포함 결제 검증은 여전히 대기 중이다.
 
 작성일: 2026-11-02. 담당: 황준범. 브랜치: `feature/wallet-topup-api`.
+
+## 현재 실행 설정 (2026-11-04 확인)
+
+공유 application.properties의 `toss.topup-enabled=${TOSS_TOPUP_ENABLED:true}`에 따라 일반 실행 기본값은 true다. 외부 호출을 끄려면 `TOSS_TOPUP_ENABLED=false`를 지정한다. test 프로필은 `toss.topup-enabled=false`로 덮어쓰며 CI도 외부 충전을 비활성화한다. 개인 시크릿은 Git 제외 설정 또는 서버 환경변수로 관리한다. 실제 제공자 호출에는 테스트 시크릿이 필요하다.
+
+확인 대상은 공유 application.properties·application-default.properties·application-test.properties 및 CI 워크플로다. 개인 설정의 최종 값이나 실제 결제 성공을 확인한 것은 아니다. 아래 11월 2일의 기본 비활성화 설명은 당시 기록이며 현재 실행 기본값으로 사용하지 않는다.
 
 ## 1. 범위
 
 기존 V2와 신청/조회 API에 서버 승인·적립금 반영·본인 재확인을 추가한다. Flyway 변경은 없다. 실제 토스 테스트 결제창을 통한 연동 실행은 아직 하지 않았다. 검증은 외부 API 대역·실제 Security/DB·커밋/롤백을 사용한다. 로그인 구현·React 결제 UI·웹훅·자동 복구 스케줄러·충전 취소는 포함하지 않는다.
 
-실제 제공자 호출은 기본 비활성화다. 개인 설정에 아래 값과 기존 테스트 시크릿을 준비하고 서버를 재시작해야 활성화된다. 실제 키를 문서·Git·로그에 기록하지 않는다.
+최초 구현 당시 실제 제공자 호출은 기본 비활성화였다. 개인 설정에 아래 값과 기존 테스트 시크릿을 준비하고 서버를 재시작해야 활성화된다. 실제 키를 문서·Git·로그에 기록하지 않는다.
 
 ```properties
 TOSS_TOPUP_ENABLED=true
 TOSS_SECRET_KEY=CHANGE_ME
 ```
 
-기본값은 false이며 비활성화 상태의 새 승인 요청은 503 PAYMENT_PROVIDER_UNAVAILABLE로 차단하고 READY를 유지한다. 활성화 시 test_gsk_ 또는 test_sk_ 키만 허용하고 live 키는 거부한다. demo에서는 관련 Bean을 등록하지 않는다. 테스트에 개인 키나 외부 통신을 요구하지 않는다.
+최초 구현 당시 기본값은 false였다. 현재 기본값은 위 현재 실행 설정을 따른다. 비활성화 상태의 새 승인 요청은 503 PAYMENT_PROVIDER_UNAVAILABLE로 차단하고 READY를 유지한다. 활성화 시 test_gsk_ 또는 test_sk_ 키만 허용하고 live 키는 거부한다. demo에서는 관련 Bean을 등록하지 않는다. 테스트에 개인 키나 외부 통신을 요구하지 않는다.
 
 ## 2. 공개 API 계약
 

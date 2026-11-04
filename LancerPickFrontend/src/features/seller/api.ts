@@ -1,8 +1,9 @@
+import { getMemberSession } from '../auth/api.ts'
 import { ApiError, apiRequest } from '../../shared/api/client.ts'
-import type { SellerProfile, SellerProfileInput, SellerSession } from './types.ts'
+import type { SellerProfile, SellerProfileInput } from './types.ts'
 
 export function getSellerSession(signal?: AbortSignal) {
-  return apiRequest<SellerSession>('/me', { signal })
+  return getMemberSession(signal)
 }
 
 export async function getMySellerProfile(signal?: AbortSignal): Promise<SellerProfile | null> {

@@ -25,6 +25,7 @@ function Editor({ id, memberId, checking }: { id?: string; memberId: string; che
   if (product.isError || categories.isError) return <AsyncState title="상품 정보를 불러오지 못했어요" error={product.error ?? categories.error} onRetry={() => { if (id) void product.refetch(); void categories.refetch() }} />
   if (!categories.data || (id && !product.data)) return <AsyncState title="상품 정보 확인 중" />
   return <section className={styles.page}><Link to="/mypage">← 마이페이지</Link><h1>{id ? '상품 수정' : '상품 등록'}</h1>
+    {id && <p><Link to={`/mypage/products/${id}/sale-status`}>상품 판매 상태 관리 →</Link></p>}
     <ProductForm key={id ?? 'new'} initial={product.data} categories={categories.data} memberId={memberId} checking={checking} />
   </section>
 }

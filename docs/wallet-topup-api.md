@@ -1,5 +1,7 @@
 # 토스 테스트 충전 신청·본인 조회 API
 
+> 문서 읽기 기준(2026-11-04): 아래 날짜·브랜치별 구현 및 검증 설명은 당시 기록이다. 현재 반영 여부·남은 작업은 [현황표](current-status.md), 실행 설정은 [루트 README](../README.md), API 계약은 [API 명세](api-spec.md)를 따른다. 과거의 미구현·병합 전 표현과 검사 수를 현재 상태로 확대하지 않는다.
+
 후속 구현: [승인·지급·재확인 API](wallet-topup-approval.md)와 [React 충전 화면](wallet-topup-frontend.md)을 추가했다. 아래 신청 단계 기록은 유지하며, 실제 테스트 키·로그인 포함 전체 결제 흐름은 아직 검증 전이다.
 
 작성일: 2026-11-02. 담당: 황준범. 브랜치: `feature/wallet-topup-api`.

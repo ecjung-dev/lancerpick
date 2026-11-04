@@ -25,111 +25,202 @@ import org.springframework.transaction.annotation.Transactional;
 @Profile("!demo")
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class OrderCancellationRequestService {
-    public enum Resolution { APPROVED, REJECTED, WITHDRAWN }
-    private final OrderRepository orders;
-    private final CancellationRequestQueries requests;
-    private final OrderHistoryRepository histories;
-    private final OrderDetailQueries details;
-    private final OrderCancellationService cancellations;
-    private final Clock clock;
+  public enum Resolution {
+    APPROVED,
+    REJECTED,
+    WITHDRAWN
+  }
 
-    public OrderCancellationRequestService(OrderRepository orders, CancellationRequestQueries requests, OrderHistoryRepository histories,
-            OrderDetailQueries details, OrderCancellationService cancellations, Clock clock) {
-        this.orders = orders;
-        this.requests = requests;
-        this.histories = histories;
-        this.details = details;
-        this.cancellations = cancellations;
-        this.clock = clock;
-    }
+  private final OrderRepository orders;
+  private final CancellationRequestQueries requests;
+  private final OrderHistoryRepository histories;
+  private final OrderDetailQueries details;
+  private final OrderCancellationService cancellations;
+  private final Clock clock;
 
-    public Created create(long memberId, String id, CreateCancellationRequest input) {
-        long orderId = positiveId(id);
-        if (input == null) throw invalid();
-        String reason = normalized(input.reason(), false);
-        String key = uuid(input.requestKey());
-        var order = lock(orderId, memberId);
-        requireRole(order.getBuyerId().equals(memberId));
-        var existing = requests.byKey(orderId, memberId, key);
-        if (existing.isPresent()) {
-            if (!existing.get().reason().equals(reason)) throw conflict("IDEMPOTENCY_KEY_REUSED", "다른 사유에 사용한 요청 키입니다.");
-            return new Created(response(order, memberId, existing.get().id()), false);
-        }
-        requirePaidOpen(order);
-        if (requests.pending(orderId) > 0) throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청이 있습니다.");
-        LocalDateTime at = now(order);
-        long requestId = requests.insert(orderId, memberId, key, reason, at);
-        histories.saveAndFlush(OrderHistory.cancellationRequestEvent(orderId, memberId, OrderHistoryAction.CANCELLATION_REQUESTED, order.getStatus(), at, reason));
-        return new Created(response(order, memberId, requestId), true);
-    }
+  public OrderCancellationRequestService(
+      OrderRepository orders,
+      CancellationRequestQueries requests,
+      OrderHistoryRepository histories,
+      OrderDetailQueries details,
+      OrderCancellationService cancellations,
+      Clock clock) {
+    this.orders = orders;
+    this.requests = requests;
+    this.histories = histories;
+    this.details = details;
+    this.cancellations = cancellations;
+    this.clock = clock;
+  }
 
-    public CancellationResultResponse resolve(long memberId, String id, String requestId, Resolution resolution, String rawResponseReason) {
-        long orderId = positiveId(id);
-        long targetId = positiveId(requestId);
-        String responseReason = resolution == Resolution.REJECTED ? normalized(rawResponseReason, true) : null;
-        var order = lock(orderId, memberId);
-        boolean buyer = order.getBuyerId().equals(memberId);
-        requireRole(resolution == Resolution.WITHDRAWN ? buyer : !buyer);
-        var request = requests.byOrder(orderId, targetId).orElseThrow(OrderCancellationRequestService::notFound);
-        if (request.requestedBy() != order.getBuyerId()) throw integrity();
-        if (!request.status().equals("PENDING")) {
-            if (!request.status().equals(resolution.name())) throw conflict("REQUEST_ALREADY_RESOLVED", "다른 방식으로 이미 처리한 요청입니다.");
-            return response(order, memberId, targetId);
-        }
-        requirePaidOpen(order);
-        if (requests.pending(orderId) != 1) throw integrity();
-        LocalDateTime at = now(order);
-        if (at.isBefore(request.requestedAt())) throw new IllegalStateException("Cancellation resolution clock moved backwards");
-        if (resolution == Resolution.APPROVED) {
-            // 기존 주문 취소·전액 환불·원장·대기 요청 승인 처리를 같은 트랜잭션에 참여시킨다.
-            cancellations.cancel(memberId, id, request.reason());
-            requests.clearApprovalResponseReason(targetId);
-            if (!requests.byOrder(orderId, targetId).orElseThrow(OrderCancellationRequestService::integrity).status().equals("APPROVED")) throw integrity();
-        } else {
-            if (requests.resolve(targetId, resolution.name(), memberId, responseReason, at) != 1) throw integrity();
-            var action = resolution == Resolution.REJECTED ? OrderHistoryAction.CANCELLATION_REJECTED : OrderHistoryAction.CANCELLATION_WITHDRAWN;
-            histories.saveAndFlush(OrderHistory.cancellationRequestEvent(orderId, memberId, action, order.getStatus(), at, responseReason));
-        }
-        return response(order, memberId, targetId);
+  public Created create(long memberId, String id, CreateCancellationRequest input) {
+    long orderId = positiveId(id);
+    if (input == null) throw invalid();
+    String reason = normalized(input.reason(), false);
+    String key = uuid(input.requestKey());
+    var order = lock(orderId, memberId);
+    requireRole(order.getBuyerId().equals(memberId));
+    var existing = requests.byKey(orderId, memberId, key);
+    if (existing.isPresent()) {
+      if (!existing.get().reason().equals(reason))
+        throw conflict("IDEMPOTENCY_KEY_REUSED", "다른 사유에 사용한 요청 키입니다.");
+      return new Created(response(order, memberId, existing.get().id()), false);
     }
+    requirePaidOpen(order);
+    if (requests.pending(orderId) > 0) throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청이 있습니다.");
+    LocalDateTime at = now(order);
+    long requestId = requests.insert(orderId, memberId, key, reason, at);
+    histories.saveAndFlush(
+        OrderHistory.cancellationRequestEvent(
+            orderId,
+            memberId,
+            OrderHistoryAction.CANCELLATION_REQUESTED,
+            order.getStatus(),
+            at,
+            reason));
+    return new Created(response(order, memberId, requestId), true);
+  }
 
-    private Order lock(long orderId, long memberId) {
-        if (orders.lockDecisionActor(memberId).isEmpty()) throw new BusinessException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-        return orders.findForDecision(orderId, memberId).orElseThrow(OrderCancellationRequestService::notFound);
+  public CancellationResultResponse resolve(
+      long memberId, String id, String requestId, Resolution resolution, String rawResponseReason) {
+    long orderId = positiveId(id);
+    long targetId = positiveId(requestId);
+    String responseReason =
+        resolution == Resolution.REJECTED ? normalized(rawResponseReason, true) : null;
+    var order = lock(orderId, memberId);
+    boolean buyer = order.getBuyerId().equals(memberId);
+    requireRole(resolution == Resolution.WITHDRAWN ? buyer : !buyer);
+    var request =
+        requests.byOrder(orderId, targetId).orElseThrow(OrderCancellationRequestService::notFound);
+    if (request.requestedBy() != order.getBuyerId()) throw integrity();
+    if (!request.status().equals("PENDING")) {
+      if (!request.status().equals(resolution.name()))
+        throw conflict("REQUEST_ALREADY_RESOLVED", "다른 방식으로 이미 처리한 요청입니다.");
+      return response(order, memberId, targetId);
     }
-    private CancellationResultResponse response(Order order, long memberId, long requestId) {
-        var request = requests.byOrder(order.getId(), requestId).orElseThrow(OrderCancellationRequestService::integrity);
-        var detail = details.forParticipant(order.getId(), memberId);
-        return new CancellationResultResponse(request.response(), detail.withAllowedActions(OrderAllowedActions.actions(detail.status(),
-                order.getBuyerId().equals(memberId), detail.revisionRequest(), detail.cancellationRequests(), detail.review())));
+    requirePaidOpen(order);
+    if (requests.pending(orderId) != 1) throw integrity();
+    LocalDateTime at = now(order);
+    if (at.isBefore(request.requestedAt()))
+      throw new IllegalStateException("Cancellation resolution clock moved backwards");
+    if (resolution == Resolution.APPROVED) {
+      // 기존 주문 취소·전액 환불·원장·대기 요청 승인 처리를 같은 트랜잭션에 참여시킨다.
+      cancellations.cancel(memberId, id, request.reason());
+      requests.clearApprovalResponseReason(targetId);
+      if (!requests
+          .byOrder(orderId, targetId)
+          .orElseThrow(OrderCancellationRequestService::integrity)
+          .status()
+          .equals("APPROVED")) throw integrity();
+    } else {
+      if (requests.resolve(targetId, resolution.name(), memberId, responseReason, at) != 1)
+        throw integrity();
+      var action =
+          resolution == Resolution.REJECTED
+              ? OrderHistoryAction.CANCELLATION_REJECTED
+              : OrderHistoryAction.CANCELLATION_WITHDRAWN;
+      histories.saveAndFlush(
+          OrderHistory.cancellationRequestEvent(
+              orderId, memberId, action, order.getStatus(), at, responseReason));
     }
-    private LocalDateTime now(Order order) {
-        LocalDateTime at = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
-        if (at.getYear() < 1000 || at.getYear() > 9999 || at.isBefore(order.getUpdatedAt())) throw new IllegalStateException("Invalid cancellation request clock");
-        return at;
+    return response(order, memberId, targetId);
+  }
+
+  private Order lock(long orderId, long memberId) {
+    if (orders.lockDecisionActor(memberId).isEmpty())
+      throw new BusinessException(
+          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
+    return orders
+        .findForDecision(orderId, memberId)
+        .orElseThrow(OrderCancellationRequestService::notFound);
+  }
+
+  private CancellationResultResponse response(Order order, long memberId, long requestId) {
+    var request =
+        requests
+            .byOrder(order.getId(), requestId)
+            .orElseThrow(OrderCancellationRequestService::integrity);
+    var detail = details.forParticipant(order.getId(), memberId);
+    return new CancellationResultResponse(
+        request.response(),
+        detail.withAllowedActions(
+            OrderAllowedActions.actions(
+                detail.status(),
+                order.getBuyerId().equals(memberId),
+                detail.revisionRequest(),
+                detail.cancellationRequests(),
+                detail.review())));
+  }
+
+  private LocalDateTime now(Order order) {
+    LocalDateTime at =
+        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    if (at.getYear() < 1000 || at.getYear() > 9999 || at.isBefore(order.getUpdatedAt()))
+      throw new IllegalStateException("Invalid cancellation request clock");
+    return at;
+  }
+
+  private static void requirePaidOpen(Order order) {
+    if (order.getPaidAt() == null
+        || !Set.of(
+                OrderStatus.IN_PROGRESS,
+                OrderStatus.AWAITING_CONFIRMATION,
+                OrderStatus.REVISION_IN_PROGRESS)
+            .contains(order.getStatus()))
+      throw conflict("ORDER_STATE_CONFLICT", "결제 후 미완료 주문만 취소 요청할 수 있습니다.");
+  }
+
+  private static void requireRole(boolean allowed) {
+    if (!allowed)
+      throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "이 요청을 처리할 권한이 없습니다.");
+  }
+
+  private static String normalized(String raw, boolean optional) {
+    if (raw == null) {
+      if (optional) return null;
+      throw invalid();
     }
-    private static void requirePaidOpen(Order order) {
-        if (order.getPaidAt() == null || !Set.of(OrderStatus.IN_PROGRESS, OrderStatus.AWAITING_CONFIRMATION, OrderStatus.REVISION_IN_PROGRESS).contains(order.getStatus()))
-            throw conflict("ORDER_STATE_CONFLICT", "결제 후 미완료 주문만 취소 요청할 수 있습니다.");
+    String text = TextNormalizer.normalize(raw);
+    if (text.isEmpty() || text.codePointCount(0, text.length()) > 1000) throw invalid();
+    return text;
+  }
+
+  private static String uuid(String key) {
+    if (key == null
+        || !key.matches(
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))
+      throw invalid();
+    return UUID.fromString(key).toString();
+  }
+
+  private static long positiveId(String id) {
+    try {
+      if (id == null || !id.matches("[0-9]+")) throw invalid();
+      long value = Long.parseLong(id);
+      if (value <= 0) throw invalid();
+      return value;
+    } catch (NumberFormatException e) {
+      throw invalid();
     }
-    private static void requireRole(boolean allowed) { if (!allowed) throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "이 요청을 처리할 권한이 없습니다."); }
-    private static String normalized(String raw, boolean optional) {
-        if (raw == null) { if (optional) return null; throw invalid(); }
-        String text = TextNormalizer.normalize(raw);
-        if (text.isEmpty() || text.codePointCount(0, text.length()) > 1000) throw invalid();
-        return text;
-    }
-    private static String uuid(String key) {
-        if (key == null || !key.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) throw invalid();
-        return UUID.fromString(key).toString();
-    }
-    private static long positiveId(String id) {
-        try { if (id == null || !id.matches("[0-9]+")) throw invalid(); long value = Long.parseLong(id); if (value <= 0) throw invalid(); return value; }
-        catch (NumberFormatException e) { throw invalid(); }
-    }
-    private static BusinessException invalid() { return new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "취소 요청 입력값을 확인해 주세요."); }
-    private static BusinessException notFound() { return new BusinessException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "요청한 대상을 찾을 수 없습니다."); }
-    private static BusinessException integrity() { return new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "DATA_INTEGRITY_ERROR", "취소 요청 기록을 확인해야 합니다."); }
-    private static BusinessException conflict(String code, String message) { return new BusinessException(HttpStatus.CONFLICT, code, message); }
-    public record Created(CancellationResultResponse result, boolean created) {}
+  }
+
+  private static BusinessException invalid() {
+    return new BusinessException(
+        HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "취소 요청 입력값을 확인해 주세요.");
+  }
+
+  private static BusinessException notFound() {
+    return new BusinessException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "요청한 대상을 찾을 수 없습니다.");
+  }
+
+  private static BusinessException integrity() {
+    return new BusinessException(
+        HttpStatus.INTERNAL_SERVER_ERROR, "DATA_INTEGRITY_ERROR", "취소 요청 기록을 확인해야 합니다.");
+  }
+
+  private static BusinessException conflict(String code, String message) {
+    return new BusinessException(HttpStatus.CONFLICT, code, message);
+  }
+
+  public record Created(CancellationResultResponse result, boolean created) {}
 }

@@ -50,6 +50,18 @@ public class Product {
         return true;
     }
 
+    public boolean changeSaleStatus(String status, LocalDateTime now) {
+        if (!"ON_SALE".equals(status) && !"STOPPED".equals(status)) {
+            throw new IllegalArgumentException("Invalid product sale status");
+        }
+        if (saleStatus.equals(status)) return false;
+        if (now == null || now.isBefore(updatedAt)) throw new IllegalStateException("Invalid product clock");
+        saleStatus = status;
+        version = Math.incrementExact(version);
+        updatedAt = now;
+        return true;
+    }
+
     private void assign(com.example.lancerpick.product.dto.ProductWriteInput input) {
         categoryId = input.categoryId(); title = input.title(); description = input.description();
         scopeDescription = input.scopeDescription(); preparationDescription = input.preparationDescription();

@@ -85,7 +85,7 @@ CI에서는 잠금 파일 기준으로 의존성을 설치한다.
 
 ### 기술 스택과 기준 버전
 
-아래 버전은 개발 착수 기준으로 선정한 조합이다. 실제 설치·빌드·인증·DB 연결·배포 검증은 아직 수행하지 않았다. 계열로 표기한 항목의 정확한 패치는 초기 설정에서 선택하여 잠금 파일과 실행 안내에 기록한다.
+아래 표는 프로젝트의 기술 기준이다. 현재 설치·빌드·인증·DB 연결 및 테스트 실행 근거는 현재 현황과 검증 이력에서 관리한다. 정확한 의존성 버전은 Gradle 설정·Wrapper와 package-lock.json을 확인하고, 배포 준비 상태는 별도로 구분한다.
 
 | 영역 | 선정 기술·기준 | 고정 방법 |
 | --- | --- | --- |
@@ -98,7 +98,7 @@ CI에서는 잠금 파일 기준으로 의존성을 설치한다.
 | 스타일 | CSS Modules, 공통 UI | 필요한 컴포넌트부터 공유 |
 | DB·변경 | MySQL 8.4 LTS, Flyway | DB 이미지 고정, Boot 관리 버전·MySQL 모듈 |
 | 배포 | Docker Compose, Nginx, HTTPS | 도구·이미지 버전은 초기 배포 시 고정 |
-| 검증 | Spring Boot Test·JUnit·MockMvc, Vitest·React Testing Library | 핵심 검증 우선, 통합 후 Playwright 적용 |
+| 검증 | Spring Boot Test·JUnit·MockMvc, Node.js test runner·React SSR | 실제 실행 스크립트 기준, 브라우저 검증은 별도 기록 |
 | 협업 | GitHub PR, GitHub Actions | 타입 검사·빌드·관련 테스트 |
 
 버전 확인 근거: Spring Boot 공식 시스템 요구사항, React 공식 버전 안내, Node.js 공식 릴리스 안내, Vite 공식 릴리스 안내. 초기 설치 시 배포 가능 여부·보안 수정·호환성을 다시 확인한다.

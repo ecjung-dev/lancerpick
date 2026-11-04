@@ -48,7 +48,7 @@ class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
     CancellationRequestQueries cancellationRequestQueries;
     @MockitoBean
-    com.example.lancerpick.settlement.SettlementQueryService settlementQueryService;
+    com.example.lancerpick.settlement.service.SettlementQueryService settlementQueryService;
     @MockitoBean
     com.example.lancerpick.order.service.OrderConfirmationService orderConfirmationService;
     @MockitoBean

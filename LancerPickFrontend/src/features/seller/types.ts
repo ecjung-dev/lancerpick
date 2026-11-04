@@ -12,4 +12,4 @@ export interface SellerProfileInput {
   portfolioUrl: string | null
 }
 
-export interface SellerSession { id: string; displayName: string }
+export type SellerSession = Pick<import('../auth/types').Member, 'id' | 'displayName'>

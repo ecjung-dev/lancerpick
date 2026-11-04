@@ -25,3 +25,10 @@ export interface CancellationRequest {
   resolvedBy: string | null; responseReason: string | null
 }
 export interface CancellationResult { cancellationRequest: CancellationRequest; order: OrderDetail }
+
+export interface CreateOrderInput {
+  productId: string
+  expectedProductVersion: number
+  requirements: string
+  requestKey: string
+}

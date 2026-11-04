@@ -7,7 +7,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.example.lancerpick.order.service.OrderConfirmationService;
-import com.example.lancerpick.settlement.SettlementQueryService;
+import com.example.lancerpick.settlement.service.SettlementQueryService;
 import java.util.*;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.*;

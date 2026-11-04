@@ -2,9 +2,11 @@ import { ApiError, apiRequest } from '../../shared/api/client.ts'
 import type { LoginInput, Member, SignupInput, UpdateMeInput } from './types.ts'
 
 /** 로그인 안 한 상태(401)는 오류가 아니라 null로 돌려준다. 그 밖의 오류는 그대로 던진다. */
-export async function getCurrentMember(signal?: AbortSignal): Promise<Member | null> {
+export async function getCurrentMember(
+  signal?: AbortSignal,
+): Promise<Member | null> {
   try {
-    return await apiRequest<Member>('/me', { signal })
+    return await getMemberSession(signal)
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) return null
     throw error
@@ -32,4 +34,9 @@ export function updateMe(input: UpdateMeInput) {
 /** POST /api/members. 가입 후 자동 로그인하지 않는다(API 2절). */
 export function signup(input: SignupInput) {
   return apiRequest<Member>('/members', { method: 'POST', json: input })
+}
+
+/** 보호 기능의 현재 회원 확인. 401을 호출한 기능에 그대로 전달한다. */
+export function getMemberSession(signal?: AbortSignal) {
+  return apiRequest<Member>('/me', { signal })
 }

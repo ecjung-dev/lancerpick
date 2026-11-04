@@ -1,5 +1,7 @@
 # 실제 로그인 세션 기반 거래 API 통합 검증
 
+> 문서 읽기 기준(2026-11-04): 아래 날짜·브랜치별 구현 및 검증 설명은 당시 기록이다. 현재 반영 여부·남은 작업은 [현황표](current-status.md), 실행 설정은 [루트 README](../README.md), API 계약은 [API 명세](api-spec.md)를 따른다. 과거의 미구현·병합 전 표현과 검사 수를 현재 상태로 확대하지 않는다.
+
 2026-11-03. test/session-trade-integration. 선행 지갑 세션 연결 및 JPA·QueryDSL 전환을 포함한다.
 
 ## 검사 방식

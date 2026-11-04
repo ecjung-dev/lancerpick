@@ -1,5 +1,7 @@
 # 상품 등록·수정·버전 관리
 
+> 문서 읽기 기준(2026-11-04): 아래 날짜·브랜치별 구현 및 검증 설명은 당시 기록이다. 현재 반영 여부·남은 작업은 [현황표](current-status.md), 실행 설정은 [루트 README](../README.md), API 계약은 [API 명세](api-spec.md)를 따른다. 과거의 미구현·병합 전 표현과 검사 수를 현재 상태로 확대하지 않는다.
+
 2026-11-04 박소현. main cd86802 기준 codex/product-management에서 작업. API 명세 3·10절, JPA·QueryDSL 규칙, 프런트 공통 가이드·Git 규칙을 확인했다. 주문 진입 검증 기록 stash `order-entry verification notes`는 삭제·복원하지 않고 보존 중이다. 추후 이 기능 반영 시 메시지를 확인해 함께 복원한다.
 
 ## 구현

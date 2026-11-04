@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { ApiError, clearCsrfToken } from '../../shared/api/client.ts'
 import { clearWalletCache } from '../wallet/cache.ts'
+import { clearAccountQueries } from '../../shared/api/accountCache.ts'
 import { getCurrentMember } from './api.ts'
 import type { Member } from './types.ts'
 
@@ -28,8 +29,7 @@ export async function resetAccountState(queryClient: QueryClient, member: Member
  */
 async function clearPersonalCaches(queryClient: QueryClient) {
   await clearWalletCache(queryClient) // 지갑 캐시 + 토스 충전 진행 정보(clearCheckoutState)
-  await queryClient.cancelQueries({ predicate: (query) => query.queryKey[0] !== 'auth' })
-  queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'auth' })
+  await clearAccountQueries(queryClient)
 }
 
 /**

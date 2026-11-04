@@ -11,7 +11,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CsrfException;
 
-/** 인증 구현을 위한 기본 정책. 회원 조회·로그인 필터·인코더는 인증 담당자가 이어서 구현한다. */
+/** 공개 조회·가입·로그인과 인증 필요 API, 관리자 전용 API의 접근 정책. */
 @Configuration
 public class SecurityConfig {
     @Bean

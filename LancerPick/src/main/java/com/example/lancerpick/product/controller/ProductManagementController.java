@@ -28,4 +28,11 @@ public class ProductManagementController {
     public ResponseEntity<OwnedProductResponse> patch(Authentication auth, @PathVariable String id, @RequestBody JsonNode body) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(products.patch(current.require(auth), id, body));
     }
+
+    @PatchMapping("/products/{id}/sale-status")
+    public ResponseEntity<OwnedProductResponse> changeSaleStatus(
+            Authentication auth, @PathVariable String id, @RequestBody JsonNode body) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(products.changeSaleStatus(current.require(auth), id, body));
+    }
 }

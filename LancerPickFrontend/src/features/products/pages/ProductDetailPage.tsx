@@ -1,46 +1,92 @@
-import { useQuery } from '@tanstack/react-query'
+import { useProductDetail } from '../queries'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
-import { getProductDetail } from '../api'
 import styles from './ProductDetailPage.module.css'
 
 export function ProductDetailPage() {
   const { id = '' } = useParams()
   const location = useLocation()
   const from: unknown = location.state?.from
-  const back = typeof from === 'string' && (from === '/' || from.startsWith('/?')) ? from : '/'
-  const product = useQuery({
-    queryKey: ['products', 'detail', id], queryFn: ({ signal }) => getProductDetail(id, signal),
-    retry: false, staleTime: 0, gcTime: 0,
-  })
-  const missing = product.error instanceof ApiError && product.error.status === 404
-  return <section className={styles.page}>
-    <Link to={back}>← 상품 목록으로</Link>
-    {product.isPending ? <AsyncState title="상품을 불러오고 있어요" />
-      : product.isError ? <AsyncState title={missing ? '현재 조회할 수 없는 상품이에요' : '상품을 불러오지 못했어요'}
-        description={missing ? '판매가 중지되거나 공개되지 않은 상품일 수 있어요.' : undefined}
-        error={missing ? undefined : product.error} onRetry={missing ? undefined : () => { void product.refetch() }} />
-        : <>
-          <header className={styles.heading}><p>{product.data.category.name}</p><h1>{product.data.title}</h1><p>판매자 · {product.data.seller.displayName}</p></header>
+  const back =
+    typeof from === 'string' && (from === '/' || from.startsWith('/?'))
+      ? from
+      : '/'
+  const product = useProductDetail(id)
+  const missing =
+    product.error instanceof ApiError && product.error.status === 404
+  return (
+    <section className={styles.page}>
+      <Link to={back}>← 상품 목록으로</Link>
+      {product.isPending ? (
+        <AsyncState title="상품을 불러오고 있어요" />
+      ) : product.isError ? (
+        <AsyncState
+          title={
+            missing
+              ? '현재 조회할 수 없는 상품이에요'
+              : '상품을 불러오지 못했어요'
+          }
+          description={
+            missing
+              ? '판매가 중지되거나 공개되지 않은 상품일 수 있어요.'
+              : undefined
+          }
+          error={missing ? undefined : product.error}
+          onRetry={
+            missing
+              ? undefined
+              : () => {
+                  void product.refetch()
+                }
+          }
+        />
+      ) : (
+        <>
+          <header className={styles.heading}>
+            <p>{product.data.category.name}</p>
+            <h1>{product.data.title}</h1>
+            <p>판매자 · {product.data.seller.displayName}</p>
+          </header>
           <div className={styles.grid}>
             <div className={styles.content}>
               <Detail title="서비스 소개" text={product.data.description} />
               <Detail title="작업 범위" text={product.data.scopeDescription} />
-              <Detail title="구매 전 준비사항" text={product.data.preparationDescription} />
+              <Detail
+                title="구매 전 준비사항"
+                text={product.data.preparationDescription}
+              />
             </div>
             <aside className={styles.summary} aria-label="가격 및 작업 기간">
-              <p>고정 가격</p><strong>{formatWon(product.data.priceAmount)}</strong>
-              <dl><dt>작업 기간</dt><dd>{product.data.durationDays}일</dd><dt>판매 상태</dt><dd>판매 중</dd></dl>
-              <Link to={`/products/${product.data.id}/order`}>주문 요청 작성하기 →</Link>
+              <p>고정 가격</p>
+              <strong>{formatWon(product.data.priceAmount)}</strong>
+              <dl>
+                <dt>작업 기간</dt>
+                <dd>{product.data.durationDays}일</dd>
+                <dt>판매 상태</dt>
+                <dd>판매 중</dd>
+              </dl>
+              <Link to={`/products/${product.data.id}/order`}>
+                주문 요청 작성하기 →
+              </Link>
             </aside>
           </div>
-          <footer className={styles.dates}>등록 {formatDateTime(product.data.createdAt)} · 수정 {formatDateTime(product.data.updatedAt)}</footer>
-        </>}
-  </section>
+          <footer className={styles.dates}>
+            등록 {formatDateTime(product.data.createdAt)} · 수정{' '}
+            {formatDateTime(product.data.updatedAt)}
+          </footer>
+        </>
+      )}
+    </section>
+  )
 }
 
 function Detail({ title, text }: { title: string; text: string }) {
-  return <section className={styles.block}><h2>{title}</h2><p>{text}</p></section>
+  return (
+    <section className={styles.block}>
+      <h2>{title}</h2>
+      <p>{text}</p>
+    </section>
+  )
 }
