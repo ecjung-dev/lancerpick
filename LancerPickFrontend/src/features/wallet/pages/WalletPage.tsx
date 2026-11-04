@@ -89,6 +89,7 @@ function WalletLayout({ children, preview = false }: { children: ReactNode; prev
         <nav className={styles.menu} aria-label="내 활동">
           <span className={styles.menuLabel}>내 활동</span>
           <Link to="/mypage/seller-profile">판매자 프로필</Link>
+          <Link to="/mypage/products/new">상품 등록</Link>
           <span className={styles.active} aria-current="page">적립금 · 이용 내역 <span aria-hidden="true">↗</span></span>
           <Link to="/orders?side=BUYER">구매 내역</Link>
           <Link to="/orders?side=SELLER">판매 내역</Link>

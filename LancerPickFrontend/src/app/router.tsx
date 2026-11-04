@@ -5,6 +5,7 @@ import { LoginPage } from '../features/auth/pages/LoginPage'
 import { SignupPage } from '../features/auth/pages/SignupPage'
 import { ProductListPage } from '../features/products/pages/ProductListPage'
 import { ProductDetailPage } from '../features/products/pages/ProductDetailPage'
+import { ProductEditorPage } from '../features/products/pages/ProductEditorPage'
 import { OrderCreatePage } from '../features/orders/pages/OrderCreatePage'
 import { SellerProfilePage } from '../features/seller/pages/SellerProfilePage'
 import { OrderListPage } from '../features/orders/pages/OrderListPage'
@@ -19,6 +20,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <ProductListPage /> },
       { path: 'products/:id', element: <ProductDetailPage /> },
+      { path: 'mypage/products/new', element: <ProductEditorPage /> },
+      { path: 'mypage/products/:id/edit', element: <ProductEditorPage /> },
       { path: 'products/:id/order', element: <OrderCreatePage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },

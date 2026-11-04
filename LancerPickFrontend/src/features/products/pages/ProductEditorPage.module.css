@@ -1,0 +1,7 @@
+.page { max-width: 850px; padding: 36px 0 70px; margin: auto; overflow-wrap: anywhere; }
+.page h1 { margin: 25px 0; }
+.form { display: grid; gap: 18px; }
+.form fieldset { display: grid; gap: 18px; border: 0; padding: 0; min-width: 0; }
+.form label { display: block; margin-bottom: 8px; }
+.form input,.form textarea,.form select { width: 100%; box-sizing: border-box; border: 1px solid #aaa; padding: 12px; border-radius: 8px; font: inherit; }
+.form [role=alert] { color: #a12626; }
