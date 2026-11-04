@@ -40,7 +40,7 @@ src/
 
 auth와 products도 orders와 같은 기능별 구조를 사용합니다. 공통 client.ts와 types.ts는 구현되어 있고 products에는 예시 조회용 api.ts·types.ts·queries.ts·카드·미리보기가 있습니다. auth에는 로그인·가입·로그아웃 api.ts·types.ts·queries.ts·session.ts·validation.ts가 있습니다. 공통 코드를 복사하지 말고 기능에서 재사용합니다. 업무 화면의 스타일은 해당 컴포넌트 옆에 *.module.css로 둡니다.
 
-현재 `/`는 `/api/categories`, `/api/products`에서 실제 목록을 받아 검색·카테고리·페이지·상품 요약을 표시합니다. DB가 없는 demo 프로필로 자동 전환하지 않으며 실패 시 오류를 표시합니다. 상품 카드는 상세 API 대신 목록 응답의 요약을 보여줍니다. 상품 상세·주문 진입은 후속입니다. API 경로와 함께 조회 키·예시 표시도 전환했습니다.
+현재 `/`는 `/api/categories`, `/api/products`에서 실제 목록을 받아 검색·카테고리·페이지·상품 요약을 표시합니다. DB가 없는 demo 프로필로 자동 전환하지 않으며 실패 시 오류를 표시합니다. 상품 카드는 목록 응답의 요약을 보여주고 `/products/:id` 상세로 이동합니다. 상세에서 `/products/:id/order` 주문 작성 화면으로 연결됩니다. 운영 로그인부터 주문 생성·상세 이동까지의 브라우저/DB 통합 검증은 별도입니다. [현재 구현·검증 현황](../docs/current-status.md)을 참고합니다.
 
 ## 팀원 실행
 
@@ -59,7 +59,7 @@ npm.cmd run dev
 
 ## 검사
 
-판매자 프로필 관리는 `/mypage/seller-profile`에서 서버 세션 확인 후 조회·등록·수정합니다. 미등록 404는 빈 폼, 인증 만료는 로그인 안내, 통신 오류는 오류로 구분합니다. 마이페이지 메뉴에도 연결했으며 [구현·브라우저 검증 범위](../docs/seller-profile.md)를 참고합니다. 일반 로그인/회원가입 화면의 통합은 후속입니다.
+판매자 프로필 관리는 `/mypage/seller-profile`에서 서버 세션 확인 후 조회·등록·수정합니다. 미등록 404는 빈 폼, 인증 만료는 로그인 안내, 통신 오류는 오류로 구분합니다. 마이페이지 메뉴에도 연결했으며 [구현·브라우저 검증 범위](../docs/seller-profile.md)를 참고합니다. 로그인·회원가입 화면은 구현됐고, 운영 로그인에서 판매자 프로필까지의 브라우저 통합 검증은 별도입니다.
 
 ```powershell
 npm.cmd run test:api
