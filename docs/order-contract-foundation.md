@@ -1,12 +1,12 @@
 # 전자계약 버전·서명 기반 1차 구현
 
-2026-11-05 신규 정책: CONTRACT_V3는 [전액 보관·판매자 적립금 지급·자동 구매 확정](full-funding-policy.md)을 따른다. 로컬 V7은 업무 테이블 30개와 새 모드를 준비한다. 아래 선금/잔금·보상·V1~V6/29개 설명은 해당 버전의 이력이다. 신규 V3 금액 명령·스케줄러의 완료를 뜻하지 않는다.
+2026-11-05 신규 정책: CONTRACT_V3는 [전액 보관·판매자 적립금 지급·자동 구매 확정](full-funding-policy.md)을 따른다. V7은 main `2fec099`에 반영돼 업무 테이블 30개와 새 모드를 제공한다. 아래 선금/잔금·보상·V1~V6/29개 설명은 해당 버전의 이력이다. 신규 V3 금액 명령·스케줄러의 완료를 뜻하지 않는다.
 
 작성일: 2026-11-05. 공유 브랜치: feature/advanced-common-foundation. 초기 작업 브랜치 feature/contract-finance-foundation에서 공통 기반을 분리했다. 정책은 [4인 설계](advanced-design-four-person.md)를 따른다.
 
 후속 구현: `feature/contract-pdf-delivery`에서 [실제 PDF 생성·실패 재시도·계약 HTTP API·화면](contract-pdf-delivery.md)을 추가했다. main #82/#85의 V2 생성·수락/계약 성립 상태 전환을 재사용하고 신규 V3 전액 보관 기반을 확장했다. 아래 ‘미연결’·검증 수·19개 테이블은 최초 V4 기반 당시 기록이다. main은 V6까지 29개, 이 브랜치 V7은 30개이며 실제 V3 금액 명령·자동 확정은 후속이다.
 
-현재 반영 상태(2026-11-05): 아래 V3/V4 기반은 PR #76으로 main에 반영됐고, main `1e10d78`에는 V5/V6 누적 29개와 [정책 경계 보완](advanced-policy-boundary.md)도 포함된다. 기존 명령의 V2 차단·허용 행동·정책 DTO는 반영 완료다. 이후 V2 생성 경로(E3, #82, 설정으로 닫힘)와 수락·계약 성립·선금 전 취소 상태 연결(E4, #85, main `a7057d6`)도 반영됐다. 계약 HTTP API·화면·PDF·분할 결제 연결은 미완료다. 아래 19개 스키마와 결제 외 명령 재검토 필요 문장은 최초 공유 당시 기록이다. 후속: 초안 작성 중 주문 당사자 회원이 없으면 500 `DATA_INTEGRITY_ERROR`로 처리한다(리뷰 9, [정책 경계](advanced-policy-boundary.md)). 남은 연결은 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)의 E3~E5·J3을 따른다.
+현재 반영 상태(2026-11-05): 아래 V3/V4 기반은 PR #76으로 main에 반영됐고, main `1e10d78`에는 V5/V6 누적 29개와 [정책 경계 보완](advanced-policy-boundary.md)도 포함된다. 기존 명령의 V2 차단·허용 행동·정책 DTO는 반영 완료다. 이후 V2 생성 경로(E3, #82, 설정으로 닫힘)와 수락·계약 성립·선금 전 취소 상태 연결(E4, #85, main `a7057d6`)도 반영됐다. 계약 HTTP API·화면·PDF는 main `2fec099`에서 연결됐다([PDF 연결](contract-pdf-delivery.md)). 분할 결제는 [전액 보관 V3](full-funding-policy.md)로 대체됐고 V3 금액 명령은 미구현이다. 아래 19개 스키마와 결제 외 명령 재검토 필요 문장은 최초 공유 당시 기록이다. 후속: 초안 작성 중 주문 당사자 회원이 없으면 500 `DATA_INTEGRITY_ERROR`로 처리한다(리뷰 9, [정책 경계](advanced-policy-boundary.md)). 남은 연결은 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)의 E3~E5·J3을 따른다.
 
 공유 전 최종 검증: 2026-11-05, 격리 MySQL 8.4에서 V1~V4·JPA validate 포함 clean build 전체 **651건 통과, 실패·오류·건너뜀 0**. 아래 최초 실패와 부분 재검증 기록 이후, 수정된 전체 소스를 한 번에 재실행한 결과다. 프런트·브라우저·원격 CI 결과와 구분한다.
 
@@ -22,7 +22,7 @@
 
 ## 단계별 연결 한계
 
-기존 주문 생성 API는 설정(`lancerpick.order.contract-v2-creation-enabled` 기본 false)으로 아직 LEGACY_V1만 생성한다. 계약 서비스는 내부 명령이며 HTTP Controller·React 계약 화면은 추가하지 않았다(E5).
+기존 주문 생성 API는 설정(`lancerpick.order.contract-v2-creation-enabled` 기본 false)으로 아직 LEGACY_V1만 생성한다. 계약 서비스는 내부 명령이며 HTTP Controller·React 계약 화면은 추가하지 않았다(E5, 당시 기록). 이후 main `2fec099`에서 `/api/orders/{orderId}/contract` 수락·초안·서명·조회·PDF API와 주문 상세 계약 화면이 추가됐다.
 
 상태 연결(E4, main 반영 #85):
 - V2 판매자 수락은 `AWAITING_CONTRACT`로 전환한다. 초안 작성은 이 상태에서만 가능하다.
