@@ -4,9 +4,9 @@
 
 ## 고도화 기반 후속 계약 — 2026-11-05
 
-V3 납품·수정 요청(`feature/v3-delivery-revision`): 경로·입력은 그대로이며 CONTRACT_V3 주문도 POST `/orders/{id}/deliveries`·`/orders/{id}/revision-request`를 쓸 수 있다. V3 `allowedActions`는 판매자 작업 중·수정 중 `DELIVER`, 구매자 검수 대기(수정 미사용) `REQUEST_REVISION`이다. 보관금이 HELD가 아니면 500 `DATA_INTEGRITY_ERROR`. V3 구매 확정·결제 후 취소와 V2 결제 후 명령은 409 `ORDER_POLICY_NOT_READY`.
+V3 납품·수정 요청(#93): 경로·입력은 그대로이며 CONTRACT_V3 주문도 POST `/orders/{id}/deliveries`·`/orders/{id}/revision-request`를 쓸 수 있다. V3 `allowedActions`는 판매자 작업 중·수정 중 `DELIVER`, 구매자 검수 대기(수정 미사용) `REQUEST_REVISION`이다. 보관금이 HELD가 아니면 500 `DATA_INTEGRITY_ERROR`. V3 구매 확정·결제 후 취소와 V2 결제 후 명령은 409 `ORDER_POLICY_NOT_READY`.
 
-수락 경로 단일화(`fix/contract-accept-single-path`): 계약 전용 POST `/api/orders/{orderId}/contract/accept`를 삭제했다. 계약 주문도 일반 주문과 같은 POST `/api/orders/{id}/accept`(주문 상세 응답, `allowedActions`의 `ACCEPT`)로 수락하며 REQUESTED → AWAITING_CONTRACT가 된다.
+수락 경로 단일화(#92): 계약 전용 POST `/api/orders/{orderId}/contract/accept`를 삭제했다. 계약 주문도 일반 주문과 같은 POST `/api/orders/{id}/accept`(주문 상세 응답, `allowedActions`의 `ACCEPT`)로 수락하며 REQUESTED → AWAITING_CONTRACT가 된다.
 
 후속 3차(main `2fec099` 반영): PDF 흐름용 POST `/api/orders/{orderId}/contract/accept`(위 단일화로 삭제)·`/draft`·`/sign` 추가. V2 전용 수락→계약 대기→초안/PDF→양측 서명→선금 대기이며 기존 전액 결제는 차단 상태다. 요청·권한·반복 처리·트랜잭션은 [PDF 연결 3차](contract-pdf-delivery.md)를 따른다. 생성 플래그 기본 false는 유지한다.
 

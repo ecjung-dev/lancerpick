@@ -27,7 +27,7 @@
 
 E4(#85, main `a7057d6`)부터 수락/거절과 직접 취소는 findForDecision으로 잠근 뒤 정책을 직접 검사한다. 수락/거절은 V2를 허용하고, 직접 취소는 V2의 선금 전(`paidAt` 없음)만 허용한다. 알 수 없는 정책과 선금 후 V2는 계속 ORDER_POLICY_NOT_READY다.
 
-E6 앞부분(`feature/v3-delivery-revision`)부터 납품·재납품·수정 요청은 `findForFulfillment`(LEGACY_V1·CONTRACT_V3 허용)를 사용한다. V3는 주문 잠금 아래에서 전액 보관(`order_funds` HELD, 금액=주문 총액)을 확인하고, 없으면 `DATA_INTEGRITY_ERROR`(500)로 아무것도 바꾸지 않는다. 금액이 움직이는 구매 확정·결제 후 취소·취소 요청은 J4 전까지 V3에서도 `ORDER_POLICY_NOT_READY`이며, CONTRACT_V2의 결제 후 명령도 계속 막는다.
+E6 앞부분(#93)부터 납품·재납품·수정 요청은 `findForFulfillment`(LEGACY_V1·CONTRACT_V3 허용)를 사용한다. V3는 주문 잠금 아래에서 전액 보관(`order_funds` HELD, 금액=주문 총액)을 확인하고, 없으면 `DATA_INTEGRITY_ERROR`(500)로 아무것도 바꾸지 않는다. 금액이 움직이는 구매 확정·결제 후 취소·취소 요청은 J4 전까지 V3에서도 `ORDER_POLICY_NOT_READY`이며, CONTRACT_V2의 결제 후 명령도 계속 막는다.
 
 OrderDetailResponse.withAllowedActions도 policyVersion을 보존한다. 새 필드는 기존 JSON에 추가되는 필드이며 기존 경로·입력은 유지한다. 프런트는 서버 allowedActions를 그대로 사용하고 임의로 V2의 PAY/CONFIRM을 복원하지 않는다.
 
