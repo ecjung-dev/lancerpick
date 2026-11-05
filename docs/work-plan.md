@@ -12,7 +12,7 @@
 
 고도화는 [4인 설계](advanced-design-four-person.md)가 기준이다. 정은찬은 알림·이벤트·주문/계약 흐름, 황준범은 DB 변경 전체·결제·채팅·공통 기반, 김창재는 회원·인증·관리자, 박소현은 상품·판매자·후기 보완을 맡는다. 아래 MVP 완료/잔여 표를 고도화 작업량으로 해석하지 않는다. Redis·Batch 등 공통 인프라는 정은찬·황준범 담당이다. 항목별 담당·선행·상태는 아래 [고도화 작업표](#고도화-작업표--2026-11-05)를 따른다.
 
-김창재 고도화 진행(2026-11-05): main 반영(#84, `feature/password-change`)으로 로그인 상태 비밀번호 변경(POST /api/me/password, K1 일부)과 `auth_version` 기반 기존 세션 폐기(K2)를 구현했다. DB·라이브러리 변경 없음. 세션 폐기 확인 계약(`AuthVersionLookup`, principal의 authVersion)은 [로그인 문서](auth-login.md#세션-폐기-계약-채팅-소켓-담당-참고)에 있으며 C2(소켓 연결 폐기) 구현 시 사용한다. 다음은 이메일 인증 가입·비밀번호 재설정(C3 메일 인프라 필요)과 요청 제한이다. 검사 결과는 PR에 기록한다. 후속: 비밀번호 재설정·재설정 요청 제한은 `feature/password-recovery`에서 구현했다(실제 메일 발송은 C3 연결 후, 아래 K1).
+김창재 고도화 진행(2026-11-05): main 반영(#84, `feature/password-change`)으로 로그인 상태 비밀번호 변경(POST /api/me/password, K1 일부)과 `auth_version` 기반 기존 세션 폐기(K2)를 구현했다. DB·라이브러리 변경 없음. 세션 폐기 확인 계약(`AuthVersionLookup`, principal의 authVersion)은 [로그인 문서](auth-login.md#세션-폐기-계약-채팅-소켓-담당-참고)에 있으며 C2(소켓 연결 폐기) 구현 시 사용한다. 다음은 이메일 인증 가입·비밀번호 재설정(C3 메일 인프라 필요)과 요청 제한이다. 검사 결과는 PR에 기록한다. 후속: 비밀번호 재설정·재설정 요청 제한은 main에 반영됐다(#89). 실제 메일 발송은 C3(`feature/mail-infrastructure`) 병합 후 `MAIL_ENABLED=true`로 켠다(아래 K1·C3).
 
 ## 고도화 작업표 — 2026-11-05
 
@@ -56,7 +56,7 @@
 
 | ID | 작업 | 선행 | 상태 | 비고 |
 | --- | --- | --- | --- | --- |
-| K1 | 이메일 인증 가입·비밀번호 재설정/변경·아이디 안내·요청 제한 | F1 | 진행 중 | 로그인 상태 비밀번호 변경 완료(#84). 비밀번호 재설정·재설정 요청 제한 구현(`feature/password-recovery`, 실제 메일 발송은 C3 연결 후). 이메일 인증 가입·아이디 안내는 남음. V5 토큰 스키마 사용. 메일 인프라는 C3 |
+| K1 | 이메일 인증 가입·비밀번호 재설정/변경·아이디 안내·요청 제한 | F1 | 진행 중 | 로그인 상태 비밀번호 변경 완료(#84). 비밀번호 재설정·재설정 요청 제한 완료(#89, 실제 메일 발송은 C3 병합 후). 이메일 인증 가입·아이디 안내는 남음. V5 토큰 스키마 사용. 메일 인프라는 C3 |
 | K2 | 인증 버전 기반 세션 무효화 계약 제공 | K1 | 완료(#84) | HTTP 세션 폐기 필터·`AuthVersionLookup` 계약. 소켓 종료(C2)는 이 계약 사용. 브라우저 2개 동시 확인은 자동 테스트로 대체 |
 | K3 | 관리자 운영 현황·충전/금액 처리 조회 | E4, J4 | 시작 전 | 업무 상태·금액 조회 계약은 정은찬·황준범 |
 | K4 | 구매자 운영 문의, 판매자 무응답 취소의 관리자 승인/거절 | E6 | 시작 전 | 실제 취소·반환 서비스는 정은찬·황준범 |
@@ -79,7 +79,7 @@
 | --- | --- | --- | --- | --- |
 | C1 | 공통 이벤트 ID·버전·오류 계약 | E1 | 시작 전 | |
 | C2 | 계정 전환·비밀번호 변경 시 소켓 연결 폐기·개인 캐시 정리 | K2, J1 | 시작 전 | |
-| C3 | 메일 발송 인프라(Spring Mail·Mailpit) | — | 시작 전 | K1 선행. 연결 지점: `auth/mail/AccountMailSender`(비동기 큐에 넣고 바로 반환) 구현 Bean + 발송 후 `AccountMailDeliveryRecorder` 호출([계약](auth-login.md#메일-발송-경계-c3-연결-계약)) |
+| C3 | 메일 발송 인프라(Spring Mail·Mailpit) | — | 진행 중(`feature/mail-infrastructure`, PR 전) | [메일 인프라](mail-infrastructure.md). `SmtpAccountMailSender`(발송 스레드 1개·고정 큐), 기본 꺼짐(`MAIL_ENABLED`). K1 선행. 연결 지점: `auth/mail/AccountMailSender`(비동기 큐에 넣고 바로 반환) 구현 Bean + 발송 후 `AccountMailDeliveryRecorder` 호출([계약](auth-login.md#메일-발송-경계-c3-연결-계약)) |
 | C4 | Redis 세션 공유·Pub/Sub | J1 | 조정 가능 | DB 잠금·UNIQUE를 대체하지 않음 |
 | C5 | 계측(Actuator·Micrometer·k6) | — | 조정 가능 | |
 

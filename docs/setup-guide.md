@@ -24,7 +24,7 @@
 
 2026-10-29 파일 검토 기준으로 프로젝트는 이미 생성되어 있다. 실제 경로는 `LancerPick/`과 `LancerPickFrontend/`이고, 기본 Java 패키지는 `com.example.lancerpick`이다. 신규 팀원은 [루트 README](../README.md)의 복제 후 실행 절차를 우선 따른다. 아래 프로젝트 생성 절차를 기존 저장소에 다시 실행하지 않는다.
 
-현재 로컬 DB 접속은 각자의 MySQL과 `LancerPick/local-application.properties`를 사용한다. 이 개인 파일은 검토하지 않았으며 실제 접속 성공 여부도 확인하지 않았다. 루트 `compose.yaml`·`.env.example`과 Docker 배포 구성은 아직 없다. 아래 Docker DB 및 YAML 설정은 선택적인 신규 구축 예시이며 현재 적용 상태가 아니다. 기존 `application.properties`에 YAML 예시를 중복 추가하지 않는다. CI 구성은 이미 `.github/workflows/ci.yml`에 있으므로 새로 만드는 대신 내용을 검토·수정한다.
+현재 로컬 DB 접속은 각자의 MySQL과 `LancerPick/local-application.properties`를 사용한다. 이 개인 파일은 검토하지 않았으며 실제 접속 성공 여부도 확인하지 않았다. 루트 `compose.yaml`·`.env.example`과 Docker 배포 구성은 아직 없다. 아래 Docker DB 및 YAML 설정은 선택적인 신규 구축 예시이며 현재 적용 상태가 아니다. 기존 `application.properties`에 YAML 예시를 중복 추가하지 않는다. CI 구성은 이미 `.github/workflows/ci.yml`에 있으므로 새로 만드는 대신 내용을 검토·수정한다. 비밀번호 재설정 메일을 실제로 받아 보려면 선택적으로 Mailpit을 띄우고 `MAIL_ENABLED=true`를 지정한다([메일 발송 인프라](mail-infrastructure.md#로컬-mailpit-확인)). 지정하지 않으면 메일 없이 지금처럼 실행된다.
 
 | 항목 | 현재 파일에 기록된 값 | 검증 상태 |
 | --- | --- | --- |

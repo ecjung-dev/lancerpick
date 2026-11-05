@@ -2,7 +2,8 @@ package com.example.lancerpick.auth.mail;
 
 /**
  * 계정 메일 발송 경계. 구현은 C3 메일 발송 인프라(Spring Mail·Mailpit, 정은찬·황준범 담당, 작업표 C3)가 제공한다.
- * 이 저장소에는 아직 구현 Bean이 없다. 없으면 AccountMailDispatcher가 발송하지 않고 FAILED(MAIL_NOT_CONFIGURED)로 기록한다.
+ * 구현은 SmtpAccountMailSender이며 lancerpick.mail.enabled=true일 때만 등록된다(기본 꺼짐).
+ * 등록되지 않으면 AccountMailDispatcher가 발송하지 않고 FAILED(MAIL_NOT_CONFIGURED)로 기록한다.
  *
  * 구현 계약(4인 설계 §4, 3인 설계 7.2):
  * - enqueue는 호출한 요청 스레드를 막지 않는다. 크기가 정해진 비동기 큐에 넣고 바로 돌아온다.

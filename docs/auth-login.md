@@ -145,7 +145,7 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 
 ## 비밀번호 재설정·요청 제한 — 2026-11-05 (`feature/password-recovery`)
 
-4인 설계 §4 2번(비밀번호 재설정)과 3인 설계 6.1·7·8절을 구현했다. DB·라이브러리 변경은 없다(V5 `account_challenges`·`auth_request_limits` 사용, 새 엔티티 2개). **실제 메일 발송은 C3(메일 인프라, 정은찬·황준범) 연결 후**이며, 이 작업은 4인 설계 §4의 김창재 범위(메일 내용·토큰·회원 API·요청 제한)만 한다.
+4인 설계 §4 2번(비밀번호 재설정)과 3인 설계 6.1·7·8절을 구현했다. DB·라이브러리 변경은 없다(V5 `account_challenges`·`auth_request_limits` 사용, 새 엔티티 2개). **실제 메일 발송은 C3(메일 인프라, 정은찬·황준범) 연결 후**이며(C3 발송기는 [메일 인프라](mail-infrastructure.md)에서 추가), 이 작업은 4인 설계 §4의 김창재 범위(메일 내용·토큰·회원 API·요청 제한)만 한다.
 
 ### 계약
 
@@ -183,7 +183,8 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 
 - `auth/mail/AccountMailSender.enqueue(AccountMail)`: C3가 Bean으로 구현한다. 요청 스레드를 막지 않고 크기가 정해진 비동기 큐에 넣은 뒤 바로 돌아온다(넣었으면 true, 가득 찼으면 false). SMTP를 요청 스레드에서 하면 가입된 이메일만 느려져 가입 여부가 드러난다.
 - 발송이 끝나면 `AccountMailDeliveryRecorder.markSent(challengeId)` / `markFailed(challengeId, 안전한 코드)`를 호출한다. PENDING인 행만 바뀐다.
-- 구현 Bean이 없으면(현재 기본) 발송하지 않고 `FAILED`·`MAIL_NOT_CONFIGURED`로 기록한다. 큐 가득 참은 `MAIL_QUEUE_FULL`, enqueue 예외는 `MAIL_ENQUEUE_FAILED`다. 앱은 메일 서버 없이도 지금처럼 켜진다.
+- 구현: C3 `auth/mail/SmtpAccountMailSender`(`feature/mail-infrastructure`, [메일 인프라](mail-infrastructure.md)). `lancerpick.mail.enabled=true`(환경변수 `MAIL_ENABLED`)일 때만 등록된다.
+- 구현 Bean이 없으면(기본 꺼짐) 발송하지 않고 `FAILED`·`MAIL_NOT_CONFIGURED`로 기록한다. 큐 가득 참은 `MAIL_QUEUE_FULL`, enqueue 예외는 `MAIL_ENQUEUE_FAILED`다. 앱은 메일 서버 없이도 지금처럼 켜진다.
 - `AccountMail.body`에는 토큰이 있다. 로그·DB·거래 아웃박스에 평문으로 남기지 않는다. `toString`은 수신자·본문을 가린다.
 
 ### 화면
@@ -205,11 +206,11 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 
 ### 한계
 
-- 실제 메일 발송·Mailpit·받은편지함 확인 없음(C3 이후). 그 전에는 브라우저에서 끝까지 재설정할 수 없고, 자동 테스트의 가짜 발송기로만 끝까지 검증했다.
+- 실제 메일 발송은 C3 발송기(`MAIL_ENABLED=true` + Mailpit)로 가능해졌다. 확인 범위는 [메일 인프라](mail-infrastructure.md#검증)를 따른다. 재설정 흐름 자체는 자동 테스트의 가짜 발송기로 끝까지 검증했다.
 - 1시간 제한은 고정 구간이라 두 구간에 걸치면 짧은 시간에 최대 10회까지 허용될 수 있다(60초 간격은 항상 보장).
 - IP·전체 발송량 제한, 재설정 POST 실패 횟수 제한(토큰이 256비트라 추측은 현실적이지 않음), 로그인 상태 비밀번호 변경의 시도 제한은 없다.
 - 만료된 `account_challenges`·`auth_request_limits` 정리 작업은 없다(공통 스케줄러·Batch 담당과 함께 정한다). `account_challenges.email`에는 스키마상 정규화 이메일이 저장된다.
-- 비밀번호 변경·재설정 완료 안내 메일은 C3 이후 추가한다.
+- 비밀번호 변경·재설정 완료 안내 메일은 아직 없다(C3 발송기를 사용해 K1에서 추가).
 - 가입 여부에 따른 응답 시간 차이는 회원 조회·토큰 저장 1건 정도이며 실제 측정은 하지 않았다.
 
 ### 검증

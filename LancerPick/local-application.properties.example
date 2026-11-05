@@ -9,3 +9,7 @@ DB_PASSWORD=CHANGE_ME
 TOSS_SECRET_KEY=CHANGE_ME
 # Set true only when explicitly running the Toss test integration.
 TOSS_TOPUP_ENABLED=false
+
+# Optional: send account mails (password reset) to a local Mailpit (docs/mail-infrastructure.md).
+# Defaults are localhost:1025. Keep real SMTP credentials here only; never commit them.
+MAIL_ENABLED=false

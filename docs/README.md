@@ -77,6 +77,7 @@
 - [프런트엔드 공통 개발 가이드](frontend-common-guide.md)
 - [공통 JPA 설정과 테스트 DB 실행](test-database.md)
 - [토스페이먼츠 테스트 키 설정 안내](toss-test-payment-setup.md)
+- [메일 발송 인프라(C3)](mail-infrastructure.md): 계정 메일 SMTP 발송기, 기본 꺼짐(`MAIL_ENABLED`), 로컬 Mailpit 확인 방법
 
 ### 회원·상품·관리자
 

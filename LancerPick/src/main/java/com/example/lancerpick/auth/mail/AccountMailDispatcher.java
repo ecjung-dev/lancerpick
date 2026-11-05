@@ -29,7 +29,7 @@ public class AccountMailDispatcher {
     public void dispatch(AccountMail mail) {
         AccountMailSender sender = senders.getIfAvailable();
         if (sender == null) {
-            // C3 메일 인프라가 아직 없다(기본 상태). 앱은 메일 서버 없이도 지금처럼 동작한다.
+            // 메일 발송이 꺼져 있다(lancerpick.mail.enabled=false, 기본). 앱은 메일 서버 없이도 동작한다.
             fail(mail.challengeId(), "MAIL_NOT_CONFIGURED");
             return;
         }
