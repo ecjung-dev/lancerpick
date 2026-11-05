@@ -4,6 +4,7 @@ import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.entity.*;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.*;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.wallet.entity.*;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.*;
 public class OrderCancellationService {
   private final OrderRepository orders;
   private final OrderHistoryRepository histories;
+  private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final PaymentRepository payments;
   private final WalletRepository wallets;
@@ -32,6 +34,7 @@ public class OrderCancellationService {
   public OrderCancellationService(
       OrderRepository orders,
       OrderHistoryRepository histories,
+      OrderEventPublisher events,
       OrderDetailQueries details,
       PaymentRepository payments,
       WalletRepository wallets,
@@ -40,6 +43,7 @@ public class OrderCancellationService {
       Clock clock) {
     this.orders = orders;
     this.histories = histories;
+    this.events = events;
     this.details = details;
     this.payments = payments;
     this.wallets = wallets;
@@ -134,11 +138,11 @@ public class OrderCancellationService {
       var request = pending.getFirst();
       request.approve(memberId, reason, at);
       requests.saveAndFlush(request);
-      histories.saveAndFlush(
+      events.publish(order, histories.saveAndFlush(
           OrderHistory.cancellationRequestEvent(
-              orderId, memberId, OrderHistoryAction.CANCELLATION_APPROVED, from, at, reason));
+              orderId, memberId, OrderHistoryAction.CANCELLATION_APPROVED, from, at, reason)));
     }
-    histories.saveAndFlush(OrderHistory.cancelled(orderId, memberId, from, at, reason));
+    events.publish(order, histories.saveAndFlush(OrderHistory.cancelled(orderId, memberId, from, at, reason)));
     return response(orderId, memberId, buyer);
   }
 

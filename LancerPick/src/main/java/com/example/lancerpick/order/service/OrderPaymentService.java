@@ -4,6 +4,7 @@ import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderStatus;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.*;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.wallet.entity.WalletEntry;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderPaymentService {
   private final OrderRepository orders;
   private final OrderHistoryRepository histories;
+  private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final PaymentRepository payments;
   private final WalletRepository wallets;
@@ -34,6 +36,7 @@ public class OrderPaymentService {
   public OrderPaymentService(
       OrderRepository orders,
       OrderHistoryRepository histories,
+      OrderEventPublisher events,
       OrderDetailQueries details,
       PaymentRepository payments,
       WalletRepository wallets,
@@ -41,6 +44,7 @@ public class OrderPaymentService {
       Clock clock) {
     this.orders = orders;
     this.histories = histories;
+    this.events = events;
     this.details = details;
     this.payments = payments;
     this.wallets = wallets;
@@ -115,7 +119,7 @@ public class OrderPaymentService {
     long paymentId = payments.insert(orderId, order.getPriceAmount(), at);
     entries.saveAndFlush(
         WalletEntry.payment(memberId, paymentId, order.getPriceAmount(), wallet.getBalance(), at));
-    histories.saveAndFlush(OrderHistory.paid(orderId, memberId, at));
+    events.publish(order, histories.saveAndFlush(OrderHistory.paid(orderId, memberId, at)));
     return response(orderId, memberId);
   }
 

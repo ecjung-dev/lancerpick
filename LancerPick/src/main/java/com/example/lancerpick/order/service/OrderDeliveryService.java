@@ -6,6 +6,7 @@ import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.entity.Delivery;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderStatus;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.*;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -23,6 +24,7 @@ public class OrderDeliveryService {
   private final OrderRepository orders;
   private final DeliveryRepository deliveries;
   private final OrderHistoryRepository histories;
+  private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final Clock clock;
 
@@ -30,11 +32,13 @@ public class OrderDeliveryService {
       OrderRepository orders,
       DeliveryRepository deliveries,
       OrderHistoryRepository histories,
+      OrderEventPublisher events,
       OrderDetailQueries details,
       Clock clock) {
     this.orders = orders;
     this.deliveries = deliveries;
     this.histories = histories;
+    this.events = events;
     this.details = details;
     this.clock = clock;
   }
@@ -86,7 +90,7 @@ public class OrderDeliveryService {
         Delivery.create(orderId, sequence, request.description(), request.resultUrl(), at);
     order.deliver(at);
     deliveries.saveAndFlush(delivery);
-    histories.saveAndFlush(OrderHistory.delivered(orderId, memberId, from, at));
+    events.publish(order, histories.saveAndFlush(OrderHistory.delivered(orderId, memberId, from, at)));
     var detail = details.forParticipant(orderId, memberId);
     return detail.withAllowedActions(
         OrderAllowedActions.actions(

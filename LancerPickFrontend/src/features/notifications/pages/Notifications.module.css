@@ -1,0 +1,83 @@
+.notifications {
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 0 20px;
+  overflow-wrap: anywhere;
+  color: #171717;
+}
+.notifications button {
+  padding: 10px 18px;
+  background: #171717;
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.notifications button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 16px 0 24px;
+}
+.list {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.list li a,
+.list li .plain {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 10px;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  font: inherit;
+}
+.list li .plain {
+  background: transparent;
+  color: inherit;
+}
+.unread a,
+.unread .plain {
+  background: #f1f5ff;
+  border-left: 4px solid #2f5bea;
+}
+.read a,
+.read .plain {
+  background: #fafafa;
+  border-left: 4px solid transparent;
+}
+.read strong {
+  font-weight: 500;
+  color: #525252;
+}
+.title {
+  color: #404040;
+}
+.list small {
+  color: #737373;
+}
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin: 24px 0;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

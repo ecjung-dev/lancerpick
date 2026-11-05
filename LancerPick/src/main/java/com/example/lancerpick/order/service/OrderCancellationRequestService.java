@@ -8,6 +8,7 @@ import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderHistoryAction;
 import com.example.lancerpick.order.entity.OrderStatus;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.*;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -34,6 +35,7 @@ public class OrderCancellationRequestService {
   private final OrderRepository orders;
   private final CancellationRequestQueries requests;
   private final OrderHistoryRepository histories;
+  private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final OrderCancellationService cancellations;
   private final Clock clock;
@@ -42,12 +44,14 @@ public class OrderCancellationRequestService {
       OrderRepository orders,
       CancellationRequestQueries requests,
       OrderHistoryRepository histories,
+      OrderEventPublisher events,
       OrderDetailQueries details,
       OrderCancellationService cancellations,
       Clock clock) {
     this.orders = orders;
     this.requests = requests;
     this.histories = histories;
+    this.events = events;
     this.details = details;
     this.cancellations = cancellations;
     this.clock = clock;
@@ -70,14 +74,14 @@ public class OrderCancellationRequestService {
     if (requests.pending(orderId) > 0) throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청이 있습니다.");
     LocalDateTime at = now(order);
     long requestId = requests.insert(orderId, memberId, key, reason, at);
-    histories.saveAndFlush(
+    events.publish(order, histories.saveAndFlush(
         OrderHistory.cancellationRequestEvent(
             orderId,
             memberId,
             OrderHistoryAction.CANCELLATION_REQUESTED,
             order.getStatus(),
             at,
-            reason));
+            reason)));
     return new Created(response(order, memberId, requestId), true);
   }
 
@@ -119,9 +123,9 @@ public class OrderCancellationRequestService {
           resolution == Resolution.REJECTED
               ? OrderHistoryAction.CANCELLATION_REJECTED
               : OrderHistoryAction.CANCELLATION_WITHDRAWN;
-      histories.saveAndFlush(
+      events.publish(order, histories.saveAndFlush(
           OrderHistory.cancellationRequestEvent(
-              orderId, memberId, action, order.getStatus(), at, responseReason));
+              orderId, memberId, action, order.getStatus(), at, responseReason)));
     }
     return response(order, memberId, targetId);
   }

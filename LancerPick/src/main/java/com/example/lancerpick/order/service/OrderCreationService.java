@@ -5,6 +5,7 @@ import com.example.lancerpick.order.dto.CreateOrderRequest;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderSnapshot;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.OrderCreationQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
@@ -28,6 +29,7 @@ public class OrderCreationService {
   private final OrderRepository orders;
   private final OrderSnapshotRepository snapshots;
   private final OrderHistoryRepository histories;
+  private final OrderEventPublisher events;
   private final OrderTerms terms;
   private final Clock clock;
 
@@ -36,12 +38,14 @@ public class OrderCreationService {
       OrderRepository orders,
       OrderSnapshotRepository snapshots,
       OrderHistoryRepository histories,
+      OrderEventPublisher events,
       OrderTerms terms,
       Clock clock) {
     this.source = source;
     this.orders = orders;
     this.snapshots = snapshots;
     this.histories = histories;
+    this.events = events;
     this.terms = terms;
     this.clock = clock;
   }
@@ -130,7 +134,7 @@ public class OrderCreationService {
             product.preparation(),
             terms.currentText(),
             requirements));
-    histories.saveAndFlush(OrderHistory.created(order.getId(), buyerId, now));
+    events.publish(order, histories.saveAndFlush(OrderHistory.created(order.getId(), buyerId, now)));
     return new Result(order.getId(), true);
   }
 

@@ -12,6 +12,7 @@ import { OrderCreatePage } from '../features/orders/pages/OrderCreatePage'
 import { SellerProfilePage } from '../features/seller/pages/SellerProfilePage'
 import { MyProfilePage } from '../features/auth/pages/MyProfilePage'
 import { OrderListPage } from '../features/orders/pages/OrderListPage'
+import { NotificationsPage } from '../features/notifications/pages/NotificationsPage'
 import { AppLayout } from '../shared/components/AppLayout'
 import { AdminProductListPage } from '../features/admin/pages/AdminProductListPage'
 import { AdminProductDetailPage } from '../features/admin/pages/AdminProductDetailPage'
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
       { path: 'signup', element: <SignupPage /> },
       { path: 'orders', element: <OrderListPage /> },
       { path: 'orders/:id', element: <OrderDetailPage /> },
+      { path: 'notifications', element: <NotificationsPage /> },
       { path: 'mypage', element: <WalletPage /> },
       { path: 'mypage/profile', element: <MyProfilePage /> },
       { path: 'mypage/seller-profile', element: <SellerProfilePage /> },

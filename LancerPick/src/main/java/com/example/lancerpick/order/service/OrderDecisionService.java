@@ -3,6 +3,7 @@ package com.example.lancerpick.order.service;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.entity.OrderHistory;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
@@ -21,16 +22,19 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderDecisionService {
   private final OrderRepository orders;
   private final OrderHistoryRepository histories;
+  private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final Clock clock;
 
   public OrderDecisionService(
       OrderRepository orders,
       OrderHistoryRepository histories,
+      OrderEventPublisher events,
       OrderDetailQueries details,
       Clock clock) {
     this.orders = orders;
     this.histories = histories;
+    this.events = events;
     this.details = details;
     this.clock = clock;
   }
@@ -78,7 +82,7 @@ public class OrderDecisionService {
       history = OrderHistory.rejected(orderId, memberId, at, reason);
     }
     // 변경 감지와 이력 저장을 응답 조회 전에 flush한다. 이후 실패도 같은 트랜잭션에서 롤백한다.
-    histories.saveAndFlush(history);
+    events.publish(order, histories.saveAndFlush(history));
     var detail = details.forParticipant(orderId, memberId);
     return detail.withAllowedActions(
         OrderAllowedActions.actions(

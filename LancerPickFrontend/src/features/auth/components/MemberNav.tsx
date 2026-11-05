@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { logout } from '../api'
 import { useCurrentMember } from '../queries'
+import { NotificationNavLink } from '../../notifications/components/NotificationNavLink'
 import { isUnclearResult, recheckSession, resetAccountState } from '../session'
 
 /**
@@ -36,6 +37,7 @@ export function MemberNav({ signupClassName, buttonClassName }: { signupClassNam
     return <>
       {/* 메뉴 표시는 편의일 뿐이다. 실제 관리자 권한은 서버가 /api/admin/** 요청마다 다시 확인한다. */}
       {member.data.role === 'ADMIN' && <NavLink to="/admin/products">관리자</NavLink>}
+      <NotificationNavLink />
       <NavLink to="/mypage">{member.data.displayName}님</NavLink>
       <button type="button" className={buttonClassName} disabled={out.isPending} onClick={() => out.mutate()}>
         {out.isPending ? '로그아웃 중…' : '로그아웃'}
