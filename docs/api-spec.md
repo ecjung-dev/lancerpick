@@ -1,12 +1,12 @@
 # 랜서픽 MVP API 명세서
 
-2026-11-05 최신 변경: main a7057d6를 통합하고 CONTRACT_V3 전액 보관 정책/V7/새 계약 본문을 로컬에서 추가했다. 기존 V1/V2/서명 문서는 유지한다. 상세 정책·DB·미구현 금액 명령·활성화 조건은 [전액 보관 설계](full-funding-policy.md)를 따른다.
+2026-11-05 최신 변경: CONTRACT_V3 전액 보관 정책/V7/새 계약 본문과 계약 PDF·수락/초안/서명 HTTP API·주문 상세 계약 화면이 main `2fec099`에 반영됐다. 기존 V1/V2/서명 문서는 유지한다. 상세 정책·DB·미구현 금액 명령·활성화 조건은 [전액 보관 설계](full-funding-policy.md)를 따른다.
 
 ## 고도화 기반 후속 계약 — 2026-11-05
 
-후속 로컬 3차: PDF 흐름용 POST `/api/orders/{orderId}/contract/accept`·`/draft`·`/sign` 추가. V2 전용 수락→계약 대기→초안/PDF→양측 서명→선금 대기이며 기존 전액 결제는 차단 상태다. 요청·권한·반복 처리·트랜잭션은 [PDF 연결 3차](contract-pdf-delivery.md)를 따른다. 생성 플래그 기본 false는 유지한다.
+후속 3차(main `2fec099` 반영): PDF 흐름용 POST `/api/orders/{orderId}/contract/accept`·`/draft`·`/sign` 추가. V2 전용 수락→계약 대기→초안/PDF→양측 서명→선금 대기이며 기존 전액 결제는 차단 상태다. 요청·권한·반복 처리·트랜잭션은 [PDF 연결 3차](contract-pdf-delivery.md)를 따른다. 생성 플래그 기본 false는 유지한다.
 
-PDF 후속 브랜치 `feature/contract-pdf-delivery`: 당사자 GET `/api/orders/{orderId}/contract`·GET `/api/orders/{orderId}/contract/file`(선택 `version`), 판매자 POST `/api/orders/{orderId}/contract/generate`(`{"version":1}`, CSRF) 추가. 성공/진행 중 200/202, 버전·상태 충돌 409, 생성/파일 검사 실패 503. 요청·응답·오류·권한·비공개 보관의 상세 계약은 [PDF API 문서](contract-pdf-delivery.md)를 따른다. 기존 V2 주문 생성/초안/서명 HTTP 활성화와 구분한다.
+PDF 후속(`feature/contract-pdf-delivery`, main `2fec099` 반영): 당사자 GET `/api/orders/{orderId}/contract`·GET `/api/orders/{orderId}/contract/file`(선택 `version`), 판매자 POST `/api/orders/{orderId}/contract/generate`(`{"version":1}`, CSRF) 추가. 성공/진행 중 200/202, 버전·상태 충돌 409, 생성/파일 검사 실패 503. 요청·응답·오류·권한·비공개 보관의 상세 계약은 [PDF API 문서](contract-pdf-delivery.md)를 따른다. 기존 V2 주문 생성/초안/서명 HTTP 활성화와 구분한다.
 
 기존 MVP API 경로·입력은 유지한다. main `1e10d78`에는 주문 목록 items와 상세/명령 응답의 `policyVersion: LEGACY_V1 | CONTRACT_V2` 및 아래 정책 경계가 반영됐다. 신규 주문 생성 API는 아직 LEGACY_V1만 생성한다(V2 생성 코드는 있으나 설정 `lancerpick.order.contract-v2-creation-enabled` 기본 false로 닫혀 있음, [주문 생성](order-creation.md) 8단계). 고도화 기능이 활성화됐다는 뜻이 아니다.
 
