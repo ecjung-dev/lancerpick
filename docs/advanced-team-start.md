@@ -1,6 +1,10 @@
 # 고도화 공통 기반: 팀원 시작 안내
 
-갱신일: 2026-11-05. 현재 제공 기준은 main `1e10d78`이다. 최초 공유 브랜치 feature/advanced-common-foundation과 후속 feature/advanced-schema-foundation의 기반 변경은 main에 반영됐다. 이후 main `1941ad1`까지 기존 주문 알림·아웃박스(#79, #80)가 추가됐다. 담당별 항목 ID·선행·상태는 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)를 따른다.
+2026-11-05 신규 정책: CONTRACT_V3는 [전액 보관·판매자 적립금 지급·자동 구매 확정](full-funding-policy.md)을 따른다. 로컬 V7은 업무 테이블 30개와 새 모드를 준비한다. 아래 선금/잔금·보상·V1~V6/29개 설명은 해당 버전의 이력이다. 신규 V3 금액 명령·스케줄러의 완료를 뜻하지 않는다.
+
+갱신일: 2026-11-05. 현재 제공 기준은 main `1e10d78`이다. 최초 공유 브랜치 feature/advanced-common-foundation과 후속 feature/advanced-schema-foundation의 기반 변경은 main에 반영됐다. 이후 main `1941ad1`까지 기존 주문 알림·아웃박스(#79, #80)가 추가됐고, main `a7057d6`까지 V2 생성 경로(#82, 설정으로 닫힘)·비밀번호 변경과 세션 폐기(#84)·V2 수락/계약 성립 상태 연결(#85)이 들어왔다. 담당별 항목 ID·선행·상태는 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)를 따른다.
+
+후속 `feature/contract-pdf-delivery`는 main `1e10d78`에서 PDF 생성·재시도·당사자 조회/다운로드를 추가한 단계다. [API·저장·연결 전제](contract-pdf-delivery.md)를 따른다. PDFBox 의존성과 글꼴은 코드와 함께 제공하며 Gradle이 내려받는다. 기본 로컬 저장 경로 외 별도 서버·키·환경변수는 필수가 아니다. 아래 ‘PDF 미완료/추가 라이브러리 없음’은 최초 공통 기반 당시 설명이다.
 
 PR #76의 V4 누적 19개 이후 V5/V6 나머지 10개와 정책별 조회·명령 경계까지 반영돼 현재 29개 업무 테이블을 제공한다. [전체 업무 스키마](advanced-schema-foundation.md)와 [정책 경계](advanced-policy-boundary.md)를 따른다. 테이블 존재가 신규 기능의 서비스/API/화면 완료를 의미하지 않는다.
 

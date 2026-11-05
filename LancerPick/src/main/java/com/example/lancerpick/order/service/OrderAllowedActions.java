@@ -15,9 +15,7 @@ final class OrderAllowedActions {
       RevisionRequest revision,
       List<CancellationRequest> cancellations,
       Review review) {
-    if (com.example.lancerpick.common.policy.TradePolicyVersion.CONTRACT_V2
-        .name()
-        .equals(policyVersion)) return contractActions(status, buyer);
+    if (com.example.lancerpick.common.policy.TradePolicyVersion.isContract(policyVersion)) return contractActions(status, buyer);
     if (!com.example.lancerpick.common.policy.TradePolicyVersion.LEGACY_V1
         .name()
         .equals(policyVersion)) return List.of();

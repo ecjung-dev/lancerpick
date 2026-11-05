@@ -16,6 +16,7 @@ const labels: Record<WalletEntryType, string> = {
   PAYMENT: '서비스 결제',
   REFUND: '결제 환불',
   TOPUP: '테스트 결제 충전',
+  SELLER_PAYOUT: '판매대금 지급',
 }
 
 /** 서버 세션의 본인 확인 후 계정별 지갑 조회를 시작한다. */

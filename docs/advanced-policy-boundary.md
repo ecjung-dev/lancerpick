@@ -1,5 +1,7 @@
 # 설계 리뷰 후속: 정책별 조회·명령 경계
 
+2026-11-05 신규 정책: CONTRACT_V3는 [전액 보관·판매자 적립금 지급·자동 구매 확정](full-funding-policy.md)을 따른다. 로컬 V7은 업무 테이블 30개와 새 모드를 준비한다. 아래 선금/잔금·보상·V1~V6/29개 설명은 해당 버전의 이력이다. 신규 V3 금액 명령·스케줄러의 완료를 뜻하지 않는다.
+
 작성일: 2026-11-05. 기준 리뷰: [고도화 기반 리뷰](review/advanced-foundation-review.md). 리뷰 원문은 main c24f37d의 정적 검토 기록으로 보존한다. 아래 보완은 main `1e10d78`에 반영됐다. 실제 V2 기능 활성화는 남은 조건을 따른다.
 
 ## 이번 보완
@@ -23,7 +25,7 @@
 
 기존 쓰기 서비스는 OrderRepository.findForLegacyDecision을 사용한다. 기존 findForDecision의 행 잠금·당사자 조건을 유지한 채 공통 정책 검사를 수행한다. 내부 계약 서비스와 조회는 V2가 필요하므로 해당 legacy wrapper를 사용하지 않는다.
 
-E4(`feature/contract-v2-acceptance`)부터 수락/거절과 직접 취소는 findForDecision으로 잠근 뒤 정책을 직접 검사한다. 수락/거절은 V2를 허용하고, 직접 취소는 V2의 선금 전(`paidAt` 없음)만 허용한다. 알 수 없는 정책과 선금 후 V2는 계속 ORDER_POLICY_NOT_READY다.
+E4(#85, main `a7057d6`)부터 수락/거절과 직접 취소는 findForDecision으로 잠근 뒤 정책을 직접 검사한다. 수락/거절은 V2를 허용하고, 직접 취소는 V2의 선금 전(`paidAt` 없음)만 허용한다. 알 수 없는 정책과 선금 후 V2는 계속 ORDER_POLICY_NOT_READY다.
 
 OrderDetailResponse.withAllowedActions도 policyVersion을 보존한다. 새 필드는 기존 JSON에 추가되는 필드이며 기존 경로·입력은 유지한다. 프런트는 서버 allowedActions를 그대로 사용하고 임의로 V2의 PAY/CONFIRM을 복원하지 않는다.
 

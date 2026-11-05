@@ -47,6 +47,7 @@ public class Wallet {
         updatedAt = at;
     }
     public long getBalance() { return balance; }
+    public void creditSettlement(long amount,LocalDateTime at) {refund(amount,at);}
     public void refund(long amount, LocalDateTime at) {
         if (amount < 1 || amount > 1_000_000 || at == null || at.isBefore(updatedAt)) throw new IllegalArgumentException("Invalid wallet refund");
         balance = Math.addExact(balance, amount);

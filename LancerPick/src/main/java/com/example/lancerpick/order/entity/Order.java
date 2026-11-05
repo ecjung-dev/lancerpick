@@ -229,7 +229,7 @@ public class Order {
     }
 
     public boolean isContractPolicy() {
-        return com.example.lancerpick.common.policy.TradePolicyVersion.CONTRACT_V2.name().equals(policyVersion);
+        return com.example.lancerpick.common.policy.TradePolicyVersion.isContract(policyVersion);
     }
 
     public void reject(LocalDateTime now) {

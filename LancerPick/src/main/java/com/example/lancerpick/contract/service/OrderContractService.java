@@ -39,6 +39,7 @@ public class OrderContractService {
   private final JsonMapper mapper;
   private final Clock clock;
   private final String standardBody;
+  private final String fullFundingBody;
 
   public OrderContractService(
       OrderRepository orders,
@@ -69,6 +70,15 @@ public class OrderContractService {
     } catch (IOException e) {
       throw new IllegalStateException("Missing standard contract", e);
     }
+    try (var stream =
+        new ClassPathResource("contracts/standard-v2-full-funding.txt").getInputStream()) {
+      fullFundingBody =
+          new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+              .replace("\r\n", "\n")
+              .replace("\r", "\n");
+    } catch (IOException e) {
+      throw new IllegalStateException("Missing full funding contract", e);
+    }
   }
 
   public ContractResponse prepare(
@@ -83,8 +93,11 @@ public class OrderContractService {
     var snapshot = snapshots.findById(orderId).orElseThrow(() -> conflict("주문 조건이 없습니다."));
     var split = installments(order);
     var content = new LinkedHashMap<String, Object>();
-    content.put("templateVersion", "standard-v1");
-    content.put("standardBody", standardBody);
+    boolean full = "CONTRACT_V3".equals(order.getPolicyVersion());
+    String template = full ? "standard-v2-full-funding" : "standard-v1";
+    content.put("templateVersion", template);
+    content.put("standardBody", full ? fullFundingBody : standardBody);
+    if (full) content.put("policyVersion", order.getPolicyVersion());
     content.put("orderId", Long.toString(orderId));
     content.put("buyerId", order.getBuyerId().toString());
     content.put("sellerId", order.getSellerId().toString());
@@ -97,8 +110,13 @@ public class OrderContractService {
     content.put("originalTerms", snapshot.getTermsSnapshot());
     content.put("requirements", snapshot.getRequirements());
     content.put("total", split.total());
-    content.put("deposit", split.deposit());
-    content.put("balance", split.balance());
+    if (full) {
+      content.put("fundingMode", "FULL_HOLD");
+      content.put("feeRateBps", 1000);
+    } else {
+      content.put("deposit", split.deposit());
+      content.put("balance", split.balance());
+    }
     content.put("durationDays", order.getDurationDaysSnapshot());
     content.put("specialTerms", specialTerms);
     String canonical = mapper.writeValueAsString(new TreeMap<>(content));
@@ -115,7 +133,7 @@ public class OrderContractService {
     var saved =
         contracts.saveAndFlush(
             OrderContract.draft(
-                orderId, version + 1, "standard-v1", specialTerms, canonical, memberId, at));
+                orderId, version + 1, template, specialTerms, canonical, memberId, at));
     events.publish(
         order,
         histories.saveAndFlush(
@@ -165,9 +183,8 @@ public class OrderContractService {
         orders
             .findForDecision(orderId, memberId)
             .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
-    if (!com.example.lancerpick.common.policy.TradePolicyVersion.CONTRACT_V2
-            .name()
-            .equals(order.getPolicyVersion())
+    if (!com.example.lancerpick.common.policy.TradePolicyVersion.isContract(
+            order.getPolicyVersion())
         || !Arrays.asList(allowed).contains(order.getStatus())
         || order.getAcceptedAt() == null
         || order.getPaidAt() != null
@@ -186,6 +203,15 @@ public class OrderContractService {
     return ContractPaymentPolicy.installments(total);
   }
 
+  public ContractResponse prepareHttp(long actor, long orderId, int version, String terms) {
+    return prepare(actor, orderId, version, terms);
+  }
+
+  public ContractResponse signHttp(
+      long actor, long orderId, int version, String contentHash, String fileHash) {
+    return sign(actor, orderId, version, contentHash, fileHash);
+  }
+
   private ContractResponse response(OrderContract c) {
     return new ContractResponse(
         c.getId().toString(),
@@ -198,8 +224,16 @@ public class OrderContractService {
         signatures.findByContractIdOrderByIdAsc(c.getId()).stream()
             .map(s ->
                 new ContractResponse.Signature(
-                    Long.toString(s.getMemberId()), s.getPartyRole(), s.getSignedAt()))
+                    Long.toString(s.getMemberId()),
+                    s.getPartyRole(),
+                    s.getSignedAt().atOffset(ZoneOffset.UTC)))
             .toList());
+  }
+
+  /** Internal response assembly. Authorization belongs to the calling transaction service. */
+  @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+  public ContractResponse describe(OrderContract contract) {
+    return response(contract);
   }
 
   private LocalDateTime now() {
@@ -224,12 +258,8 @@ public class OrderContractService {
   private String partyName(Long memberId) {
     return members
         .findById(memberId)
-        .orElseThrow(
-            () ->
-                error(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "DATA_INTEGRITY_ERROR",
-                    "거래 당사자 기록을 확인해야 합니다."))
+        .orElseThrow(() ->
+            error(HttpStatus.INTERNAL_SERVER_ERROR, "DATA_INTEGRITY_ERROR", "거래 당사자 기록을 확인해야 합니다."))
         .getDisplayName();
   }
 

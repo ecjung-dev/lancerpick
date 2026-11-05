@@ -1,4 +1,6 @@
--- REVIEW CANDIDATE ONLY. Apply after V1/V2 to an isolated MySQL 8.4 database.
+-- HISTORICAL CONTRACT_V2 REVIEW CANDIDATE ONLY. Never apply on a V3+ runtime database.
+-- CONTRACT_V3 full funding is defined by V7__add_full_funding_policy.sql and docs/full-funding-policy.md.
+-- This preserved installment proposal is for isolated V1/V2 regression review only.
 
 -- Not a runtime Flyway migration. Requires coordinated entity/service changes.
 

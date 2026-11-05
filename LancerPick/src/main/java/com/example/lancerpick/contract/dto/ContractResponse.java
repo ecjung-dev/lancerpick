@@ -1,6 +1,6 @@
 package com.example.lancerpick.contract.dto;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 public record ContractResponse(
@@ -12,5 +12,5 @@ public record ContractResponse(
     String contentHash,
     String fileHash,
     List<Signature> signatures) {
-  public record Signature(String memberId, String role, LocalDateTime signedAt) {}
+  public record Signature(String memberId, String role, OffsetDateTime signedAt) {}
 }

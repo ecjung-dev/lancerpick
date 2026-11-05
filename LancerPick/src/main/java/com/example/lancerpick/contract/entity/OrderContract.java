@@ -62,11 +62,7 @@ public class OrderContract {
   @Column(name = "file_hash", columnDefinition = "BINARY(32)")
   private byte[] fileHash;
 
-  @Column(
-      name = "generation_key",
-      nullable = false,
-      updatable = false,
-      columnDefinition = "CHAR(36)")
+  @Column(name = "generation_key", nullable = false, columnDefinition = "CHAR(36)")
   private String generationKey;
 
   @Column(name = "created_by", nullable = false, updatable = false)
@@ -137,6 +133,23 @@ public class OrderContract {
     requireMonotonicTime(at);
     status = "GENERATING";
     updatedAt = at;
+  }
+
+  public void retryGeneration(LocalDateTime at) {
+    if (!"FAILED".equals(status) && !"GENERATING".equals(status))
+      throw new IllegalStateException("Generation is not retryable");
+    requireMonotonicTime(at);
+    generationKey = UUID.randomUUID().toString();
+    status = "GENERATING";
+    updatedAt = at;
+  }
+
+  public boolean failGeneration(String attemptKey, LocalDateTime at) {
+    if (!"GENERATING".equals(status) || !generationKey.equals(attemptKey)) return false;
+    requireMonotonicTime(at);
+    status = "FAILED";
+    updatedAt = at;
+    return true;
   }
 
   /** Internal renderer completion, not an HTTP input. Caller must lock order/current contract. */

@@ -123,7 +123,7 @@ public class OrderCreationService {
     }
     // 정책은 생성 시 한 번 고정한다. 기존 주문(같은 요청 키 재전송)은 위에서 이미 반환했다.
     TradePolicyVersion policy = newOrderPolicy.current();
-    if (policy == TradePolicyVersion.CONTRACT_V2
+    if (TradePolicyVersion.isContract(policy.name())
         && product.price() < ContractPaymentPolicy.MIN_TOTAL) {
       throw new BusinessException(
           HttpStatus.CONFLICT,
@@ -144,7 +144,9 @@ public class OrderCreationService {
                 product.durationDays(),
                 now,
                 policy));
-    if (policy == TradePolicyVersion.CONTRACT_V2) {
+    if (policy == TradePolicyVersion.CONTRACT_V3) {
+      tradeTerms.saveAndFlush(OrderTradeTerms.fullFunding(order.getId()));
+    } else if (policy == TradePolicyVersion.CONTRACT_V2) {
       tradeTerms.saveAndFlush(OrderTradeTerms.contractV2(order.getId()));
     }
     snapshots.saveAndFlush(
@@ -155,7 +157,7 @@ public class OrderCreationService {
             product.description(),
             product.scope(),
             product.preparation(),
-            terms.currentText(),
+            terms.forPolicy(policy),
             requirements));
     events.publish(order, histories.saveAndFlush(OrderHistory.created(order.getId(), buyerId, now)));
     return new Result(order.getId(), true);

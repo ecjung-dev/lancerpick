@@ -7,6 +7,7 @@ const actions: Record<string, string> = {
   CANCELLATION_REQUESTED: '취소 요청', CANCELLATION_APPROVED: '취소 요청 승인',
   CANCELLATION_REJECTED: '취소 요청 거절', CANCELLATION_WITHDRAWN: '취소 요청 철회',
   CANCELLED: '주문 취소', COMPLETED: '구매 확정',
+  CONTRACT_CREATED: '계약 초안 작성', CONTRACT_SIGNED: '계약 서명',
 }
 export function describeHistory(history: OrderHistory, order: Pick<OrderDetail, 'buyer' | 'seller'>) {
   const actor = history.actorId === order.buyer.id ? '구매자'

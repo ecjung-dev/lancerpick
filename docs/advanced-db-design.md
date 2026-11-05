@@ -1,4 +1,28 @@
-# 랜서픽 고도화 DB 설계안 v0.3 — 제약·상태 구체화
+# 랜서픽 고도화 DB 설계 v0.4
+
+
+2026-11-05 신규 정책: CONTRACT_V3는 [전액 보관·판매자 적립금 지급·자동 구매 확정](full-funding-policy.md)을 따른다. 로컬 V7은 업무 테이블 30개와 새 모드를 준비한다. 아래 선금/잔금·보상·V1~V6/29개 설명은 해당 버전의 이력이다. 신규 V3 금액 명령·스케줄러의 완료를 뜻하지 않는다.
+
+## 4. DB와 마이그레이션
+
+V1~V6는 수정하지 않고 V7__add_full_funding_policy.sql을 추가한다. 신규 업무 테이블은 order_funds 하나로, 누적 30개다. 기존 12개 고도화 테이블은 재사용한다.
+
+| 대상 | V7 변경 |
+| --- | --- |
+| orders | CONTRACT_V3 허용, 새 계약 최소 금액 CHECK |
+| payments | V3/FULL 허용. 주문당 1건 UNIQUE·기존 단건 조회·전액 환불 CHECK 유지 |
+| order_trade_terms | funding_mode 추가. V2 INSTALLMENT 비율 보존, V3 FULL_HOLD(전액 10000bps/보상 0/정상 수수료 1000bps/보상 수수료 0) |
+| order_funds | order_id PK, payment_id UNIQUE, 최초 금액·남은 보관액·HELD/RELEASED/REFUNDED·보관/해결 시각. 결제+주문 복합 FK로 다른 주문 대금 연결 차단 |
+| wallet_entries | SELLER_PAYOUT 유형과 금액 CHECK. payment/type UNIQUE·event_key UNIQUE로 중복 지급 방어 |
+| order_response_timers | AUTO_CONFIRM 유형·cycle_no, 동일 납품에서도 응답 이후 새 타이머 회차 허용. 활성 한 건 UNIQUE 유지 |
+| order_closures | SYSTEM/AUTO_CONFIRMED 정상 10% 수수료 분배 허용. 기존 V2 보상 종료 제약 보존 |
+
+보관금은 결제 행을 대신하지 않는다. payments는 결제 사실, order_funds는 미해결 보관 상태, settlements/closures는 확정 결과, wallet_entries는 지갑 변동 근거다. 원래 금액·당사자·정책·타이머 납품 연결과 전체 합계는 서비스에서도 검증한다. FK/CHECK만으로 정책별 행 간 금액 관계까지 모두 보장하지 않는다.
+
+
+## 이하 CONTRACT_V2 설계 이력 — 신규 V3에 적용하지 않음
+
+### V2 설계 원문 — 이전 제약·상태
 
 후속 합의: 현재 계약 한 개·정책별 결제 회차·관리자 타이머 해제·만료 우선 규칙을 적용한다. 실제 컬럼 타입·NULL·FK·CHECK는 백엔드의 실행 Flyway V1~V6가 기준이다. [DDL 후보](sql/advanced-db-candidate.sql)는 최초 전체 목표 검토본이고, 명령별 처리 기준은 [상태·제약 명세](advanced-db-transitions.md)를 따른다. 실제 단계별 V3~V6 적용 범위는 아래 후속 기록을 따른다.
 

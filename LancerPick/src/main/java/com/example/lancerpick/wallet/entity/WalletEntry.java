@@ -96,6 +96,12 @@ public class WalletEntry {
         return entry;
     }
     public Long getPaymentId() { return paymentId; }
+    public static WalletEntry sellerPayout(long seller,long payment,long amount,long after,LocalDateTime at) {
+        var entry=refund(seller,payment,amount,after,at);
+        entry.type=WalletEntryType.SELLER_PAYOUT;
+        entry.eventKey="SELLER_PAYOUT:"+payment;
+        return entry;
+    }
     public Long getTopupId() { return topupId; }
     public WalletEntryType getType() { return type; }
     public long getAmountDelta() { return amountDelta; }

@@ -32,3 +32,4 @@ docs/git-commands.txt
 
 # Personal working documents
 /testDocument/
+.local-data/

@@ -22,6 +22,7 @@ import { orderDeadlineView } from '../deadlines'
 import { orderStatusLabel } from '../status'
 import { orderCommandFailureMessage } from '../failure'
 import { ReviewForm } from '../../reviews/components/ReviewForm'
+import { ContractPanel } from '../../contracts/components/ContractPanel'
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
@@ -200,6 +201,15 @@ function OrderDetail({ id }: { id: string }) {
         구매자 {order.buyer.displayName} · 판매자 {order.seller.displayName}
       </p>
       <h2>보관된 거래 조건</h2>
+      {['CONTRACT_V2', 'CONTRACT_V3'].includes(order.policyVersion) && (
+        <ContractPanel
+          key={order.id}
+          orderId={order.id}
+          sellerId={order.seller.id}
+          orderStatus={order.status}
+          policyVersion={order.policyVersion}
+        />
+      )}
       <h3>상품 설명</h3>
       <p className={styles.text}>{order.productSnapshot.description}</p>
       <h3>작업 범위</h3>

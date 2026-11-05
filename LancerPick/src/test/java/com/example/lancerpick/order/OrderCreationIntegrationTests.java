@@ -403,6 +403,21 @@ class OrderCreationIntegrationTests {
     }
 
     @Test
+    void fullFundingOrderFreezesNewTermsAndReplayDoesNotChangePolicy() {
+        doReturn(TradePolicyVersion.CONTRACT_V3).when(newOrderPolicy).current();
+        var key=UUID.randomUUID();
+        var result=service.create(buyerId,request(key,"요구사항"));
+        assertThat(policyOf(result.orderId())).isEqualTo("CONTRACT_V3");
+        assertThat(jdbc.queryForObject("SELECT funding_mode FROM order_trade_terms WHERE order_id=?",String.class,result.orderId())).isEqualTo("FULL_HOLD");
+        var frozen=snapshots.findById(result.orderId()).orElseThrow().getTermsSnapshot();
+        assertThat(frozen).contains("자동 구매 확정","전액","구매에 사용할 수 있는 적립금").doesNotContain("판매 수익은 분리");
+        doReturn(TradePolicyVersion.CONTRACT_V2).when(newOrderPolicy).current();
+        assertThat(service.create(buyerId,request(key,"요구사항")).created()).isFalse();
+        assertThat(policyOf(result.orderId())).isEqualTo("CONTRACT_V3");
+        assertThat(snapshots.findById(result.orderId()).orElseThrow().getTermsSnapshot()).isEqualTo(frozen);
+    }
+
+    @Test
     void contractOrderRejectsTotalBelowMinimumWithoutWritingRows() {
         enableContractCreation();
         jdbc.update("UPDATE products SET price = 9999 WHERE id = ?", productId);

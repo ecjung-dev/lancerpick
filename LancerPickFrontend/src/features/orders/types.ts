@@ -1,5 +1,5 @@
 // API 명세에 맞춘 요청·응답 타입을 구현할 때 정의합니다.
-export type TradePolicyVersion = 'LEGACY_V1' | 'CONTRACT_V2'
+export type TradePolicyVersion = 'LEGACY_V1' | 'CONTRACT_V2' | 'CONTRACT_V3'
 export interface OrderSummary {
   policyVersion: TradePolicyVersion
   id: string; status: string; productTitle: string; priceAmount: number

@@ -33,6 +33,8 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
         "lancerpick.notifications.dispatch-enabled=false"
 })
 class DefaultCatalogApiTests extends CommonApiTests {
+    @MockitoBean
+    com.example.lancerpick.contract.service.ContractDocumentTransactions contractDocumentTransactions;
     // This HTTP-only context excludes JPA; contract persistence is tested against MySQL separately.
     @MockitoBean
     com.example.lancerpick.contract.service.OrderContractService orderContractService;
