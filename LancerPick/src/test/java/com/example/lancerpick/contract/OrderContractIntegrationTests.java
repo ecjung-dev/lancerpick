@@ -51,24 +51,155 @@ class OrderContractIntegrationTests {
   void contractOrderReportsPolicyAndBlocksLegacyMutations() {
     var detail = queries.detail(buyer, Long.toString(orderId));
     assertThat(detail.policyVersion()).isEqualTo("CONTRACT_V2");
-    assertThat(detail.allowedActions()).isEmpty();
+    assertThat(detail.status()).isEqualTo("AWAITING_CONTRACT");
+    assertThat(detail.allowedActions()).containsExactly("CANCEL");
     assertThat(
             queries
                 .list(buyer, com.example.lancerpick.order.dto.OrderSide.BUYER, null, 0, 20)
                 .items())
         .allSatisfy(row -> assertThat(row.policyVersion()).isEqualTo("CONTRACT_V2"));
-    for (Runnable command :
-        List.<Runnable>of(
-            () -> cancellations.cancel(seller, Long.toString(orderId), "cancel"),
-            () -> confirmations.confirm(buyer, Long.toString(orderId)),
-            () -> decisions.accept(seller, Long.toString(orderId)))) {
-      assertThatThrownBy(command::run)
+    assertThatThrownBy(() -> confirmations.confirm(buyer, Long.toString(orderId)))
+        .isInstanceOfSatisfying(
+            BusinessException.class,
+            error -> assertThat(error.code()).isEqualTo("ORDER_POLICY_NOT_READY"));
+    assertThatThrownBy(() -> decisions.accept(seller, Long.toString(orderId)))
+        .isInstanceOfSatisfying(
+            BusinessException.class,
+            error -> assertThat(error.code()).isEqualTo("ORDER_STATE_CONFLICT"));
+    assertThat(orders.findById(orderId).orElseThrow().getStatus())
+        .isEqualTo(OrderStatus.AWAITING_CONTRACT);
+  }
+
+  @Test
+  void sellerAcceptsContractOrderIntoAwaitingContractAndCanReject() {
+    long accepted = requestedContractOrder(100001L);
+    var detail = decisions.accept(seller, Long.toString(accepted));
+    assertThat(detail.status()).isEqualTo("AWAITING_CONTRACT");
+    var history = histories.findByOrderIdOrderByCreatedAtAscIdAsc(accepted).getLast();
+    assertThat(history.getAction()).isEqualTo(OrderHistoryAction.ACCEPTED);
+    assertThat(history.getToStatus()).isEqualTo(OrderStatus.AWAITING_CONTRACT);
+    assertThat(outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", accepted))
+        .extracting(e -> e.getType())
+        .containsExactly("ORDER_ACCEPTED");
+    assertThat(queries.detail(buyer, Long.toString(accepted)).allowedActions())
+        .containsExactly("CANCEL");
+
+    long rejected = requestedContractOrder(100001L);
+    assertThat(queries.detail(seller, Long.toString(rejected)).allowedActions())
+        .containsExactly("ACCEPT", "REJECT");
+    assertThat(queries.detail(buyer, Long.toString(rejected)).allowedActions())
+        .containsExactly("CANCEL");
+    assertThat(decisions.reject(seller, Long.toString(rejected), "일정 불가").status())
+        .isEqualTo("REJECTED");
+  }
+
+  @Test
+  void contractOrderCanBeCancelledBeforeDeposit() {
+    long requested = requestedContractOrder(100001L);
+    assertThatThrownBy(() -> cancellations.cancel(seller, Long.toString(requested), "취소"))
+        .isInstanceOfSatisfying(
+            BusinessException.class, e -> assertThat(e.code()).isEqualTo("ORDER_STATE_CONFLICT"));
+    assertThat(cancellations.cancel(buyer, Long.toString(requested), "구매 취소").status())
+        .isEqualTo("CANCELLED");
+
+    var draft = service.prepare(seller, orderId, 0, "");
+    ready(draft.id());
+    var cancelled = cancellations.cancel(buyer, Long.toString(orderId), "계약 전 취소");
+    assertThat(cancelled.status()).isEqualTo("CANCELLED");
+    assertThat(cancelled.allowedActions()).isEmpty();
+    var last = histories.findByOrderIdOrderByCreatedAtAscIdAsc(orderId).getLast();
+    assertThat(last.getAction()).isEqualTo(OrderHistoryAction.CANCELLED);
+    assertThat(last.getFromStatus()).isEqualTo(OrderStatus.AWAITING_CONTRACT);
+    // 취소된 주문의 계약은 더 이상 서명·수정할 수 없다.
+    String file = fileHash(draft.id());
+    assertThatThrownBy(() -> service.sign(buyer, orderId, 1, draft.contentHash(), file))
+        .isInstanceOfSatisfying(
+            BusinessException.class, e -> assertThat(e.code()).isEqualTo("CONTRACT_CONFLICT"));
+    assertThatThrownBy(() -> service.prepare(seller, orderId, 1, "changed"))
+        .isInstanceOfSatisfying(
+            BusinessException.class, e -> assertThat(e.code()).isEqualTo("CONTRACT_CONFLICT"));
+    // 같은 취소 재요청은 현재 결과를 그대로 돌려준다.
+    assertThat(cancellations.cancel(buyer, Long.toString(orderId), "계약 전 취소").status())
+        .isEqualTo("CANCELLED");
+  }
+
+  @Test
+  void signedContractCanBeCancelledBeforeDepositButNotAfterDeposit() {
+    long second = requestedContractOrder(100001L);
+    decisions.accept(seller, Long.toString(second));
+    signBoth(second);
+    assertThat(queries.detail(buyer, Long.toString(second)).allowedActions())
+        .containsExactly("CANCEL");
+    assertThat(cancellations.cancel(seller, Long.toString(second), "선금 전 취소").status())
+        .isEqualTo("CANCELLED");
+
+    signBoth(orderId);
+    em.flush();
+    em.clear();
+    var order = orders.findById(orderId).orElseThrow();
+    // 선금 결제 경로(J4)가 아직 없어 엔티티 전이로 결제 후 상태를 만든다.
+    order.pay(
+        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS));
+    orders.saveAndFlush(order);
+    em.clear();
+    for (long actor : new long[] {buyer, seller}) {
+      assertThatThrownBy(() -> cancellations.cancel(actor, Long.toString(orderId), "선금 후"))
           .isInstanceOfSatisfying(
               BusinessException.class,
-              error -> assertThat(error.code()).isEqualTo("ORDER_POLICY_NOT_READY"));
+              e -> assertThat(e.code()).isEqualTo("ORDER_POLICY_NOT_READY"));
     }
     assertThat(orders.findById(orderId).orElseThrow().getStatus())
-        .isEqualTo(OrderStatus.AWAITING_PAYMENT);
+        .isEqualTo(OrderStatus.IN_PROGRESS);
+  }
+
+  /**
+   * 10,000원 미만 계약 주문은 V3 ck_orders_v2_price가 저장 단계에서 막는다. 서비스의 초안·확정 시 하한 검사는 이 제약을
+   * 409 업무 오류로 한 번 더 지키는 방어선이라 저장된 데이터로는 도달할 수 없다.
+   */
+  @Test
+  void databaseRejectsContractOrderBelowMinimumAmount() {
+    em.flush();
+    assertThatThrownBy(() ->
+            jdbc.update("UPDATE orders SET price_amount=9999 WHERE id=?", orderId))
+        .hasMessageContaining("ck_orders_v2_price");
+    assertThatThrownBy(() -> requestedContractOrder(9999L))
+        .hasMessageContaining("ck_orders_v2_price");
+  }
+
+  @Autowired OrderHistoryRepository histories;
+  @Autowired com.example.lancerpick.notification.repository.OutboxEventRepository outbox;
+
+  long requestedContractOrder(long price) {
+    long product =
+        jdbc.queryForObject("SELECT product_id FROM orders WHERE id=?", Long.class, orderId);
+    var order =
+        Order.create(
+            buyer,
+            seller,
+            product,
+            UUID.randomUUID(),
+            price,
+            1,
+            at,
+            com.example.lancerpick.common.policy.TradePolicyVersion.CONTRACT_V2);
+    long id = orders.saveAndFlush(order).getId();
+    snapshots.saveAndFlush(
+        OrderSnapshot.create(id, 0L, "title", "desc", "scope", "prep", "terms", "requirements"));
+    em.clear();
+    return id;
+  }
+
+  void signBoth(long id) {
+    var draft = service.prepare(seller, id, 0, "");
+    ready(draft.id());
+    String file = fileHash(draft.id());
+    service.sign(buyer, id, 1, draft.contentHash(), file);
+    service.sign(seller, id, 1, draft.contentHash(), file);
+  }
+
+  String fileHash(String contractId) {
+    return HexFormat.of()
+        .formatHex(contracts.findById(Long.parseLong(contractId)).orElseThrow().getFileHash());
   }
 
   @Autowired PlatformTransactionManager transactionManager;
@@ -85,6 +216,9 @@ class OrderContractIntegrationTests {
             + " order_id=?)",
         orderId);
     jdbc.update("DELETE FROM order_contracts WHERE order_id=?", orderId);
+    jdbc.update(
+        "DELETE FROM outbox_events WHERE aggregate_type='ORDER' AND aggregate_id=?", orderId);
+    jdbc.update("DELETE FROM order_histories WHERE order_id=?", orderId);
     jdbc.update("DELETE FROM order_snapshots WHERE order_id=?", orderId);
     jdbc.update("DELETE FROM orders WHERE id=?", orderId);
     jdbc.update("DELETE FROM products WHERE id=?", product);
@@ -166,7 +300,16 @@ class OrderContractIntegrationTests {
         at);
     long product =
         jdbc.queryForObject("SELECT id FROM products WHERE seller_id=?", Long.class, seller);
-    var order = Order.create(buyer, seller, product, UUID.randomUUID(), 100001L, 1, at);
+    var order =
+        Order.create(
+            buyer,
+            seller,
+            product,
+            UUID.randomUUID(),
+            100001L,
+            1,
+            at,
+            com.example.lancerpick.common.policy.TradePolicyVersion.CONTRACT_V2);
     order.accept(at);
     orderId = orders.saveAndFlush(order).getId();
     snapshots.saveAndFlush(
@@ -179,7 +322,6 @@ class OrderContractIntegrationTests {
             "prep",
             "original-terms",
             "requirements"));
-    jdbc.update("UPDATE orders SET policy_version='CONTRACT_V2' WHERE id=?", orderId);
     em.clear();
   }
 
@@ -215,10 +357,30 @@ class OrderContractIntegrationTests {
     var first = service.sign(buyer, orderId, 1, draft.contentHash(), file);
     assertThat(first.status()).isEqualTo("READY");
     service.sign(buyer, orderId, 1, draft.contentHash(), file);
+    assertThat(orders.findById(orderId).orElseThrow().getStatus())
+        .isEqualTo(OrderStatus.AWAITING_CONTRACT);
     var second = service.sign(seller, orderId, 1, draft.contentHash(), file);
     assertThat(second.status()).isEqualTo("SIGNED");
     assertThat(second.signatures()).hasSize(2);
+    assertThat(orders.findById(orderId).orElseThrow().getStatus())
+        .isEqualTo(OrderStatus.AWAITING_PAYMENT);
+    // 계약 성립 후(선금 대기)에도 같은 서명 재요청은 기존 결과를 돌려준다.
     assertThat(service.sign(seller, orderId, 1, draft.contentHash(), file).signatures()).hasSize(2);
+    assertThat(service.sign(buyer, orderId, 1, draft.contentHash(), file).status())
+        .isEqualTo("SIGNED");
+    var actions =
+        histories.findByOrderIdOrderByCreatedAtAscIdAsc(orderId).stream()
+            .map(h -> h.getAction() + ":" + h.getFromStatus() + ">" + h.getToStatus())
+            .toList();
+    assertThat(actions)
+        .containsExactly(
+            "CONTRACT_CREATED:AWAITING_CONTRACT>AWAITING_CONTRACT",
+            "CONTRACT_SIGNED:AWAITING_CONTRACT>AWAITING_PAYMENT");
+    assertThat(histories.findByOrderIdOrderByCreatedAtAscIdAsc(orderId).getLast().getActorId())
+        .isEqualTo(seller);
+    assertThat(outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId))
+        .extracting(e -> e.getType())
+        .containsExactly("ORDER_CONTRACT_CREATED", "ORDER_CONTRACT_SIGNED");
     assertThatThrownBy(() -> service.prepare(seller, orderId, 1, "changed"))
         .isInstanceOf(BusinessException.class);
   }

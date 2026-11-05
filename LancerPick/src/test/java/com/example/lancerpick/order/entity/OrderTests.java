@@ -193,4 +193,27 @@ class OrderTests {
                 LocalDateTime.of(2026, 11, 2, 4, 0), null))
                 .isInstanceOf(BusinessException.class);
     }
+
+    @Test
+    void 계약_주문은_수락_후_계약_대기이고_서명_완료로만_선금_대기가_된다() {
+        LocalDateTime at = LocalDateTime.of(2026, 11, 2, 4, 0);
+        Order legacy = Order.create(1L, 2L, 15L, UUID.randomUUID(), 100000L, 3, at);
+        Order contract = Order.create(1L, 2L, 15L, UUID.randomUUID(), 100000L, 3, at,
+                com.example.lancerpick.common.policy.TradePolicyVersion.CONTRACT_V2);
+
+        legacy.accept(at.plusMinutes(1));
+        contract.accept(at.plusMinutes(1));
+        assertThat(legacy.getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
+        assertThat(contract.getStatus()).isEqualTo(OrderStatus.AWAITING_CONTRACT);
+
+        assertThatThrownBy(() -> legacy.contractSigned(at.plusMinutes(2)))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> contract.contractSigned(at))
+                .isInstanceOf(IllegalStateException.class);
+        contract.contractSigned(at.plusMinutes(2));
+        assertThat(contract.getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
+        assertThat(contract.getUpdatedAt()).isEqualTo(at.plusMinutes(2));
+        assertThatThrownBy(() -> contract.contractSigned(at.plusMinutes(3)))
+                .isInstanceOf(BusinessException.class);
+    }
 }

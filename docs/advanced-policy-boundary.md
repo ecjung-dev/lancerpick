@@ -23,11 +23,13 @@
 
 기존 쓰기 서비스는 OrderRepository.findForLegacyDecision을 사용한다. 기존 findForDecision의 행 잠금·당사자 조건을 유지한 채 공통 정책 검사를 수행한다. 내부 계약 서비스와 조회는 V2가 필요하므로 해당 legacy wrapper를 사용하지 않는다.
 
+E4(`feature/contract-v2-acceptance`)부터 수락/거절과 직접 취소는 findForDecision으로 잠근 뒤 정책을 직접 검사한다. 수락/거절은 V2를 허용하고, 직접 취소는 V2의 선금 전(`paidAt` 없음)만 허용한다. 알 수 없는 정책과 선금 후 V2는 계속 ORDER_POLICY_NOT_READY다.
+
 OrderDetailResponse.withAllowedActions도 policyVersion을 보존한다. 새 필드는 기존 JSON에 추가되는 필드이며 기존 경로·입력은 유지한다. 프런트는 서버 allowedActions를 그대로 사용하고 임의로 V2의 PAY/CONFIRM을 복원하지 않는다.
 
 ## 아직 남은 활성화 조건
 
-- 리뷰 6·8: 실제 V2 주문 생성, AWAITING_CONTRACT와 서명 완료 후 선금 대기의 정식 전환.
+- 리뷰 6·8: 실제 V2 주문 생성(E3, 설정으로 닫힘)과 AWAITING_CONTRACT·서명 완료 후 선금 대기 전환(E4)은 구현됨. 신규 생성 허용은 G1 이후.
 - 결제: 주문당 한 건 UNIQUE·전액 환불 CHECK를 전용 서비스와 함께 회차별/부분 반환 제약으로 교체.
 - 리뷰 10·렌더러: 생성 작업·FAILED·재시도·주문 잠금 아래 완료 반영·파일 실재/해시 검사.
 - PDF 실물·취소/완료·렌더러 경합·타이머 경계의 실제 API 통합 검증.

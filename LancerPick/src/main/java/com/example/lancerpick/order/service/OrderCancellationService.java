@@ -69,10 +69,14 @@ public class OrderCancellationService {
           HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
     var order =
         orders
-            .findForLegacyDecision(orderId, memberId)
+            .findForDecision(orderId, memberId)
             .orElseThrow(() ->
                 new BusinessException(
                     HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
+    // 계약 주문은 선금 전(금액 이동 없음)만 이 경로로 취소한다. 선금 후 취소·반환은 전용 경로(E6)다.
+    if (!order.isContractPolicy() || order.getPaidAt() != null)
+      com.example.lancerpick.common.policy.TradePolicyVersion.requireLegacyCommand(
+          order.getPolicyVersion());
     boolean buyer = order.getBuyerId().equals(memberId);
     var payment = payments.findByOrderId(orderId);
     boolean paid = order.getPaidAt() != null;

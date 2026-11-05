@@ -12,18 +12,38 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class OrderAllowedActionsTests {
   @Test
-  void contractAndUnknownPoliciesExposeNoLegacyMutationActions() {
-    for (String policy : new String[] {"CONTRACT_V2", "UNKNOWN"}) {
-      for (String state :
-          new String[] {
-            "REQUESTED", "AWAITING_PAYMENT", "IN_PROGRESS", "AWAITING_CONFIRMATION", "COMPLETED"
-          }) {
-        for (boolean buyer : new boolean[] {true, false}) {
-          assertThat(OrderAllowedActions.actions(policy, state, buyer, null, List.of(), null))
-              .isEmpty();
-        }
+  void unknownPolicyExposesNoActions() {
+    for (String state :
+        new String[] {
+          "REQUESTED", "AWAITING_PAYMENT", "IN_PROGRESS", "AWAITING_CONFIRMATION", "COMPLETED"
+        }) {
+      for (boolean buyer : new boolean[] {true, false}) {
+        assertThat(OrderAllowedActions.actions("UNKNOWN", state, buyer, null, List.of(), null))
+            .isEmpty();
       }
     }
+  }
+
+  /** 계약 주문은 선금 전 수락·거절·취소만 연결돼 있고, 결제·납품 등 기존 명령은 노출하지 않는다. */
+  @ParameterizedTest
+  @CsvSource({
+    "REQUESTED,true,CANCEL",
+    "REQUESTED,false,ACCEPT REJECT",
+    "AWAITING_CONTRACT,true,CANCEL",
+    "AWAITING_CONTRACT,false,CANCEL",
+    "AWAITING_PAYMENT,true,CANCEL",
+    "AWAITING_PAYMENT,false,CANCEL",
+    "IN_PROGRESS,true,''",
+    "IN_PROGRESS,false,''",
+    "AWAITING_CONFIRMATION,true,''",
+    "AWAITING_BALANCE,true,''",
+    "COMPLETED,true,''",
+    "TERMINATED,false,''",
+    "CANCELLED,true,''"
+  })
+  void contractPolicyExposesOnlyPreDepositActions(String state, boolean buyer, String expected) {
+    assertThat(OrderAllowedActions.actions("CONTRACT_V2", state, buyer, null, List.of(), null))
+        .containsExactly(expected.isEmpty() ? new String[0] : expected.split(" "));
   }
 
   @ParameterizedTest

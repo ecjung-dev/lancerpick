@@ -1,5 +1,9 @@
 # 랜서픽 현재 구현·검증 현황
 
+## V2 수락·계약 성립·선금 전 취소(E4) — 2026-11-05
+
+`feature/contract-v2-acceptance`(PR 전): V2 수락 → `AWAITING_CONTRACT` → 양측 서명 → `AWAITING_PAYMENT`(선금 대기) 전환과 `ACCEPTED`·`CONTRACT_CREATED`·`CONTRACT_SIGNED` 이력·아웃박스, 초안·확정 시 10,000원 하한 재검사, 선금 전 V2 직접 취소(금액 이동 없음), V2 선금 전 허용 행동을 구현했다. 생성 설정은 계속 false다. 자동 테스트: 로컬 MySQL 8.4 `lancerpick_test` 대상 백엔드 `clean build` 693건 통과(2026-11-05). 프런트 코드는 바꾸지 않았다. 실제 PDF(J3)·계약 HTTP API/화면(E5)이 없어 서명은 테스트용 READY 고정값으로만 확인했고, 브라우저 확인은 하지 않았다. 상세는 [계약 기반](order-contract-foundation.md) 단계별 연결 한계.
+
 ## V2 주문 생성 경로(E3) — 2026-11-05
 
 main 반영(#82, `63ac00d`): 주문 생성 서비스가 정책 버전을 생성 시 고정하고, `CONTRACT_V2`이면 최소 계약 금액 10,000원 검증과 `order_trade_terms` 저장을 같은 트랜잭션에서 한다. 설정 `lancerpick.order.contract-v2-creation-enabled` 기본 false라 실제 API는 계속 LEGACY_V1만 만든다(G1 전까지 유지). 자동 테스트: main `63ac00d`에서 로컬 MySQL 8.4 `lancerpick_test` 대상 백엔드 `clean build` 675건, 프런트 typecheck·lint·test:api 137건·build 통과(2026-11-05). V2 수락·계약 성립(E4)·브라우저 확인은 아직이다. 상세는 [주문 생성](order-creation.md) 8단계.

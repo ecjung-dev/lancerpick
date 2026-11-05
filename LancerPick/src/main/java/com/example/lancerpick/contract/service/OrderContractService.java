@@ -5,7 +5,9 @@ import com.example.lancerpick.contract.dto.ContractResponse;
 import com.example.lancerpick.contract.entity.*;
 import com.example.lancerpick.contract.repository.*;
 import com.example.lancerpick.member.repository.MemberRepository;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.entity.Order;
+import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.*;
 import com.example.lancerpick.payment.service.ContractPaymentPolicy;
@@ -32,6 +34,8 @@ public class OrderContractService {
   private final MemberRepository members;
   private final OrderContractRepository contracts;
   private final ContractSignatureRepository signatures;
+  private final OrderHistoryRepository histories;
+  private final OrderEventPublisher events;
   private final JsonMapper mapper;
   private final Clock clock;
   private final String standardBody;
@@ -43,6 +47,8 @@ public class OrderContractService {
       MemberRepository members,
       OrderContractRepository contracts,
       ContractSignatureRepository signatures,
+      OrderHistoryRepository histories,
+      OrderEventPublisher events,
       JsonMapper mapper,
       Clock clock) {
     this.orders = orders;
@@ -51,6 +57,8 @@ public class OrderContractService {
     this.members = members;
     this.contracts = contracts;
     this.signatures = signatures;
+    this.histories = histories;
+    this.events = events;
     this.mapper = mapper;
     this.clock = clock;
     try (var stream = new ClassPathResource("contracts/standard-v1.txt").getInputStream()) {
@@ -65,7 +73,7 @@ public class OrderContractService {
 
   public ContractResponse prepare(
       long memberId, long orderId, int expectedVersion, String specialTerms) {
-    var order = lock(memberId, orderId);
+    var order = lock(memberId, orderId, OrderStatus.AWAITING_CONTRACT);
     if (!order.getSellerId().equals(memberId))
       throw error(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 초안을 작성할 수 있습니다.");
     if (specialTerms == null
@@ -73,7 +81,7 @@ public class OrderContractService {
         || expectedVersion < 0)
       throw error(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "특약은 5000자 이하여야 합니다.");
     var snapshot = snapshots.findById(orderId).orElseThrow(() -> conflict("주문 조건이 없습니다."));
-    var split = ContractPaymentPolicy.installments(order.getPriceAmount());
+    var split = installments(order);
     var content = new LinkedHashMap<String, Object>();
     content.put("templateVersion", "standard-v1");
     content.put("standardBody", standardBody);
@@ -104,15 +112,22 @@ public class OrderContractService {
       current.supersede(at);
       contracts.flush();
     }
-    return response(
+    var saved =
         contracts.saveAndFlush(
             OrderContract.draft(
-                orderId, version + 1, "standard-v1", specialTerms, canonical, memberId, at)));
+                orderId, version + 1, "standard-v1", specialTerms, canonical, memberId, at));
+    events.publish(
+        order,
+        histories.saveAndFlush(
+            OrderHistory.contractCreated(orderId, memberId, at, saved.getVersion())));
+    return response(saved);
   }
 
   public ContractResponse sign(
       long memberId, long orderId, int version, String contentHash, String fileHash) {
-    var order = lock(memberId, orderId);
+    // 계약 성립 후 주문은 선금 대기(AWAITING_PAYMENT)가 되므로, 그 상태에서는 같은 서명의 재요청만 허용한다.
+    var order =
+        lock(memberId, orderId, OrderStatus.AWAITING_CONTRACT, OrderStatus.AWAITING_PAYMENT);
     var contract =
         contracts.findByOrderIdAndActiveSlot(orderId, 1).orElseThrow(() -> conflict("계약이 없습니다."));
     byte[] expectedContent = parseHash(contentHash), expectedFile = parseHash(fileHash);
@@ -124,16 +139,26 @@ public class OrderContractService {
     String role = order.getBuyerId().equals(memberId) ? "BUYER" : "SELLER";
     var existing = signatures.findByContractIdOrderByIdAsc(contract.getId());
     if (existing.stream().anyMatch(s -> s.getMemberId() == memberId)) return response(contract);
-    if (!"READY".equals(contract.getStatus())) throw conflict("서명 가능한 계약이 아닙니다.");
+    if (order.getStatus() != OrderStatus.AWAITING_CONTRACT || !"READY".equals(contract.getStatus()))
+      throw conflict("서명 가능한 계약이 아닙니다.");
     var at = now();
     signatures.saveAndFlush(ContractSignature.sign(contract, memberId, role, at));
-    if (signatures.findByContractIdOrderByIdAsc(contract.getId()).size() == 2)
+    if (signatures.findByContractIdOrderByIdAsc(contract.getId()).size() == 2) {
+      // 계약 확정 시점에도 최소 계약 금액을 다시 확인한다(생성 후 정책·데이터 변경 대비).
+      installments(order);
       contract.signComplete(at);
+      order.contractSigned(at);
+      orders.flush();
+      events.publish(
+          order,
+          histories.saveAndFlush(
+              OrderHistory.contractSigned(orderId, memberId, at, contract.getVersion())));
+    }
     contracts.flush();
     return response(contract);
   }
 
-  private Order lock(long memberId, long orderId) {
+  private Order lock(long memberId, long orderId, OrderStatus... allowed) {
     if (orders.lockDecisionActor(memberId).isEmpty())
       throw error(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
     var order =
@@ -143,12 +168,22 @@ public class OrderContractService {
     if (!com.example.lancerpick.common.policy.TradePolicyVersion.CONTRACT_V2
             .name()
             .equals(order.getPolicyVersion())
-        || order.getStatus() != OrderStatus.AWAITING_PAYMENT
+        || !Arrays.asList(allowed).contains(order.getStatus())
         || order.getAcceptedAt() == null
         || order.getPaidAt() != null
         || !cancellations.findByOrderIdAndStatus(orderId, "PENDING").isEmpty())
       throw conflict("계약을 처리할 수 없는 주문입니다.");
     return order;
+  }
+
+  private static ContractPaymentPolicy.Installments installments(Order order) {
+    long total = order.getPriceAmount();
+    if (total < ContractPaymentPolicy.MIN_TOTAL || total > ContractPaymentPolicy.MAX_TOTAL)
+      throw error(
+          HttpStatus.CONFLICT,
+          "CONTRACT_MINIMUM_AMOUNT_NOT_MET",
+          "계약 금액은 10,000원 이상 1,000,000원 이하여야 합니다.");
+    return ContractPaymentPolicy.installments(total);
   }
 
   private ContractResponse response(OrderContract c) {

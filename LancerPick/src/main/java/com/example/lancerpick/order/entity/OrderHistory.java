@@ -94,7 +94,31 @@ public class OrderHistory {
     }
 
     public static OrderHistory accepted(Long orderId, Long sellerId, LocalDateTime at) {
-        return decision(orderId, sellerId, at, OrderHistoryAction.ACCEPTED, OrderStatus.AWAITING_PAYMENT, null);
+        return accepted(orderId, sellerId, at, OrderStatus.AWAITING_PAYMENT);
+    }
+
+    /** 계약 주문의 수락은 AWAITING_CONTRACT로 기록한다. */
+    public static OrderHistory accepted(Long orderId, Long sellerId, LocalDateTime at, OrderStatus to) {
+        if (to != OrderStatus.AWAITING_PAYMENT && to != OrderStatus.AWAITING_CONTRACT) throw invalidInput("수락 후 상태가 올바르지 않습니다.");
+        return decision(orderId, sellerId, at, OrderHistoryAction.ACCEPTED, to, null);
+    }
+
+    /** 계약 초안의 새 버전이 만들어졌다. 주문 상태는 계약 대기로 유지된다. */
+    public static OrderHistory contractCreated(Long orderId, Long sellerId, LocalDateTime at, int contractVersion) {
+        if (contractVersion < 1) throw invalidInput("계약 버전이 올바르지 않습니다.");
+        var history = decision(orderId, sellerId, at, OrderHistoryAction.CONTRACT_CREATED, OrderStatus.AWAITING_CONTRACT, null);
+        history.fromStatus = OrderStatus.AWAITING_CONTRACT;
+        history.details = "{\"contractVersion\": " + contractVersion + "}";
+        return history;
+    }
+
+    /** 두 번째 서명으로 계약이 성립해 선금 대기로 넘어간다. 행위자는 마지막 서명자다. */
+    public static OrderHistory contractSigned(Long orderId, Long signerId, LocalDateTime at, int contractVersion) {
+        if (contractVersion < 1) throw invalidInput("계약 버전이 올바르지 않습니다.");
+        var history = decision(orderId, signerId, at, OrderHistoryAction.CONTRACT_SIGNED, OrderStatus.AWAITING_PAYMENT, null);
+        history.fromStatus = OrderStatus.AWAITING_CONTRACT;
+        history.details = "{\"contractVersion\": " + contractVersion + "}";
+        return history;
     }
     public static OrderHistory completed(Long orderId, Long buyerId, LocalDateTime at) {
         var history = decision(orderId, buyerId, at, OrderHistoryAction.COMPLETED, OrderStatus.COMPLETED, null);

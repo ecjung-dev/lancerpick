@@ -64,10 +64,14 @@ public class OrderDecisionService {
     }
     var order =
         orders
-            .findForLegacyDecision(orderId, memberId)
+            .findForDecision(orderId, memberId)
             .orElseThrow(() ->
                 new BusinessException(
                     HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
+    // 수락·거절은 결제 전 단계라 계약 주문도 같은 명령을 쓴다. 알 수 없는 정책만 막는다.
+    if (!order.isContractPolicy())
+      com.example.lancerpick.common.policy.TradePolicyVersion.requireLegacyCommand(
+          order.getPolicyVersion());
     if (!order.getSellerId().equals(memberId)) {
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 수락·거절할 수 있습니다.");
     }
@@ -76,7 +80,7 @@ public class OrderDecisionService {
     OrderHistory history;
     if (accept) {
       order.accept(at);
-      history = OrderHistory.accepted(orderId, memberId, at);
+      history = OrderHistory.accepted(orderId, memberId, at, order.getStatus());
     } else {
       order.reject(at);
       history = OrderHistory.rejected(orderId, memberId, at, reason);

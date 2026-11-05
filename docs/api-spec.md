@@ -6,9 +6,11 @@
 
 | 응답/검사 | 정책 |
 | --- | --- |
-| V2 허용 행동 | 전용 명령 연결 전까지 기존 `allowedActions`는 빈 배열. 기존 PAY·CANCEL·CONFIRM 버튼을 노출하지 않음 |
+| V2 허용 행동 | 선금 전 단계만 연결: `REQUESTED` 구매자 `CANCEL`·판매자 `ACCEPT`·`REJECT`, `AWAITING_CONTRACT`·`AWAITING_PAYMENT`(선금 대기) 양측 `CANCEL`. 그 밖의 상태는 빈 배열이며 PAY·CONFIRM 등 기존 버튼을 노출하지 않음 |
 | 기존 전액 결제 API | V2에 409 CONTRACT_PAYMENT_NOT_READY |
-| 기존 수락/거절·취소·취소 요청/처리·납품·수정·구매 확정 | V2에 409 ORDER_POLICY_NOT_READY. 해당 주문 당사자인지 확인한 뒤 적용 |
+| 기존 수락/거절 | V2도 처리. V2 수락은 `AWAITING_CONTRACT`로 전환하고 `ACCEPTED` 이력의 toStatus도 `AWAITING_CONTRACT` |
+| 기존 직접 취소 `POST /api/orders/{id}/cancel` | V2는 선금 전(`paidAt` 없음)만 처리: 구매자 `REQUESTED`, 양측 `AWAITING_CONTRACT`·`AWAITING_PAYMENT`. 금액 이동 없이 `CANCELLED`. 선금 후 V2는 409 ORDER_POLICY_NOT_READY |
+| 기존 취소 요청/처리·납품·수정·구매 확정 | V2에 409 ORDER_POLICY_NOT_READY. 해당 주문 당사자인지 확인한 뒤 적용 |
 | 조회 | 본인 V2 목록/상세는 정책 버전과 함께 조회 가능 |
 
 실제 V2 계약/분할 결제 경로는 별도 API 계약과 상태 전환 검증 후 추가한다. 내부 계약 서비스 prepare/sign을 현재 공개 HTTP API로 표현하지 않는다. [정책 경계 보완](advanced-policy-boundary.md)을 따른다.

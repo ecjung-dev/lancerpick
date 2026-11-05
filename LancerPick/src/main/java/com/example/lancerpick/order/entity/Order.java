@@ -208,11 +208,28 @@ public class Order {
         return status;
     }
 
+    /** 기존 주문은 결제 대기, 계약 주문은 양측 서명 전까지 계약 대기로 간다. */
     public void accept(LocalDateTime now) {
         requireRequested(now);
-        status = OrderStatus.AWAITING_PAYMENT;
+        status = isContractPolicy() ? OrderStatus.AWAITING_CONTRACT : OrderStatus.AWAITING_PAYMENT;
         acceptedAt = now.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         updatedAt = acceptedAt;
+    }
+
+    /** 현재 계약에 양측 서명이 모두 모이면 선금 대기(AWAITING_PAYMENT)로 전환한다. */
+    public void contractSigned(LocalDateTime at) {
+        if (!isContractPolicy() || status != OrderStatus.AWAITING_CONTRACT || paidAt != null) {
+            throw new BusinessException(HttpStatus.CONFLICT, "ORDER_STATE_CONFLICT", "계약 대기 주문만 계약을 성립할 수 있습니다.");
+        }
+        if (at == null || at.getYear() < 1000 || at.getYear() > 9999 || at.isBefore(updatedAt)) {
+            throw new IllegalStateException("Invalid contract signing clock");
+        }
+        status = OrderStatus.AWAITING_PAYMENT;
+        updatedAt = at.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+    }
+
+    public boolean isContractPolicy() {
+        return com.example.lancerpick.common.policy.TradePolicyVersion.CONTRACT_V2.name().equals(policyVersion);
     }
 
     public void reject(LocalDateTime now) {
