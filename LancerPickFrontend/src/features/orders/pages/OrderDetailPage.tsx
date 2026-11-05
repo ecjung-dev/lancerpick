@@ -20,6 +20,7 @@ import type { OrderDetail as OrderDetailData } from '../types'
 import { OrderHistoryList } from './OrderHistoryList'
 import { orderDeadlineView } from '../deadlines'
 import { orderStatusLabel } from '../status'
+import { orderCommandFailureMessage } from '../failure'
 import { ReviewForm } from '../../reviews/components/ReviewForm'
 
 export function OrderDetailPage() {
@@ -130,11 +131,7 @@ function OrderDetail({ id }: { id: string }) {
       // 결과 불명확 후 재조회가 다음 회차를 보여도 이전 납품 내용을 그대로 보내지 않는다.
       setDescription('')
       setResultUrl('')
-      setFailure(
-        error instanceof ApiError
-          ? `${error.message} (${error.code})`
-          : '처리 결과를 확인하지 못했습니다. 다시 요청하기 전에 주문 상태를 조회해 주세요.',
-      )
+      setFailure(orderCommandFailureMessage(error))
       return false
     } finally {
       // 성공·실패 모두 조회로 금액/상태를 확인한다. 변경 요청은 자동 재전송하지 않는다.

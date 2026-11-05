@@ -206,3 +206,18 @@ test('direct cancellation normalizes reason and accepts 1000 Unicode code points
   await cancelOrder('1', '😀'.repeat(1000))
   assert.deepEqual(bodies, [{ reason: '😀\n취소' }, { reason: '😀'.repeat(1000) }])
 })
+
+test('order command failures treat network loss and 5xx as unclear instead of asking to retry', async () => {
+  const { ApiError } = await import('../src/shared/api/client.ts')
+  const { orderCommandFailureMessage, UNCLEAR_ORDER_RESULT } = await import('../src/features/orders/failure.ts')
+  const api = (status, code, message = '요청을 처리하지 못했습니다. 다시 시도해 주세요.') => new ApiError(status, { code, message, fieldErrors: [] })
+  // 저장 후 응답만 유실된 경우(게이트웨이 502·통신 단절)는 실패로 단정하지 않는다.
+  assert.equal(orderCommandFailureMessage(api(502, 'HTTP_ERROR')), UNCLEAR_ORDER_RESULT)
+  assert.equal(orderCommandFailureMessage(api(500, 'INTERNAL_ERROR', '서버 오류')), UNCLEAR_ORDER_RESULT)
+  assert.equal(orderCommandFailureMessage(api(0, 'NETWORK_ERROR')), UNCLEAR_ORDER_RESULT)
+  assert.equal(orderCommandFailureMessage(new TypeError('boom')), UNCLEAR_ORDER_RESULT)
+  assert.doesNotMatch(UNCLEAR_ORDER_RESULT, /다시 시도해 주세요/)
+  // 서버가 처리하지 않았다고 답한 4xx는 서버 메시지와 코드를 그대로 보여준다.
+  assert.equal(orderCommandFailureMessage(api(409, 'ORDER_STATE_CONFLICT', '수락·거절 가능한 주문 상태가 아닙니다.')), '수락·거절 가능한 주문 상태가 아닙니다. (ORDER_STATE_CONFLICT)')
+  assert.equal(orderCommandFailureMessage(api(403, 'CSRF_INVALID', '요청 인증 정보를 갱신해 주세요.')), '요청 인증 정보를 갱신해 주세요. (CSRF_INVALID)')
+})

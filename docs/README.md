@@ -28,6 +28,7 @@
 - [박소현 담당 최종 검증과 PR 단위](sohyun-final-verification.md)
 
 - [사용자 수동 거래 검증 현황](manual-trade-verification.md)
+- [주문 흐름 예외·동시 상황 확인](order-flow-edge-check.md)
 - [개발용 수동 거래 데이터 SQL](sql/seed-manual-trade-demo.sql)
 
 - [작업표](work-plan.md)
