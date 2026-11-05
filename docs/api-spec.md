@@ -2,7 +2,7 @@
 
 ## 고도화 기반 후속 계약 — 2026-11-05
 
-기존 MVP API 경로·입력은 유지한다. 후속 브랜치에서는 주문 목록 items와 상세/명령 응답에 `policyVersion: LEGACY_V1 | CONTRACT_V2`를 추가한다. 신규 주문 생성 API는 아직 LEGACY_V1만 생성한다. 고도화 기능이 활성화됐다는 뜻이 아니다.
+기존 MVP API 경로·입력은 유지한다. main `1e10d78`에는 주문 목록 items와 상세/명령 응답의 `policyVersion: LEGACY_V1 | CONTRACT_V2` 및 아래 정책 경계가 반영됐다. 신규 주문 생성 API는 아직 LEGACY_V1만 생성한다. 고도화 기능이 활성화됐다는 뜻이 아니다.
 
 | 응답/검사 | 정책 |
 | --- | --- |

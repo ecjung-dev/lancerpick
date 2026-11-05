@@ -1,8 +1,8 @@
 # 고도화 공통 기반: 팀원 시작 안내
 
-작성일: 2026-11-05. 공유 브랜치: feature/advanced-common-foundation. PR 검토·CI·병합 전과 main 반영 후를 구분한다.
+갱신일: 2026-11-05. 현재 제공 기준은 main `1e10d78`이다. 최초 공유 브랜치 feature/advanced-common-foundation과 후속 feature/advanced-schema-foundation의 기반 변경은 main에 반영됐다.
 
-후속 V5/V6 작업은 feature/advanced-schema-foundation에서 진행한다. PR #76의 V4 누적 19개를 기준으로 나머지 10개를 추가한 단계이며 [전체 업무 스키마](advanced-schema-foundation.md)를 따른다. 후속 브랜치 반영 전 main에 29개가 있다고 가정하지 않는다.
+PR #76의 V4 누적 19개 이후 V5/V6 나머지 10개와 정책별 조회·명령 경계까지 반영돼 현재 29개 업무 테이블을 제공한다. [전체 업무 스키마](advanced-schema-foundation.md)와 [정책 경계](advanced-policy-boundary.md)를 따른다. 테이블 존재가 신규 기능의 서비스/API/화면 완료를 의미하지 않는다.
 
 ## 1. 이번에 공유하는 것
 
@@ -19,9 +19,9 @@
 
 ## 2. 받아서 실행하기
 
-1. 본인 변경을 commit 또는 stash로 보존한다. PR 병합 뒤 main을 최신화하고 자기 기능 브랜치에 main을 병합한다. 아직 미병합이면 공통 브랜치를 별도 checkout으로 검토하거나 선행 PR 관계를 명시한다. main에 직접 push하지 않는다.
+1. 본인 변경을 commit 또는 stash로 보존한다. main을 최신화하고 자기 기능 브랜치에 main을 병합한다. 이 문서의 V3~V6 기반은 이미 반영됐으므로 최초 공통 브랜치를 별도로 병합할 필요가 없다. main에 직접 push하지 않는다.
 2. 기존 README의 개인 DB·로컬 환경변수 설정을 사용한다. 다른 사람의 키·접속 파일을 복사하거나 저장소에 추가하지 않는다. 신규 환경변수·라이브러리 설치는 이번 기반에서 요구하지 않는다.
-3. V5/V6 후속 브랜치까지 받으면 백엔드 시작 시 Flyway가 미적용 migration을 V6까지 적용한다. V1~V4를 수정하거나 DB를 삭제·재생성하지 않는다. 코드·migration을 함께 받아 사용하고 ddl-auto=validate를 유지한다.
+3. 최신 main 코드로 백엔드를 시작하면 Flyway가 미적용 migration을 V6까지 적용한다. 기존 V1~V6를 수정하거나 DB를 삭제·재생성하지 않는다. 코드·migration을 함께 받아 사용하고 ddl-auto=validate를 유지한다. 적용 대상은 기존 README에서 지정한 본인 DB임을 먼저 확인한다.
 4. 프런트 실행은 기존 방식이다. 이번 공유에는 새 계약 화면이 없으며 기존 메인·로그인·마이페이지로 정상 동작을 확인한다.
 
 `docs/sql/advanced-db-candidate.sql`은 V1/V2 기준 전체 목표 검토본이다. **현재 DB에 직접 실행하지 않는다.** V3/V4와 컬럼·테이블이 중복된다. 다음 기능의 DDL은 황준범이 현재 적용 이력 기준 새 Flyway로 제공한다.
@@ -48,6 +48,6 @@
 
 ## 5. 검토·검증
 
-공유 전 전체 검사 결과는 [계약 기반 검증 기록](order-contract-foundation.md)의 마지막 실행을 확인한다. 로컬 격리 MySQL 검사와 GitHub CI는 별도다. 실행하지 않은 PDF·브라우저·고도화 전체 거래를 완료로 표시하지 않는다. PR은 공통 기반 단위이며 고도화 전체 기능의 병합 요청이 아니다.
+V3/V4 공유 전 전체 검사 결과는 [계약 기반 기록](order-contract-foundation.md), V5/V6와 정책 경계의 후속 실패·선택 재검증은 [스키마 기록](advanced-schema-foundation.md)·[정책 경계 기록](advanced-policy-boundary.md)을 따른다. 로컬 격리 MySQL 검사와 GitHub CI는 별도다. 실행하지 않은 PDF·브라우저·고도화 전체 거래를 완료로 표시하지 않는다.
 
-공유 직전 확인: main e44d411(PR #75)을 충돌 없이 통합했다. 백엔드는 동일 소스의 격리 MySQL 전체 651건 통과, 통합 프런트는 129건·lint·타입 검사 포함 build 통과다. 원격 CI·PR 병합은 별도 확인한다.
+최초 공유 직전 기록: main e44d411(PR #75)을 충돌 없이 통합했다. 당시 백엔드는 격리 MySQL 전체 651건 통과, 통합 프런트는 129건·lint·타입 검사 포함 build 통과다. 현재 main V5/V6까지 전체 651건을 새로 일괄 통과했다는 뜻은 아니다. 원격 CI는 이번 문서 갱신에서 확인하지 않았다.
