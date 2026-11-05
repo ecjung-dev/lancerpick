@@ -1,6 +1,6 @@
 # 메일 발송 인프라 (C3)
 
-담당: 정은찬(작업표 C3). 계정 메일(현재 비밀번호 재설정)을 실제 SMTP로 보낸다. 메일 내용·토큰·요청 제한은 김창재 K1 범위이며 [로그인 문서](auth-login.md#메일-발송-경계-c3-연결-계약)의 연결 계약을 따른다. DB·Flyway 변경은 없다.
+담당: 정은찬(작업표 C3). main 반영: #90(2026-11-05). K1 담당자 전달 사항은 [작업표](work-plan.md#c3-반영-후-김창재-전달--2026-11-05). 계정 메일(현재 비밀번호 재설정)을 실제 SMTP로 보낸다. 메일 내용·토큰·요청 제한은 김창재 K1 범위이며 [로그인 문서](auth-login.md#메일-발송-경계-c3-연결-계약)의 연결 계약을 따른다. DB·Flyway 변경은 없다.
 
 ## 구성
 
@@ -70,6 +70,6 @@ docker run -d --name lancerpick-mailpit -p 1025:1025 -p 8025:8025 axllent/mailpi
 - `SmtpAccountMailSenderTests` 8건(DB·SMTP 없음): 발송 스레드에서 보낸 뒤 SENT 기록·보낸 사람/수신자/제목/본문, `enqueue`가 SMTP를 기다리지 않음, 큐 가득 참 → false, 인증·전송·예상 밖 예외의 안전한 코드와 이후 발송 계속, 기록 실패 후 발송 계속, 종료 후 false, 잘못된 설정 거부.
 - `MailInfrastructureConfigurationTests` 4건: 기본 꺼짐, 켜면 발송기 1개, 켰는데 메일 서버 설정 없음 → 시작 실패, demo 프로필에서는 등록 안 함.
 - 기존 `AccountMailDispatcherTests` 2건, `PasswordResetIntegrationTests`(가짜 발송기)는 그대로 사용.
-- 백엔드 `clean build`(로컬 MySQL 8.4 `lancerpick_test`): 771건 통과(2026-11-05, 이 브랜치).
+- 백엔드 `clean build`(로컬 MySQL 8.4 `lancerpick_test`): 771건 통과(2026-11-05, 병합 전 작업 브랜치. 병합 후 main에서 재실행하지 않음).
 - 실제 서버 + Mailpit(2026-11-05, 개발 DB, `MAIL_ENABLED=true`, API 호출로 확인): 가입 → 재설정 요청 202 → Mailpit에 메일 1통 도착(보낸 사람 `LancerPick <no-reply@lancerpick.local>`, 한글 제목·본문, `text/plain; charset=UTF-8`, 링크 `http://localhost:5173/password-reset#token=…` 43자) → 그 토큰으로 재설정 204 → 옛 비밀번호 로그인 401, 새 비밀번호 로그인 200 → 같은 토큰 재사용 400. 서버 로그에 메일 경고·이메일·토큰 없음.
 - 확인하지 않은 것: `account_challenges.delivery_status`가 `SENT`인지 DB에서 직접 조회하지 않았다(로컬에 MySQL 클라이언트 없음, 기록 실패 로그가 없는 것으로만 확인). 브라우저 화면으로 재설정 링크를 연 확인은 하지 않았다. 60초 안에 같은 이메일로 다시 요청하면 메일이 오지 않는 것(요청 제한)은 의도된 동작임을 확인했다.

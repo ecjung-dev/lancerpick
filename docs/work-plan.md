@@ -12,7 +12,18 @@
 
 고도화는 [4인 설계](advanced-design-four-person.md)가 기준이다. 정은찬은 알림·이벤트·주문/계약 흐름, 황준범은 DB 변경 전체·결제·채팅·공통 기반, 김창재는 회원·인증·관리자, 박소현은 상품·판매자·후기 보완을 맡는다. 아래 MVP 완료/잔여 표를 고도화 작업량으로 해석하지 않는다. Redis·Batch 등 공통 인프라는 정은찬·황준범 담당이다. 항목별 담당·선행·상태는 아래 [고도화 작업표](#고도화-작업표--2026-11-05)를 따른다.
 
-김창재 고도화 진행(2026-11-05): main 반영(#84, `feature/password-change`)으로 로그인 상태 비밀번호 변경(POST /api/me/password, K1 일부)과 `auth_version` 기반 기존 세션 폐기(K2)를 구현했다. DB·라이브러리 변경 없음. 세션 폐기 확인 계약(`AuthVersionLookup`, principal의 authVersion)은 [로그인 문서](auth-login.md#세션-폐기-계약-채팅-소켓-담당-참고)에 있으며 C2(소켓 연결 폐기) 구현 시 사용한다. 다음은 이메일 인증 가입·비밀번호 재설정(C3 메일 인프라 필요)과 요청 제한이다. 검사 결과는 PR에 기록한다. 후속: 비밀번호 재설정·재설정 요청 제한은 main에 반영됐다(#89). 실제 메일 발송은 C3(`feature/mail-infrastructure`) 병합 후 `MAIL_ENABLED=true`로 켠다(아래 K1·C3).
+김창재 고도화 진행(2026-11-05): main 반영(#84, `feature/password-change`)으로 로그인 상태 비밀번호 변경(POST /api/me/password, K1 일부)과 `auth_version` 기반 기존 세션 폐기(K2)를 구현했다. DB·라이브러리 변경 없음. 세션 폐기 확인 계약(`AuthVersionLookup`, principal의 authVersion)은 [로그인 문서](auth-login.md#세션-폐기-계약-채팅-소켓-담당-참고)에 있으며 C2(소켓 연결 폐기) 구현 시 사용한다. 다음은 이메일 인증 가입·비밀번호 재설정(C3 메일 인프라 필요)과 요청 제한이다. 검사 결과는 PR에 기록한다. 후속: 비밀번호 재설정·재설정 요청 제한은 main에 반영됐다(#89). 실제 메일 발송은 C3가 main에 반영돼(#90) `MAIL_ENABLED=true`로 켤 수 있다(아래 K1·C3, 전달 사항은 다음 절).
+
+### C3 반영 후 김창재 전달 — 2026-11-05
+
+C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인증 가입·아이디 안내)과 재설정 메일 확인에 아래를 사용한다. 상세는 [메일 인프라](mail-infrastructure.md).
+
+1. **켜는 법**: 기본은 꺼짐(`MAIL_ENABLED=false`)이라 아무것도 안 하면 지금과 같다(`FAILED`·`MAIL_NOT_CONFIGURED`). 로컬에서 Docker로 Mailpit을 띄우고(`docker run -d --name lancerpick-mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:v1.33.0`) `local-application.properties`에 `MAIL_ENABLED=true`를 넣으면 http://localhost:8025 에서 받는다. 테스트 프로필은 항상 꺼져 있어 개인 설정이 테스트에 영향을 주지 않는다.
+2. **새 메일 추가 방법**: 발송기는 고치지 않는다. 기존 재설정과 같이 발급 트랜잭션 커밋 후 `AccountMailDispatcher.dispatch(new AccountMail(challengeId, to, subject, body))`를 부르면 큐 → 발송 → `delivery_status`(`SENT`/`FAILED`) 기록까지 처리된다. 본문은 UTF-8 평문이며, 내용 구성은 `PasswordResetMailContent`처럼 K1 쪽에 둔다.
+3. **이메일 인증 가입**: V5 `account_challenges.purpose='SIGNUP_EMAIL'`(member_id·credential_version NULL)로 발급하면 위 경로를 그대로 쓸 수 있다.
+4. **아이디 안내는 먼저 상의**: `AccountMail`·`AccountMailDeliveryRecorder`가 `challengeId`(=`account_challenges` 행)를 전제로 한다. 아이디 안내처럼 토큰이 없는 메일은 이 행이 없으므로, challenge 행을 만들지, 발송 결과 기록 없이 보낼 수 있게 계약을 넓힐지 구현 전에 정은찬과 정한다(DB 변경이 필요하면 황준범).
+5. **지키는 것**: 본문(토큰)·수신자를 로그·DB·아웃박스에 남기지 않는다. 자동 재발송은 없으며 요청 제한 안에서 사용자가 다시 요청한다. 메모리 큐라 서버 종료 시 남은 메일은 `PENDING`으로 남는다.
+6. **확인 부탁**: 재설정 화면(`/password-reset/request` → 메일 링크 → 새 비밀번호)을 Mailpit 켠 상태로 브라우저에서 한 번 확인해 주면 C3·K1의 남은 브라우저 확인을 채울 수 있다(C3 쪽은 API로만 확인함).
 
 ## 고도화 작업표 — 2026-11-05
 
@@ -56,7 +67,7 @@
 
 | ID | 작업 | 선행 | 상태 | 비고 |
 | --- | --- | --- | --- | --- |
-| K1 | 이메일 인증 가입·비밀번호 재설정/변경·아이디 안내·요청 제한 | F1 | 진행 중 | 로그인 상태 비밀번호 변경 완료(#84). 비밀번호 재설정·재설정 요청 제한 완료(#89, 실제 메일 발송은 C3 병합 후). 이메일 인증 가입·아이디 안내는 남음. V5 토큰 스키마 사용. 메일 인프라는 C3 |
+| K1 | 이메일 인증 가입·비밀번호 재설정/변경·아이디 안내·요청 제한 | F1 | 진행 중 | 로그인 상태 비밀번호 변경 완료(#84). 비밀번호 재설정·재설정 요청 제한 완료(#89, 실제 메일 발송은 C3 #90 반영으로 `MAIL_ENABLED=true` 시 가능, 브라우저 확인 남음). 이메일 인증 가입·아이디 안내는 남음. V5 토큰 스키마 사용. 메일 인프라는 C3 |
 | K2 | 인증 버전 기반 세션 무효화 계약 제공 | K1 | 완료(#84) | HTTP 세션 폐기 필터·`AuthVersionLookup` 계약. 소켓 종료(C2)는 이 계약 사용. 브라우저 2개 동시 확인은 자동 테스트로 대체 |
 | K3 | 관리자 운영 현황·충전/금액 처리 조회 | E4, J4 | 시작 전 | 업무 상태·금액 조회 계약은 정은찬·황준범 |
 | K4 | 구매자 운영 문의, 판매자 무응답 취소의 관리자 승인/거절 | E6 | 시작 전 | 실제 취소·반환 서비스는 정은찬·황준범 |
@@ -79,7 +90,7 @@
 | --- | --- | --- | --- | --- |
 | C1 | 공통 이벤트 ID·버전·오류 계약 | E1 | 시작 전 | |
 | C2 | 계정 전환·비밀번호 변경 시 소켓 연결 폐기·개인 캐시 정리 | K2, J1 | 시작 전 | |
-| C3 | 메일 발송 인프라(Spring Mail·Mailpit) | — | 진행 중(`feature/mail-infrastructure`, PR 전) | [메일 인프라](mail-infrastructure.md). `SmtpAccountMailSender`(발송 스레드 1개·고정 큐), 기본 꺼짐(`MAIL_ENABLED`). K1 선행. 연결 지점: `auth/mail/AccountMailSender`(비동기 큐에 넣고 바로 반환) 구현 Bean + 발송 후 `AccountMailDeliveryRecorder` 호출([계약](auth-login.md#메일-발송-경계-c3-연결-계약)) |
+| C3 | 메일 발송 인프라(Spring Mail·Mailpit) | — | 완료(#90) | [메일 인프라](mail-infrastructure.md). 실제 서버+Mailpit API 확인, 브라우저 화면 확인은 남음. `SmtpAccountMailSender`(발송 스레드 1개·고정 큐), 기본 꺼짐(`MAIL_ENABLED`). K1 선행. 연결 지점: `auth/mail/AccountMailSender`(비동기 큐에 넣고 바로 반환) 구현 Bean + 발송 후 `AccountMailDeliveryRecorder` 호출([계약](auth-login.md#메일-발송-경계-c3-연결-계약)) |
 | C4 | Redis 세션 공유·Pub/Sub | J1 | 조정 가능 | DB 잠금·UNIQUE를 대체하지 않음 |
 | C5 | 계측(Actuator·Micrometer·k6) | — | 조정 가능 | |
 
@@ -89,7 +100,7 @@
 | --- | --- | --- | --- |
 | G1 | V3 API·화면·금액/보관/원장·권한·경합·PDF 실제 검증 후 신규 생성 허용 | 정은찬·황준범 | 시작 전 |
 
-권장 순서: (완료) E2 → E3·E4 → J3·E5 → J2(V7) / (남음) J4 → E6 → E8 → E7·E9 → G1. 채팅(J1)·회원(K1)·상품(S1~S3)은 V3 흐름과 독립으로 병행하고, C3(메일)는 K1 선행이라 먼저 착수한다.
+권장 순서: (완료) E2 → E3·E4 → J3·E5 → J2(V7) / (남음) J4 → E6 → E8 → E7·E9 → G1. 채팅(J1)·회원(K1)·상품(S1~S3)은 V3 흐름과 독립으로 병행한다. K1 선행인 C3(메일)는 완료(#90).
 
 ## 현재 작업 상태 — 2026-11-05
 
