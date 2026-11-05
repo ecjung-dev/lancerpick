@@ -4,6 +4,8 @@
 
 main c24f37d(PR #76)에는 V3 금융 컬럼·V4 계약/서명 2개와 내부 공통 서비스가 반영됐다. 당시 전체 백엔드 651건과 통합 프런트 129건·lint·build 통과. 고도화 전체 거래·PDF·새 화면이 구현됐다는 뜻은 아니다.
 
+김창재 고도화(2026-11-05, `feature/password-change`): 로그인 상태 비밀번호 변경 API·화면(`/mypage/profile`)과 `members.auth_version` 기반 기존 세션 폐기 필터를 추가했다. 이메일 인증 가입·비밀번호 재설정·요청 제한은 아직 없다. 상세·한계는 [로그인 문서](auth-login.md#비밀번호-변경세션-폐기--2026-11-05-featurepassword-change), 실행한 검사 수는 PR을 따른다.
+
 후속 feature/advanced-schema-foundation은 V5/V6 나머지 업무 10개·기존 엔티티 호환을 준비했다. 상세 결과는 [스키마 기반 기록](advanced-schema-foundation.md), 리뷰 후 정책별 DTO/버튼/기존 명령 차단 보완은 [정책 경계 기록](advanced-policy-boundary.md)을 따른다. 후속 로컬 변경과 main 반영 상태를 구분한다. 아래 11월 4일 MVP 표는 과거 검증 범위로 보존한다.
 
 문서 통합 후 기준은 main `384546a`이며, 아래 사용자 검증 보고와 원격 문서 브랜치의 기록을 보존했다. 이번 문서 병합에서 기능 테스트를 새로 실행하지 않았다.

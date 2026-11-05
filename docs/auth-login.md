@@ -81,3 +81,62 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 - 표시 이름을 공백 없는 영문 30자로 저장해도 헤더가 넘치지 않는다(이름 한 줄, 로그아웃 버튼은 다음 줄). 확인 후 원래 이름(`테스트 회원 B`)으로 되돌렸다.
 - `/mypage` 메뉴의 "내 정보" 링크가 좁은 화면에서도 표시된다.
 - 발견된 결함이 없어 코드 변경은 없다. 2026-11-04 상품 담당의 헤더 줄바꿈 수정(`product-review-browser-check.md`) 이후 상태다.
+
+## 비밀번호 변경·세션 폐기 — 2026-11-05 (`feature/password-change`)
+
+고도화 4인 설계 4절 3·4번(로그인 상태 비밀번호 변경, 기존 세션 무효화)과 3인 설계 6.2·9절을 구현했다. DB 변경은 없다. V5에서 추가된 `members.auth_version`(기본 0)을 사용한다. 새 라이브러리도 없다.
+
+### 계약
+
+| 경로 | 입력·권한 | 결과 |
+| --- | --- | --- |
+| POST /api/me/password | 회원 + CSRF; currentPassword, newPassword | 204 `no-store`. 지금 세션을 끝내고 다른 세션도 모두 폐기한다. 자동 로그인하지 않는다 |
+
+| 상황 | 응답 |
+| --- | --- |
+| newPassword가 가입 규칙 위반·누락, currentPassword 누락 | 400 VALIDATION_FAILED, fieldErrors의 field=`newPassword`·`currentPassword` |
+| 현재 비밀번호 불일치 | 400 CURRENT_PASSWORD_INCORRECT. 401이 아닌 이유: 401은 화면이 "로그인 끝남"으로 처리한다 |
+| 새 비밀번호 = 현재 비밀번호 | 400 PASSWORD_UNCHANGED |
+| 비로그인, 이미 폐기된 세션, 동시 변경에서 늦은 요청 | 401 AUTHENTICATION_REQUIRED |
+| CSRF 누락 | 403 CSRF_INVALID |
+
+두 비밀번호는 정리(trim)하지 않는다. currentPassword는 로그인과 같이 형식을 검사하지 않는다. newPassword는 가입과 같은 정규식이다(`member/dto/PasswordRules.PATTERN`, 가입 DTO도 같은 상수를 쓰도록 바꿨다). 72바이트를 넘는 currentPassword는 BCrypt 비교 없이 불일치로 처리한다(500 방지). 지갑·적립금은 건드리지 않는다.
+
+### 서버 처리 순서
+
+1. `MeController`가 세션 principal에서 회원 ID와 로그인 당시 `authVersion`을 꺼낸다.
+2. `MemberService.changePassword`가 회원 행을 `SELECT … FOR UPDATE`로 잠근다(`MemberRepository.findByIdForUpdate`).
+3. 세션 버전과 DB 버전이 다르면 401. 같은 회원의 변경 두 건이 동시에 오면 잠금에서 한 줄로 서고, 늦은 쪽은 앞 요청이 올린 버전을 보고 거절된다(덮어쓰지 않음).
+4. 현재 비밀번호 확인 → 같은 비밀번호 거절 → 새 해시 저장 + `auth_version + 1` + `updated_at` 갱신(`Member.changePassword`). 한 트랜잭션이다.
+5. 커밋 뒤 `AuthService.logout`(로그아웃과 같은 `SecurityContextLogoutHandler`)으로 지금 세션을 무효화한다.
+
+### 세션 폐기 계약 (채팅 소켓 담당 참고)
+
+- 로그인 principal은 `LoginMember(memberId, role, authVersion)`이다. `authVersion`은 비밀번호 해시와 같은 행 조회에서 읽은 값이다. `CurrentMemberId.require()` 사용법은 그대로다.
+- `SessionAuthVersionFilter`(Security 체인, `CsrfFilter` 다음)가 매 요청 `AuthVersionLookup.currentAuthVersion(memberId)`로 DB 값을 읽어 비교한다. 다르거나 회원이 없으면 세션을 무효화하고 인증 정보를 지운 뒤 비로그인으로 계속 진행한다. 보호 API는 401, 공개 조회는 비로그인 결과다. 캐시하지 않으므로 요청마다 기본키 조회 1회가 추가된다.
+- 로그인과 비밀번호 변경이 겹쳐 변경이 먼저 커밋되면, 그 로그인 세션은 옛 버전을 갖고 있어 다음 요청에서 폐기된다. 옛 비밀번호로 새 버전 세션이 발급되지 않는다.
+- 소켓 연결·SEND 검사에서도 같은 `AuthVersionLookup`으로 `memberId + authVersion`을 다시 확인하면 된다. 서버가 소켓에 보내는 폐기 신호(이벤트)는 이번 범위가 아니다(소켓 구현 시 함께 정한다).
+- `authVersion`이 null인 principal(DB 없이 만드는 테스트용 2인자 생성자)은 확인하지 않는다. 실제 로그인은 항상 값을 넣는다. demo 프로필과 `@WebMvcTest`에는 조회 Bean이 없어 필터를 넣지 않는다.
+
+한계: 이미 필터를 통과해 처리 중인 요청은 되돌리지 않는다. 비밀번호 변경 요청 횟수 제한(현재 비밀번호 대입 방지)은 아직 없다(요청 제한 작업에서 함께 처리). 변경 완료 안내 메일은 메일 기반 작업 후 추가한다. 세션이 메모리에 있으므로 서버 재시작 때 모두 로그아웃되는 기존 동작은 같다.
+
+### 화면
+
+| 파일 | 역할 |
+| --- | --- |
+| `features/auth/api.ts` | `changePassword`: POST `/me/password`, 원문 그대로 1회 |
+| `features/auth/validation.ts` | `validatePasswordChange`: 현재 비밀번호 필수, 새 비밀번호 가입 규칙·현재와 다름, 확인 일치. 정리하지 않음 |
+| `features/auth/password.ts` | `submitPasswordChange`: 같은 계정인지 `/api/me`로 확인 → POST 1회 → 성공하면 `resetAccountState(null)`(CSRF·개인 캐시 정리) |
+| `features/auth/pages/PasswordChangeForm.tsx` | `/mypage/profile` 아래 비밀번호 변경 폼. `autocomplete` current-password·new-password, 숨긴 username(이메일) |
+| `features/auth/pages/LoginPage.tsx` | 이동 state `passwordChanged: 'done' \| 'unclear'` 안내 |
+
+- 성공: 로그인 화면으로 이동해 "새 비밀번호로 로그인" 안내.
+- 400: 코드별로 입력칸 안내(현재 비밀번호 틀림이면 그 칸을 비움). CSRF 403: 다시 시도 안내. 자동 재전송 없음.
+- 401: 캐시를 정리하고 로그인 안내 화면으로 바뀐다.
+- 통신 오류·5xx: `recheckSession`. 같은 계정 그대로면 바뀌지 않은 것이다(바뀌었다면 이 세션도 끊긴다). 로그인이 끝났으면 바뀌었을 수 있으므로 로그인 화면에서 새 비밀번호를 먼저 시도하도록 안내한다.
+
+### 검증
+
+백엔드 `PasswordChangeIntegrationTests`(실제 Security 필터·MySQL): 로그인 principal의 버전 0, 변경 성공 시 두 세션 모두 폐기·옛 비밀번호 401·새 비밀번호 로그인·`auth_version`=1·해시 변경·지갑 잔액·원장 불변, 현재 비밀번호 틀림(공백 포함·72바이트 초과 포함) 400·세션 유지, 같은 비밀번호 400, 새 비밀번호 규칙 위반 6종 400, 누락 400, 익명 401·CSRF 403, DB 버전이 바뀐 세션 폐기(보호 401·공개 200·변경 401), 삭제된 회원 세션 폐기, 동시 변경 2건 중 1건만 성공. 프런트 `tests/password-change.test.mjs`. 실행 결과(2026-11-05 로컬): 관련 백엔드 테스트·`clean build` 통과, 프런트 test:api 138건 통과·typecheck·lint·build 통과.
+
+브라우저 확인(2026-11-05, 에이전트가 Claude 데스크톱 앱 브라우저로 로컬 개발 서버 확인, 새 테스트 계정 `pwcheck-1105a@example.com` 사용): 빈 값 제출 시 세 칸 안내, 틀린 현재 비밀번호 → POST 1회 400·현재 비밀번호 칸 비움·안내, 정상 변경 → `/login` 이동과 완료 안내·헤더 비로그인 표시·`/api/me` 401, 옛 비밀번호 로그인 401 INVALID_CREDENTIALS·새 비밀번호 로그인 200. 320×740에서 `/mypage/profile`의 문서 너비 320·넘친 요소 0. 두 기기 세션 폐기는 같은 브라우저로 재현하지 않았고 백엔드 통합 테스트로 검증했다. 실기기 모바일은 확인하지 않았다.

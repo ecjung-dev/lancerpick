@@ -60,8 +60,11 @@ fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 
 | POST /auth/logout | 회원; 없음 | 204; 세션 무효화 |
 | GET /me | 회원 | Member |
 | PATCH /me | 회원; displayName | Member |
+| POST /me/password | 회원+CSRF; currentPassword,newPassword | 204; 현재 비밀번호 재확인 후 변경, auth_version 증가로 모든 세션 폐기. 자동 로그인 없음 |
 
 Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·소문자 정규화 후 중복 확인한다. 가입 후 로그인 화면으로 이동하며 자동 로그인하지 않는다. 로그인·로그아웃 후 CSRF 토큰을 다시 획득한다.
+
+비밀번호 변경(2026-11-05 구현): 두 값 모두 정리하지 않는다. newPassword는 10절 비밀번호 원문 정책, currentPassword는 형식 검사 없음. 현재 비밀번호 불일치 400 CURRENT_PASSWORD_INCORRECT, 새 비밀번호가 현재와 같으면 400 PASSWORD_UNCHANGED, 폐기된 세션·동시 변경의 늦은 요청은 401 AUTHENTICATION_REQUIRED. 로그인 세션은 로그인 당시 auth_version을 갖고, DB 값과 다르면 다음 요청에서 폐기되어 비로그인으로 처리된다. 상세는 [로그인 문서](auth-login.md#비밀번호-변경세션-폐기--2026-11-05-featurepassword-change).
 
 ## 3 판매자와 상품 박소현
 
@@ -288,7 +291,7 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 
 | HTTP | 주요 코드 |
 | --- | --- |
-| 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL |
+| 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED |
 | 401 | AUTHENTICATION_REQUIRED, INVALID_CREDENTIALS |
 | 403 / 404 | FORBIDDEN, CSRF_INVALID / RESOURCE_NOT_FOUND |
 | 409 | EMAIL_ALREADY_EXISTS, PRODUCT_VERSION_CONFLICT, PRODUCT_NOT_ORDERABLE, SELF_PURCHASE_NOT_ALLOWED |
@@ -326,7 +329,7 @@ URL은 URI 파서로 https 스킴·호스트 존재·userinfo 부재를 확인�
 
 ### 비밀번호 원문 정책
 
-2026-11-02 김창재 결정(PR #14). 회원가입 입력에 적용한다.
+2026-11-02 김창재 결정(PR #14). 회원가입 입력과 비밀번호 변경의 새 비밀번호(2026-11-05)에 적용한다. 서버는 `PasswordRules.PATTERN` 한 곳의 상수를 쓴다.
 
 | 항목 | 기준 |
 | --- | --- |
