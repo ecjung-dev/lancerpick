@@ -305,6 +305,12 @@ public class Order {
         return id;
     }
 
+    /** 주문 배타 잠금 아래에서만 호출한다. 채팅으로 거래 상태·납기·updatedAt을 바꾸지 않는다. */
+    public long nextChatSequence() {
+        chatSequence = Math.addExact(chatSequence, 1);
+        return chatSequence;
+    }
+
     public Long getProductId() {
         return productId;
     }

@@ -34,6 +34,10 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
 })
 class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
+    com.example.lancerpick.chat.service.OrderChatService orderChatService;
+    @MockitoBean
+    com.example.lancerpick.chat.repository.OrderChatMessageQueries orderChatMessageQueries;
+    @MockitoBean
     com.example.lancerpick.order.service.FullFundingService fullFundingService;
     @MockitoBean
     com.example.lancerpick.contract.service.ContractDocumentTransactions contractDocumentTransactions;
