@@ -12,7 +12,7 @@
 
 | API (기본 `/api/orders/{orderId}/contract`) | 요청 | 결과 |
 | --- | --- | --- |
-| POST `/accept` | 본문 없음, 판매자·CSRF | V2 REQUESTED → AWAITING_CONTRACT. 같은 수락 재요청은 이력 추가 없음 |
+| ~~POST `/accept`~~ | (삭제, `fix/contract-accept-single-path`) | 일반 주문과 같은 POST `/api/orders/{id}/accept` 하나로 수락한다. 계약 주문은 REQUESTED → AWAITING_CONTRACT, 응답은 주문 상세. 수락 후 재요청은 409 |
 | POST `/draft` | `expectedVersion`(최초 0), `specialTerms`(5000 코드 포인트 이하) | 판매자만 초안 저장/교체. 동일 내용 재전송은 기존 버전 반환 |
 | POST `/sign` | `version`, `contentHash`, `fileHash`, `agreed:true` | 실제 파일 무결성 확인 후 주문 잠금 아래 현재 버전/해시 재확인·서명 저장. 양측 완료 시 SIGNED·AWAITING_PAYMENT |
 

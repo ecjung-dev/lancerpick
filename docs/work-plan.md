@@ -47,7 +47,7 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 | E2 | 계약 초안의 당사자 회원 누락을 무결성 오류로 처리(리뷰 9) | F2 | 완료(#81) | |
 | E3 | V2 주문 생성·`order_trade_terms` 저장·최소 계약 금액 10,000원 서버 검증 | F3 | 완료(#82) | 생성 경로는 설정 `lancerpick.order.contract-v2-creation-enabled` 기본 false로 닫아 둠(G1 전까지). 계약 확정 시 하한 재검증은 E4 |
 | E4 | V2 수락 → `AWAITING_CONTRACT` → 양측 서명 → 선금 대기 상태·이력, 계약 확정 시 하한 재검사, 선금 전 V2 취소 | E3 | 완료(#85) | 선금 대기는 V2의 `AWAITING_PAYMENT`([DB 전환 기준](advanced-db-transitions.md) §1). 병합 전 브랜치에서 백엔드 clean build 693건 통과. 계약 API·화면(E5)·실제 PDF(J3)가 없어 서명은 테스트 고정값으로만 확인, 브라우저 확인 없음 |
-| E5 | 계약 조회·확인 API, 주문 상세의 계약 화면 | E4, J3 | 완료(`2fec099`, 황준범 구현) | `/api/orders/{orderId}/contract` 수락·초안·서명·조회·PDF 생성/다운로드와 `ContractPanel`([PDF 연결](contract-pdf-delivery.md)). 남은 것: 기존 `POST /api/orders/{id}/accept`와 `/contract/accept` 수락 경로 중복 정리, 실제 브라우저 계약 거래 확인 |
+| E5 | 계약 조회·확인 API, 주문 상세의 계약 화면 | E4, J3 | 완료(`2fec099`, 황준범 구현) | `/api/orders/{orderId}/contract` 수락·초안·서명·조회·PDF 생성/다운로드와 `ContractPanel`([PDF 연결](contract-pdf-delivery.md)). 수락 경로는 `POST /api/orders/{id}/accept` 하나로 정리(`/contract/accept`·계약 영역 수락 버튼 삭제, `fix/contract-accept-single-path`). 남은 것: 실제 브라우저 계약 거래 확인 |
 | E6 | V3 검수·수정/재납품·합의/관리자 취소·구매 확정 연결 | E4, J4 | 시작 전 | 기존 잔금 대기/보상 종료 제외. 관리자 화면/API K4 |
 | E7 | 검수 무응답 48시간 → 판매자 7일 타이머 → 자동 구매 확정 | E6, J4 | 시작 전 | 수정/취소 응답 시 이전 타이머 취소, 새 기산점/회차. 관리자 해제 포함 |
 | E8 | 전액 결제 완료 기준 납기·재납품 기한·중복 없는 통지 | E4, E6, J4 | 시작 전 | 전액 결제·납기 상태/금액과 원자 연결 |

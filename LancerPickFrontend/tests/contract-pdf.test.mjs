@@ -159,6 +159,29 @@ test('ready file escapes contract text and keeps signing disabled before PDF rev
   assert.match(html, /<button disabled="">현재 계약에 서명<\/button>/)
 })
 
+test('contract panel has no second accept button; acceptance uses the order detail ACCEPT action', () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, retryOnMount: false } },
+  })
+  client.setQueryData(['wallet', 'contract-member'], { id: '7' })
+  try {
+    const html = renderToStaticMarkup(
+      createElement(
+        QueryClientProvider,
+        { client },
+        createElement(ContractPanel, {
+          orderId: '11',
+          sellerId: '7',
+          orderStatus: 'REQUESTED',
+        }),
+      ),
+    )
+    assert.doesNotMatch(html, /수락/)
+  } finally {
+    client.clear()
+  }
+})
+
 test('draft and signing commands send the expected version and fixed document hashes with consent', async () => {
   const writes=[]
   globalThis.fetch=async (url,init) => {

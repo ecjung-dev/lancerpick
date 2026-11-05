@@ -5,7 +5,6 @@ import com.example.lancerpick.contract.dto.*;
 import com.example.lancerpick.contract.service.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
-import java.util.Map;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
@@ -18,24 +17,13 @@ public class ContractCommandController {
   private final OrderContractService commands;
   private final ContractDocumentService documents;
   private final CurrentMemberId members;
-  private final com.example.lancerpick.order.service.OrderDecisionService decisions;
 
+  // 계약 주문 수락은 일반 주문과 같은 POST /api/orders/{id}/accept(OrderController) 하나만 쓴다.
   public ContractCommandController(
-      OrderContractService commands,
-      ContractDocumentService documents,
-      CurrentMemberId members,
-      com.example.lancerpick.order.service.OrderDecisionService decisions) {
+      OrderContractService commands, ContractDocumentService documents, CurrentMemberId members) {
     this.commands = commands;
     this.documents = documents;
     this.members = members;
-    this.decisions = decisions;
-  }
-
-  @PostMapping("/accept")
-  public ResponseEntity<Map<String, String>> accept(
-      Authentication auth, @PathVariable @Min(1) long orderId) {
-    var result = decisions.accept(members.require(auth), Long.toString(orderId));
-    return ok(Map.of("orderId", result.id(), "status", result.status()));
   }
 
   @PostMapping("/draft")

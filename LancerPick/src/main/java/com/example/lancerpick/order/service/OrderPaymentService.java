@@ -74,7 +74,7 @@ public class OrderPaymentService {
     if (!order.getBuyerId().equals(memberId))
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "구매자만 결제할 수 있습니다.");
     if (!com.example.lancerpick.common.policy.TradePolicyVersion.LEGACY_V1.name().equals(order.getPolicyVersion())) {
-      throw new BusinessException(HttpStatus.CONFLICT, "CONTRACT_PAYMENT_NOT_READY", "계약 주문의 분할 결제 연결이 아직 준비되지 않았습니다.");
+      throw new BusinessException(HttpStatus.CONFLICT, "CONTRACT_PAYMENT_NOT_READY", "계약 주문의 결제 기능이 아직 준비되지 않았습니다.");
     }
     var existing = payments.findByOrderId(orderId);
     if (existing.isPresent()) {

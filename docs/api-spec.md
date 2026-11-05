@@ -4,7 +4,9 @@
 
 ## 고도화 기반 후속 계약 — 2026-11-05
 
-후속 3차(main `2fec099` 반영): PDF 흐름용 POST `/api/orders/{orderId}/contract/accept`·`/draft`·`/sign` 추가. V2 전용 수락→계약 대기→초안/PDF→양측 서명→선금 대기이며 기존 전액 결제는 차단 상태다. 요청·권한·반복 처리·트랜잭션은 [PDF 연결 3차](contract-pdf-delivery.md)를 따른다. 생성 플래그 기본 false는 유지한다.
+수락 경로 단일화(`fix/contract-accept-single-path`): 계약 전용 POST `/api/orders/{orderId}/contract/accept`를 삭제했다. 계약 주문도 일반 주문과 같은 POST `/api/orders/{id}/accept`(주문 상세 응답, `allowedActions`의 `ACCEPT`)로 수락하며 REQUESTED → AWAITING_CONTRACT가 된다.
+
+후속 3차(main `2fec099` 반영): PDF 흐름용 POST `/api/orders/{orderId}/contract/accept`(위 단일화로 삭제)·`/draft`·`/sign` 추가. V2 전용 수락→계약 대기→초안/PDF→양측 서명→선금 대기이며 기존 전액 결제는 차단 상태다. 요청·권한·반복 처리·트랜잭션은 [PDF 연결 3차](contract-pdf-delivery.md)를 따른다. 생성 플래그 기본 false는 유지한다.
 
 PDF 후속(`feature/contract-pdf-delivery`, main `2fec099` 반영): 당사자 GET `/api/orders/{orderId}/contract`·GET `/api/orders/{orderId}/contract/file`(선택 `version`), 판매자 POST `/api/orders/{orderId}/contract/generate`(`{"version":1}`, CSRF) 추가. 성공/진행 중 200/202, 버전·상태 충돌 409, 생성/파일 검사 실패 503. 요청·응답·오류·권한·비공개 보관의 상세 계약은 [PDF API 문서](contract-pdf-delivery.md)를 따른다. 기존 V2 주문 생성/초안/서명 HTTP 활성화와 구분한다.
 
@@ -166,7 +168,7 @@ payment: id,amount,feeRateBps,status,paidAt,refundedAt. review는 8절의 Review
 
 | POST 경로 | 실행자·입력 | 조건·결과 |
 | --- | --- | --- |
-| /orders/{id}/accept | 판매자; 없음 | REQUESTED → AWAITING_PAYMENT |
+| /orders/{id}/accept | 판매자; 없음 | REQUESTED → AWAITING_PAYMENT(LEGACY_V1) / AWAITING_CONTRACT(계약 주문) |
 | /orders/{id}/reject | 판매자; reason | REQUESTED → REJECTED |
 | /orders/{id}/cancel | 구매자·판매자; reason | 구매자 결제 전; 판매자 수락 후 미완료. 유료 취소 전액 환불 |
 | /orders/{id}/payment | 구매자; agreedToTerms=true | 결제 대기·잔액 확인 → IN_PROGRESS |

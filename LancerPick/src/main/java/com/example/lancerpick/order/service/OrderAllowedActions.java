@@ -56,8 +56,9 @@ final class OrderAllowedActions {
   }
 
   /**
-   * 계약 주문은 선금 전 수락·거절·취소만 연결돼 있다. 계약 확인·선금 결제·이후 거래 명령은 전용 API(E5·E6·J4)가 생길 때
-   * 추가한다.
+   * 계약 주문은 결제 전 수락·거절·취소만 연결돼 있다. 수락은 일반 주문과 같은 ACCEPT(POST /api/orders/{id}/accept)다.
+   * 계약 초안·서명은 주문 상세의 계약 영역이 계약 API로 처리한다. CONTRACT_V3의 AWAITING_PAYMENT는 전액 결제 대기이며,
+   * 결제(PAY)와 이후 거래 명령은 V3 금액 처리(J4)·거래 명령(E6)이 연결될 때 추가한다.
    */
   private static List<String> contractActions(String status, boolean buyer) {
     return switch (status) {

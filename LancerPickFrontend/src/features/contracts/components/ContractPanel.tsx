@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../shared/api/client'
 import { getMemberSession } from '../../auth/api'
 import { downloadContract, generateContract, verifyContractPdf } from '../api'
-import { acceptContractOrder, prepareContract, signContract } from '../api'
+import { prepareContract, signContract } from '../api'
 import { useContract, useContractMember } from '../queries'
 import { contractFields } from '../document-view'
 import styles from './ContractPanel.module.css'
@@ -53,7 +53,8 @@ export function ContractPanel({
     orderStatus,
   )
 
-  async function act(download: boolean | 'accept' | 'prepare' | 'sign') {
+  // 계약 주문 수락은 주문 상세의 공통 수락 버튼(POST /orders/{id}/accept)에서 한다.
+  async function act(download: boolean | 'prepare' | 'sign') {
     if (
       lock.current ||
       !member.data ||
@@ -69,8 +70,7 @@ export function ContractPanel({
       if ((await getMemberSession()).id !== owner)
         throw new Error('계정이 변경되었습니다. 새로고침 후 확인해 주세요.')
       if (epoch.current !== startedAt) return
-      if (download === 'accept') await acceptContractOrder(orderId)
-      else if (download === 'prepare')
+      if (download === 'prepare')
         await prepareContract(orderId, current.data?.version ?? 0, terms)
       else if (download === 'sign') {
         if (!document || !agreed || reviewed !== document.fileHash)
@@ -120,16 +120,6 @@ export function ContractPanel({
   return (
     <section className={styles.panel} aria-label="전자계약서">
       <h2>전자계약서</h2>
-      {member.data?.id === sellerId && orderStatus === 'REQUESTED' && (
-        <button
-          disabled={busy}
-          onClick={() => {
-            void act('accept')
-          }}
-        >
-          계약 주문 수락
-        </button>
-      )}
       {member.data?.id === sellerId &&
         orderStatus === 'AWAITING_CONTRACT' &&
         current.data?.status !== 'SIGNED' &&

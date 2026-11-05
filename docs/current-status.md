@@ -1,5 +1,9 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 계약 주문 수락 경로 단일화 — 2026-11-05
+
+`fix/contract-accept-single-path`(정은찬, PR 전): 같은 수락을 하던 두 경로 중 계약 전용 `POST /api/orders/{orderId}/contract/accept`와 계약 영역의 "계약 주문 수락" 버튼을 삭제했다. 판매자가 계약 주문(REQUESTED)을 볼 때 수락 버튼이 두 개 나오던 문제가 사라지고, 수락은 주문 상세의 공통 버튼(`allowedActions`의 `ACCEPT`, `POST /api/orders/{id}/accept`) 하나로 한다. 상태 전환·이력·아웃박스는 같은 `OrderDecisionService.accept`라 바뀌지 않는다. 함께 V3 기준으로 주석(`NewOrderPolicy`, `OrderAllowedActions`)과 계약 주문 결제 차단 메시지(`CONTRACT_PAYMENT_NOT_READY`, 코드 유지·문구에서 "분할 결제" 제거)를 고쳤다. DB 변경 없음. 검증 결과는 PR에 기록한다. 브라우저 확인은 하지 않았다.
+
 ## 메일 발송 인프라(C3) — 2026-11-05
 
 main 반영(#90, `feature/mail-infrastructure`, 정은찬): `AccountMailSender`의 SMTP 구현 `SmtpAccountMailSender`(발송 스레드 1개 + 고정 크기 큐, 결과를 `AccountMailDeliveryRecorder`에 SENT/FAILED 안전 코드로 기록)와 `spring-boot-starter-mail`을 추가했다. `lancerpick.mail.enabled`(환경변수 `MAIL_ENABLED`) 기본 false라 메일 서버 없이 지금처럼 켜지고, 켜면 로컬 Mailpit(localhost:1025)으로 보낸다. DB 변경 없음. 자동 테스트: 병합 전 작업 브랜치에서 백엔드 `clean build` 771건 통과(로컬 `lancerpick_test`). 병합 후 main에서 재실행하지 않았으며 원격 CI는 PR 기록을 따른다. 실제 서버 + Mailpit에서 재설정 메일 수신 → 링크 토큰으로 재설정 → 새 비밀번호 로그인까지 API로 확인했다. DB의 SENT 직접 조회와 브라우저 화면 확인은 하지 않았다. 상세·한계·검증은 [메일 인프라](mail-infrastructure.md).

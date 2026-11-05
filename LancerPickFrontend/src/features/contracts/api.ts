@@ -1,8 +1,6 @@
 import { apiRequest, apiPdfRequest } from '../../shared/api/client.ts'
 import type { ContractDocument } from './types.ts'
 
-export const acceptContractOrder = (id: string) =>
-  apiRequest(`${path(id)}/accept`, { method: 'POST' })
 export const prepareContract = (
   id: string,
   expectedVersion: number,

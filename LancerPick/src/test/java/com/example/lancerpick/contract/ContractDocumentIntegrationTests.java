@@ -447,12 +447,17 @@ class ContractDocumentIntegrationTests {
         "DELETE FROM outbox_events WHERE aggregate_type='ORDER' AND aggregate_id=?", orderId);
     jdbc.update("DELETE FROM order_histories WHERE order_id=?", orderId);
     jdbc.update("UPDATE orders SET status='REQUESTED',accepted_at=NULL WHERE id=?", orderId);
-    mvc.perform(post(path() + "/accept").with(authentication(auth(buyer))).with(csrf()))
+    // 계약 주문 수락은 일반 주문 수락 API 하나로 한다. 계약 전용 수락 경로는 없다.
+    mvc.perform(post(path() + "/accept").with(authentication(auth(seller))).with(csrf()))
+        .andExpect(status().is4xxClientError());
+    String accept = "/api/orders/" + orderId + "/accept";
+    mvc.perform(post(accept).with(authentication(auth(buyer))).with(csrf()))
         .andExpect(status().isForbidden());
-    mvc.perform(post(path() + "/accept").with(authentication(auth(seller))).with(csrf()))
+    mvc.perform(post(accept).with(authentication(auth(seller))).with(csrf()))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status").value("AWAITING_CONTRACT"));
-    mvc.perform(post(path() + "/accept").with(authentication(auth(seller))).with(csrf()))
+        .andExpect(jsonPath("$.status").value("AWAITING_CONTRACT"))
+        .andExpect(jsonPath("$.allowedActions[0]").value("CANCEL"));
+    mvc.perform(post(accept).with(authentication(auth(seller))).with(csrf()))
         .andExpect(status().isConflict());
     mvc.perform(
             post(path() + "/draft")
