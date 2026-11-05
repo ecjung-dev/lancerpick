@@ -77,8 +77,10 @@ public class AuthService {
         }
 
         String role = member.getRole().name();
+        // auth_version은 비밀번호 해시와 같은 행 조회에서 읽은 값이다. 이 로그인과 비밀번호 변경이 겹쳐
+        // 변경이 먼저 저장되면 이 세션은 옛 버전을 갖게 되어 다음 요청에서 SessionAuthVersionFilter가 폐기한다.
         Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
-                new LoginMember(member.getId(), role),
+                new LoginMember(member.getId(), role, member.getAuthVersion()),
                 null,   // 인증 후에는 비밀번호를 보관하지 않는다
                 List.of(new SimpleGrantedAuthority("ROLE_" + role)));   // hasRole("ADMIN")은 ROLE_ADMIN을 찾는다
 

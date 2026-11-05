@@ -19,6 +19,12 @@ export interface UpdateMeInput {
   displayName: string
 }
 
+/** POST /api/me/password 본문. 두 값 모두 원문 그대로 보낸다(정리하지 않음). */
+export interface ChangePasswordInput {
+  currentPassword: string
+  newPassword: string
+}
+
 export interface SignupInput {
   email: string
   password: string

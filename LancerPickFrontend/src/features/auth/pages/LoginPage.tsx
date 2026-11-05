@@ -12,12 +12,22 @@ import { validateLogin, type LoginErrors } from '../validation'
 import { AuthLayout } from './AuthLayout'
 import styles from './AuthPage.module.css'
 
-/** 가입 화면이 navigate('/login', { state })로 넘겨주는 값 */
-interface SignupState { signedUpEmail?: string }
+/**
+ * 다른 화면이 navigate('/login', { state })로 넘겨주는 값.
+ * - signedUpEmail: 가입 직후 이메일 미리 채우기
+ * - passwordChanged: 비밀번호 변경 후 이동(done=바뀜, unclear=바뀌었는지 확인하지 못함)
+ * 비밀번호 값은 절대 넣지 않는다.
+ */
+export interface LoginPageState {
+  signedUpEmail?: string
+  passwordChanged?: 'done' | 'unclear'
+}
 
 export function LoginPage() {
   const location = useLocation()
-  const signedUpEmail = (location.state as SignupState | null)?.signedUpEmail
+  const state = location.state as LoginPageState | null
+  const signedUpEmail = state?.signedUpEmail
+  const passwordChanged = state?.passwordChanged
   const [params] = useSearchParams()
   const next = safeNextPath(params.get('next'))
   const navigate = useNavigate()
@@ -60,6 +70,14 @@ export function LoginPage() {
 
   return <AuthLayout title="로그인" description="이메일과 비밀번호로 로그인해 주세요.">
     {signedUpEmail && <p className={styles.success} role="status">가입이 완료됐어요. 로그인해 주세요.</p>}
+    {passwordChanged === 'done' && (
+      <p className={styles.success} role="status">비밀번호를 바꿨어요. 모든 기기에서 로그아웃됐으니 새 비밀번호로 로그인해 주세요.</p>
+    )}
+    {passwordChanged === 'unclear' && (
+      <p className={styles.error} role="alert">
+        비밀번호 변경 결과를 확인하지 못했어요. 로그인이 끝났으니 새 비밀번호로 먼저 로그인해 보고, 안 되면 기존 비밀번호로 로그인해 주세요.
+      </p>
+    )}
     {submit.isError && <p className={styles.error} role="alert">{loginErrorMessage(submit.error)}
       {submit.error instanceof ApiError && submit.error.traceId && <small>문의 코드: {submit.error.traceId}</small>}</p>}
     <form onSubmit={onSubmit} noValidate className={styles.form}>

@@ -2,12 +2,14 @@ package com.example.lancerpick.member.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.member.dto.ChangePasswordRequest;
 import com.example.lancerpick.member.dto.MemberResponse;
 import com.example.lancerpick.member.dto.SignupRequest;
 import com.example.lancerpick.member.dto.UpdateMeRequest;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.repository.MemberRepository;
 import com.example.lancerpick.wallet.service.WalletInitializationService;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -102,10 +104,57 @@ public class MemberService {
         return MemberResponse.from(member, hasSellerProfile(memberId));
     }
 
+    /**
+     * POST /api/me/password — 현재 비밀번호를 다시 확인한 뒤 새 비밀번호로 바꾼다.
+     * 성공하면 auth_version이 1 올라가 이 회원의 모든 기존 세션이 폐기된다(세션 무효화는 Controller·필터가 한다).
+     * 지갑·적립금은 건드리지 않는다.
+     *
+     * 확인 순서(실패하면 아무것도 바꾸지 않는다):
+     * 1) 회원 행을 잠근다. 같은 회원의 변경이 동시에 오면 여기서 한 줄로 선다.
+     * 2) 세션의 로그인 당시 버전과 DB 버전이 다르면 이미 다른 곳에서 비밀번호가 바뀐 세션이다 → 401.
+     *    (동시 요청 중 늦은 쪽은 앞 요청이 올린 버전을 보고 여기서 거절된다. 앞 요청을 덮어쓰지 않는다.)
+     * 3) 현재 비밀번호가 틀리면 400 CURRENT_PASSWORD_INCORRECT.
+     * 4) 새 비밀번호가 현재와 같으면 400 PASSWORD_UNCHANGED.
+     *
+     * @param expectedAuthVersion 세션 principal의 authVersion. null이면(테스트용 principal) 2)를 건너뛴다.
+     */
+    @Transactional
+    public void changePassword(long memberId, Long expectedAuthVersion, ChangePasswordRequest request) {
+        Member member = memberRepository.findByIdForUpdate(memberId).orElseThrow(MemberService::authenticationRequired);
+
+        if (expectedAuthVersion != null && expectedAuthVersion != member.getAuthVersion()) {
+            throw authenticationRequired();
+        }
+        if (!currentPasswordMatches(request.currentPassword(), member.getPasswordHash())) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "CURRENT_PASSWORD_INCORRECT", "현재 비밀번호가 올바르지 않습니다.");
+        }
+        // 3)을 통과했으므로 현재 비밀번호 원문과 같으면 저장된 비밀번호와도 같다. 해시 비교를 한 번 더 하지 않는다.
+        if (request.newPassword().equals(request.currentPassword())) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "PASSWORD_UNCHANGED", "새 비밀번호가 현재 비밀번호와 같습니다.");
+        }
+
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        member.changePassword(passwordEncoder.encode(request.newPassword()), now);   // 트랜잭션 종료 시 UPDATE
+    }
+
+    /**
+     * BCrypt는 72바이트까지만 비교하고, 그보다 긴 입력은 버전에 따라 예외가 날 수 있다.
+     * 저장된 비밀번호는 정책상 64바이트 이하이므로 72바이트를 넘는 입력은 비교 없이 불일치로 본다(500 방지).
+     */
+    private boolean currentPasswordMatches(String rawPassword, String passwordHash) {
+        if (rawPassword.getBytes(StandardCharsets.UTF_8).length > 72) {
+            return false;
+        }
+        return passwordEncoder.matches(rawPassword, passwordHash);
+    }
+
     /** 세션에는 있는데 DB에 회원이 없으면(삭제 등) 로그인이 유효하지 않은 것으로 본다. */
     private Member findLoggedInMember(long memberId) {
-        return memberRepository.findById(memberId).orElseThrow(() ->
-                new BusinessException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다."));
+        return memberRepository.findById(memberId).orElseThrow(MemberService::authenticationRequired);
+    }
+
+    private static BusinessException authenticationRequired() {
+        return new BusinessException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
     }
 
     private boolean hasSellerProfile(long memberId) {

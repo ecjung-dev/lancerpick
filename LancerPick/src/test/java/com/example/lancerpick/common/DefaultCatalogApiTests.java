@@ -129,4 +129,8 @@ class DefaultCatalogApiTests extends CommonApiTests {
     // 로그인 서비스도 DB(MemberRepository)를 사용하므로 이 컨텍스트에서는 대체한다.
     @MockitoBean
     com.example.lancerpick.auth.service.AuthService authService;
+
+    // 세션 폐기 확인(auth_version 조회)도 DB를 사용하므로 대체한다. 실제 폐기는 PasswordChangeIntegrationTests에서 검증한다.
+    @MockitoBean
+    com.example.lancerpick.common.security.AuthVersionLookup authVersionLookup;
 }

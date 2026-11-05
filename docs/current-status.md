@@ -8,6 +8,10 @@
 
 main 반영(#82, `63ac00d`): 주문 생성 서비스가 정책 버전을 생성 시 고정하고, `CONTRACT_V2`이면 최소 계약 금액 10,000원 검증과 `order_trade_terms` 저장을 같은 트랜잭션에서 한다. 설정 `lancerpick.order.contract-v2-creation-enabled` 기본 false라 실제 API는 계속 LEGACY_V1만 만든다(G1 전까지 유지). 자동 테스트: main `63ac00d`에서 로컬 MySQL 8.4 `lancerpick_test` 대상 백엔드 `clean build` 675건, 프런트 typecheck·lint·test:api 137건·build 통과(2026-11-05). V2 수락·계약 성립(E4)·브라우저 확인은 아직이다. 상세는 [주문 생성](order-creation.md) 8단계.
 
+## 비밀번호 변경·세션 폐기(K1 일부·K2) — 2026-11-05
+
+`feature/password-change`(김창재): 로그인 상태 비밀번호 변경 API·화면(`/mypage/profile`)과 `members.auth_version` 기반 기존 세션 폐기 필터를 추가했다. DB·라이브러리 변경 없음. 이메일 인증 가입·비밀번호 재설정·요청 제한은 아직 없다. 세션 폐기 계약은 채팅 소켓 종료(C2)에서 사용한다. 상세·한계·검증은 [로그인 문서](auth-login.md#비밀번호-변경세션-폐기--2026-11-05-featurepassword-change).
+
 ## 주문 알림·아웃박스 — 2026-11-05
 
 main 반영(#79, `feature/order-notifications`): 기존 주문 이력 발생 시 같은 트랜잭션에 아웃박스 이벤트 저장, 스케줄러가 상대 당사자 알림 생성, 알림 목록·읽음 API와 `/notifications` 화면·헤더 개수 표시. 아래 팀 진행도의 "채팅/알림 미연결" 중 기존 주문 알림만 연결했으며, V2 계약 주문 알림·채팅은 여전히 미연결이다. 로컬 백엔드 `clean build` 664건·프런트 검사 통과. 실제 서버 스케줄러·브라우저 확인은 아직이다. 상세는 [주문 알림·아웃박스](notifications.md).

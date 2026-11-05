@@ -1,6 +1,7 @@
 package com.example.lancerpick.common.security;
 
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -10,13 +11,20 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CsrfException;
+import org.springframework.security.web.csrf.CsrfFilter;
 
 /** 공개 조회·가입·로그인과 인증 필요 API, 관리자 전용 API의 접근 정책. */
 @Configuration
 public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityErrorWriter errors,
-            Environment environment) throws Exception {
+            Environment environment, ObjectProvider<AuthVersionLookup> authVersionLookup) throws Exception {
+        // 비밀번호 변경으로 버전이 바뀐 세션을 폐기한다. DB가 없는 demo·HTTP 단위 테스트에는 조회 Bean이 없어 넣지 않는다.
+        // CsrfFilter 다음에 두어, 폐기된 세션의 변경 요청이 403(CSRF)이 아니라 401(로그인 필요)로 끝나게 한다.
+        AuthVersionLookup lookup = authVersionLookup.getIfAvailable();
+        if (lookup != null) {
+            http.addFilterAfter(new SessionAuthVersionFilter(lookup), CsrfFilter.class);
+        }
         http.formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
