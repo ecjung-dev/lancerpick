@@ -26,6 +26,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.security:spring-security-messaging'
     implementation 'org.flywaydb:flyway-mysql'
     implementation 'io.github.openfeign.querydsl:querydsl-jpa:7.7'
     annotationProcessor 'io.github.openfeign.querydsl:querydsl-apt:7.7:jpa'

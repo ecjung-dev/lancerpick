@@ -4,6 +4,7 @@ import com.example.lancerpick.chat.dto.ChatMessageResponse;
 import com.example.lancerpick.chat.dto.ChatMessagesResponse;
 import com.example.lancerpick.chat.dto.SendChatMessageRequest;
 import com.example.lancerpick.chat.entity.OrderChatMessage;
+import com.example.lancerpick.chat.event.ChatMessageStored;
 import com.example.lancerpick.chat.repository.OrderChatMessageQueries;
 import com.example.lancerpick.chat.repository.OrderChatMessageRepository;
 import com.example.lancerpick.common.exception.BusinessException;
@@ -20,6 +21,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class OrderChatService {
   private final OrderChatMessageRepository messageRepository;
   private final OrderChatMessageQueries messageQueries;
   private final Clock clock;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
   public ChatMessagesResponse list(
@@ -133,6 +136,9 @@ public class OrderChatService {
         messageRepository.saveAndFlush(
             OrderChatMessage.create(
                 orderId, sequence, memberId, clientMessageId, content, occurredAt));
+    eventPublisher.publishEvent(
+        new ChatMessageStored(
+            ChatMessageResponse.from(message), order.getBuyerId(), order.getSellerId()));
     return new Sent(ChatMessageResponse.from(message), true);
   }
 
