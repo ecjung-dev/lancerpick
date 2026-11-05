@@ -2,7 +2,7 @@
 
 ## V2 주문 생성 경로(E3) — 2026-11-05
 
-`feature/contract-v2-order-creation`(PR 전): 주문 생성 서비스가 정책 버전을 생성 시 고정하고, `CONTRACT_V2`이면 최소 계약 금액 10,000원 검증과 `order_trade_terms` 저장을 같은 트랜잭션에서 한다. 설정 `lancerpick.order.contract-v2-creation-enabled` 기본 false라 실제 API는 계속 LEGACY_V1만 만든다(G1 전까지 유지). 자동 테스트: 로컬 MySQL 8.4 `lancerpick_test`에서 주문 생성·계약·결제 정책 관련 테스트 통과. V2 수락·계약 성립(E4)·브라우저 확인은 아직이다. 상세는 [주문 생성](order-creation.md) 8단계.
+main 반영(#82, `63ac00d`): 주문 생성 서비스가 정책 버전을 생성 시 고정하고, `CONTRACT_V2`이면 최소 계약 금액 10,000원 검증과 `order_trade_terms` 저장을 같은 트랜잭션에서 한다. 설정 `lancerpick.order.contract-v2-creation-enabled` 기본 false라 실제 API는 계속 LEGACY_V1만 만든다(G1 전까지 유지). 자동 테스트: main `63ac00d`에서 로컬 MySQL 8.4 `lancerpick_test` 대상 백엔드 `clean build` 675건, 프런트 typecheck·lint·test:api 137건·build 통과(2026-11-05). V2 수락·계약 성립(E4)·브라우저 확인은 아직이다. 상세는 [주문 생성](order-creation.md) 8단계.
 
 ## 주문 알림·아웃박스 — 2026-11-05
 
@@ -10,7 +10,7 @@ main 반영(#79, `feature/order-notifications`): 기존 주문 이력 발생 시
 
 ## 최신 팀 진행도 — 2026-11-05
 
-대조 기준은 원격 main과 동일한 `1e10d78`이다. 첨부 시트와 전체 문서의 현황·검증 기록을 대조한 [팀 진행도](team-progress.md)에 개인 35개·공통 8개 항목별 근거를 정리했다. 개인 MVP 기능은 김창재 6/6·박소현 7/7·정은찬 12/12·황준범 10/10 완료를 유지한다. 공통은 완료 0/8(진행 중 7·시작 전 1)이며 전체 프로젝트 완료율을 뜻하지 않는다.
+아래 수치는 `1e10d78`(당시 원격 main) 기준의 시트 대조 결과이며, 이후 main 변경(#79~#82)은 이 집계에 반영하지 않았다. 첨부 시트와 전체 문서의 현황·검증 기록을 대조한 [팀 진행도](team-progress.md)에 개인 35개·공통 8개 항목별 근거를 정리했다. 개인 MVP 기능은 김창재 6/6·박소현 7/7·정은찬 12/12·황준범 10/10 완료를 유지한다. 공통은 완료 0/8(진행 중 7·시작 전 1)이며 전체 프로젝트 완료율을 뜻하지 않는다.
 
 V3 금융 컬럼·V4 계약/서명·V5/V6 업무 스키마와 정책별 DTO/허용 행동/기존 명령 차단은 모두 main에 반영됐다. 실행 Flyway는 V1~V6이며 업무 테이블은 누적 29개다. 새 계약 주문·선금/잔금·PDF·채팅·타이머 기능과 V2 계약 주문 알림은 미연결이다. 기존 주문 알림은 위 절과 같이 반영됐다. 기존 생성은 LEGACY_V1이고 단일 결제 제약도 유지한다. [스키마 기반](advanced-schema-foundation.md)과 [정책 경계](advanced-policy-boundary.md)를 따르고, 담당별 남은 항목은 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)에서 관리한다.
 

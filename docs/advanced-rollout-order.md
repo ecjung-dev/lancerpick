@@ -8,6 +8,8 @@
 - 같은 main의 V5: 회원 인증·요청 제한·채팅·아웃박스·알림·문의 스키마.
 - 같은 main의 V6: 주문 상태/이력 컬럼·거래 정책·타이머·종료 결과·복구 준비 컬럼.
 - 이후 main `1941ad1`: 기존(LEGACY_V1) 주문 알림·아웃박스 서비스·API·화면(#79, #80). V2 계약 주문 알림은 아직 없음.
+- 이후 main `577f7ed`: 계약 초안의 당사자 회원 누락을 500 `DATA_INTEGRITY_ERROR`로 처리(#81).
+- 이후 main `63ac00d`: V2 주문 생성 경로(정책 고정·10,000원 하한·`order_trade_terms` 저장, #82). 설정 `lancerpick.order.contract-v2-creation-enabled` 기본 false라 실제 생성은 LEGACY_V1 유지.
 - 누적 업무 테이블 29개. 결제의 주문당 한 건 UNIQUE·전액 환불 CHECK는 유지.
 
 기존 main 코드가 분할 결제 두 행을 만나지 않도록 새 주문 생성은 LEGACY_V1으로 유지한다. 테이블 준비만으로 새 계약 주문을 활성화하지 않는다.
