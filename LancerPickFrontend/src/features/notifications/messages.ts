@@ -24,6 +24,20 @@ export function notificationTarget(item: Pick<NotificationItem, 'orderId'>) {
   return item.orderId && /^[1-9][0-9]{0,18}$/.test(item.orderId) ? `/orders/${item.orderId}` : null
 }
 
+/**
+ * 새 탭·새 창 열기(보조 버튼·수정 키)는 브라우저 동작을 그대로 두고, 같은 탭 이동만 읽음 처리 결과를 기다린다.
+ * 그래야 읽음 처리가 실패했을 때 목록 화면에서 안내할 수 있다.
+ */
+export function waitsForReadBeforeNavigation(event: {
+  button: number
+  metaKey: boolean
+  ctrlKey: boolean
+  shiftKey: boolean
+  altKey: boolean
+}) {
+  return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
+}
+
 /** 헤더 배지는 99를 넘으면 99+로 줄인다. 0 이하·비정상 값은 표시하지 않는다. */
 export function unreadBadge(count: number | undefined) {
   if (count === undefined || !Number.isInteger(count) || count <= 0) return null

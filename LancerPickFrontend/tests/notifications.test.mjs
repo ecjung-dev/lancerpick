@@ -5,11 +5,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createServer } from 'vite'
-import { notificationMessage, notificationTarget, unreadBadge } from '../src/features/notifications/messages.ts'
+import { notificationMessage, notificationTarget, unreadBadge, waitsForReadBeforeNavigation } from '../src/features/notifications/messages.ts'
 
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-notifications',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
-const { NotificationsPage } = await server.ssrLoadModule('/src/features/notifications/pages/NotificationsPage.tsx')
+const { NotificationsPage, NotificationReadError } = await server.ssrLoadModule('/src/features/notifications/pages/NotificationsPage.tsx')
 const { NotificationNavLink } = await server.ssrLoadModule('/src/features/notifications/components/NotificationNavLink.tsx')
 const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
 after(async () => { await server.close() })
@@ -85,6 +85,24 @@ test('empty list, login requirement and server errors are shown differently', ()
   assert.match(failed, /role="alert"/)
   assert.match(failed, /잠시 후 다시 시도해 주세요/)
   assert.doesNotMatch(failed, /받은 알림이 없습니다/)
+})
+
+test('only plain left clicks wait for the read request before navigating', () => {
+  const plain = { button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false }
+  assert.equal(waitsForReadBeforeNavigation(plain), true)
+  assert.equal(waitsForReadBeforeNavigation({ ...plain, button: 1 }), false)
+  for (const key of ['metaKey', 'ctrlKey', 'shiftKey', 'altKey'])
+    assert.equal(waitsForReadBeforeNavigation({ ...plain, [key]: true }), false)
+})
+
+test('read failure notice is an alert and offers the order without marking it read', () => {
+  const withOrder = render(createElement(NotificationReadError, { target: '/orders/7' }), () => {})
+  assert.match(withOrder, /role="alert"/)
+  assert.match(withOrder, /읽음 처리하지 못했어요/)
+  assert.match(withOrder, /href="\/orders\/7"/)
+  const withoutOrder = render(createElement(NotificationReadError, { target: null }), () => {})
+  assert.match(withoutOrder, /읽음 처리하지 못했어요/)
+  assert.doesNotMatch(withoutOrder, /href=/)
 })
 
 test('header link shows the unread count only when there is one', () => {

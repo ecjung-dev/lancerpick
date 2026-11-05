@@ -2,7 +2,9 @@ package com.example.lancerpick.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.reset;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -31,6 +33,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,6 +43,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -198,11 +202,69 @@ class NotificationIntegrationTests {
 
     assertThat(dispatcher.dispatch(id)).isFalse();
 
-    assertThat(eventColumn(id, "status")).isEqualTo("PENDING");
+    // 수신자 오류는 다시 시도해도 성공할 수 없으므로 첫 실패에서 바로 멈춘다.
+    assertThat(eventColumn(id, "status")).isEqualTo("FAILED");
     assertThat(eventColumn(id, "attempt_count")).isEqualTo("1");
     assertThat(eventColumn(id, "last_error_code")).isEqualTo("UnsupportedEventException");
     assertThat(notificationCount(third)).isZero();
     assertThat(notificationCount(buyer)).isZero();
+  }
+
+  @Test
+  void malformedRecipientPayloadFailsImmediately() {
+    jdbc.update("""
+        INSERT INTO outbox_events(event_id,type,schema_version,aggregate_type,aggregate_id,payload,status,
+            attempt_count,next_attempt_at,created_at)
+        VALUES (?,'ORDER_ACCEPTED',1,'ORDER',?,JSON_OBJECT('recipientIds',JSON_ARRAY('not-a-number')),'PENDING',0,?,?)
+        """, UUID.randomUUID().toString(), order, AT, AT);
+    long id = eventIds().getLast();
+
+    assertThat(dispatcher.dispatch(id)).isFalse();
+
+    assertThat(eventColumn(id, "status")).isEqualTo("FAILED");
+    assertThat(eventColumn(id, "attempt_count")).isEqualTo("1");
+    assertThat(eventColumn(id, "last_error_code")).isEqualTo("UnsupportedEventException");
+  }
+
+  @Test
+  void failureWhileRecordingFailureDoesNotEscapeDispatch() {
+    long id = eventIds().getFirst();
+    // 처리와 실패 기록 모두 잠금 대기 초과를 흉내 낸다. 예외가 반복문 밖으로 새면 같은 배치의 다음 이벤트가 막힌다.
+    doThrow(new CannotAcquireLockException("simulated lock timeout")).when(events).lockById(id);
+
+    assertThat(dispatcher.dispatch(id)).isFalse();
+    reset(events);
+
+    assertThat(eventColumn(id, "status")).isEqualTo("PENDING");
+    assertThat(eventColumn(id, "attempt_count")).isEqualTo("0");
+    assertThat(dispatcher.dispatch(id)).as("picked up again on the next run").isTrue();
+    assertThat(notificationCount(seller)).isEqualTo(1);
+  }
+
+  @Test
+  void failureAfterAnotherDispatcherDeferredTheEventIsNotCountedAgain() {
+    long id = eventIds().getFirst();
+    doThrow(new IllegalStateException("simulated delivery failure")).when(notifications).save(any());
+    assertThat(dispatcher.dispatch(id)).isFalse();
+    assertThat(eventColumn(id, "attempt_count")).isEqualTo("1");
+    var deferredUntil = eventColumn(id, "next_attempt_at");
+
+    // 경합한 다른 처리기: 잠금 대기에서 실패했지만, 실패를 기록할 때는 이미 앞 처리기가 다음 시도를 미뤄 둔 상태다.
+    // 저장소 스파이는 인터페이스 프록시라 callRealMethod 대신 스파이의 기본 응답(실제 빈 위임)을 쓴다.
+    var delegate = mockingDetails(events).getMockCreationSettings().getDefaultAnswer();
+    var calls = new AtomicInteger();
+    doAnswer(invocation -> {
+          if (calls.getAndIncrement() == 0) throw new CannotAcquireLockException("simulated lock timeout");
+          return delegate.answer(invocation);
+        })
+        .when(events)
+        .lockById(id);
+    assertThat(dispatcher.dispatch(id)).isFalse();
+    assertThat(calls).as("process and failure recording both locked the event").hasValue(2);
+
+    assertThat(eventColumn(id, "status")).isEqualTo("PENDING");
+    assertThat(eventColumn(id, "attempt_count")).isEqualTo("1");
+    assertThat(eventColumn(id, "next_attempt_at")).isEqualTo(deferredUntil);
   }
 
   @Test

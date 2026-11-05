@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -75,7 +76,16 @@ public class OutboxDispatcher {
     } catch (RuntimeException exception) {
       // 페이로드·개인정보를 남기지 않고 이벤트 ID와 예외 유형만 기록한다.
       log.warn("Outbox event {} failed: {}", id, exception.getClass().getSimpleName());
-      tx.executeWithoutResult(status -> recordFailure(id, exception));
+      try {
+        tx.executeWithoutResult(status -> recordFailure(id, exception));
+      } catch (RuntimeException recordException) {
+        // 실패 기록마저 실패해도(잠금 대기 초과 등) 같은 배치의 다음 이벤트 처리를 막지 않는다.
+        // 이벤트는 PENDING으로 남아 다음 배치에서 다시 선택된다.
+        log.warn(
+            "Outbox event {} failure was not recorded: {}",
+            id,
+            recordException.getClass().getSimpleName());
+      }
       return false;
     }
   }
@@ -97,14 +107,24 @@ public class OutboxDispatcher {
   private List<Notification> toNotifications(OutboxEvent event) {
     if (!OrderEventPublisher.AGGREGATE_ORDER.equals(event.getAggregateType()) || event.getSchemaVersion() != 1)
       throw new UnsupportedEventException();
-    JsonNode payload = mapper.readTree(event.getPayload());
+    JsonNode payload;
+    try {
+      payload = mapper.readTree(event.getPayload());
+    } catch (JacksonException e) {
+      throw new UnsupportedEventException();
+    }
     JsonNode recipients = payload.get("recipientIds");
     if (recipients == null || !recipients.isArray() || recipients.isEmpty()) throw new UnsupportedEventException();
     // 페이로드를 신뢰하지 않는다. 현재 주문의 구매자·판매자가 아닌 수신자가 있으면 이벤트 전체를 실패 처리한다.
     var order = orders.findById(event.getAggregateId()).orElseThrow(UnsupportedEventException::new);
     var recipientIds = new LinkedHashSet<Long>();
     for (JsonNode recipient : recipients) {
-      long recipientId = Long.parseLong(recipient.asString());
+      long recipientId;
+      try {
+        recipientId = Long.parseLong(recipient.asString());
+      } catch (RuntimeException e) {
+        throw new UnsupportedEventException();
+      }
       if (recipientId != order.getBuyerId() && recipientId != order.getSellerId())
         throw new UnsupportedEventException();
       recipientIds.add(recipientId);
@@ -124,9 +144,15 @@ public class OutboxDispatcher {
 
   private void recordFailure(long id, RuntimeException exception) {
     var event = events.lockById(id).orElse(null);
-    if (event == null || !OutboxEvent.PENDING.equals(event.getStatus())) return;
+    var at = now();
+    // 기한이 지난 PENDING만 기록한다. 같은 이벤트를 고른 다른 처리기가 이미 실패를 기록해 다음 시도를 미뤘다면
+    // 이번 실패는 같은 시도로 보고 횟수를 다시 올리지 않는다(동시 경합만으로 FAILED가 되는 것을 막는다).
+    if (event == null || !event.isDue(at)) return;
+    // 형식·수신자 오류는 다시 시도해도 성공할 수 없으므로 바로 FAILED로 멈춘다.
+    int maxAttempts =
+        exception instanceof UnsupportedEventException ? event.getAttemptCount() + 1 : MAX_ATTEMPTS;
     long backoff = Math.min(3600, 30L << Math.min(event.getAttemptCount(), 7));
-    event.fail(exception.getClass().getSimpleName(), now(), MAX_ATTEMPTS, backoff);
+    event.fail(exception.getClass().getSimpleName(), at, maxAttempts, backoff);
     events.flush();
   }
 
