@@ -133,4 +133,13 @@ class DefaultCatalogApiTests extends CommonApiTests {
     // 세션 폐기 확인(auth_version 조회)도 DB를 사용하므로 대체한다. 실제 폐기는 PasswordChangeIntegrationTests에서 검증한다.
     @MockitoBean
     com.example.lancerpick.common.security.AuthVersionLookup authVersionLookup;
+
+    // 비밀번호 재설정·요청 제한·발송 결과 기록도 DB(Repository)를 사용하므로 대체한다.
+    // 실제 처리는 PasswordResetIntegrationTests(MySQL)에서 검증한다.
+    @MockitoBean
+    com.example.lancerpick.auth.service.PasswordResetService passwordResetService;
+    @MockitoBean
+    com.example.lancerpick.auth.service.AuthRequestLimiter authRequestLimiter;
+    @MockitoBean
+    com.example.lancerpick.auth.mail.AccountMailDeliveryRecorder accountMailDeliveryRecorder;
 }

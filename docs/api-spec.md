@@ -63,10 +63,14 @@ fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 
 | GET /me | 회원 | Member |
 | PATCH /me | 회원; displayName | Member |
 | POST /me/password | 회원+CSRF; currentPassword,newPassword | 204; 현재 비밀번호 재확인 후 변경, auth_version 증가로 모든 세션 폐기. 자동 로그인 없음 |
+| POST /auth/password-reset-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답 |
+| POST /auth/password-resets | 비로그인 가능+CSRF; token,newPassword | 204; 일회용 토큰으로 비밀번호 변경, auth_version 증가로 모든 세션·다른 재설정 링크 폐기. 자동 로그인 없음 |
 
 Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·소문자 정규화 후 중복 확인한다. 가입 후 로그인 화면으로 이동하며 자동 로그인하지 않는다. 로그인·로그아웃 후 CSRF 토큰을 다시 획득한다.
 
 비밀번호 변경(2026-11-05 구현): 두 값 모두 정리하지 않는다. newPassword는 10절 비밀번호 원문 정책, currentPassword는 형식 검사 없음. 현재 비밀번호 불일치 400 CURRENT_PASSWORD_INCORRECT, 새 비밀번호가 현재와 같으면 400 PASSWORD_UNCHANGED, 폐기된 세션·동시 변경의 늦은 요청은 401 AUTHENTICATION_REQUIRED. 로그인 세션은 로그인 당시 auth_version을 갖고, DB 값과 다르면 다음 요청에서 폐기되어 비로그인으로 처리된다. 상세는 [로그인 문서](auth-login.md#비밀번호-변경세션-폐기--2026-11-05-featurepassword-change).
+
+비밀번호 재설정(2026-11-05 구현): 요청 email은 가입과 같이 정규화·형식 검사하며 형식 오류만 400 VALIDATION_FAILED다. 그 밖에는 모두 같은 202·본문·`no-store`다(가입 안 된 이메일, 이메일+목적당 60초 간격·1시간 5회 제한 초과, 메일 발송 실패 포함). 재설정 token은 메일 링크 `#token=`의 값이며, 위조·만료(15분)·이미 사용·발급 후 비밀번호 변경은 모두 400 PASSWORD_RESET_TOKEN_INVALID다. newPassword는 10절 비밀번호 원문 정책(위반 400 VALIDATION_FAILED, field=newPassword)이고 현재 비밀번호와 같아도 거절하지 않는다. 상세는 [로그인 문서](auth-login.md#비밀번호-재설정요청-제한--2026-11-05-featurepassword-recovery).
 
 ## 3 판매자와 상품 박소현
 
@@ -306,7 +310,7 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 
 | HTTP | 주요 코드 |
 | --- | --- |
-| 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED |
+| 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED, PASSWORD_RESET_TOKEN_INVALID |
 | 401 | AUTHENTICATION_REQUIRED, INVALID_CREDENTIALS |
 | 403 / 404 | FORBIDDEN, CSRF_INVALID / RESOURCE_NOT_FOUND |
 | 409 | EMAIL_ALREADY_EXISTS, PRODUCT_VERSION_CONFLICT, PRODUCT_NOT_ORDERABLE, SELF_PURCHASE_NOT_ALLOWED, CONTRACT_MINIMUM_AMOUNT_NOT_MET(V2 생성 활성화 후에만) |
@@ -344,7 +348,7 @@ URL은 URI 파서로 https 스킴·호스트 존재·userinfo 부재를 확인�
 
 ### 비밀번호 원문 정책
 
-2026-11-02 김창재 결정(PR #14). 회원가입 입력과 비밀번호 변경의 새 비밀번호(2026-11-05)에 적용한다. 서버는 `PasswordRules.PATTERN` 한 곳의 상수를 쓴다.
+2026-11-02 김창재 결정(PR #14). 회원가입 입력과 비밀번호 변경·재설정의 새 비밀번호(2026-11-05)에 적용한다. 서버는 `PasswordRules.PATTERN` 한 곳의 상수를 쓴다.
 
 | 항목 | 기준 |
 | --- | --- |

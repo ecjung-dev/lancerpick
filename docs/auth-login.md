@@ -140,3 +140,76 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 백엔드 `PasswordChangeIntegrationTests`(실제 Security 필터·MySQL): 로그인 principal의 버전 0, 변경 성공 시 두 세션 모두 폐기·옛 비밀번호 401·새 비밀번호 로그인·`auth_version`=1·해시 변경·지갑 잔액·원장 불변, 현재 비밀번호 틀림(공백 포함·72바이트 초과 포함) 400·세션 유지, 같은 비밀번호 400, 새 비밀번호 규칙 위반 6종 400, 누락 400, 익명 401·CSRF 403, DB 버전이 바뀐 세션 폐기(보호 401·공개 200·변경 401), 삭제된 회원 세션 폐기, 동시 변경 2건 중 1건만 성공. 프런트 `tests/password-change.test.mjs`. 실행 결과(2026-11-05 로컬): 관련 백엔드 테스트·`clean build` 통과, 프런트 test:api 138건 통과·typecheck·lint·build 통과.
 
 브라우저 확인(2026-11-05, 에이전트가 Claude 데스크톱 앱 브라우저로 로컬 개발 서버 확인, 새 테스트 계정 `pwcheck-1105a@example.com` 사용): 빈 값 제출 시 세 칸 안내, 틀린 현재 비밀번호 → POST 1회 400·현재 비밀번호 칸 비움·안내, 정상 변경 → `/login` 이동과 완료 안내·헤더 비로그인 표시·`/api/me` 401, 옛 비밀번호 로그인 401 INVALID_CREDENTIALS·새 비밀번호 로그인 200. 320×740에서 `/mypage/profile`의 문서 너비 320·넘친 요소 0. 두 기기 세션 폐기는 같은 브라우저로 재현하지 않았고 백엔드 통합 테스트로 검증했다. 실기기 모바일은 확인하지 않았다.
+
+## 비밀번호 재설정·요청 제한 — 2026-11-05 (`feature/password-recovery`)
+
+4인 설계 §4 2번(비밀번호 재설정)과 3인 설계 6.1·7·8절을 구현했다. DB·라이브러리 변경은 없다(V5 `account_challenges`·`auth_request_limits` 사용, 새 엔티티 2개). **실제 메일 발송은 C3(메일 인프라, 정은찬·황준범) 연결 후**이며, 이 작업은 4인 설계 §4의 김창재 범위(메일 내용·토큰·회원 API·요청 제한)만 한다.
+
+### 계약
+
+| 경로 | 입력·권한 | 결과 |
+| --- | --- | --- |
+| POST /api/auth/password-reset-requests | 비로그인 가능 + CSRF; email | 202 `{message}` `no-store`. 가입 여부·제한 초과·발송 실패와 무관하게 같은 응답. 이메일 형식 오류만 400 VALIDATION_FAILED |
+| POST /api/auth/password-resets | 비로그인 가능 + CSRF; token, newPassword | 204 `no-store`. 토큰 위조·만료·사용됨·발급 후 비밀번호 변경은 모두 400 PASSWORD_RESET_TOKEN_INVALID. 새 비밀번호 규칙 위반은 400 VALIDATION_FAILED(field=newPassword, 토큰은 그대로 사용 가능) |
+
+메일 링크: `lancerpick.frontend.base-url`(기본 `http://localhost:5173`, 환경변수 `FRONTEND_BASE_URL`) + `/password-reset#token=…`. 요청 Host·returnUrl을 쓰지 않는다. 링크 GET은 화면만 보여주고, 토큰 사용은 POST에서만 한다.
+
+### 서버 처리 순서
+
+요청(`PasswordResetService.requestReset`):
+1. 이메일 정규화(가입과 같은 `member/dto/EmailRules`. 가입 코드도 이 클래스로 옮겼다).
+2. 제한 키 = HMAC-SHA256(서버 키, `PASSWORD_RESET` + 이메일). 제한 행이 없으면 별도 짧은 트랜잭션에서 만들고 커밋한다(HQL `on conflict do nothing`, 지갑 최초 생성과 같은 방식). 같은 새 이메일의 첫 요청이 동시에 오면 MySQL이 같은 키 insert끼리 교착 상태(deadlock)로 한쪽을 롤백할 수 있어, 이 행 만들기만 교착 시 최대 3번 시도한다(결과가 같은 작업이고, 다시 시도할 때는 행이 이미 있다).
+3. 업무 트랜잭션: 제한 행 잠금(간격 행 → 1시간 행) → 허용되면 회원 조회 → 회원이 있으면 SecureRandom 32바이트 토큰의 SHA-256 해시, 발급 당시 auth_version, 15분 만료, `delivery_status=PENDING` 저장.
+4. 커밋 뒤 트랜잭션 밖에서 `AccountMailDispatcher`가 메일을 발송기에 넘긴다. 실패해도 예외를 던지지 않고 `delivery_status`·안전한 로그(challengeId·코드)만 남긴다.
+
+새 요청이 와도 기존 유효 링크는 지우지 않는다(남이 반복 요청해 복구를 방해하지 못하게). 대신 요청 수를 제한한다.
+
+실행(`resetPassword`, 한 트랜잭션): 토큰 해시로 회원 ID 조회(잠금 없음) → **회원 `FOR UPDATE` → 토큰 `FOR UPDATE`** → 잠근 뒤 목적·사용 여부·만료(경계 시각은 만료)·발급 당시 auth_version 재확인 → `Member.changePassword` 재사용(해시 변경 + auth_version + 1) → `consumed_at` 기록. 같은 토큰 동시 제출은 회원 잠금에서 한 줄로 서고 늦은 쪽은 400이다. auth_version이 오르므로 기존 세션은 `SessionAuthVersionFilter`가 폐기하고 다른 재설정 링크도 버전 불일치로 쓸 수 없다. 지갑·적립금은 건드리지 않는다.
+
+### 요청 제한
+
+`auth_request_limits`에 이메일(HMAC)마다 두 행을 쓴다. 가입하지 않은 이메일에도 같은 제한을 적용한다.
+
+| scope | window_start | 의미 |
+| --- | --- | --- |
+| PASSWORD_RESET_EMAIL_INTERVAL | 고정값 2000-01-01 | 이메일당 한 행. `expires_at` = 마지막 허용 시각 + 60초. 이 시각 전이면 막는다(구간 경계와 무관하게 최소 60초) |
+| PASSWORD_RESET_EMAIL_HOUR | 지금을 시 단위로 자른 값 | 그 1시간 구간에 허용한 수. 5 이상이면 막는다 |
+
+막히면 발급하지 않고 같은 202를 돌려준다(3인 설계 6.1 2번). 같은 이메일의 동시 요청은 간격 행 잠금에서 한 줄로 선다. 제한 키는 `lancerpick.auth.request-limit-key`(환경변수 `AUTH_REQUEST_LIMIT_KEY`)로 각자 설정하며 저장소에 넣지 않는다. 비어 있으면 서버 시작 시 임의 키를 만든다(재시작하면 이전 제한 행과 이어지지 않는 개발용 한계).
+
+### 메일 발송 경계 (C3 연결 계약)
+
+- `auth/mail/AccountMailSender.enqueue(AccountMail)`: C3가 Bean으로 구현한다. 요청 스레드를 막지 않고 크기가 정해진 비동기 큐에 넣은 뒤 바로 돌아온다(넣었으면 true, 가득 찼으면 false). SMTP를 요청 스레드에서 하면 가입된 이메일만 느려져 가입 여부가 드러난다.
+- 발송이 끝나면 `AccountMailDeliveryRecorder.markSent(challengeId)` / `markFailed(challengeId, 안전한 코드)`를 호출한다. PENDING인 행만 바뀐다.
+- 구현 Bean이 없으면(현재 기본) 발송하지 않고 `FAILED`·`MAIL_NOT_CONFIGURED`로 기록한다. 큐 가득 참은 `MAIL_QUEUE_FULL`, enqueue 예외는 `MAIL_ENQUEUE_FAILED`다. 앱은 메일 서버 없이도 지금처럼 켜진다.
+- `AccountMail.body`에는 토큰이 있다. 로그·DB·거래 아웃박스에 평문으로 남기지 않는다. `toString`은 수신자·본문을 가린다.
+
+### 화면
+
+| 파일 | 역할 |
+| --- | --- |
+| `features/auth/api.ts` | `requestPasswordReset`, `resetPassword`(공통 `apiRequest`, 1회 전송) |
+| `features/auth/passwordReset.ts` | `readResetToken`(fragment에서 43자 토큰만), `submitPasswordReset`(POST 1회 → `recheckSession`), `resetFailureKind`(code 기준 분류) |
+| `features/auth/validation.ts` | `validatePasswordResetRequest`(가입과 같은 이메일 규칙), `validatePasswordReset`(가입 비밀번호 규칙·확인 일치, 정리 안 함) |
+| `pages/PasswordResetRequestPage.tsx` | `/password-reset/request`. 같은 안내 문구, 보낸 뒤 60초 버튼 잠금(불명확한 결과도 잠금) |
+| `pages/PasswordResetPage.tsx` | `/password-reset#token=…`. 토큰을 화면 상태에만 두고 주소창에서 지움. 잘못된 링크는 새 요청 안내 |
+| `pages/LoginPage.tsx` | "비밀번호를 잊으셨나요?" 링크, `passwordReset: 'done' \| 'unclear'` 안내 |
+
+- 처리 중 입력 잠금 + ref로 두 번 클릭 방지, `retry: false`(토큰은 일회용).
+- 성공: `recheckSession`으로 이 브라우저의 로그인 상태를 다시 확인한다. 같은 계정 세션은 서버가 폐기해 로그아웃·개인 캐시 정리, 다른 계정이 로그인돼 있으면 그대로 둔다. 이후 로그인 화면에서 완료 안내.
+- 400 토큰 오류: 링크 사용 불가 화면. 400 입력 오류: 새 비밀번호 칸 안내. CSRF 403: 다시 시도 안내.
+- 통신 오류·5xx: 바뀌었을 수 있으므로 같은 토큰을 다시 보내지 않고 로그인 화면에서 새 비밀번호를 먼저 시도하도록 안내한다.
+- 202 본문: 공통 `apiRequest`가 빈 202 본문을 응답 형식 오류로 처리하므로 공통 코드를 바꾸지 않고 서버가 고정 `{message}`를 보낸다.
+
+### 한계
+
+- 실제 메일 발송·Mailpit·받은편지함 확인 없음(C3 이후). 그 전에는 브라우저에서 끝까지 재설정할 수 없고, 자동 테스트의 가짜 발송기로만 끝까지 검증했다.
+- 1시간 제한은 고정 구간이라 두 구간에 걸치면 짧은 시간에 최대 10회까지 허용될 수 있다(60초 간격은 항상 보장).
+- IP·전체 발송량 제한, 재설정 POST 실패 횟수 제한(토큰이 256비트라 추측은 현실적이지 않음), 로그인 상태 비밀번호 변경의 시도 제한은 없다.
+- 만료된 `account_challenges`·`auth_request_limits` 정리 작업은 없다(공통 스케줄러·Batch 담당과 함께 정한다). `account_challenges.email`에는 스키마상 정규화 이메일이 저장된다.
+- 비밀번호 변경·재설정 완료 안내 메일은 C3 이후 추가한다.
+- 가입 여부에 따른 응답 시간 차이는 회원 조회·토큰 저장 1건 정도이며 실제 측정은 하지 않았다.
+
+### 검증
+
+백엔드 `PasswordResetIntegrationTests`(실제 Security 필터·MySQL, 가짜 발송기): 전체 흐름(기존 세션 폐기·옛 비밀번호 401·새 비밀번호 로그인·auth_version 1·지갑 잔액·원장 불변), 링크 주소·DB에는 해시만·15분·발송 결과 기록(SENT 뒤 늦은 실패가 덮어쓰지 않음), 가입 안 된 이메일의 같은 응답·미발급·같은 제한, 이메일 정규화·형식 400, 60초 내 재요청 미발급과 이후 재발급, 1시간 5회, 같은 이메일 동시 4건 중 1건만 발급, 일회용, 만료, 다른 링크 사용 후 무효, 비밀번호 변경 후 링크 무효, 잘못된 토큰 5종 같은 400, 새 비밀번호 규칙 위반 시 토큰 유지, 같은 토큰 동시 2건 중 1건만 성공, 큐 가득 참·예외 시 같은 202와 FAILED 기록, CSRF 403. `AccountMailDispatcherTests`(DB 없음): 발송기 없음 → MAIL_NOT_CONFIGURED, 기록 실패도 예외 없음. 프런트 `tests/password-reset.test.mjs` 12건. 실행 결과는 PR에 기록한다.

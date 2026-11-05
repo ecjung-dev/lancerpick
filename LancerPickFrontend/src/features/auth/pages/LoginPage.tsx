@@ -16,11 +16,13 @@ import styles from './AuthPage.module.css'
  * 다른 화면이 navigate('/login', { state })로 넘겨주는 값.
  * - signedUpEmail: 가입 직후 이메일 미리 채우기
  * - passwordChanged: 비밀번호 변경 후 이동(done=바뀜, unclear=바뀌었는지 확인하지 못함)
- * 비밀번호 값은 절대 넣지 않는다.
+ * - passwordReset: 메일 링크로 비밀번호 재설정 후 이동(done=바뀜, unclear=바뀌었는지 확인하지 못함)
+ * 비밀번호·토큰 값은 절대 넣지 않는다.
  */
 export interface LoginPageState {
   signedUpEmail?: string
   passwordChanged?: 'done' | 'unclear'
+  passwordReset?: 'done' | 'unclear'
 }
 
 export function LoginPage() {
@@ -28,6 +30,7 @@ export function LoginPage() {
   const state = location.state as LoginPageState | null
   const signedUpEmail = state?.signedUpEmail
   const passwordChanged = state?.passwordChanged
+  const passwordReset = state?.passwordReset
   const [params] = useSearchParams()
   const next = safeNextPath(params.get('next'))
   const navigate = useNavigate()
@@ -78,6 +81,14 @@ export function LoginPage() {
         비밀번호 변경 결과를 확인하지 못했어요. 로그인이 끝났으니 새 비밀번호로 먼저 로그인해 보고, 안 되면 기존 비밀번호로 로그인해 주세요.
       </p>
     )}
+    {passwordReset === 'done' && (
+      <p className={styles.success} role="status">비밀번호를 다시 설정했어요. 모든 기기에서 로그아웃됐으니 새 비밀번호로 로그인해 주세요.</p>
+    )}
+    {passwordReset === 'unclear' && (
+      <p className={styles.error} role="alert">
+        재설정 결과를 확인하지 못했어요. 새 비밀번호로 먼저 로그인해 보고, 안 되면 재설정 메일을 다시 요청해 주세요.
+      </p>
+    )}
     {submit.isError && <p className={styles.error} role="alert">{loginErrorMessage(submit.error)}
       {submit.error instanceof ApiError && submit.error.traceId && <small>문의 코드: {submit.error.traceId}</small>}</p>}
     <form onSubmit={onSubmit} noValidate className={styles.form}>
@@ -97,6 +108,7 @@ export function LoginPage() {
         <Button type="submit" className={styles.submit}>{submit.isPending ? '로그인 중…' : '로그인'}</Button>
       </fieldset>
     </form>
+    <p className={styles.switch}><Link to="/password-reset/request">비밀번호를 잊으셨나요?</Link></p>
     <p className={styles.switch}>아직 회원이 아니신가요? <Link to="/signup">회원가입</Link></p>
   </AuthLayout>
 }

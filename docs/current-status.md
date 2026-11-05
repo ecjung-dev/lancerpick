@@ -1,5 +1,9 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 비밀번호 재설정·요청 제한(K1 일부) — 2026-11-05
+
+`feature/password-recovery`(김창재, PR 전): 로그아웃 상태 비밀번호 재설정 API(`POST /api/auth/password-reset-requests` 202, `POST /api/auth/password-resets` 204)와 화면(`/password-reset/request`, `/password-reset#token=…`, 로그인 화면 링크)을 추가했다. V5 `account_challenges`(토큰 SHA-256 해시만 저장, 15분, 일회용)·`auth_request_limits`(이메일 HMAC, 최소 60초 간격·1시간 5회)를 사용하며 DB·라이브러리 변경은 없다. **실제 메일 발송은 아직 없다**: 발송 경계 `AccountMailSender`만 두었고 구현(Spring Mail·비동기 큐)은 C3 담당(정은찬·황준범)이다. C3 전에는 발급 기록이 `FAILED`(`MAIL_NOT_CONFIGURED`)로 남는다. 상세·한계·검증은 [로그인 문서](auth-login.md#비밀번호-재설정요청-제한--2026-11-05-featurepassword-recovery).
+
 ## V2 수락·계약 성립·선금 전 취소(E4) — 2026-11-05
 
 `feature/contract-v2-acceptance`(PR 전): V2 수락 → `AWAITING_CONTRACT` → 양측 서명 → `AWAITING_PAYMENT`(선금 대기) 전환과 `ACCEPTED`·`CONTRACT_CREATED`·`CONTRACT_SIGNED` 이력·아웃박스, 초안·확정 시 10,000원 하한 재검사, 선금 전 V2 직접 취소(금액 이동 없음), V2 선금 전 허용 행동을 구현했다. 생성 설정은 계속 false다. 자동 테스트: 로컬 MySQL 8.4 `lancerpick_test` 대상 백엔드 `clean build` 693건 통과(2026-11-05). 프런트 코드는 바꾸지 않았다. 실제 PDF(J3)·계약 HTTP API/화면(E5)이 없어 서명은 테스트용 READY 고정값으로만 확인했고, 브라우저 확인은 하지 않았다. 상세는 [계약 기반](order-contract-foundation.md) 단계별 연결 한계.

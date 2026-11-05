@@ -25,6 +25,17 @@ export interface ChangePasswordInput {
   newPassword: string
 }
 
+/** POST /api/auth/password-resets 본문. 토큰·새 비밀번호 모두 원문 그대로 보낸다(정리하지 않음). */
+export interface PasswordResetInput {
+  token: string
+  newPassword: string
+}
+
+/** POST /api/auth/password-reset-requests의 202 본문. 가입 여부와 상관없이 항상 같다. */
+export interface PasswordResetAccepted {
+  message: string
+}
+
 export interface SignupInput {
   email: string
   password: string

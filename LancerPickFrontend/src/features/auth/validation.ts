@@ -16,6 +16,7 @@ const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*[0-9])[\x21-\x7E]{8,64}$/
 export type SignupErrors = Partial<Record<'email' | 'password' | 'passwordConfirm' | 'displayName', string>>
 export type LoginErrors = Partial<Record<'email' | 'password', string>>
 export type PasswordChangeErrors = Partial<Record<'currentPassword' | 'newPassword' | 'newPasswordConfirm', string>>
+export type PasswordResetErrors = Partial<Record<'newPassword' | 'newPasswordConfirm', string>>
 
 const PASSWORD_RULE_MESSAGE = '영문과 숫자를 포함해 8~64자로 입력해 주세요. 공백·한글은 쓸 수 없어요.'
 
@@ -33,6 +34,14 @@ export function normalizeEmail(value: string) {
   return normalizeText(value).toLowerCase()
 }
 
+/** 이메일: 정리 후 비어 있음·형식 오류 안내. 가입과 비밀번호 재설정 요청이 같은 규칙을 쓴다(서버 EmailRules). */
+function emailError(email: string) {
+  const length = codePointLength(email)
+  if (!email) return '이메일을 입력해 주세요.'
+  if (length < 3 || length > 254 || !EMAIL_PATTERN.test(email)) return '이메일 형식을 확인해 주세요.'
+  return undefined
+}
+
 export function validateSignup(draft: { email: string; password: string; passwordConfirm: string; displayName: string }) {
   const input: SignupInput = {
     email: normalizeEmail(draft.email),
@@ -40,9 +49,8 @@ export function validateSignup(draft: { email: string; password: string; passwor
     displayName: validateDisplayName(draft.displayName).displayName,
   }
   const errors: SignupErrors = {}
-  const emailLength = codePointLength(input.email)
-  if (!input.email) errors.email = '이메일을 입력해 주세요.'
-  else if (emailLength < 3 || emailLength > 254 || !EMAIL_PATTERN.test(input.email)) errors.email = '이메일 형식을 확인해 주세요.'
+  const emailProblem = emailError(input.email)
+  if (emailProblem) errors.email = emailProblem
 
   if (!input.password) errors.password = '비밀번호를 입력해 주세요.'
   else if (!PASSWORD_PATTERN.test(input.password)) errors.password = PASSWORD_RULE_MESSAGE
@@ -63,6 +71,29 @@ export function validateLogin(draft: { email: string; password: string }) {
   if (!input.email) errors.email = '이메일을 입력해 주세요.'
   if (!input.password) errors.password = '비밀번호를 입력해 주세요.'
   return { input, errors, valid: Object.keys(errors).length === 0 }
+}
+
+/** 비밀번호 재설정 메일 요청. 이메일은 가입과 같이 정리·검사한다. */
+export function validatePasswordResetRequest(draft: { email: string }) {
+  const email = normalizeEmail(draft.email)
+  const error = emailError(email)
+  return { email, error, valid: error === undefined }
+}
+
+/**
+ * 비밀번호 재설정의 새 비밀번호(POST /api/auth/password-resets). 정리하지 않는다.
+ * 새 비밀번호는 가입과 같은 규칙, 확인 칸은 같은 값이어야 한다(확인 칸은 서버로 보내지 않음).
+ * 예전 비밀번호를 모르는 상황이라 "현재와 같은지"는 검사하지 않는다(서버도 검사하지 않음).
+ */
+export function validatePasswordReset(draft: { newPassword: string; newPasswordConfirm: string }) {
+  const errors: PasswordResetErrors = {}
+  if (!draft.newPassword) errors.newPassword = '새 비밀번호를 입력해 주세요.'
+  else if (!PASSWORD_PATTERN.test(draft.newPassword)) errors.newPassword = PASSWORD_RULE_MESSAGE
+
+  if (!draft.newPasswordConfirm) errors.newPasswordConfirm = '새 비밀번호를 한 번 더 입력해 주세요.'
+  else if (draft.newPasswordConfirm !== draft.newPassword) errors.newPasswordConfirm = '새 비밀번호가 서로 달라요.'
+
+  return { newPassword: draft.newPassword, errors, valid: Object.keys(errors).length === 0 }
 }
 
 /**

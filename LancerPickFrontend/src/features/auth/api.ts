@@ -1,5 +1,7 @@
 import { ApiError, apiRequest } from '../../shared/api/client.ts'
-import type { ChangePasswordInput, LoginInput, Member, SignupInput, UpdateMeInput } from './types.ts'
+import type {
+  ChangePasswordInput, LoginInput, Member, PasswordResetAccepted, PasswordResetInput, SignupInput, UpdateMeInput,
+} from './types.ts'
 
 /** 로그인 안 한 상태(401)는 오류가 아니라 null로 돌려준다. 그 밖의 오류는 그대로 던진다. */
 export async function getCurrentMember(
@@ -40,6 +42,25 @@ export function changePassword(input: ChangePasswordInput) {
   return apiRequest<void>('/me/password', {
     method: 'POST',
     json: { currentPassword: input.currentPassword, newPassword: input.newPassword },
+  })
+}
+
+/**
+ * POST /api/auth/password-reset-requests. 가입 여부와 상관없이 같은 202가 온다(메일 도착을 뜻하지 않음).
+ * 실패해도 자동으로 다시 보내지 않는다. 다시 보내기 간격은 화면이 막는다.
+ */
+export function requestPasswordReset(email: string) {
+  return apiRequest<PasswordResetAccepted>('/auth/password-reset-requests', { method: 'POST', json: { email } })
+}
+
+/**
+ * POST /api/auth/password-resets. 성공하면 204. 토큰은 한 번만 쓸 수 있으므로 절대 자동으로 다시 보내지 않는다.
+ * 호출 순서와 캐시 처리는 passwordReset.ts의 submitPasswordReset을 쓴다.
+ */
+export function resetPassword(input: PasswordResetInput) {
+  return apiRequest<void>('/auth/password-resets', {
+    method: 'POST',
+    json: { token: input.token, newPassword: input.newPassword },
   })
 }
 
