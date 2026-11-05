@@ -2,7 +2,7 @@
 
 작성일: 2026-11-05. 브랜치: feature/advanced-schema-foundation. 선행 기준: main c24f37d(PR #76). DB 변경 담당 황준범.
 
-현재 반영 상태(2026-11-05): main `1e10d78`에 V5/V6와 기존 엔티티 호환 변경이 반영됐다. 아래 브랜치·검증 설명은 구현 당시 기록이다. 이번 문서 갱신은 DB 적용이나 재검증을 포함하지 않는다.
+현재 반영 상태(2026-11-05): main `1e10d78`에 V5/V6와 기존 엔티티 호환 변경이 반영됐다. 아래 브랜치·검증 설명은 구현 당시 기록이다. 이번 문서 갱신은 DB 적용이나 재검증을 포함하지 않는다. 후속: `outbox_events`·`notifications`는 main `1941ad1`의 기존 주문 알림(#79, #80)에서 사용한다([주문 알림](notifications.md)). 나머지 테이블의 서비스 연결 상태는 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)를 따른다.
 
 ## 실제 추가 범위
 
@@ -12,7 +12,7 @@ V1/V2의 17개 + V4 계약 2개 + V5 7개 + V6 3개 = **29개 업무 테이블**
 | --- | --- | --- |
 | order_contracts·contract_signatures | 현재 계약·문서·특약·양측 서명 | 정은찬·황준범 |
 | order_chat_messages | 주문별 대화·순번·요청 중복 방지 | 황준범 |
-| outbox_events·notifications | 이벤트 처리 상태·사용자 알림·읽음 | 정은찬 |
+| outbox_events·notifications | 이벤트 처리 상태·사용자 알림·읽음 | 정은찬(기존 주문 알림 반영 #79, #80) |
 | account_challenges·auth_request_limits | 목적별 인증 증명·메일/인증 요청 제한 | 김창재 |
 | support_inquiries·support_messages | 구매자 운영 문의·관리자 답변 | 김창재 |
 | order_trade_terms | 신규 주문의 고정 비율·응답 기한 | 황준범·정은찬 |

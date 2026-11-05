@@ -12,7 +12,7 @@
 
 고도화 작업을 시작할 팀원은 [공통 기반 시작 안내](docs/advanced-team-start.md)에서 실제 제공된 스키마·내부 서비스와 아직 연결하지 않은 기능을 먼저 확인하세요.
 
-main `1e10d78`에는 V3 금융 컬럼·V4 계약/서명 두 테이블·V5/V6 나머지 업무 10개와 정책별 조회/명령 경계가 반영됐습니다. 실행 Flyway는 V1~V6, 업무 테이블은 누적 29개입니다. 기존 MVP 주문 생성은 LEGACY_V1이며 새 계약 주문·분할 결제·PDF·알림/채팅 전체 기능은 아직 활성화하지 않았습니다. [전체 스키마](docs/advanced-schema-foundation.md)·[정책 경계](docs/advanced-policy-boundary.md)에서 기반과 남은 연결을 구분합니다. Redis/Batch 설치도 별도입니다.
+main `1e10d78`에는 V3 금융 컬럼·V4 계약/서명 두 테이블·V5/V6 나머지 업무 10개와 정책별 조회/명령 경계가 반영됐습니다. 실행 Flyway는 V1~V6, 업무 테이블은 누적 29개입니다. 기존 MVP 주문 생성은 LEGACY_V1이며 새 계약 주문·분할 결제·PDF·채팅 기능은 아직 활성화하지 않았습니다. 알림은 기존 주문용만 main에 반영됐습니다(#79, #80, [주문 알림](docs/notifications.md)). [전체 스키마](docs/advanced-schema-foundation.md)·[정책 경계](docs/advanced-policy-boundary.md)에서 기반과 남은 연결을 구분합니다. Redis/Batch 설치도 별도입니다. 담당별 고도화 항목·선행·상태는 [고도화 작업표](docs/work-plan.md#고도화-작업표--2026-11-05)를 따르세요.
 
 | 담당자 | 역할 | 핵심 책임 |
 | --- | --- | --- |
