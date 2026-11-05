@@ -1,15 +1,19 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.order.dto.CreateOrderRequest;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderSnapshot;
+import com.example.lancerpick.order.entity.OrderTradeTerms;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.OrderCreationQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.order.repository.OrderSnapshotRepository;
+import com.example.lancerpick.order.repository.OrderTradeTermsRepository;
+import com.example.lancerpick.payment.service.ContractPaymentPolicy;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -31,6 +35,8 @@ public class OrderCreationService {
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
   private final OrderTerms terms;
+  private final OrderTradeTermsRepository tradeTerms;
+  private final NewOrderPolicy newOrderPolicy;
   private final Clock clock;
 
   public OrderCreationService(
@@ -40,6 +46,8 @@ public class OrderCreationService {
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderTerms terms,
+      OrderTradeTermsRepository tradeTerms,
+      NewOrderPolicy newOrderPolicy,
       Clock clock) {
     this.source = source;
     this.orders = orders;
@@ -47,6 +55,8 @@ public class OrderCreationService {
     this.histories = histories;
     this.events = events;
     this.terms = terms;
+    this.tradeTerms = tradeTerms;
+    this.newOrderPolicy = newOrderPolicy;
     this.clock = clock;
   }
 
@@ -111,6 +121,15 @@ public class OrderCreationService {
       throw new BusinessException(
           HttpStatus.CONFLICT, "PRODUCT_VERSION_CONFLICT", "변경된 상품 정보를 다시 확인해 주세요.");
     }
+    // 정책은 생성 시 한 번 고정한다. 기존 주문(같은 요청 키 재전송)은 위에서 이미 반환했다.
+    TradePolicyVersion policy = newOrderPolicy.current();
+    if (policy == TradePolicyVersion.CONTRACT_V2
+        && product.price() < ContractPaymentPolicy.MIN_TOTAL) {
+      throw new BusinessException(
+          HttpStatus.CONFLICT,
+          "CONTRACT_MINIMUM_AMOUNT_NOT_MET",
+          "계약 주문은 10,000원 이상인 상품부터 신청할 수 있습니다.");
+    }
 
     LocalDateTime now =
         LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
@@ -123,7 +142,11 @@ public class OrderCreationService {
                 request.requestKeyAsUuid(),
                 product.price(),
                 product.durationDays(),
-                now));
+                now,
+                policy));
+    if (policy == TradePolicyVersion.CONTRACT_V2) {
+      tradeTerms.saveAndFlush(OrderTradeTerms.contractV2(order.getId()));
+    }
     snapshots.saveAndFlush(
         OrderSnapshot.create(
             order.getId(),

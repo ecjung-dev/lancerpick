@@ -107,6 +107,29 @@ public class Order {
             Integer durationDaysSnapshot,
             LocalDateTime now
     ) {
+        return create(buyerId, sellerId, productId, requestKey, priceAmount, durationDaysSnapshot, now,
+                com.example.lancerpick.common.policy.TradePolicyVersion.LEGACY_V1);
+    }
+
+    /** 정책 버전은 생성 시 고정되며 이후 변경하지 않는다. */
+    public static Order create(
+            Long buyerId,
+            Long sellerId,
+            Long productId,
+            UUID requestKey,
+            Long priceAmount,
+            Integer durationDaysSnapshot,
+            LocalDateTime now,
+            com.example.lancerpick.common.policy.TradePolicyVersion policyVersion
+    ) {
+        if (policyVersion == null) {
+            throw new BusinessException(
+                    HttpStatus.BAD_REQUEST,
+                    "VALIDATION_FAILED",
+                    "주문 정책 버전이 필요합니다."
+            );
+        }
+
         if (buyerId == null || sellerId == null
                 || buyerId <= 0 || sellerId <= 0) {
             throw new BusinessException(
@@ -174,6 +197,7 @@ public class Order {
         order.status = OrderStatus.REQUESTED;
         order.priceAmount = priceAmount;
         order.durationDaysSnapshot = durationDaysSnapshot;
+        order.policyVersion = policyVersion.name();
         order.createdAt = now;
         order.updatedAt = now;
 

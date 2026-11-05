@@ -178,4 +178,19 @@ class OrderTests {
             ));
         }
     }
+
+    @Test
+    void 정책_버전을_생략하면_LEGACY_V1이고_지정하면_생성_시_고정한다() {
+        Order legacy = Order.create(1L, 2L, 15L, UUID.randomUUID(), 100000L, 3,
+                LocalDateTime.of(2026, 11, 2, 4, 0));
+        Order contract = Order.create(1L, 2L, 15L, UUID.randomUUID(), 100000L, 3,
+                LocalDateTime.of(2026, 11, 2, 4, 0),
+                com.example.lancerpick.common.policy.TradePolicyVersion.CONTRACT_V2);
+
+        assertThat(legacy.getPolicyVersion()).isEqualTo("LEGACY_V1");
+        assertThat(contract.getPolicyVersion()).isEqualTo("CONTRACT_V2");
+        assertThatThrownBy(() -> Order.create(1L, 2L, 15L, UUID.randomUUID(), 100000L, 3,
+                LocalDateTime.of(2026, 11, 2, 4, 0), null))
+                .isInstanceOf(BusinessException.class);
+    }
 }

@@ -4,11 +4,13 @@ package com.example.lancerpick.payment.service;
 public final class ContractPaymentPolicy {
   public static final int NORMAL_FEE_BPS = 1000;
   public static final int COMPENSATION_FEE_BPS = 100;
+  public static final long MIN_TOTAL = 10_000;
+  public static final long MAX_TOTAL = 1_000_000;
 
   private ContractPaymentPolicy() {}
 
   public static Installments installments(long total) {
-    if (total < 10_000 || total > 1_000_000) {
+    if (total < MIN_TOTAL || total > MAX_TOTAL) {
       throw new IllegalArgumentException("Contract total must be between 10000 and 1000000");
     }
     long deposit = total / 2;
