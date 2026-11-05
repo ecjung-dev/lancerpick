@@ -26,6 +26,7 @@ public class OrderDeliveryService {
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
   private final OrderDetailQueries details;
+  private final OrderFundingGuard funding;
   private final Clock clock;
 
   public OrderDeliveryService(
@@ -34,12 +35,14 @@ public class OrderDeliveryService {
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderDetailQueries details,
+      OrderFundingGuard funding,
       Clock clock) {
     this.orders = orders;
     this.deliveries = deliveries;
     this.histories = histories;
     this.events = events;
     this.details = details;
+    this.funding = funding;
     this.clock = clock;
   }
 
@@ -62,7 +65,7 @@ public class OrderDeliveryService {
           HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
     var order =
         orders
-            .findForLegacyDecision(orderId, memberId)
+            .findForFulfillment(orderId, memberId)
             .orElseThrow(() ->
                 new BusinessException(
                     HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
@@ -84,6 +87,7 @@ public class OrderDeliveryService {
       throw new BusinessException(
           HttpStatus.INTERNAL_SERVER_ERROR, "DATA_INTEGRITY_ERROR", "수정 요청과 최초 납품 기록을 확인해야 합니다.");
     }
+    funding.requireHeldForWork(order);
     LocalDateTime at =
         LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
     var delivery =

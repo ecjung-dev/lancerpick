@@ -15,11 +15,12 @@ final class OrderAllowedActions {
       RevisionRequest revision,
       List<CancellationRequest> cancellations,
       Review review) {
-    if (com.example.lancerpick.common.policy.TradePolicyVersion.isContract(policyVersion)) return contractActions(status, buyer);
+    boolean pending = cancellations.stream().anyMatch(c -> "PENDING".equals(c.status()));
+    if (com.example.lancerpick.common.policy.TradePolicyVersion.isContract(policyVersion))
+      return contractActions(policyVersion, status, buyer, revision, pending);
     if (!com.example.lancerpick.common.policy.TradePolicyVersion.LEGACY_V1
         .name()
         .equals(policyVersion)) return List.of();
-    boolean pending = cancellations.stream().anyMatch(c -> "PENDING".equals(c.status()));
     var actions = new ArrayList<String>();
     if (buyer) {
       switch (status) {
@@ -57,14 +58,32 @@ final class OrderAllowedActions {
 
   /**
    * 계약 주문은 결제 전 수락·거절·취소만 연결돼 있다. 수락은 일반 주문과 같은 ACCEPT(POST /api/orders/{id}/accept)다.
-   * 계약 초안·서명은 주문 상세의 계약 영역이 계약 API로 처리한다. CONTRACT_V3의 AWAITING_PAYMENT는 전액 결제 대기이며,
-   * 결제(PAY)와 이후 거래 명령은 V3 금액 처리(J4)·거래 명령(E6)이 연결될 때 추가한다.
+   * 계약 초안·서명은 주문 상세의 계약 영역이 계약 API로 처리한다. CONTRACT_V3의 AWAITING_PAYMENT는 전액 결제 대기다.
+   * V3 결제 후에는 금액이 움직이지 않는 납품·수정 요청만 연결돼 있다. 결제(PAY)·구매 확정·결제 후 취소는 V3 금액
+   * 처리(J4)가 연결될 때 추가한다. CONTRACT_V2는 결제 후 명령을 열지 않는다.
    */
-  private static List<String> contractActions(String status, boolean buyer) {
-    return switch (status) {
-      case "REQUESTED" -> buyer ? List.of("CANCEL") : List.of("ACCEPT", "REJECT");
-      case "AWAITING_CONTRACT", "AWAITING_PAYMENT" -> List.of("CANCEL");
-      default -> List.of();
-    };
+  private static List<String> contractActions(
+      String policyVersion,
+      String status,
+      boolean buyer,
+      RevisionRequest revision,
+      boolean pendingCancellation) {
+    switch (status) {
+      case "REQUESTED":
+        return buyer ? List.of("CANCEL") : List.of("ACCEPT", "REJECT");
+      case "AWAITING_CONTRACT", "AWAITING_PAYMENT":
+        return List.of("CANCEL");
+      default:
+        break;
+    }
+    if (!com.example.lancerpick.common.policy.TradePolicyVersion.isFullFunding(policyVersion)
+        || pendingCancellation) return List.of();
+    if (buyer)
+      return "AWAITING_CONFIRMATION".equals(status) && revision == null
+          ? List.of("REQUEST_REVISION")
+          : List.of();
+    return "IN_PROGRESS".equals(status) || "REVISION_IN_PROGRESS".equals(status)
+        ? List.of("DELIVER")
+        : List.of();
   }
 }

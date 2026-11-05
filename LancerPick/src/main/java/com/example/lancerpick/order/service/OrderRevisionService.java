@@ -27,6 +27,7 @@ public class OrderRevisionService {
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
   private final OrderDetailQueries details;
+  private final OrderFundingGuard funding;
   private final Clock clock;
 
   public OrderRevisionService(
@@ -36,6 +37,7 @@ public class OrderRevisionService {
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderDetailQueries details,
+      OrderFundingGuard funding,
       Clock clock) {
     this.orders = orders;
     this.deliveries = deliveries;
@@ -43,6 +45,7 @@ public class OrderRevisionService {
     this.histories = histories;
     this.events = events;
     this.details = details;
+    this.funding = funding;
     this.clock = clock;
   }
 
@@ -55,7 +58,7 @@ public class OrderRevisionService {
       throw new BusinessException(
           HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
     var order =
-        orders.findForLegacyDecision(orderId, memberId).orElseThrow(() -> notFound("주문을 찾을 수 없습니다."));
+        orders.findForFulfillment(orderId, memberId).orElseThrow(() -> notFound("주문을 찾을 수 없습니다."));
     if (!order.getBuyerId().equals(memberId))
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "구매자만 수정 요청할 수 있습니다.");
     // 이미 사용한 수정 권한은 상태가 재납품 확인 대기로 바뀌어도 되살아나지 않는다.
@@ -70,6 +73,8 @@ public class OrderRevisionService {
     if (sequence != 1) throw conflict("REVISION_ALREADY_USED", "최초 납품에만 수정 요청할 수 있습니다.");
     if (deliveries.pendingCancellations(orderId) > 0)
       throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
+    funding.requireHeldForWork(order);
+    // E7(검수 타이머)이 연결되면 V3 수정 요청은 같은 트랜잭션에서 활성 AUTO_CONFIRM 타이머를 취소해야 한다.
     LocalDateTime at =
         LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
     var revision =
