@@ -1,6 +1,6 @@
 # 랜서픽 MVP 물리 DB 설계
 
-구현 대조 2026-11-03: 실행 원본은 Flyway V1·V2이며 누적 17개 테이블이다. 본문의 컬럼 사전·이미지·정적 검사 기준은 V1 기본 16개를 설명한다. V1/V2·현재 Entity validate를 포함한 MySQL 8.4 검증 결과는 [현황표](current-status.md)를 따른다. 과거 작성일의 매핑 미검증 설명과 구분하며, 이미 적용한 V1을 수정하지 않는다.
+구현 대조 2026-11-05: main `1e10d78`의 실행 원본은 Flyway V1~V6이며 누적 29개 업무 테이블이다. 본문의 컬럼 사전·이미지·정적 검사 기준은 V1 기본 16개를 설명하고, V2 포함 17개 이후 고도화 관계·제약은 [DB 설계](advanced-db-design.md)·[전체 업무 스키마](advanced-schema-foundation.md)를 따른다. 단계별 MySQL·Entity validate 결과는 [현황표](current-status.md)에서 구분한다. 과거 작성일의 매핑 미검증 설명을 현재 상태로 해석하지 않으며, 적용된 migration은 수정하지 않는다.
 
 2026-11-02 V2 확장: 사용자 요청으로 [토스 충전 신청 저장 구조](wallet-topup-schema.md)와 새 Flyway V2·JPA 매핑을 추가한다. 아래 컬럼 사전·ERD 이미지·정적 검사 결과는 V1 MVP 기본 구조이며 V2 누적 구조와 구분한다. 기존 V1은 변경하지 않는다.
 

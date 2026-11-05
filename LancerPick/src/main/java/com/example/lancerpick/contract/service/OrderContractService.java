@@ -80,8 +80,8 @@ public class OrderContractService {
     content.put("orderId", Long.toString(orderId));
     content.put("buyerId", order.getBuyerId().toString());
     content.put("sellerId", order.getSellerId().toString());
-    content.put("buyerName", members.findById(order.getBuyerId()).orElseThrow().getDisplayName());
-    content.put("sellerName", members.findById(order.getSellerId()).orElseThrow().getDisplayName());
+    content.put("buyerName", partyName(order.getBuyerId()));
+    content.put("sellerName", partyName(order.getSellerId()));
     content.put("productTitle", snapshot.getProductTitleSnapshot());
     content.put("description", snapshot.getDescriptionSnapshot());
     content.put("scope", snapshot.getScopeSnapshot());
@@ -184,6 +184,18 @@ public class OrderContractService {
     if (value == null || !value.matches("[0-9a-f]{64}"))
       throw error(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "해시는 64자리 소문자 16진수여야 합니다.");
     return HexFormat.of().parseHex(value);
+  }
+
+  private String partyName(Long memberId) {
+    return members
+        .findById(memberId)
+        .orElseThrow(
+            () ->
+                error(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "DATA_INTEGRITY_ERROR",
+                    "거래 당사자 기록을 확인해야 합니다."))
+        .getDisplayName();
   }
 
   private static BusinessException conflict(String message) {

@@ -2,7 +2,7 @@
 
 ## 고도화 기반 후속 계약 — 2026-11-05
 
-기존 MVP API 경로·입력은 유지한다. 후속 브랜치에서는 주문 목록 items와 상세/명령 응답에 `policyVersion: LEGACY_V1 | CONTRACT_V2`를 추가한다. 신규 주문 생성 API는 아직 LEGACY_V1만 생성한다. 고도화 기능이 활성화됐다는 뜻이 아니다.
+기존 MVP API 경로·입력은 유지한다. main `1e10d78`에는 주문 목록 items와 상세/명령 응답의 `policyVersion: LEGACY_V1 | CONTRACT_V2` 및 아래 정책 경계가 반영됐다. 신규 주문 생성 API는 아직 LEGACY_V1만 생성한다(V2 생성 코드는 있으나 설정 `lancerpick.order.contract-v2-creation-enabled` 기본 false로 닫혀 있음, [주문 생성](order-creation.md) 8단계). 고도화 기능이 활성화됐다는 뜻이 아니다.
 
 | 응답/검사 | 정책 |
 | --- | --- |
@@ -212,6 +212,19 @@ PAYMENT_ALREADY_REFUNDED 응답에는 재결제 성공 의미를 담지 않는�
 
 반복 요청에도 실행자 권한을 확인한다. 주문 → 지갑 잠금 순서를 통일한다. 결과 불명확 시 프런트는 조회로 확인하며 변경 요청 자동 재시도는 하지 않는다.
 
+## 7-1 주문 알림 정은찬
+
+2026-11-05 고도화 1단계: 기존 MVP 주문 이력이 생길 때 같은 트랜잭션에 아웃박스 이벤트를 저장하고, 처리기가 상대 당사자 알림을 만든다. 처리 기준과 검증 범위는 [주문 알림·아웃박스](notifications.md)를 따른다.
+
+| 메서드·경로 | 권한·입력 | 출력 |
+| --- | --- | --- |
+| GET /notifications | 회원; page 0 이상, size 1~100(기본 20) | Notification 목록, 생성 시각·ID 내림차순 |
+| GET /notifications/unread-count | 회원 | count |
+| POST /notifications/{id}/read | 본인+CSRF; 양수 알림 ID | 204. 이미 읽음도 204, 최초 읽은 시각 유지. 타인·없음 404, 형식 오류 400 |
+| POST /notifications/read-all | 회원+CSRF; 본문 없음 | 204. 요청 시점까지 생성된 본인 알림만 읽음 처리 |
+
+Notification: id,type,orderId,productTitle,read,createdAt. type은 `ORDER_` + 주문 이력 행동(CREATED·ACCEPTED·REJECTED·PAID·DELIVERED·REVISION_REQUESTED·CANCELLATION_REQUESTED·CANCELLATION_REJECTED·CANCELLATION_WITHDRAWN·CANCELLED·COMPLETED)이다. 문구는 화면이 type으로 정하고, 모르는 type은 일반 문구로 표시한다. productTitle은 주문 시점 스냅샷이다. 조회 응답은 `Cache-Control: no-store`다.
+
 ## 8 지갑·정산 담당 황준범, 후기 담당 박소현
 
 2026-11-04 후기 후속: `codex/reviews`에서 후기 작성·공개 조회 API와 주문/상품 상세 화면을 구현했다. 구현·검증·미병합 상태는 [후기 작성·조회](reviews.md)를 따른다. POST는 회원+CSRF, 구매 확정 주문 구매자만 허용하며 미완료409 ORDER_STATE_CONFLICT·중복409 REVIEW_ALREADY_EXISTS·판매자403·타인404다. 별점은 원본 JSON 정수1~5만 허용하고 content 생략/null을 허용한다. 공개 GET은 공개·판매 중 상품만 조회(그 외404), page0/size20 기본·size1~100·작성 시각/ID 내림차순이며 공개 응답에 orderId를 포함하지 않는다.
@@ -294,7 +307,7 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 | 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED |
 | 401 | AUTHENTICATION_REQUIRED, INVALID_CREDENTIALS |
 | 403 / 404 | FORBIDDEN, CSRF_INVALID / RESOURCE_NOT_FOUND |
-| 409 | EMAIL_ALREADY_EXISTS, PRODUCT_VERSION_CONFLICT, PRODUCT_NOT_ORDERABLE, SELF_PURCHASE_NOT_ALLOWED |
+| 409 | EMAIL_ALREADY_EXISTS, PRODUCT_VERSION_CONFLICT, PRODUCT_NOT_ORDERABLE, SELF_PURCHASE_NOT_ALLOWED, CONTRACT_MINIMUM_AMOUNT_NOT_MET(V2 생성 활성화 후에만) |
 | 409 | ORDER_STATE_CONFLICT, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED |
 | 409 | CANCELLATION_PENDING, REQUEST_ALREADY_RESOLVED, REVISION_ALREADY_USED, REVIEW_ALREADY_EXISTS, PAYMENT_ALREADY_REFUNDED, DELIVERY_ALREADY_SUBMITTED, DELIVERY_SEQUENCE_CONFLICT |
 | 500 | INTERNAL_ERROR, DATA_INTEGRITY_ERROR |

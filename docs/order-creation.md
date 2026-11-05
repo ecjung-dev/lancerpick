@@ -21,6 +21,7 @@ API 명세 4·10·11절과 기존 SQL을 바탕으로 `OrderCreationService.crea
 5. 신규 요청이면 상품 행을 잠근다. 상품의 현재 판매자 ID가 사전 조회와 다르면 409 PRODUCT_VERSION_CONFLICT로 거절한다. 잠그지 않은 판매자의 FK를 추가로 참조하지 않는다.
 6. 상품 없음·관리자 숨김은 404 RESOURCE_NOT_FOUND, 판매 중지는 409 PRODUCT_NOT_ORDERABLE, 자기 상품은 409 SELF_PURCHASE_NOT_ALLOWED, 버전 불일치는 409 PRODUCT_VERSION_CONFLICT로 처리한다. 상품 잠금 후 검사는 없음/숨김→판매자 변경→판매 중지→자기 상품→버전 순서다.
 7. 현재 가격·판매자·소요일·설명은 서버 조회값만 사용한다. UTC 시각을 마이크로초로 준비해 주문 REQUESTED·스냅샷·최초 CREATED 이력을 함께 저장한다.
+8. 정책 버전(`policy_version`)은 이 단계에서 한 번 고정한다(고도화 E3). 기본은 `LEGACY_V1`이며, `lancerpick.order.contract-v2-creation-enabled=true`일 때만 `CONTRACT_V2`로 만든다. 이 설정은 V2 전용 명령·화면과 실제 DB 경합 검증(G1)을 마칠 때까지 켜지 않는다. `CONTRACT_V2`이면 상품 가격(계약 총액)이 10,000원 미만일 때 409 CONTRACT_MINIMUM_AMOUNT_NOT_MET으로 거절하고(버전 검사 다음), 같은 트랜잭션에 `order_trade_terms`(5000/3000/1000/100 bps, 48/168시간 고정)를 저장한다. 같은 요청 키 재전송은 4단계에서 기존 주문을 그대로 돌려주므로 설정을 바꿔도 기존 주문의 정책은 바뀌지 않는다.
 
 성공했던 요청은 상품 수정·판매 중지·숨김이나 주문 종료 이후에도 기존 입력으로 재전송할 수 있다. 기존 키 확인은 현재 상품 조건 검사와 현재 거래 규칙 생성보다 먼저 수행한다. UUID는 소문자 하이픈 표준형, 요구사항은 공통 Unicode 공백·줄바꿈 정규화 결과로 비교한다. 새 키는 별도 주문을 생성한다. DB 오류 전부를 멱등 성공으로 바꾸거나 실패한 트랜잭션 안에서 재시도하지 않는다.
 

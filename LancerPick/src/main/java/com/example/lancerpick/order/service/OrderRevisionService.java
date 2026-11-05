@@ -6,6 +6,7 @@ import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.entity.RevisionRequest;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.*;
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ public class OrderRevisionService {
   private final DeliveryRepository deliveries;
   private final RevisionRequestRepository revisions;
   private final OrderHistoryRepository histories;
+  private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final Clock clock;
 
@@ -32,12 +34,14 @@ public class OrderRevisionService {
       DeliveryRepository deliveries,
       RevisionRequestRepository revisions,
       OrderHistoryRepository histories,
+      OrderEventPublisher events,
       OrderDetailQueries details,
       Clock clock) {
     this.orders = orders;
     this.deliveries = deliveries;
     this.revisions = revisions;
     this.histories = histories;
+    this.events = events;
     this.details = details;
     this.clock = clock;
   }
@@ -73,8 +77,8 @@ public class OrderRevisionService {
             orderId, deliveryId, input.reason(), at, order.getDurationDaysSnapshot());
     order.requestRevision(at);
     revisions.saveAndFlush(revision);
-    histories.saveAndFlush(
-        OrderHistory.revisionRequested(orderId, memberId, at, revision.getReason()));
+    events.publish(order, histories.saveAndFlush(
+        OrderHistory.revisionRequested(orderId, memberId, at, revision.getReason())));
     var detail = details.forParticipant(orderId, memberId);
     return detail.withAllowedActions(
         OrderAllowedActions.actions(

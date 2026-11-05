@@ -5,6 +5,8 @@ import com.example.lancerpick.order.dto.CreateOrderRequest;
 import com.example.lancerpick.order.repository.OrderCreationQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderSnapshotRepository;
+import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.order.service.NewOrderPolicy;
 import com.example.lancerpick.order.service.OrderCreationService;
 import com.example.lancerpick.order.service.OrderTerms;
 import com.example.lancerpick.support.IntegrationTest;
@@ -53,6 +55,7 @@ class OrderCreationIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager transactionManager;
     @MockitoSpyBean OrderTerms terms;
+    @MockitoSpyBean NewOrderPolicy newOrderPolicy;
 
     private final List<Long> members = new ArrayList<>();
     private final List<Long> extraProducts = new ArrayList<>();
@@ -79,10 +82,12 @@ class OrderCreationIntegrationTests {
         reset(terms);
         reset(histories);
         reset(source);
+        reset(newOrderPolicy);
         var products = new ArrayList<>(extraProducts);
         if (productId != 0) products.add(productId);
         for (long id : products) {
             jdbc.update("DELETE FROM order_histories WHERE order_id IN (SELECT id FROM orders WHERE product_id = ?)", id);
+            jdbc.update("DELETE FROM order_trade_terms WHERE order_id IN (SELECT id FROM orders WHERE product_id = ?)", id);
             jdbc.update("DELETE FROM order_snapshots WHERE order_id IN (SELECT id FROM orders WHERE product_id = ?)", id);
             jdbc.update("DELETE FROM orders WHERE product_id = ?", id);
             jdbc.update("DELETE FROM products WHERE id = ?", id);
@@ -370,6 +375,84 @@ class OrderCreationIntegrationTests {
             executor.shutdownNow();
             executor.awaitTermination(10, TimeUnit.SECONDS);
         }
+    }
+
+    @Test
+    void newOrdersStayLegacyWithoutTradeTermsUntilContractCreationIsEnabled() {
+        var result = service.create(buyerId, request(UUID.randomUUID(), "요구사항"));
+        assertThat(policyOf(result.orderId())).isEqualTo("LEGACY_V1");
+        assertThat(tradeTermsCount(result.orderId())).isZero();
+    }
+
+    @Test
+    void contractOrderFixesPolicyAndStoresFixedTradeTermsInSameTransaction() {
+        enableContractCreation();
+        var result = service.create(buyerId, request(UUID.randomUUID(), "요구사항"));
+        assertThat(result.created()).isTrue();
+        assertCounts(1);
+        assertThat(policyOf(result.orderId())).isEqualTo("CONTRACT_V2");
+        assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, result.orderId()))
+                .isEqualTo("REQUESTED");
+        var row = jdbc.queryForMap("SELECT * FROM order_trade_terms WHERE order_id = ?", result.orderId());
+        assertThat(((Number) row.get("deposit_rate_bps")).intValue()).isEqualTo(5000);
+        assertThat(((Number) row.get("compensation_rate_bps")).intValue()).isEqualTo(3000);
+        assertThat(((Number) row.get("normal_fee_rate_bps")).intValue()).isEqualTo(1000);
+        assertThat(((Number) row.get("compensation_fee_rate_bps")).intValue()).isEqualTo(100);
+        assertThat(((Number) row.get("review_wait_hours")).intValue()).isEqualTo(48);
+        assertThat(((Number) row.get("response_window_hours")).intValue()).isEqualTo(168);
+    }
+
+    @Test
+    void contractOrderRejectsTotalBelowMinimumWithoutWritingRows() {
+        enableContractCreation();
+        jdbc.update("UPDATE products SET price = 9999 WHERE id = ?", productId);
+        assertBusiness(() -> service.create(buyerId, request(UUID.randomUUID(), "요구사항")),
+                "CONTRACT_MINIMUM_AMOUNT_NOT_MET");
+        assertCounts(0);
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM order_trade_terms t JOIN orders o ON o.id = t.order_id WHERE o.product_id = ?",
+                Long.class, productId)).isZero();
+    }
+
+    @Test
+    void contractOrderAcceptsMinimumBoundary() {
+        enableContractCreation();
+        jdbc.update("UPDATE products SET price = 10000 WHERE id = ?", productId);
+        var result = service.create(buyerId, request(UUID.randomUUID(), "요구사항"));
+        assertThat(policyOf(result.orderId())).isEqualTo("CONTRACT_V2");
+        assertThat(tradeTermsCount(result.orderId())).isOne();
+    }
+
+    @Test
+    void replayKeepsPolicyFixedAtCreationEvenAfterSwitch() {
+        UUID legacyKey = UUID.randomUUID();
+        var legacy = service.create(buyerId, request(legacyKey, "요구사항"));
+        enableContractCreation();
+        var legacyReplay = service.create(buyerId, request(legacyKey, "요구사항"));
+        assertThat(legacyReplay.created()).isFalse();
+        assertThat(legacyReplay.orderId()).isEqualTo(legacy.orderId());
+        assertThat(policyOf(legacy.orderId())).isEqualTo("LEGACY_V1");
+        assertThat(tradeTermsCount(legacy.orderId())).isZero();
+
+        UUID contractKey = UUID.randomUUID();
+        var contract = service.create(buyerId, request(contractKey, "요구사항"));
+        var contractReplay = service.create(buyerId, request(contractKey, "요구사항"));
+        assertThat(contractReplay.created()).isFalse();
+        assertThat(contractReplay.orderId()).isEqualTo(contract.orderId());
+        assertThat(tradeTermsCount(contract.orderId())).isOne();
+        assertCounts(2);
+    }
+
+    private void enableContractCreation() {
+        doReturn(TradePolicyVersion.CONTRACT_V2).when(newOrderPolicy).current();
+    }
+
+    private String policyOf(long orderId) {
+        return jdbc.queryForObject("SELECT policy_version FROM orders WHERE id = ?", String.class, orderId);
+    }
+
+    private long tradeTermsCount(long orderId) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM order_trade_terms WHERE order_id = ?", Long.class, orderId);
     }
 
     private CreateOrderRequest request(UUID key, String requirements) {

@@ -2,6 +2,8 @@
 
 작성일: 2026-11-05. 공유 브랜치: feature/advanced-common-foundation. 초기 작업 브랜치 feature/contract-finance-foundation에서 공통 기반을 분리했다. 정책은 [4인 설계](advanced-design-four-person.md)를 따른다.
 
+현재 반영 상태(2026-11-05): 아래 V3/V4 기반은 PR #76으로 main에 반영됐고, main `1e10d78`에는 V5/V6 누적 29개와 [정책 경계 보완](advanced-policy-boundary.md)도 포함된다. 기존 명령의 V2 차단·허용 행동·정책 DTO는 반영 완료이며 신규 계약 주문/API·PDF·분할 결제 연결은 미완료다. 아래 19개 스키마와 결제 외 명령 재검토 필요 문장은 최초 공유 당시 기록이다. 후속: 초안 작성 중 주문 당사자 회원이 없으면 500 `DATA_INTEGRITY_ERROR`로 처리한다(리뷰 9, [정책 경계](advanced-policy-boundary.md)). 남은 연결은 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)의 E3~E5·J3을 따른다.
+
 공유 전 최종 검증: 2026-11-05, 격리 MySQL 8.4에서 V1~V4·JPA validate 포함 clean build 전체 **651건 통과, 실패·오류·건너뜀 0**. 아래 최초 실패와 부분 재검증 기록 이후, 수정된 전체 소스를 한 번에 재실행한 결과다. 프런트·브라우저·원격 CI 결과와 구분한다.
 
 ## 구현

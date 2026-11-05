@@ -3,6 +3,7 @@ package com.example.lancerpick.order.service;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.entity.*;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.*;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.settlement.entity.Settlement;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.*;
 public class OrderConfirmationService {
   private final OrderRepository orders;
   private final OrderHistoryRepository histories;
+  private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final PaymentRepository payments;
   private final SettlementRepository settlements;
@@ -28,6 +30,7 @@ public class OrderConfirmationService {
   public OrderConfirmationService(
       OrderRepository orders,
       OrderHistoryRepository histories,
+      OrderEventPublisher events,
       OrderDetailQueries details,
       PaymentRepository payments,
       SettlementRepository settlements,
@@ -35,6 +38,7 @@ public class OrderConfirmationService {
       Clock clock) {
     this.orders = orders;
     this.histories = histories;
+    this.events = events;
     this.details = details;
     this.payments = payments;
     this.settlements = settlements;
@@ -87,7 +91,7 @@ public class OrderConfirmationService {
           LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
       order.confirm(at);
       settlements.saveAndFlush(Settlement.create(orderId, payment.amount(), payment.rate(), at));
-      histories.saveAndFlush(OrderHistory.completed(orderId, memberId, at));
+      events.publish(order, histories.saveAndFlush(OrderHistory.completed(orderId, memberId, at)));
     }
     var detail = details.forParticipant(orderId, memberId);
     return detail.withAllowedActions(
