@@ -1,6 +1,6 @@
 # 고도화 공통 기반: 팀원 시작 안내
 
-갱신일: 2026-11-05. 현재 제공 기준은 main `1e10d78`이다. 최초 공유 브랜치 feature/advanced-common-foundation과 후속 feature/advanced-schema-foundation의 기반 변경은 main에 반영됐다. 이후 main `1941ad1`까지 기존 주문 알림·아웃박스(#79, #80)가 추가됐다. 담당별 항목 ID·선행·상태는 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)를 따른다.
+갱신일: 2026-11-05. 현재 제공 기준은 main `1e10d78`이다. 최초 공유 브랜치 feature/advanced-common-foundation과 후속 feature/advanced-schema-foundation의 기반 변경은 main에 반영됐다. 이후 main `1941ad1`까지 기존 주문 알림·아웃박스(#79, #80)가 추가됐고, main `a7057d6`까지 V2 생성 경로(#82, 설정으로 닫힘)·비밀번호 변경과 세션 폐기(#84)·V2 수락/계약 성립 상태 연결(#85)이 들어왔다. 담당별 항목 ID·선행·상태는 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)를 따른다.
 
 PR #76의 V4 누적 19개 이후 V5/V6 나머지 10개와 정책별 조회·명령 경계까지 반영돼 현재 29개 업무 테이블을 제공한다. [전체 업무 스키마](advanced-schema-foundation.md)와 [정책 경계](advanced-policy-boundary.md)를 따른다. 테이블 존재가 신규 기능의 서비스/API/화면 완료를 의미하지 않는다.
 

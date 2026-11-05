@@ -2,7 +2,7 @@
 
 작성일: 2026-11-05. 공유 브랜치: feature/advanced-common-foundation. 초기 작업 브랜치 feature/contract-finance-foundation에서 공통 기반을 분리했다. 정책은 [4인 설계](advanced-design-four-person.md)를 따른다.
 
-현재 반영 상태(2026-11-05): 아래 V3/V4 기반은 PR #76으로 main에 반영됐고, main `1e10d78`에는 V5/V6 누적 29개와 [정책 경계 보완](advanced-policy-boundary.md)도 포함된다. 기존 명령의 V2 차단·허용 행동·정책 DTO는 반영 완료이며 신규 계약 주문/API·PDF·분할 결제 연결은 미완료다. 아래 19개 스키마와 결제 외 명령 재검토 필요 문장은 최초 공유 당시 기록이다. 후속: 초안 작성 중 주문 당사자 회원이 없으면 500 `DATA_INTEGRITY_ERROR`로 처리한다(리뷰 9, [정책 경계](advanced-policy-boundary.md)). 남은 연결은 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)의 E3~E5·J3을 따른다.
+현재 반영 상태(2026-11-05): 아래 V3/V4 기반은 PR #76으로 main에 반영됐고, main `1e10d78`에는 V5/V6 누적 29개와 [정책 경계 보완](advanced-policy-boundary.md)도 포함된다. 기존 명령의 V2 차단·허용 행동·정책 DTO는 반영 완료다. 이후 V2 생성 경로(E3, #82, 설정으로 닫힘)와 수락·계약 성립·선금 전 취소 상태 연결(E4, #85, main `a7057d6`)도 반영됐다. 계약 HTTP API·화면·PDF·분할 결제 연결은 미완료다. 아래 19개 스키마와 결제 외 명령 재검토 필요 문장은 최초 공유 당시 기록이다. 후속: 초안 작성 중 주문 당사자 회원이 없으면 500 `DATA_INTEGRITY_ERROR`로 처리한다(리뷰 9, [정책 경계](advanced-policy-boundary.md)). 남은 연결은 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05)의 E3~E5·J3을 따른다.
 
 공유 전 최종 검증: 2026-11-05, 격리 MySQL 8.4에서 V1~V4·JPA validate 포함 clean build 전체 **651건 통과, 실패·오류·건너뜀 0**. 아래 최초 실패와 부분 재검증 기록 이후, 수정된 전체 소스를 한 번에 재실행한 결과다. 프런트·브라우저·원격 CI 결과와 구분한다.
 
@@ -20,7 +20,7 @@
 
 기존 주문 생성 API는 설정(`lancerpick.order.contract-v2-creation-enabled` 기본 false)으로 아직 LEGACY_V1만 생성한다. 계약 서비스는 내부 명령이며 HTTP Controller·React 계약 화면은 추가하지 않았다(E5).
 
-상태 연결(E4, `feature/contract-v2-acceptance`):
+상태 연결(E4, main 반영 #85):
 - V2 판매자 수락은 `AWAITING_CONTRACT`로 전환한다. 초안 작성은 이 상태에서만 가능하다.
 - 초안의 새 버전마다 `CONTRACT_CREATED` 이력(상태 유지, details에 계약 버전)과 아웃박스 이벤트를 같은 트랜잭션에 저장한다. 같은 초안 재요청은 이력을 추가하지 않는다.
 - 두 번째 서명으로 계약이 SIGNED가 되면 같은 트랜잭션에서 주문을 `AWAITING_PAYMENT`(선금 대기)로 전환하고 `CONTRACT_SIGNED` 이력(행위자는 마지막 서명자)과 이벤트를 저장한다. 계약 성립 후에도 같은 당사자의 서명 재요청은 기존 결과를 돌려준다.
@@ -39,7 +39,7 @@ PDF 렌더러·비공개 저장·당사자 다운로드는 아직 연결하지 �
 
 최초 계약 검사에서는 JUnit Order와 엔티티 Order의 와일드카드 import 충돌을 수정했다. 현재 테스트는 명시적 JUnit import를 사용하며 컴파일 실패를 테스트 통과로 계산하지 않는다.
 
-신규 주문 API 활성화 전에는 기존 취소·납품·확정 API도 정책별 허용 행동을 재검토해야 한다. 현재 결제 API 차단만으로 전체 CONTRACT_V2 업무 흐름의 검증이 끝났다고 판단하지 않는다.
+신규 주문 API 활성화 전에는 기존 취소·납품·확정 API도 정책별 허용 행동을 재검토해야 한다(위 최초 공유 당시 기록). 이후 E4(#85)에서 수락/거절과 선금 전 직접 취소는 V2를 처리하도록 연결했고, 선금 후 V2 명령은 계속 ORDER_POLICY_NOT_READY로 막는다(E6 대상). 현재 결제 API 차단만으로 전체 CONTRACT_V2 업무 흐름의 검증이 끝났다고 판단하지 않는다.
 
 ## 마이그레이션
 

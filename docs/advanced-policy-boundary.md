@@ -23,7 +23,7 @@
 
 기존 쓰기 서비스는 OrderRepository.findForLegacyDecision을 사용한다. 기존 findForDecision의 행 잠금·당사자 조건을 유지한 채 공통 정책 검사를 수행한다. 내부 계약 서비스와 조회는 V2가 필요하므로 해당 legacy wrapper를 사용하지 않는다.
 
-E4(`feature/contract-v2-acceptance`)부터 수락/거절과 직접 취소는 findForDecision으로 잠근 뒤 정책을 직접 검사한다. 수락/거절은 V2를 허용하고, 직접 취소는 V2의 선금 전(`paidAt` 없음)만 허용한다. 알 수 없는 정책과 선금 후 V2는 계속 ORDER_POLICY_NOT_READY다.
+E4(#85, main `a7057d6`)부터 수락/거절과 직접 취소는 findForDecision으로 잠근 뒤 정책을 직접 검사한다. 수락/거절은 V2를 허용하고, 직접 취소는 V2의 선금 전(`paidAt` 없음)만 허용한다. 알 수 없는 정책과 선금 후 V2는 계속 ORDER_POLICY_NOT_READY다.
 
 OrderDetailResponse.withAllowedActions도 policyVersion을 보존한다. 새 필드는 기존 JSON에 추가되는 필드이며 기존 경로·입력은 유지한다. 프런트는 서버 allowedActions를 그대로 사용하고 임의로 V2의 PAY/CONFIRM을 복원하지 않는다.
 
