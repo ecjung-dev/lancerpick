@@ -72,4 +72,14 @@ public class Member {
         this.displayName = displayName;
         this.updatedAt = now;
     }
+
+    /**
+     * POST /api/me/password 비밀번호 변경용. 인코더 결과만 받는다(원문 X).
+     * auth_version을 1 올려서 이 회원의 기존 로그인 세션이 모두 폐기되게 한다(SessionAuthVersionFilter).
+     */
+    public void changePassword(String newPasswordHash, LocalDateTime now) {
+        this.passwordHash = newPasswordHash;
+        this.authVersion += 1;
+        this.updatedAt = now;
+    }
 }
