@@ -2,6 +2,8 @@
 
 작성일: 2026-11-05. 브랜치: feature/advanced-schema-foundation. 선행 기준: main c24f37d(PR #76). DB 변경 담당 황준범.
 
+현재 반영 상태(2026-11-05): main `1e10d78`에 V5/V6와 기존 엔티티 호환 변경이 반영됐다. 아래 브랜치·검증 설명은 구현 당시 기록이다. 이번 문서 갱신은 DB 적용이나 재검증을 포함하지 않는다.
+
 ## 실제 추가 범위
 
 V1/V2의 17개 + V4 계약 2개 + V5 7개 + V6 3개 = **29개 업무 테이블**이다. 목표 신규 12개가 모두 존재한다. 선택 관심 상품·Spring Batch의 BATCH_* 시스템 테이블은 포함하지 않는다.
@@ -41,7 +43,7 @@ payments.uk_payments_order와 전액 환불 CHECK는 아직 유지한다. 단일
 
 ## 적용 절차
 
-동일 브랜치의 코드·V5/V6를 함께 받아 기존 설정으로 서버를 실행한다. Flyway가 V1~V4 적용 이력을 보존하고 V5/V6만 추가 적용한다. 적용된 V1~V4 파일을 수정하거나 전체 DB를 재생성하지 않는다.
+최신 main의 코드·V5/V6를 함께 받아 기존 설정으로 서버를 실행한다. Flyway가 V1~V4 적용 이력을 보존하고 V5/V6만 추가 적용한다. 적용된 migration 파일을 수정하거나 전체 DB를 재생성하지 않는다.
 
 docs/sql/advanced-db-candidate.sql은 최초 V1/V2 기준 전체 목표 검토본이다. V3~V6 적용 DB에 직접 실행하지 않는다. 다음 DDL도 황준범이 최신 migration 기준 차분으로 제공한다. 관심 상품·파일 납품·Batch 시스템 스키마는 선택 기능 착수 시 별도 추가한다.
 
@@ -53,4 +55,4 @@ docs/sql/advanced-db-candidate.sql은 최초 V1/V2 기준 전체 목표 검토�
 
 전체 clean build에서 V1~V6·JPA validate를 포함해 651건을 실행했고 650건 통과, 기존 취소 fixture의 resolution_source 누락 1건이 실패했다. fixture에 SELLER를 추가한 뒤 해당 OrderCreationApiIntegrationTests 전체 24건을 재실행해 실패·오류·건너뜀 0으로 통과했다. 수정 후 운영 코드는 바꾸지 않았으며 전체 651건을 한 번에 다시 실행한 결과와 구분한다. 기존 철회 fixture도 BUYER를 명시하도록 보완했다.
 
-개인 DB 적용·커밋·push는 이번 검증에서 수행하지 않았다. 테이블 수에 Batch 시스템 테이블을 포함했다고 표현하지 않는다.
+위 구현 당시 검증에서는 개인 DB 적용·커밋·push를 수행하지 않았다. 이후 main 반영 상태는 문서 상단을 따른다. 테이블 수에 Batch 시스템 테이블을 포함했다고 표현하지 않는다.
