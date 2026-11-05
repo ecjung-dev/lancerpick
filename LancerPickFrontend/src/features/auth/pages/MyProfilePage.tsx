@@ -12,10 +12,11 @@ import { isUnclearResult, memberQueryKey, resetAccountState } from '../session'
 import type { Member } from '../types'
 import { DISPLAY_NAME_MAX, validateDisplayName } from '../validation'
 import styles from './MyProfilePage.module.css'
+import { PasswordChangeForm } from './PasswordChangeForm'
 
 const PROFILE_PATH = '/mypage/profile'
 
-/** /mypage/profile. 내 정보 확인과 표시 이름 수정(MVP 3절 회원, API 2절 PATCH /me). */
+/** /mypage/profile. 내 정보 확인, 표시 이름 수정(API 2절 PATCH /me), 비밀번호 변경(POST /me/password). */
 export function MyProfilePage() {
   const member = useCurrentMember()
   const [accountChanged, setAccountChanged] = useState(false)
@@ -47,6 +48,12 @@ export function MyProfilePage() {
       {/* 계정이 바뀌면 key가 바뀌어 입력 상태도 새로 시작한다(이전 계정 입력이 남지 않게). */}
       <ProfileForm
         key={member.data.id}
+        member={member.data}
+        onAccountChanged={() => setAccountChanged(true)}
+      />
+      <hr className={styles.divider} />
+      <PasswordChangeForm
+        key={`password-${member.data.id}`}
         member={member.data}
         onAccountChanged={() => setAccountChanged(true)}
       />
@@ -145,7 +152,7 @@ function ProfileForm({ member, onAccountChanged }: { member: Member; onAccountCh
         </p>
         <p id="profile-display-name-error" className={styles.fieldError}>{error}</p>
         <div className={styles.actions}>
-          <p>이메일과 비밀번호는 이 화면에서 바꿀 수 없어요.</p>
+          <p>이메일(로그인 아이디)은 바꿀 수 없어요.</p>
           <Button type="submit">{save.isPending ? '저장 중…' : '표시 이름 저장'}</Button>
         </div>
       </fieldset>
@@ -176,7 +183,7 @@ function Layout({ children }: { children: ReactNode }) {
       <header className={styles.heading}>
         <p>MY ACCOUNT</p>
         <h1>내 정보</h1>
-        <span>다른 회원에게 보이는 표시 이름을 바꿀 수 있어요.</span>
+        <span>다른 회원에게 보이는 표시 이름과 비밀번호를 바꿀 수 있어요.</span>
       </header>
       <div className={styles.card}>{children}</div>
     </section>

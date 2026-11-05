@@ -1,5 +1,5 @@
 import { ApiError, apiRequest } from '../../shared/api/client.ts'
-import type { LoginInput, Member, SignupInput, UpdateMeInput } from './types.ts'
+import type { ChangePasswordInput, LoginInput, Member, SignupInput, UpdateMeInput } from './types.ts'
 
 /** 로그인 안 한 상태(401)는 오류가 아니라 null로 돌려준다. 그 밖의 오류는 그대로 던진다. */
 export async function getCurrentMember(
@@ -29,6 +29,18 @@ export function logout() {
  */
 export function updateMe(input: UpdateMeInput) {
   return apiRequest<Member>('/me', { method: 'PATCH', json: { displayName: input.displayName } })
+}
+
+/**
+ * POST /api/me/password. 성공하면 204이고 서버가 지금 세션을 끝낸다(다시 로그인 필요).
+ * 비밀번호는 정리하지 않고 그대로 보낸다. 실패해도 자동으로 다시 보내지 않는다.
+ * 호출 순서와 캐시 처리는 password.ts의 submitPasswordChange를 쓴다.
+ */
+export function changePassword(input: ChangePasswordInput) {
+  return apiRequest<void>('/me/password', {
+    method: 'POST',
+    json: { currentPassword: input.currentPassword, newPassword: input.newPassword },
+  })
 }
 
 /** POST /api/members. 가입 후 자동 로그인하지 않는다(API 2절). */
