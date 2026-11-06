@@ -106,33 +106,37 @@ K4 구현 시 B4·C8을 같이 추가한다.
 
 ```sql
 SELECT * FROM (
-  SELECT o.id, p.amount AS paid, f.amount AS funds_amount, f.status,
-         f.remaining_amount AS held, -pay.amount_delta AS debit,
-         COALESCE(r.amount_delta, 0) AS refund, COALESCE(s.amount_delta, 0) AS payout,
-         COALESCE(c.fee_amount, 0) AS fee, c.reason
+  SELECT o.id, o.buyer_id, o.seller_id, p.amount AS paid,
+         f.order_id AS funds_order, f.payment_id AS funds_payment, f.amount AS funds_amount,
+         f.status, f.remaining_amount AS held,
+         pay.member_id AS debit_member, -pay.amount_delta AS debit,
+         r.member_id AS refund_member, COALESCE(r.amount_delta, 0) AS refund,
+         s.member_id AS payout_member, COALESCE(s.amount_delta, 0) AS payout,
+         c.order_id AS closure_order, COALESCE(c.fee_amount, 0) AS fee, c.reason, p.id AS payment_id
   FROM orders o
   JOIN payments p ON p.order_id = o.id
-  JOIN order_funds f ON f.order_id = o.id AND f.payment_id = p.id
-  JOIN wallet_entries pay ON pay.payment_id = p.id AND pay.type = 'PAYMENT' AND pay.member_id = o.buyer_id
-  LEFT JOIN wallet_entries r ON r.payment_id = p.id AND r.type = 'REFUND' AND r.member_id = o.buyer_id
-  LEFT JOIN wallet_entries s ON s.payment_id = p.id AND s.type = 'SELLER_PAYOUT' AND s.member_id = o.seller_id
+  LEFT JOIN order_funds f ON f.order_id = o.id
+  LEFT JOIN wallet_entries pay ON pay.payment_id = p.id AND pay.type = 'PAYMENT'
+  LEFT JOIN wallet_entries r ON r.payment_id = p.id AND r.type = 'REFUND'
+  LEFT JOIN wallet_entries s ON s.payment_id = p.id AND s.type = 'SELLER_PAYOUT'
   LEFT JOIN order_closures c ON c.order_id = o.id
   WHERE o.policy_version = 'CONTRACT_V3'
 ) t
-WHERE NOT (
-  debit = paid AND funds_amount = paid AND paid = held + refund + payout + fee
-  AND ( (status = 'HELD'     AND reason IS NULL AND refund = 0 AND payout = 0)
+WHERE (
+  funds_order IS NOT NULL AND funds_payment = payment_id AND funds_amount = paid
+  AND debit_member = buyer_id AND debit = paid
+  AND (refund_member IS NULL OR refund_member = buyer_id)
+  AND (payout_member IS NULL OR payout_member = seller_id)
+  AND paid = held + refund + payout + fee
+  AND ( (status = 'HELD'     AND closure_order IS NULL AND refund = 0 AND payout = 0)
      OR (status = 'RELEASED' AND reason IN ('COMPLETED','AUTO_CONFIRMED') AND refund = 0 AND payout > 0)
      OR (status = 'REFUNDED' AND reason IN ('MUTUAL_CANCELLATION','ADMIN_CANCELLATION') AND payout = 0 AND fee = 0) )
-);
-
--- 결제 행은 있는데 보관금 행이 없는 V3 주문(위 조회의 JOIN에 안 잡힘)
-SELECT o.id FROM orders o JOIN payments p ON p.order_id = o.id
-LEFT JOIN order_funds f ON f.order_id = o.id
-WHERE o.policy_version = 'CONTRACT_V3' AND f.order_id IS NULL;
+) IS NOT TRUE;
 ```
 
-두 조회 모두 0행이어야 한다. 컬럼 이름이 바뀌면 이 조회도 함께 고친다. 2026-11-06 로컬 `lancerpick_test`에서 두 조회의 문법·컬럼 실행만 확인했다(당시 V3 결제 데이터 0건이라 실제 위반 탐지는 아직 확인하지 않음).
+보관금·차감 원장·종료 기록은 모두 LEFT JOIN으로 읽고, 정상 조건 전체에 `IS NOT TRUE`를 적용해 행 누락(NULL)도 위반으로 잡는다. 원장은 회원 조건 없이 결제 ID로 읽고 회원 일치를 따로 검사해 다른 회원에게 연결된 원장도 잡는다. 컬럼 이름이 바뀌면 이 조회도 함께 고친다.
+
+확인 기록(2026-11-06, 로컬 `lancerpick_test`): 조회 실행은 오류 없이 0행(V3 결제 데이터 0건). 바깥 판정식은 가짜 행 9개(정상 HELD/RELEASED/REFUNDED, 보관금 누락, 차감 원장 누락, 차감 원장 다른 회원, REFUNDED인데 closure 누락, 합계 불일치, HELD인데 closure 존재)로 위반 6건만 반환되는 것을 확인했다. 실제 V3 거래 데이터에서의 확인은 G1 판정 때 한다.
 
 ## 5. 활성화 절차
 
