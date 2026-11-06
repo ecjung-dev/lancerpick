@@ -1,6 +1,6 @@
 # 랜서픽 MVP ERD 설계 v1.0
 
-2026-11-06 J5 로컬 후속: V8은 [충전 복구 Batch](wallet-topup-recovery-batch.md)의 공식 `BATCH_*` 시스템 테이블 9개다. 업무 테이블 30개와 아래 업무 ERD 관계는 유지하며, 시스템 테이블을 포함하면 39개(`flyway_schema_history` 제외)다. 기본 자동 실행은 꺼져 있다.
+2026-11-06 J5 로컬 후속: V9는 [충전 복구 Batch](wallet-topup-recovery-batch.md)의 공식 `BATCH_*` 시스템 테이블 9개다. main V8 관심 상품까지 업무 테이블은 31개이며, 시스템 테이블을 포함하면 40개(`flyway_schema_history` 제외)다. 아래 MVP 업무 ERD는 이력으로 유지하며 기본 자동 복구 실행은 꺼져 있다.
 
 2026-11-05 신규 정책: CONTRACT_V3는 [결제 금액 보관·판매자 적립금 지급·자동 구매 확정](full-funding-policy.md)을 따른다. V7은 main `2fec099`에 반영돼 업무 테이블 30개와 새 모드를 제공한다. 아래 선금/잔금·보상·V1~V6/29개 설명은 해당 버전의 이력이다. 신규 V3 금액 명령·스케줄러의 완료를 뜻하지 않는다.
 

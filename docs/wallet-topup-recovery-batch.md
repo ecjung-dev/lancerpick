@@ -24,7 +24,7 @@
 
 자동 실행할 환경에서만 Git 제외 개인 설정 또는 환경변수에 앞의 두 값을 `true`로 넣고 서버를 재시작한다. 기존 토스 테스트 키와 `TOSS_TOPUP_ENABLED=true`도 필요하다. 토스가 비활성 상태면 처리권/잔액을 변경하기 전에 실행이 실패한다. 키 원문은 문서·Job 파라미터에 넣지 않는다. `demo` 프로필에는 복구 기능을 등록하지 않는다.
 
-`spring.batch.job.enabled=false`로 애플리케이션 시작 시 Job 자동 실행을 막고, `spring.batch.jdbc.initialize-schema=never`로 프레임워크의 자동 DDL을 막는다. 위 기능 설정과 관계없이 Flyway V8은 시스템 테이블을 적용한다.
+`spring.batch.job.enabled=false`로 애플리케이션 시작 시 Job 자동 실행을 막고, `spring.batch.jdbc.initialize-schema=never`로 프레임워크의 자동 DDL을 막는다. 위 기능 설정과 관계없이 Flyway V9는 시스템 테이블을 적용한다.
 
 ## 트랜잭션·동시성
 
@@ -55,11 +55,19 @@ Job의 `COMPLETED`는 이번 스캔이 끝났다는 뜻이다. 모든 미확정 
 
 ## DB·라이브러리
 
-Boot 4.1.2가 관리하는 `spring-boot-starter-batch-jdbc` / Spring Batch 6.0.6을 사용한다. V8은 해당 버전의 공식 MySQL 스키마를 가져온 **9개 `BATCH_*` 시스템 테이블**이다. 기존 V1~V7은 변경하지 않는다. 업무 테이블은 여전히 30개이며 시스템 테이블을 더하면 39개다(`flyway_schema_history` 제외).
+Boot 4.1.2가 관리하는 `spring-boot-starter-batch-jdbc` / Spring Batch 6.0.6을 사용한다. V9는 해당 버전의 공식 MySQL 스키마를 가져온 **9개 `BATCH_*` 시스템 테이블**이다. main `6d2dac5` 병합 시 관심 상품이 이미 V8을 사용해, 아직 공유하지 않은 복구 스키마만 V8에서 V9로 옮겼다. main에 반영된 V1~V8은 변경하지 않는다. 업무 테이블은 V8까지 31개이며 시스템 테이블을 더하면 40개다(`flyway_schema_history` 제외).
 
 V5에 이미 있는 `wallet_topups`의 재시도 수·다음 시각·처리권·만료 컬럼과 인덱스를 사용한다. 별도 복구 시도 업무 테이블은 만들지 않는다. 업무 데이터 접근은 JPA/QueryDSL을 유지한다. JDBC는 Spring Batch 프레임워크의 실행 메타데이터 저장 구현에 한정되며, 업무 Repository에 JdbcTemplate·직접 SQL을 추가하지 않았다.
 
 ## 검증
+
+### 최신 main 통합 — 2026-11-06
+
+main `6d2dac5`(#113까지)을 로컬 복구 작업에 병합했다. `current-status.md`의 복구/Redis 기록과 회원·지급 경합 보완 기록을 모두 보존했다. main V8 관심 상품 SQL은 유지하고 미공유 Batch SQL만 내용 변경 없이 V9로 옮겼다. 기존 지갑·복구 Java 코드는 로컬 `5691b21`과 동일하다.
+
+새 격리 MySQL에서 Flyway V1~V9가 모두 성공했고, 업무 31개 + Batch 시스템 9개 = 40개 테이블을 확인했다(`flyway_schema_history` 제외). 병합 후 백엔드 전체 `clean build` **875건**이 실패·오류·건너뜀 없이 통과했다. 프런트 API 테스트 **218건**·lint·TypeScript 포함 build도 통과했다. Vite의 500kB 이상 청크 경고는 남아 있으며 빌드 실패는 아니다. 개인 개발 DB·실제 토스·메일 서버에 접속하지 않았다.
+
+### 병합 전 구현 검사
 
 격리 MySQL 8.4에서 백엔드 전체 `clean build` **839건(신규 복구 통합 16건 포함)**이 실패·오류·건너뜀 없이 통과했다. 이후 스케줄러 구성 보완에 대해 별도 설정 검사 **4건**이 통과했고, 해당 보완을 포함한 복구 통합·설정 선택 검사 **20건**도 새 격리 MySQL에서 실패·오류·건너뜀 없이 통과했다. 스케줄러 보완 이후 전체 검사를 다시 실행하지 않았으며, 전체 검사 수와 선택 검사 수를 합산한 전체 실행 결과로 표현하지 않는다.
 
@@ -72,4 +80,4 @@ V5에 이미 있는 `wallet_topups`의 재시도 수·다음 시각·처리권·
 - [JobRepository와 메타데이터](https://docs.spring.io/spring-batch/reference/job/configuring-repository.html)
 - [JobOperator 재시작·복구 API](https://docs.spring.io/spring-batch/reference/api/org/springframework/batch/core/launch/JobOperator.html)
 
-V8 스키마의 원본 경로는 `spring-batch-core-6.0.6.jar!/org/springframework/batch/core/schema-mysql.sql`이다.
+V9 스키마의 원본 경로는 `spring-batch-core-6.0.6.jar!/org/springframework/batch/core/schema-mysql.sql`이다.

@@ -43,6 +43,8 @@ class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
     com.example.lancerpick.order.service.ReviewTimerService reviewTimerService;
     @MockitoBean
+    com.example.lancerpick.order.service.DeadlineNotices deadlineNotices;
+    @MockitoBean
     com.example.lancerpick.order.service.ReviewTimers reviewTimers;
     @MockitoBean
     com.example.lancerpick.contract.service.ContractDocumentTransactions contractDocumentTransactions;
@@ -71,6 +73,10 @@ class DefaultCatalogApiTests extends CommonApiTests {
     com.example.lancerpick.seller.service.SellerProfileService sellerProfileService;
     @MockitoBean
     com.example.lancerpick.product.service.ProductSearchService productSearchService;
+    @MockitoBean
+    com.example.lancerpick.product.service.ProductFavoriteService productFavoriteService;
+    @MockitoBean
+    com.example.lancerpick.product.repository.ProductFavoriteQueries productFavoriteQueries;
     @MockitoBean
     com.example.lancerpick.product.repository.ProductSearchQueries productSearchQueries;
     @MockitoBean
@@ -155,6 +161,9 @@ class DefaultCatalogApiTests extends CommonApiTests {
     com.example.lancerpick.auth.service.PasswordResetService passwordResetService;
     @MockitoBean
     com.example.lancerpick.auth.service.AuthRequestLimiter authRequestLimiter;
+    // 가입 이메일 인증도 DB를 사용하므로 대체한다. 실제 처리는 SignupEmailIntegrationTests(MySQL)에서 검증한다.
+    @MockitoBean
+    com.example.lancerpick.auth.service.SignupEmailService signupEmailService;
     @MockitoBean
     com.example.lancerpick.auth.mail.AccountMailDeliveryRecorder accountMailDeliveryRecorder;
 }

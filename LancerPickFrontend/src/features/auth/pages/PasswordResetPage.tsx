@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link, useLocation, useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Button } from '../../../shared/components/Button'
 import { Input } from '../../../shared/components/Input'
-import { readResetToken, resetFailureKind, submitPasswordReset } from '../passwordReset'
+import { resetFailureKind, submitPasswordReset } from '../passwordReset'
+import { useLinkToken } from '../useLinkToken'
 import { validatePasswordReset, type PasswordResetErrors } from '../validation'
 import { AuthLayout } from './AuthLayout'
 import type { LoginPageState } from './LoginPage'
@@ -21,18 +22,12 @@ type Draft = { newPassword: string; newPasswordConfirm: string }
  * - 통신 오류·5xx는 바뀌었을 수 있다. 같은 토큰을 다시 보내지 않고 로그인 화면에서 새 비밀번호를 먼저 시도하게 안내한다.
  */
 export function PasswordResetPage() {
-  const location = useLocation()
   const navigate = useNavigate()
   const client = useQueryClient()
-  const [token] = useState(() => readResetToken(location.hash))
+  const token = useLinkToken()   // 주소의 #token=... 을 메모리로 옮기고 주소창에서 지운다
   const active = useRef(true)
   const sending = useRef(false)
   useEffect(() => { active.current = true; return () => { active.current = false } }, [])
-
-  // 주소창에서 #token=... 을 지운다. 토큰은 위의 state에 이미 들어 있다.
-  useEffect(() => {
-    if (location.hash) navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: location.state })
-  }, [location.hash, location.pathname, location.search, location.state, navigate])
 
   const [draft, setDraft] = useState<Draft>({ newPassword: '', newPasswordConfirm: '' })
   const [errors, setErrors] = useState<PasswordResetErrors>({})

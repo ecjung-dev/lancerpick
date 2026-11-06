@@ -9,17 +9,18 @@ import java.util.regex.Pattern;
 
 /**
  * 일회용 토큰 만들기·해시(3인 설계 7.1). 원문 = SecureRandom 32바이트를 URL-safe Base64(패딩 없음, 43자)로 쓴 값.
- * DB에는 SHA-256(원문 32바이트)만 저장한다. 원문은 메일 링크에만 들어간다.
+ * DB에는 SHA-256(원문 32바이트)만 저장한다. 원문은 메일 링크(또는 가입 증명 응답)에만 들어간다.
  * 토큰이 2^256가지라 맞혀 볼 수 없으므로 비밀번호처럼 느린 해시(BCrypt)를 쓰지 않고, 해시로 바로 찾는다.
+ * 비밀번호 재설정 토큰, 가입 인증 메일 토큰, 가입 증명(proof)이 모두 이 형식을 쓴다. 목적은 account_challenges.purpose로 구분한다.
  */
-public final class ResetTokens {
+public final class OneTimeTokens {
     private static final int TOKEN_BYTES = 32;
     private static final Pattern FORMAT = Pattern.compile("^[A-Za-z0-9_-]{43}$");
     private static final SecureRandom RANDOM = new SecureRandom();   // 여러 스레드가 함께 써도 안전하다
     private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder DECODER = Base64.getUrlDecoder();
 
-    private ResetTokens() {
+    private OneTimeTokens() {
     }
 
     /** value: 메일 링크에 넣을 원문, hash: DB에 저장할 값. toString에 원문이 찍히지 않게 덮어쓴다. */

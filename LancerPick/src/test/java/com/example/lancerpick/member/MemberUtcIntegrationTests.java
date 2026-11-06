@@ -1,8 +1,8 @@
 package com.example.lancerpick.member;
 
-import com.example.lancerpick.member.dto.SignupRequest;
 import com.example.lancerpick.member.service.MemberService;
 import com.example.lancerpick.support.IntegrationTest;
+import com.example.lancerpick.support.TestMembers;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -27,7 +27,8 @@ class MemberUtcIntegrationTests {
 
     @Test
     void signupPersistsUtcMicrosecondsInMemberAndInitialGrant() {
-        var member = members.signup(new SignupRequest("utc-" + UUID.randomUUID() + "@example.com", "abcd1234", "시각 검사"));
+        // @Transactional 테스트라 가입 증명 행도 테스트가 끝나면 함께 롤백된다.
+        var member = members.signup(TestMembers.signupRequest(jdbc, "utc-" + UUID.randomUUID() + "@example.com", "abcd1234", "시각 검사"));
         long id = Long.parseLong(member.id());
         assertSoftly(softly -> {
             for (String column : new String[]{"created_at", "updated_at"}) {

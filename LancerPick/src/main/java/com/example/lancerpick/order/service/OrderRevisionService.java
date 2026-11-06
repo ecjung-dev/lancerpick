@@ -33,6 +33,7 @@ public class OrderRevisionService {
   private final OrderDetailQueries details;
   private final OrderFundingGuard funding;
   private final ReviewTimers reviewTimers;
+  private final DeadlineNotices deadlineNotices;
   private final Clock clock;
 
   public OrderRevisionService(
@@ -44,6 +45,7 @@ public class OrderRevisionService {
       OrderDetailQueries details,
       OrderFundingGuard funding,
       ReviewTimers reviewTimers,
+      DeadlineNotices deadlineNotices,
       Clock clock) {
     this.orders = orders;
     this.deliveries = deliveries;
@@ -53,6 +55,7 @@ public class OrderRevisionService {
     this.details = details;
     this.funding = funding;
     this.reviewTimers = reviewTimers;
+    this.deadlineNotices = deadlineNotices;
     this.clock = clock;
   }
 
@@ -94,6 +97,7 @@ public class OrderRevisionService {
         order,
         histories.saveAndFlush(
             OrderHistory.revisionRequested(orderId, memberId, at, revision.getReason())));
+    deadlineNotices.redeliveryDue(order, revision);
     var detail = details.forParticipant(orderId, memberId);
     return detail.withAllowedActions(
         OrderAllowedActions.actions(

@@ -1,6 +1,7 @@
 import { ApiError, apiRequest } from '../../shared/api/client.ts'
 import type {
-  ChangePasswordInput, LoginInput, Member, PasswordResetAccepted, PasswordResetInput, SignupInput, UpdateMeInput,
+  ChangePasswordInput, LoginInput, Member, PasswordResetAccepted, PasswordResetInput, SignupEmailVerification,
+  SignupInput, UpdateMeInput,
 } from './types.ts'
 
 /** 로그인 안 한 상태(401)는 오류가 아니라 null로 돌려준다. 그 밖의 오류는 그대로 던진다. */
@@ -64,9 +65,36 @@ export function resetPassword(input: PasswordResetInput) {
   })
 }
 
-/** POST /api/members. 가입 후 자동 로그인하지 않는다(API 2절). */
+/**
+ * POST /api/members. 이메일 인증 증명(emailVerificationProof)이 필수다. 가입 후 자동 로그인하지 않는다(API 2절).
+ * 증명은 일회용이라 실패해도 자동으로 다시 보내지 않는다.
+ */
 export function signup(input: SignupInput) {
-  return apiRequest<Member>('/members', { method: 'POST', json: input })
+  return apiRequest<Member>('/members', {
+    method: 'POST',
+    json: {
+      email: input.email,
+      password: input.password,
+      displayName: input.displayName,
+      emailVerificationProof: input.emailVerificationProof,
+    },
+  })
+}
+
+/**
+ * POST /api/auth/signup-email-requests. 가입 여부와 상관없이 같은 202가 온다(메일 도착을 뜻하지 않음).
+ * 실패해도 자동으로 다시 보내지 않는다. 다시 보내기 간격은 화면이 막는다.
+ */
+export function requestSignupEmail(email: string) {
+  return apiRequest<PasswordResetAccepted>('/auth/signup-email-requests', { method: 'POST', json: { email } })
+}
+
+/**
+ * POST /api/auth/signup-email-verifications. 메일 링크 토큰으로 인증하고 가입 증명을 받는다.
+ * 링크 토큰은 한 번만 쓸 수 있으므로 절대 자동으로 다시 보내지 않는다.
+ */
+export function verifySignupEmail(token: string) {
+  return apiRequest<SignupEmailVerification>('/auth/signup-email-verifications', { method: 'POST', json: { token } })
 }
 
 /** 보호 기능의 현재 회원 확인. 401을 호출한 기능에 그대로 전달한다. */

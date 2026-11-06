@@ -109,21 +109,38 @@ class ReviewIntegrationTests {
         jdbc.update("UPDATE reviews SET created_at='2026-11-04 01:00:00' WHERE order_id IN (?,?)", order, second);
         mvc.perform(get("/api/products/{id}/reviews", product).param("size", "1"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.summary.reviewCount").value(2))
+                .andExpect(jsonPath("$.summary.averageRating").value(3.0))
                 .andExpect(jsonPath("$.totalPages").value(2)).andExpect(jsonPath("$.items[0].id").value(later.id()))
                 .andExpect(jsonPath("$.items[0].orderId").doesNotExist())
                 .andExpect(jsonPath("$.items[0].authorId").doesNotExist())
                 .andExpect(jsonPath("$.items[0].content").value(org.hamcrest.Matchers.nullValue()));
         mvc.perform(get("/api/products/{id}/reviews", product).param("page", "2147483647"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty()).andExpect(jsonPath("$.totalElements").value(2));
-        for (String[] param : new String[][] {{"page", "-1"}, {"size", "101"}, {"size", "0"}, {"page", "abc"}}) {
+        mvc.perform(get("/api/products/{id}/reviews", product).param("rating", "1").param("size", "1"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.summary.reviewCount").value(2))
+                .andExpect(jsonPath("$.summary.averageRating").value(3.0))
+                .andExpect(jsonPath("$.items[0].id").value(later.id()));
+        mvc.perform(get("/api/products/{id}/reviews", product).param("rating", "4"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty())
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.summary.reviewCount").value(2));
+        for (String[] param : new String[][] {{"page", "-1"}, {"size", "101"}, {"size", "0"}, {"page", "abc"},
+                {"rating", "0"}, {"rating", "6"}, {"rating", ""}, {"rating", "1.5"}, {"rating", "0x5"}}) {
             mvc.perform(get("/api/products/{id}/reviews", product).param(param[0], param[1])).andExpect(status().isBadRequest());
         }
     }
     @Test void hiddenOrStoppedPublicListIs404ButBuyerCanStillWriteAndReadOrderReview() throws Exception {
-        mvc.perform(get("/api/products/{id}/reviews", product)).andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty());
+        mvc.perform(get("/api/products/{id}/reviews", product)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items").isEmpty())
+                .andExpect(jsonPath("$.summary.reviewCount").value(0))
+                .andExpect(jsonPath("$.summary.averageRating").value(org.hamcrest.Matchers.nullValue()));
         for (String field : List.of("is_hidden=1", "sale_status='STOPPED'")) {
             jdbc.update("UPDATE products SET " + field + " WHERE id=?", product);
             mvc.perform(get("/api/products/{id}/reviews", product)).andExpect(status().isNotFound());
+            mvc.perform(get("/api/products/{id}/reviews", product).param("rating", "5")).andExpect(status().isNotFound());
             jdbc.update("UPDATE products SET is_hidden=0,sale_status='ON_SALE' WHERE id=?", product);
         }
         jdbc.update("UPDATE products SET is_hidden=1,sale_status='STOPPED' WHERE id=?", product);

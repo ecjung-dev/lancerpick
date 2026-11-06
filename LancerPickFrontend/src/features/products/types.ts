@@ -27,6 +27,7 @@ export interface OwnedProductSummary extends ProductSummary {
   updatedAt: string
 }
 export interface ProductDetail extends ProductSummary {
+  minimumOrderAmount: number | null
   description: string
   scopeDescription: string
   preparationDescription: string

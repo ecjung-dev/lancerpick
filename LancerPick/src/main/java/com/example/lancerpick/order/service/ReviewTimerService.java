@@ -5,6 +5,7 @@ import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.member.entity.MemberRole;
 import com.example.lancerpick.member.repository.MemberRepository;
+import com.example.lancerpick.notification.repository.OutboxEventRepository;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.ReviewTimerResponse;
 import com.example.lancerpick.order.entity.Delivery;
@@ -57,6 +58,7 @@ public class ReviewTimerService {
   private final OrderFundingGuard funding;
   private final FullFundingService fullFunding;
   private final MemberRepository members;
+  private final OutboxEventRepository outbox;
   private final TransactionTemplate expiryTransaction;
   private final Clock clock;
 
@@ -71,6 +73,7 @@ public class ReviewTimerService {
       OrderFundingGuard funding,
       FullFundingService fullFunding,
       MemberRepository members,
+      OutboxEventRepository outbox,
       PlatformTransactionManager transactionManager,
       Clock clock) {
     this.orders = orders;
@@ -83,6 +86,7 @@ public class ReviewTimerService {
     this.funding = funding;
     this.fullFunding = fullFunding;
     this.members = members;
+    this.outbox = outbox;
     this.expiryTransaction = new TransactionTemplate(transactionManager);
     this.expiryTransaction.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     this.clock = clock;
@@ -202,6 +206,51 @@ public class ReviewTimerService {
       afterAt = last.expiresAt();
       afterId = last.id();
     }
+  }
+
+  /**
+   * 만료 24시간 전 구간에 들어온 활성 타이머의 구매자에게 사전 안내를 한 번 보낸다(E9). 타이머마다 별도 트랜잭션에서 주문 잠금 후
+   * 활성·구간·안내 여부를 다시 확인한다. 이미 안내한 타이머는 잠금 없이 먼저 건너뛴다. 실패는 다음 실행에서 다시 시도한다.
+   */
+  public int noticeDue(int batchSize) {
+    var now = now();
+    var noticeUntil = now.plusHours(OrderResponseTimer.NOTICE_BEFORE_HOURS);
+    var afterAt = CURSOR_START;
+    long afterId = 0;
+    int published = 0;
+    while (true) {
+      var batch =
+          timers.noticeTimersAfter(now, noticeUntil, afterAt, afterId, PageRequest.of(0, batchSize));
+      for (var due : batch) {
+        long timerId = due.id();
+        if (outbox.existsByEventId(OrderEventPublisher.autoConfirmNoticeEventId(timerId))) continue;
+        try {
+          if (Boolean.TRUE.equals(expiryTransaction.execute(status -> notice(timerId))))
+            published++;
+        } catch (RuntimeException e) {
+          log.warn(
+              "Auto confirmation notice failed: timerId={} type={}",
+              timerId,
+              e.getClass().getSimpleName());
+        }
+      }
+      if (batch.size() < batchSize) return published;
+      var last = batch.getLast();
+      afterAt = last.expiresAt();
+      afterId = last.id();
+    }
+  }
+
+  private boolean notice(long timerId) {
+    var orderId = timers.orderIdOf(timerId);
+    if (orderId.isEmpty()) return false;
+    var order =
+        orders.findForSystemUpdate(orderId.get()).orElseThrow(ReviewTimerService::integrity);
+    var timer = timers.findById(timerId).orElseThrow(ReviewTimerService::integrity);
+    var at = now();
+    if (!timer.isInNoticeWindow(at) || order.getStatus() != OrderStatus.AWAITING_CONFIRMATION)
+      return false;
+    return events.publishAutoConfirmNotice(order, timer, at);
   }
 
   private boolean expire(long timerId) {

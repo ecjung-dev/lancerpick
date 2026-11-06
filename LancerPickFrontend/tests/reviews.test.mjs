@@ -36,6 +36,14 @@ test('invalid identifiers and pages never send a request', () => {
   globalThis.fetch = () => { throw new Error('must not request') }
   for (const id of ['0', '-1', '1/other', '9223372036854775808']) assert.throws(() => getProductReviews(id, 0))
   for (const page of [-1, 1.2, 2147483648, NaN]) assert.throws(() => getProductReviews('1', page))
+  for (const rating of [0, 6, 1.5, NaN]) assert.throws(() => getProductReviews('1', 0, undefined, rating))
+})
+test('selected rating is sent alongside pagination', async () => {
+  globalThis.fetch = async url => {
+    assert.equal(url, '/api/products/7/reviews?page=1&size=20&rating=5')
+    return Response.json({ items: [] })
+  }
+  await getProductReviews('7', 1, undefined, 5)
 })
 test('review write uses CSRF and cookie, no member identity, and never replays a failed POST', async () => {
   let posts = 0
@@ -52,10 +60,14 @@ test('review write uses CSRF and cookie, no member identity, and never replays a
   await assert.rejects(writeReview('9007199254740993', { rating: 5, content: ' 좋아요 ' }), error => error.status === 409)
   assert.equal(posts, 1)
 })
-function render(page, data) {
+function render(page, data, rating) {
   const client = new QueryClient()
-  if (data) client.setQueryData(['products', 'reviews', '7', page], data)
-  try { return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [`/products/7?page=${page}`] }, createElement(QueryClientProvider, { client }, createElement(ProductReviews, { productId: '7' })))) }
+  if (data) client.setQueryData(['products', 'reviews', '7', page, rating], {
+    summary: { reviewCount: data.totalElements, averageRating: null },
+    ...data,
+  })
+  const url = `/products/7?page=${page}${rating === undefined ? '' : `&rating=${rating}`}`
+  try { return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [url] }, createElement(QueryClientProvider, { client }, createElement(ProductReviews, { productId: '7' })))) }
   finally { client.clear() }
 }
 test('public review markup escapes text, shows rating/null content and range recovery', () => {
@@ -67,6 +79,13 @@ test('public review markup escapes text, shows rating/null content and range rec
   assert.match(render(10, { items: [], totalElements: 1, totalPages: 1 }), /이 페이지에 후기가 없습니다/)
   assert.match(render(0, { items: [], totalElements: 0, totalPages: 0 }), /아직 작성된 후기가 없습니다/)
   assert.match(render(0), /불러오고 있어요/)
+})
+test('filtered empty results keep the overall average and count', () => {
+  const html = render(0, { items: [], totalElements: 0, totalPages: 0,
+    summary: { reviewCount: 3, averageRating: 10 / 3 } }, 5)
+  assert.match(html, /전체 후기 3건 · 평균 3\.3 \/ 5/)
+  assert.match(html, /5점 후기 0건/)
+  assert.match(html, /선택한 별점의 후기가 없습니다/)
 })
 test('write form explains one-time policy and optional text', () => {
   const client = new QueryClient()

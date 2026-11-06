@@ -1,5 +1,7 @@
 package com.example.lancerpick.auth;
 
+import com.example.lancerpick.support.TestMembers;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -370,7 +372,7 @@ class SessionTradeIntegrationTests {
         var session = new MockHttpSession();
         var anonymous = new Account(0, session);
         String email = "trade-" + UUID.randomUUID() + "@example.com";
-        var created = json(write(anonymous, "/api/members", Map.of("email", email, "password", "abcd1234", "displayName", "session-member"))
+        var created = json(write(anonymous, "/api/members", TestMembers.signupBody(jdbc, email, "abcd1234", "session-member"))
                 .andExpect(status().isCreated()));
         long id = Long.parseLong(created.get("id").asText());
         members.add(id);

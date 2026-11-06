@@ -161,6 +161,26 @@ public class OrderHistory {
         return history;
     }
 
+    /**
+     * V3 결제·수정 요청으로 정해진 납기·재납품 기한의 시스템 통지. 상태는 바꾸지 않는다. 원천 키(UNIQUE)로 같은 결제·수정
+     * 요청의 통지가 두 번 기록되지 않으며, details에 당시 기준 시각·기한·납품 회차·계약 버전을 보존한다.
+     */
+    public static OrderHistory deadlineNotified(Long orderId, OrderStatus status, LocalDateTime at,
+            String sourceEventKey, String details) {
+        if (status != OrderStatus.IN_PROGRESS && status != OrderStatus.REVISION_IN_PROGRESS)
+            throw invalidInput("기한 통지는 작업 중 상태에서만 기록합니다.");
+        if (sourceEventKey == null || !sourceEventKey.startsWith("DEADLINE:") || sourceEventKey.length() > 100
+                || details == null)
+            throw invalidInput("기한 통지 원천 키가 올바르지 않습니다.");
+        var history = decision(orderId, 1L, at, OrderHistoryAction.DEADLINE_NOTIFIED, status, null);
+        history.actorId = null;
+        history.actorType = "SYSTEM";
+        history.fromStatus = status;
+        history.sourceEventKey = sourceEventKey;
+        history.details = details;
+        return history;
+    }
+
     public static OrderHistory cancelled(Long orderId, Long actor, OrderStatus from, LocalDateTime at, String reason) {
         var history = decision(orderId, actor, at, OrderHistoryAction.CANCELLED, OrderStatus.CANCELLED, reason);
         history.fromStatus = from;

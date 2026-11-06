@@ -55,6 +55,8 @@ Docker Desktop을 켠 뒤:
 docker run -d --name lancerpick-mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:v1.33.0
 ```
 
+Docker가 없으면 Mailpit 공식 Windows 실행 파일(GitHub 릴리스 `mailpit-windows-amd64.zip`, SHA-256 확인)을 `mailpit.exe --smtp 127.0.0.1:1025 --listen 127.0.0.1:8025`로 실행해도 같다(2026-11-06 김창재 확인). 2026-11-06부터 화면 회원가입도 이메일 인증이 필수라, 로컬에서 새 계정을 만들려면 이 설정이 필요하다([이메일 인증 가입](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification)).
+
 `LancerPick/local-application.properties`에 `MAIL_ENABLED=true`를 넣고 서버를 켠다(호스트·포트 기본값이 Mailpit). 화면 `/password-reset/request`에서 가입한 이메일로 요청하면 http://localhost:8025 받은편지함에 메일이 오고, 링크로 새 비밀번호를 설정할 수 있다. 끝나면 `docker rm -f lancerpick-mailpit`.
 
 ## 한계

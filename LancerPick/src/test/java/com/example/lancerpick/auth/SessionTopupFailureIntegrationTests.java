@@ -1,5 +1,7 @@
 package com.example.lancerpick.auth;
 
+import com.example.lancerpick.support.TestMembers;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -165,7 +167,7 @@ class SessionTopupFailureIntegrationTests {
     private Account register() throws Exception {
         String email = "topup-session-" + UUID.randomUUID() + "@example.com";
         var anonymous = new Account(0, email, new MockHttpSession());
-        var member = json(write(anonymous, "/api/members", Map.of("email", email, "password", "abcd1234", "displayName", "topup-session"))
+        var member = json(write(anonymous, "/api/members", TestMembers.signupBody(jdbc, email, "abcd1234", "topup-session"))
                 .andExpect(status().isCreated()));
         long id = Long.parseLong(member.get("id").asText());
         members.add(id);

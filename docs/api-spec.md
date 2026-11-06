@@ -73,7 +73,9 @@ fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 
 | 메서드·경로 | 입력·권한 | 출력·처리 |
 | --- | --- | --- |
 | GET /auth/csrf | 전체 | token, headerName |
-| POST /members | 비로그인; email,password,displayName | 201 Member; 회원·지갑·100만원 지급 원자적 생성 |
+| POST /auth/signup-email-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답 |
+| POST /auth/signup-email-verifications | 비로그인 가능+CSRF; token | 200 `{email, proof, proofExpiresAt, alreadyRegistered}`; 메일 링크 토큰으로 인증하고 가입 증명 발급 |
+| POST /members | 비로그인+CSRF; email,password,displayName,**emailVerificationProof**(2026-11-06부터 필수) | 201 Member; 증명 소비·회원(email_verified_at)·지갑·100만원 지급 원자적 생성 |
 | POST /auth/login | 비로그인; email,password | 200 Member; 세션 발급 |
 | POST /auth/logout | 회원; 없음 | 204; 세션 무효화 |
 | GET /me | 회원 | Member |
@@ -82,9 +84,11 @@ fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 
 | POST /auth/password-reset-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답 |
 | POST /auth/password-resets | 비로그인 가능+CSRF; token,newPassword | 204; 일회용 토큰으로 비밀번호 변경, auth_version 증가로 모든 세션·다른 재설정 링크 폐기. 자동 로그인 없음 |
 
-Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·소문자 정규화 후 중복 확인한다. 가입 후 로그인 화면으로 이동하며 자동 로그인하지 않는다. 로그인·로그아웃 후 CSRF 토큰을 다시 획득한다.
+Member: id,email,displayName,role,hasSellerProfile(email_verified_at은 응답에 넣지 않는다). 이메일은 공백 제거·소문자 정규화 후 중복 확인한다. 가입 후 로그인 화면으로 이동하며 자동 로그인하지 않는다. 로그인·로그아웃 후 CSRF 토큰을 다시 획득한다.
 
 비밀번호 변경(2026-11-05 구현): 두 값 모두 정리하지 않는다. newPassword는 10절 비밀번호 원문 정책, currentPassword는 형식 검사 없음. 현재 비밀번호 불일치 400 CURRENT_PASSWORD_INCORRECT, 새 비밀번호가 현재와 같으면 400 PASSWORD_UNCHANGED, 폐기된 세션·동시 변경의 늦은 요청은 401 AUTHENTICATION_REQUIRED. 로그인 세션은 로그인 당시 auth_version을 갖고, DB 값과 다르면 다음 요청에서 폐기되어 비로그인으로 처리된다. 상세는 [로그인 문서](auth-login.md#비밀번호-변경세션-폐기--2026-11-05-featurepassword-change).
+
+이메일 인증 가입(2026-11-06 구현): 요청 email은 가입과 같이 정규화·형식 검사하며 형식 오류만 400 VALIDATION_FAILED다. 그 밖에는 이미 가입된 이메일·이메일+목적당 60초 간격·1시간 5회 제한 초과·발송 실패 모두 같은 202다(이미 가입된 주소에도 인증 메일을 보낸다). 메일 링크 `/signup/verify#token=`의 token으로 인증하며 위조·만료(15분)·이미 인증·목적 다름은 400 SIGNUP_EMAIL_TOKEN_INVALID다. 인증하면 링크 토큰은 무효가 되고 가입 증명 proof(일회용, 인증 시점부터 30분)를 받는다. `alreadyRegistered`는 메일을 받은 본인이 인증한 뒤에만 알려 준다. 가입 시 증명 없음은 400 VALIDATION_FAILED, 위조·만료·사용됨·다른 이메일·인증 전 링크 토큰·재설정 토큰은 400 EMAIL_VERIFICATION_INVALID, 이미 가입된 이메일은 409 EMAIL_ALREADY_EXISTS다. 증명 없이 가입하는 경로는 없다. 상세는 [로그인 문서](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification).
 
 비밀번호 재설정(2026-11-05 구현): 요청 email은 가입과 같이 정규화·형식 검사하며 형식 오류만 400 VALIDATION_FAILED다. 그 밖에는 모두 같은 202·본문·`no-store`다(가입 안 된 이메일, 이메일+목적당 60초 간격·1시간 5회 제한 초과, 메일 발송 실패 포함). 재설정 token은 메일 링크 `#token=`의 값이며, 위조·만료(15분)·이미 사용·발급 후 비밀번호 변경은 모두 400 PASSWORD_RESET_TOKEN_INVALID다. newPassword는 10절 비밀번호 원문 정책(위반 400 VALIDATION_FAILED, field=newPassword)이고 현재 비밀번호와 같아도 거절하지 않는다. 상세는 [로그인 문서](auth-login.md#비밀번호-재설정요청-제한--2026-11-05-featurepassword-recovery).
 
@@ -97,13 +101,17 @@ Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·
 | GET /me/seller-profile | 회원 | 본인 SellerProfile, 미등록 404 |
 | PUT /me/seller-profile | 회원; introduction,specialty,portfolioUrl | 생성 201 / 수정 200 |
 | GET /products | 전체; keyword,categoryId,minPrice,maxPrice,maxDurationDays,sort,sellerId,page,size | ProductSummary 목록 |
-| GET /products/{id} | 전체; 공개·판매 중 상품 | ProductDetail |
+| GET /products/{id} | 전체; 공개·판매 중 상품 | ProductDetail, 신규 계약 주문 최소 금액 `minimumOrderAmount` (기존 주문 정책은 `null`) |
 | GET /me/products | 회원; page,size | OwnedProductSummary 목록; 중지·숨김 포함 |
 | GET /me/products/{id} | 소유자 | 본인 ProductDetail |
 | POST /products | 판매자 프로필 보유; ProductInput | 201 ProductDetail |
 | PATCH /products/{id} | 소유자; ProductPatch,expectedVersion 필수 | ProductDetail |
 | PATCH /products/{id}/sale-status | 소유자; saleStatus,expectedVersion | ProductDetail |
-| GET /products/{id}/reviews | 전체; 공개·판매 중 상품, page,size | Review 목록 |
+| GET /products/{id}/reviews | 전체; 공개·판매 중 상품, page,size, 선택 rating(1~5) | Review 목록, 전체 평균 별점·후기 건수 |
+| GET /me/favorites | 회원; page 기본 0, size 기본 20(1~100) | 공개·판매 중인 관심 상품 ProductSummary 페이지, 최근 등록순 |
+| GET /me/favorites/{productId} | 회원 | 200 `{ favorited: boolean }` |
+| PUT /me/favorites/{productId} | 회원+CSRF; 공개·판매 중 상품 | 204, 중복 등록도 204. 상품이 없거나 비공개면 404 |
+| DELETE /me/favorites/{productId} | 회원+CSRF | 204, 이미 해제된 상품도 204 |
 
 SellerProfile: id(회원 ID),displayName,introduction,specialty,portfolioUrl. 이메일·잔액은 공개하지 않는다. ProductInput: categoryId,title,description,scopeDescription,preparationDescription,priceAmount,durationDays. 가격 1~1,000,000원, 기간 1~30일. portfolioUrl은 선택이다.
 
@@ -249,7 +257,7 @@ PAYMENT_ALREADY_REFUNDED 응답에는 재결제 성공 의미를 담지 않는�
 | POST /notifications/{id}/read | 본인+CSRF; 양수 알림 ID | 204. 이미 읽음도 204, 최초 읽은 시각 유지. 타인·없음 404, 형식 오류 400 |
 | POST /notifications/read-all | 회원+CSRF; 본문 없음 | 204. 요청 시점까지 생성된 본인 알림만 읽음 처리 |
 
-Notification: id,type,orderId,productTitle,read,createdAt. type은 `ORDER_` + 주문 이력 행동(CREATED·ACCEPTED·REJECTED·PAID·DELIVERED·REVISION_REQUESTED·CANCELLATION_REQUESTED·CANCELLATION_REJECTED·CANCELLATION_WITHDRAWN·CANCELLED·COMPLETED)이다. 문구는 화면이 type으로 정하고, 모르는 type은 일반 문구로 표시한다. productTitle은 주문 시점 스냅샷이다. 조회 응답은 `Cache-Control: no-store`다.
+Notification: id,type,orderId,productTitle,read,createdAt. type은 `ORDER_` + 주문 이력 행동(CREATED·ACCEPTED·REJECTED·PAID·DELIVERED·REVISION_REQUESTED·CANCELLATION_REQUESTED·CANCELLATION_REJECTED·CANCELLATION_WITHDRAWN·CANCELLED·COMPLETED)이다. CONTRACT_V3 주문은 PAID·구매자 COMPLETED·결제 후 CANCELLED를 각각 `ORDER_FUNDS_HELD`·`ORDER_FUNDS_RELEASED`·`ORDER_FUNDS_REFUNDED`로 보내고, 시스템 확정 `ORDER_AUTO_CONFIRMED`, 기한 통지 `ORDER_DELIVERY_DUE_NOTIFIED`·`ORDER_REDELIVERY_DUE_NOTIFIED`(양측), 만료 24시간 전 `ORDER_AUTO_CONFIRM_SOON`(구매자), 타이머 `ORDER_TIMER_STARTED`·`ORDER_TIMER_ADMIN_STOPPED`가 있다([V3 알림](v3-notices.md)). 문구는 화면이 type으로 정하고, 모르는 type은 일반 문구로 표시한다. productTitle은 주문 시점 스냅샷이다. 조회 응답은 `Cache-Control: no-store`다.
 
 ## 8 지갑·정산 담당 황준범, 후기 담당 박소현
 
@@ -330,7 +338,7 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 
 | HTTP | 주요 코드 |
 | --- | --- |
-| 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED, PASSWORD_RESET_TOKEN_INVALID |
+| 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED, PASSWORD_RESET_TOKEN_INVALID, SIGNUP_EMAIL_TOKEN_INVALID, EMAIL_VERIFICATION_INVALID |
 | 401 | AUTHENTICATION_REQUIRED, INVALID_CREDENTIALS |
 | 403 / 404 | FORBIDDEN, CSRF_INVALID / RESOURCE_NOT_FOUND |
 | 409 | EMAIL_ALREADY_EXISTS, PRODUCT_VERSION_CONFLICT, PRODUCT_NOT_ORDERABLE, SELF_PURCHASE_NOT_ALLOWED, CONTRACT_MINIMUM_AMOUNT_NOT_MET(V2 생성 활성화 후에만) |

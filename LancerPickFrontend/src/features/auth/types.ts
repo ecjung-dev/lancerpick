@@ -36,8 +36,22 @@ export interface PasswordResetAccepted {
   message: string
 }
 
+/**
+ * POST /api/members 본문. emailVerificationProof는 가입 이메일 인증에서 받은 증명(필수, 2026-11-06부터).
+ * 비밀번호는 정리하지 않고 그대로 보낸다.
+ */
 export interface SignupInput {
   email: string
   password: string
   displayName: string
+  emailVerificationProof: string
+}
+
+/** POST /api/auth/signup-email-verifications 응답. proof는 화면 메모리에만 두고 가입 요청에 한 번 보낸다. */
+export interface SignupEmailVerification {
+  email: string
+  proof: string
+  proofExpiresAt: string
+  /** 이미 가입된 이메일. 메일을 받은 본인이 인증한 뒤에만 알려 준다. */
+  alreadyRegistered: boolean
 }

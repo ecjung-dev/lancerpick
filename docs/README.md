@@ -23,7 +23,7 @@
 | --- | --- |
 | 기능 범위·업무 정책 | MVP 명세 |
 | 요청·응답·권한·중복 처리 | API 명세 |
-| 데이터 관계·컬럼 | 실행 Flyway V1~V7 누적 업무 30개(V7은 [결제 금액 보관](full-funding-policy.md))·고도화 DB 설계. 로컬 후속 V8은 [Batch 시스템 테이블 9개](wallet-topup-recovery-batch.md)를 별도로 추가한다. MVP ERD·물리 DB 이미지의 V1 기본 16개와 V2 포함 17개는 과거 범위 |
+| 데이터 관계·컬럼 | 실행 Flyway V1~V8 누적 업무 31개(V7은 [결제 금액 보관](full-funding-policy.md), V8은 관심 상품)·고도화 DB 설계. 로컬 후속 V9는 [Batch 시스템 테이블 9개](wallet-topup-recovery-batch.md)를 별도로 추가한다. MVP ERD·물리 DB 이미지의 V1 기본 16개와 V2 포함 17개는 과거 범위 |
 | 개발 방식·협업 | 공통 개발 규칙·공통 가이드·Git 협업 |
 | 구현 현황·미완료 | 현재 현황과 기능별 최신 기록 |
 | 담당 | 작업표. 고도화 항목별 담당·선행·상태는 [고도화 작업표](work-plan.md#고도화-작업표--2026-11-05), 배정 근거는 최신 4인 설계, 기반·활성화 조건은 팀원 시작 안내와 적용 순서. 확장 계획과 2·3인 설계는 해당 단계의 이력·선택 범위 |
@@ -118,7 +118,7 @@
 - [토스 테스트 충전 저장 구조](wallet-topup-schema.md)
 - [토스 테스트 충전 신청·본인 조회 API](wallet-topup-api.md)
 - [토스 테스트 충전 승인·지급·본인 재확인](wallet-topup-approval.md)
-- [미확정 충전 복구 Batch(J5)](wallet-topup-recovery-batch.md): 기본 비활성, 처리권·재시도·기존 지급 재사용, V8 시스템 메타데이터와 내부 재시작 계약.
+- [미확정 충전 복구 Batch(J5)](wallet-topup-recovery-batch.md): 기본 비활성, 처리권·재시도·기존 지급 재사용, V9 시스템 메타데이터와 내부 재시작 계약.
 - [React 토스 테스트 충전 화면](wallet-topup-frontend.md)
 
 ### 통합·검증·변경 이력

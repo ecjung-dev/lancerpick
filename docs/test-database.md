@@ -89,6 +89,8 @@ DB 없이 보호 검사만 실행하려면 백엔드 폴더에서 다음 명령�
 
 이 검사는 허용 DB, 개발 DB·유사 이름 차단, 실제 설정 override 차단과 오류의 접속 정보 미노출을 확인한다. 실제 DB 연결·Flyway 실행·업무 동시성 검증과는 다르다.
 
+테스트에서 회원을 만들 때(2026-11-06부터): `POST /api/members`는 이메일 인증 증명이 필수다. 통합 테스트는 `support/TestMembers`의 `signupJson`·`signupBody`·`signupRequest`로 인증된 가입 증명을 함께 보낸다(증명 행을 테스트 DB에 직접 넣는 fixture). 메일을 실제로 거치는 검사는 `support/FakeAccountMailSender`를 `@Import(FakeAccountMailSender.Config.class)`로 쓴다. [이메일 인증 가입](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification).
+
 CI의 임시 MySQL은 실행마다 생성·폐기한다. 로컬 전용 테스트 DB는 자동으로 삭제하거나 초기화하지 않는다. 향후 데이터 변경 테스트에서는 트랜잭션 롤백·데이터 정리·병렬 실행 기준을 별도 설계한다. V1과 엔티티는 함께 추가하고 `validate`를 끄거나 H2로 바꿔 검사를 우회하지 않는다.
 
 ## 5. 루트 제외 규칙

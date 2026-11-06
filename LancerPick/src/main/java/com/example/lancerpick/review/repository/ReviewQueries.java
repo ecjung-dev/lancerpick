@@ -5,10 +5,13 @@ import com.example.lancerpick.order.entity.QOrder;
 import com.example.lancerpick.product.entity.QProduct;
 import com.example.lancerpick.review.dto.PublicReviewResponse;
 import com.example.lancerpick.review.entity.QReview;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
@@ -28,19 +31,26 @@ public class ReviewQueries {
                 p.saleStatus.eq("ON_SALE")).fetchFirst() != null;
     }
 
-    public long count(long productId) {
-        Long total = query.select(r.id.count()).from(r).join(o).on(o.id.eq(r.orderId))
-                .where(o.productId.eq(productId)).fetchOne();
-        return total == null ? 0 : total;
+    public Map<Integer, Long> countByRating(long productId) {
+        var count = r.id.count();
+        return forProduct(query.select(r.rating, count), productId).groupBy(r.rating).fetch().stream()
+                .collect(Collectors.toMap(row -> row.get(r.rating), row -> row.get(count)));
     }
 
-    public List<PublicReviewResponse> find(long productId, int size, long offset) {
-        return query.select(r.id, m.displayName, r.rating, r.content, r.createdAt)
-                .from(r).join(o).on(o.id.eq(r.orderId)).join(m).on(m.id.eq(o.buyerId))
-                .where(o.productId.eq(productId)).orderBy(r.createdAt.desc(), r.id.desc())
+    public List<PublicReviewResponse> find(long productId, Integer rating, int size, long offset) {
+        var list = forProduct(query.select(r.id, m.displayName, r.rating, r.content, r.createdAt), productId);
+        if (rating != null) {
+            list.where(r.rating.eq(rating));
+        }
+        return list.orderBy(r.createdAt.desc(), r.id.desc())
                 .limit(size).offset(offset).fetch().stream()
                 .map(row -> new PublicReviewResponse(row.get(r.id).toString(), row.get(m.displayName),
                         row.get(r.rating), row.get(r.content), row.get(r.createdAt).atOffset(ZoneOffset.UTC)))
                 .toList();
+    }
+
+    private <T> JPAQuery<T> forProduct(JPAQuery<T> selection, long productId) {
+        return selection.from(r).join(o).on(o.id.eq(r.orderId)).join(m).on(m.id.eq(o.buyerId))
+                .where(o.productId.eq(productId));
     }
 }

@@ -1,5 +1,7 @@
 package com.example.lancerpick.auth;
 
+import com.example.lancerpick.support.TestMembers;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -201,8 +203,7 @@ class AuthLoginIntegrationTests {
     private String signupMember(String displayName) throws Exception {
         String email = EMAIL_PREFIX + UUID.randomUUID().toString().substring(0, 12) + "@example.com";
         mvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD
-                                + "\",\"displayName\":\"" + displayName + "\"}"))
+                        .content(TestMembers.signupJson(jdbc, email, PASSWORD, displayName)))
                 .andExpect(status().isCreated());
         return email;
     }
