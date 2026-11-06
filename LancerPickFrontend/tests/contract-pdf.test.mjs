@@ -32,6 +32,7 @@ const server = await createServer({
 const { ContractPanel } = await server.ssrLoadModule(
   '/src/features/contracts/components/ContractPanel.tsx',
 )
+const { ApiError: RenderApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
 after(async () => {
   await server.close()
 })
@@ -146,6 +147,69 @@ function render(status, memberId = '7', fileHash = null, denied = false, panelPr
     client.clear()
   }
 }
+
+function renderContractError(orderStatus, {
+  status = 404,
+  code = 'RESOURCE_NOT_FOUND',
+  memberId = '7',
+  hasContractHistory = false,
+  cached = false,
+} = {}) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, retryOnMount: false } },
+  })
+  client.setQueryData(['wallet', 'contract-member'], { id: memberId })
+  const key = ['wallet', 'contract', memberId, '11', 'current']
+  if (cached) {
+    client.setQueryData(key, {
+      version: 1, status: 'READY', fileHash: 'a'.repeat(64), signatures: [],
+      canonicalContent: JSON.stringify({ standardBody: 'cached-private-contract' }),
+    })
+  }
+  const query = client.getQueryCache().build(client, { queryKey: key })
+  query.setState({ status: 'error', fetchStatus: 'idle', error: new RenderApiError(status, {
+    code, message: '계약 조회 실패', fieldErrors: [],
+  }) })
+  try {
+    return renderToStaticMarkup(createElement(QueryClientProvider, { client },
+      createElement(ContractPanel, { orderId: '11', sellerId: '7', orderStatus, hasContractHistory })))
+  } finally {
+    client.clear()
+  }
+}
+
+test('unwritten contracts in pre-contract states are normal notices, not alerts', () => {
+  for (const orderStatus of ['REQUESTED', 'AWAITING_CONTRACT', 'REJECTED', 'CANCELLED']) {
+    const html = renderContractError(orderStatus)
+    assert.match(html, /role="status"/)
+    assert.match(html, /아직 작성된 계약서가 없습니다/)
+    assert.doesNotMatch(html, /role="alert"|PDF 다운로드/)
+  }
+  assert.match(renderContractError('AWAITING_CONTRACT'), /특약으로 계약 초안 저장/)
+  const buyer = renderContractError('AWAITING_CONTRACT', { memberId: '8' })
+  assert.match(buyer, /판매자가 계약 초안을 작성하면/)
+  assert.doesNotMatch(buyer, /특약으로 계약 초안 저장/)
+})
+
+test('a missing expected or previously known contract stays an error without exposing cached content', () => {
+  for (const orderStatus of ['AWAITING_PAYMENT', 'IN_PROGRESS', 'REVISION_IN_PROGRESS', 'AWAITING_CONFIRMATION', 'COMPLETED']) {
+    assert.match(renderContractError(orderStatus), /role="alert"/)
+  }
+  for (const options of [{ hasContractHistory: true }, { cached: true }]) {
+    const html = renderContractError('AWAITING_CONTRACT', options)
+    assert.match(html, /role="alert"/)
+    assert.doesNotMatch(html, /아직 작성된 계약서가 없습니다|cached-private-contract|PDF 다운로드|특약으로 계약 초안 저장/)
+  }
+})
+
+test('authentication, server, network and unrecognized 404 failures never become empty notices', () => {
+  for (const status of [0, 401, 403, 500, 503]) {
+    const html = renderContractError('AWAITING_CONTRACT', { status, code: 'REQUEST_FAILED' })
+    assert.match(html, /role="alert"/)
+    assert.doesNotMatch(html, /아직 작성된 계약서가 없습니다|특약으로 계약 초안 저장/)
+  }
+  assert.match(renderContractError('AWAITING_CONTRACT', { code: 'UNKNOWN_404' }), /role="alert"/)
+})
 test('signed contract asks for payment only while the order is awaiting payment', () => {
   const v3 = (orderStatus) =>
     render('SIGNED', '8', 'a'.repeat(64), false, { orderStatus, policyVersion: 'CONTRACT_V3' })

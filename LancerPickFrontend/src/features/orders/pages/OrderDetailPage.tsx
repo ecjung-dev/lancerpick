@@ -216,6 +216,9 @@ function OrderDetail({ id }: { id: string }) {
           sellerId={order.seller.id}
           orderStatus={order.status}
           policyVersion={order.policyVersion}
+          hasContractHistory={order.histories.some(history =>
+            ['CONTRACT_CREATED', 'CONTRACT_SIGNED'].includes(history.action),
+          )}
         />
       )}
       <h3>상품 설명</h3>

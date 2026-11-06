@@ -31,7 +31,11 @@ export function SettlementPage() {
   return <section className={styles.settlements}>
     <Link to="/mypage">← 마이페이지</Link>
     <h1>판매 수익</h1>
-    <p>구매 확정된 거래의 수익입니다. 구매 적립금과 별도로 관리하며 출금 기능은 제공하지 않습니다.</p>
+    <p>
+      구매 확정된 거래의 누적 수익 내역입니다. 새 전자계약 거래의 수익은
+      수수료를 제외하고 구매 적립금으로 지급됩니다.
+    </p>
+    <p>기존 거래의 수익은 별도 기록으로 유지하며, 출금 기능은 제공하지 않습니다.</p>
     {error ? <div role="alert">
       <p>판매 수익을 불러오지 못했습니다.</p>
       <button onClick={retry}>다시 조회</button>

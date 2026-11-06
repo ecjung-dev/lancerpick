@@ -22,11 +22,13 @@ export function ContractPanel({
   sellerId,
   orderStatus,
   policyVersion = 'CONTRACT_V2',
+  hasContractHistory = false,
 }: {
   orderId: string
   sellerId: string
   orderStatus: string
   policyVersion?: string
+  hasContractHistory?: boolean
 }) {
   const client = useQueryClient()
   const member = useContractMember()
@@ -52,6 +54,17 @@ export function ContractPanel({
   const mutable = ['AWAITING_PAYMENT', 'AWAITING_CONTRACT'].includes(
     orderStatus,
   )
+  // 주문 상세의 권한 확인 후 전달된 상태·이력으로 정상 미작성과 계약 조회 실패를 구분한다.
+  // 이미 받은 계약 데이터, 특정 버전 선택, 계약 생성 이력이 있으면 404도 오류로 남긴다.
+  const contractNotCreated =
+    member.isSuccess &&
+    selected === undefined &&
+    !current.data &&
+    !hasContractHistory &&
+    ['REQUESTED', 'AWAITING_CONTRACT', 'REJECTED', 'CANCELLED'].includes(orderStatus) &&
+    current.error instanceof ApiError &&
+    current.error.status === 404 &&
+    current.error.code === 'RESOURCE_NOT_FOUND'
 
   // 계약 주문 수락은 주문 상세의 공통 수락 버튼(POST /orders/{id}/accept)에서 한다.
   async function act(download: boolean | 'prepare' | 'sign') {
@@ -123,9 +136,7 @@ export function ContractPanel({
       {member.data?.id === sellerId &&
         orderStatus === 'AWAITING_CONTRACT' &&
         current.data?.status !== 'SIGNED' &&
-        (current.isSuccess ||
-          (current.error instanceof ApiError &&
-            current.error.status === 404)) && (
+        (current.isSuccess || contractNotCreated) && (
           <div>
             <label>
               추가 특약
@@ -158,10 +169,22 @@ export function ContractPanel({
       {(current.isPending || chosen.isPending) && !member.isError && (
         <p role="status">계약서를 확인하고 있습니다.</p>
       )}
-      {chosen.isError && (
+      {contractNotCreated && (
+        <p role="status">
+          아직 작성된 계약서가 없습니다.
+          {orderStatus === 'REQUESTED'
+            ? ' 판매자 수락 후 계약을 작성합니다.'
+            : orderStatus === 'AWAITING_CONTRACT'
+              ? member.data?.id === sellerId
+                ? ' 추가 특약을 입력해 계약 초안을 작성해 주세요.'
+                : ' 판매자가 계약 초안을 작성하면 확인할 수 있습니다.'
+              : ' 계약 작성 전에 종료된 주문입니다.'}
+        </p>
+      )}
+      {chosen.isError && !contractNotCreated && (
         <p role="alert">
           {chosen.error instanceof ApiError && chosen.error.status === 404
-            ? '아직 작성된 계약이 없거나 접근할 수 없습니다.'
+            ? '계약서를 찾을 수 없거나 조회할 수 없습니다. 새로고침 후 다시 확인해 주세요.'
             : chosen.error.message}
         </p>
       )}

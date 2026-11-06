@@ -146,6 +146,9 @@ test('settlements restore URL page and preserve large order IDs in detail links'
   assert.match(html, /3페이지/)
   assert.match(html, /href="\/orders\/9007199254740993"/)
   assert.match(html, /판매 수익 900원/)
+  assert.match(html, /구매 적립금으로 지급됩니다/)
+  assert.match(html, /기존 거래의 수익은 별도 기록으로 유지/)
+  assert.doesNotMatch(html, /구매 적립금과 별도로 관리/)
 })
 
 test('finance lists reject invalid page values and keep the first page available', () => {
