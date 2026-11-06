@@ -12,6 +12,7 @@ import { ProductSaleStatusPage } from '../features/products/pages/ProductSaleSta
 import { MyProductsPage } from '../features/products/pages/MyProductsPage'
 import { OrderCreatePage } from '../features/orders/pages/OrderCreatePage'
 import { SellerProfilePage } from '../features/seller/pages/SellerProfilePage'
+import { PublicSellerPage } from '../features/seller/pages/PublicSellerPage'
 import { MyProfilePage } from '../features/auth/pages/MyProfilePage'
 import { OrderListPage } from '../features/orders/pages/OrderListPage'
 import { NotificationsPage } from '../features/notifications/pages/NotificationsPage'
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <ProductListPage /> },
       { path: 'products/:id', element: <ProductDetailPage /> },
+      { path: 'sellers/:id', element: <PublicSellerPage /> },
       { path: 'mypage/products/new', element: <ProductEditorPage /> },
       { path: 'mypage/products', element: <MyProductsPage /> },
       { path: 'mypage/products/:id/edit', element: <ProductEditorPage /> },

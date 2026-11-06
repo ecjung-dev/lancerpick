@@ -9,6 +9,7 @@ import { createServer } from 'vite'
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-product-detail',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
 const { ProductDetailPage } = await server.ssrLoadModule('/src/features/products/pages/ProductDetailPage.tsx')
+const { PublicSellerPage } = await server.ssrLoadModule('/src/features/seller/pages/PublicSellerPage.tsx')
 const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
 after(async () => { await server.close() })
 
@@ -35,6 +36,33 @@ test('direct detail route displays the matching product, escapes text and format
     assert.doesNotMatch(html, /<script>/)
     assert.match(html, /오전 9:00/)
     assert.match(html, /href="\/\?keyword=test&amp;page=2"/)
+    assert.match(html, /href="\/sellers\/2"/)
+  } finally { client.clear() }
+})
+
+test('public seller shows the scoped product page and escapes profile text', () => {
+  const id = '9007199254740993'
+  const client = new QueryClient()
+  const search = { keyword: '', categoryId: '', sellerId: id, page: 1, size: 8 }
+  client.setQueryData(['public-seller-profile', id], {
+    id, displayName: '공개 판매자', introduction: '<script>소개</script>',
+    specialty: '디자인', portfolioUrl: 'javascript:alert(1)',
+  })
+  client.setQueryData(['products', search], {
+    items: [{ id: '9', title: '판매자 상품', priceAmount: 10000, durationDays: 2,
+      seller: { id, displayName: '공개 판매자' }, category: { id: '1', name: '디자인' } }],
+    page: 1, size: 8, totalElements: 9, totalPages: 2,
+  })
+  try {
+    const html = renderToStaticMarkup(createElement(MemoryRouter,
+      { initialEntries: [`/sellers/${id}?page=1`] },
+      createElement(QueryClientProvider, { client }, createElement(Routes, null,
+        createElement(Route, { path: '/sellers/:id', element: createElement(PublicSellerPage) })))))
+    assert.match(html, /공개 판매자/)
+    assert.match(html, /판매자 상품/)
+    assert.match(html, /2 \/ 2/)
+    assert.match(html, /&lt;script&gt;소개&lt;\/script&gt;/)
+    assert.doesNotMatch(html, /javascript:|<script>/)
   } finally { client.clear() }
 })
 

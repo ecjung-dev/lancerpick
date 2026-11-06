@@ -17,6 +17,7 @@ export interface ProductSearch {
   maxPrice?: string
   maxDurationDays?: string
   sort?: string
+  sellerId?: string
 }
 export interface OwnedProductSummary extends ProductSummary {
   saleStatus: 'ON_SALE' | 'STOPPED'

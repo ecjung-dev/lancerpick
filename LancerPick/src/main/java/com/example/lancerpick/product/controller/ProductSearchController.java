@@ -40,11 +40,13 @@ public class ProductSearchController {
             @RequestParam(required = false) String maxPrice,
             @RequestParam(required = false) String maxDurationDays,
             @RequestParam(required = false) String sort,
+            @RequestParam(required = false) String sellerId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         return productSearchService.search(
-                keyword, categoryId, page, size, ProductSearchOptions.parse(minPrice, maxPrice, maxDurationDays, sort)
+                keyword, categoryId, page, size,
+                ProductSearchOptions.parse(minPrice, maxPrice, maxDurationDays, sort, sellerId)
         );
     }
 }

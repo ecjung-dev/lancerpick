@@ -90,7 +90,8 @@ class ProductSearchControllerTests {
     void invalidSearchOptionsFailBeforeQuerying() throws Exception {
         for (String[] input : new String[][] {
                 {"minPrice", "0"}, {"maxPrice", "1000001"}, {"minPrice", "1.5"},
-                {"maxDurationDays", "31"}, {"maxDurationDays", ""}, {"sort", "unknown"}
+                {"maxDurationDays", "31"}, {"maxDurationDays", ""}, {"sort", "unknown"},
+                {"sellerId", ""}, {"sellerId", "0"}, {"sellerId", "9223372036854775808"}
         }) {
             mvc.perform(get("/api/products").param(input[0], input[1]))
                     .andExpect(status().isBadRequest())

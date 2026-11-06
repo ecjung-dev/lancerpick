@@ -10,8 +10,9 @@ export function ProductDetailPage() {
   const { id = '' } = useParams()
   const location = useLocation()
   const from: unknown = location.state?.from
+  const fromSeller = typeof from === 'string' && /^\/sellers\/[0-9]{1,19}(\?[^#]*)?$/.test(from)
   const back =
-    typeof from === 'string' && (from === '/' || from.startsWith('/?'))
+    typeof from === 'string' && (from === '/' || from.startsWith('/?') || fromSeller)
       ? from
       : '/'
   const product = useProductDetail(id)
@@ -19,7 +20,9 @@ export function ProductDetailPage() {
     product.error instanceof ApiError && product.error.status === 404
   return (
     <section className={styles.page}>
-      <Link to={back}>← 상품 목록으로</Link>
+      <Link to={back} state={fromSeller ? location.state?.sellerState : undefined}>
+        {fromSeller ? '← 판매자 상품으로' : '← 상품 목록으로'}
+      </Link>
       {product.isPending ? (
         <AsyncState title="상품을 불러오고 있어요" />
       ) : product.isError ? (
@@ -48,7 +51,15 @@ export function ProductDetailPage() {
           <header className={styles.heading}>
             <p>{product.data.category.name}</p>
             <h1>{product.data.title}</h1>
-            <p>판매자 · {product.data.seller.displayName}</p>
+            <p>
+              판매자 · <Link
+                to={`/sellers/${product.data.seller.id}`}
+                state={fromSeller ? location.state?.sellerState : {
+                  from: location.pathname + location.search,
+                  productState: location.state,
+                }}
+              >{product.data.seller.displayName} 소개 보기</Link>
+            </p>
           </header>
           <div className={styles.grid}>
             <div className={styles.content}>

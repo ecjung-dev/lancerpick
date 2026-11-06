@@ -148,13 +148,36 @@ class ProductSearchIntegrationTests {
                 .andExpect(jsonPath("$.totalPages").value(2))
                 .andExpect(jsonPath("$.items[0].id").value(Long.toString(cheap)))
                 .andExpect(jsonPath("$.items[1].id").value(Long.toString(lastTie)));
-        var ascending = ProductSearchOptions.parse("10000", "50000", "3", "PRICE_ASC");
+        var ascending = ProductSearchOptions.parse("10000", "50000", "3", "PRICE_ASC", null);
         assertThat(service.search(token, Long.toString(category), 1, 2, ascending).items())
                 .extracting(item -> item.id()).containsExactly(Long.toString(firstTie));
-        var descending = ProductSearchOptions.parse("10000", "50000", "3", "PRICE_DESC");
+        var descending = ProductSearchOptions.parse("10000", "50000", "3", "PRICE_DESC", null);
         assertThat(service.search(token, Long.toString(category), 0, 4, descending).items())
                 .extracting(item -> item.id())
                 .containsExactly(Long.toString(lastTie), Long.toString(firstTie), Long.toString(cheap));
+    }
+
+    @Test
+    void sellerFilterReturnsOnlyThatSellersPublicOnSaleProducts() throws Exception {
+        long otherSeller = insert("INSERT INTO members(email,password_hash,display_name,role,created_at,updated_at) VALUES (?, 'fixture', '다른 판매자', 'USER', ?, ?)",
+                "other-" + token + "@test.invalid", NOW, NOW);
+        long listed = product(token, "공개", category, "ON_SALE", false, NOW);
+        product(token, "숨김", category, "ON_SALE", true, NOW);
+        product(token, "중지", category, "STOPPED", false, NOW);
+        long other = product(token, "다른 판매자 상품", category, "ON_SALE", false, NOW);
+        jdbc.update("UPDATE products SET seller_id=? WHERE id=?", otherSeller, other);
+
+        mvc.perform(get("/api/products").param("sellerId", Long.toString(seller)).param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.items[0].id").value(Long.toString(listed)))
+                .andExpect(jsonPath("$.items[0].seller.id").value(Long.toString(seller)))
+                .andExpect(jsonPath("$.items[0].seller.email").doesNotExist())
+                .andExpect(jsonPath("$.items[0].seller.role").doesNotExist());
+        mvc.perform(get("/api/products").param("sellerId", Long.toString(seller)).param("page", "1").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.items").isEmpty());
     }
 
     private long product(String title, String description, long categoryId, String status, boolean hidden, LocalDateTime at) {
