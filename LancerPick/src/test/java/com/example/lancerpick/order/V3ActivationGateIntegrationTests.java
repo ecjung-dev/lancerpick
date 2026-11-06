@@ -440,6 +440,7 @@ class V3ActivationGateIntegrationTests {
             "ORDER_CREATED",
             "ORDER_ACCEPTED",
             "ORDER_CONTRACT_CREATED",
+            "ORDER_CONTRACT_SIGNATURE_REQUESTED",
             "ORDER_CONTRACT_SIGNED",
             "ORDER_FUNDS_HELD",
             "ORDER_DELIVERY_DUE_NOTIFIED",

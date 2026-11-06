@@ -1,6 +1,8 @@
 package com.example.lancerpick.notification.service;
 
 import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.contract.entity.ContractSignature;
+import com.example.lancerpick.contract.entity.OrderContract;
 import com.example.lancerpick.notification.entity.OutboxEvent;
 import com.example.lancerpick.notification.repository.OutboxEventRepository;
 import com.example.lancerpick.order.entity.Order;
@@ -22,19 +24,23 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 주문 이력과 같은 트랜잭션에서 아웃박스 이벤트를 저장한다. 저장 실패는 주문 변경도 롤백한다.
+ * 주문 이력·계약 서명과 같은 트랜잭션에서 아웃박스 이벤트를 저장한다. 저장 실패는 업무 변경도 롤백한다.
  * 알림 전달은 처리기가 별도 트랜잭션에서 수행하므로 전달 실패가 완료된 거래를 되돌리지 않는다.
  */
 @Service
 @Profile("!demo")
 public class OrderEventPublisher {
   static final String AGGREGATE_ORDER = "ORDER";
+
   /**
-   * ORDER 집계 페이로드 버전. 필드를 추가만 하면 그대로 두고, 필드 의미를 바꾸거나 지우면 올린다. 올릴 때는 처리기가 이전
-   * 버전도 계속 읽도록 {@link OutboxDispatcher}의 지원 목록에 함께 추가한다(이미 저장된 PENDING 이벤트가 있다).
+   * ORDER 집계 페이로드 버전. 필드를 추가만 하면 그대로 두고, 필드 의미를 바꾸거나 지우면 올린다. 올릴 때는 처리기가 이전 버전도 계속 읽도록 {@link
+   * OutboxDispatcher}의 지원 목록에 함께 추가한다(이미 저장된 PENDING 이벤트가 있다).
    */
   static final int ORDER_SCHEMA_VERSION = 1;
+
   public static final String AUTO_CONFIRM_SOON = "ORDER_AUTO_CONFIRM_SOON";
+  public static final String CONTRACT_SIGNATURE_REQUESTED = "ORDER_CONTRACT_SIGNATURE_REQUESTED";
+  private static final String CONTRACT_SIGNATURE_REQUEST_KIND = "CONTRACT_SIGNATURE_REQUESTED";
   private static final String AUTO_CONFIRM_NOTICE_KIND = "AUTO_CONFIRM_NOTICE";
   private static final Set<OrderStatus> PAID_WORK =
       EnumSet.of(
@@ -80,14 +86,62 @@ public class OrderEventPublisher {
   }
 
   /**
-   * 자동 구매 확정 사전 안내(E9)를 구매자에게 보낸다. 상태 변화가 아니므로 이력 없이 이벤트만 저장한다. 이벤트 ID를 타이머 ID로
-   * 정해 두어 event_id UNIQUE가 같은 타이머의 중복 안내를 막는다. 호출자가 주문 잠금 아래 타이머가 활성인지 확인한다.
+   * 첫 서명이 저장된 같은 트랜잭션에서 미서명 상대방에게 확인 알림을 예약한다. 서명 ID 기반 이벤트 키로 같은 서명의 중복 발행을 막는다. 주문 이력의
+   * CONTRACT_SIGNED는 양측 서명 완료 의미로 유지하며, 이 이벤트는 별도의 주문 상태 전환을 만들지 않는다.
+   * 호출자가 주문 잠금 아래 기존 서명이 없는지 확인한다.
+   */
+  @Transactional(propagation = Propagation.MANDATORY)
+  public boolean publishFirstContractSignature(
+      Order order, OrderContract contract, ContractSignature signature) {
+    Objects.requireNonNull(order, "order");
+    Objects.requireNonNull(contract, "contract");
+    Objects.requireNonNull(signature, "signature");
+    if (order.getId() == null
+        || contract.getId() == null
+        || signature.getId() == null
+        || !Objects.equals(contract.getOrderId(), order.getId())
+        || signature.getContractId() != contract.getId()
+        || (signature.getMemberId() != order.getBuyerId()
+            && signature.getMemberId() != order.getSellerId())
+        || order.getStatus() != OrderStatus.AWAITING_CONTRACT
+        || !"READY".equals(contract.getStatus())) {
+      throw new IllegalArgumentException("A saved first signature for this contract is required");
+    }
+    String eventId = OutboxEvent.nameBasedId(CONTRACT_SIGNATURE_REQUEST_KIND, signature.getId());
+    if (events.existsByEventId(eventId)) {
+      return false;
+    }
+    var payload = new TreeMap<String, Object>();
+    payload.put("orderId", order.getId().toString());
+    payload.put("contractId", contract.getId().toString());
+    payload.put("contractVersion", contract.getVersion());
+    payload.put("signatureId", signature.getId().toString());
+    payload.put("action", CONTRACT_SIGNATURE_REQUEST_KIND);
+    payload.put(
+        "recipientIds",
+        recipients(order, signature.getMemberId()).stream().map(String::valueOf).toList());
+    events.saveAndFlush(
+        OutboxEvent.pending(
+            eventId,
+            CONTRACT_SIGNATURE_REQUESTED,
+            ORDER_SCHEMA_VERSION,
+            AGGREGATE_ORDER,
+            order.getId(),
+            mapper.writeValueAsString(payload),
+            signature.getSignedAt()));
+    return true;
+  }
+
+  /**
+   * 자동 구매 확정 사전 안내(E9)를 구매자에게 보낸다. 상태 변화가 아니므로 이력 없이 이벤트만 저장한다. 이벤트 ID를 타이머 ID로 정해 두어 event_id
+   * UNIQUE가 같은 타이머의 중복 안내를 막는다. 호출자가 주문 잠금 아래 타이머가 활성인지 확인한다.
    */
   @Transactional(propagation = Propagation.MANDATORY)
   public boolean publishAutoConfirmNotice(Order order, OrderResponseTimer timer, LocalDateTime at) {
     Objects.requireNonNull(order, "order");
     Objects.requireNonNull(timer, "timer");
-    if (timer.getOrderId() != order.getId()) throw new IllegalStateException("Timer must belong to the order");
+    if (timer.getOrderId() != order.getId())
+      throw new IllegalStateException("Timer must belong to the order");
     String eventId = autoConfirmNoticeEventId(timer.getId());
     if (events.existsByEventId(eventId)) return false;
     var payload = new TreeMap<String, Object>();
@@ -118,8 +172,8 @@ public class OrderEventPublisher {
   }
 
   /**
-   * 시스템 구매 확정은 구매자 확정과 문구가 달라 별도 유형으로 보낸다. V3 주문의 결제·구매 확정·결제 후 취소는 보관·지급·반환을
-   * 안내하는 유형으로, 기한 통지는 납기·재납품 기한 유형으로 보낸다. 유형은 저장 시점에 고정되어 이후 정책 변경에 바뀌지 않는다.
+   * 시스템 구매 확정은 구매자 확정과 문구가 달라 별도 유형으로 보낸다. V3 주문의 결제·구매 확정·결제 후 취소는 보관·지급·반환을 안내하는 유형으로, 기한 통지는
+   * 납기·재납품 기한 유형으로 보낸다. 유형은 저장 시점에 고정되어 이후 정책 변경에 바뀌지 않는다.
    */
   static String notificationType(Order order, OrderHistory history) {
     var action = history.getAction();

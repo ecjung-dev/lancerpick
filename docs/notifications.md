@@ -1,5 +1,22 @@
 # 주문 알림·아웃박스
 
+## 첫 계약 서명 알림 — 2026-11-06 로컬 후속
+
+사용자 확정에 따라 `feature/first-contract-signature-notification`에서 첫 서명도 알리도록 추가했다. 기존 아웃박스·알림 저장 구조를 재사용하며 새 테이블·컬럼·API·주문 이력 행동은 추가하지 않는다.
+
+| 사건 | 알림 유형 | 수신자 | 상태 변화 |
+| --- | --- | --- | --- |
+| 현재 버전 첫 서명 저장 | `ORDER_CONTRACT_SIGNATURE_REQUESTED` | 아직 서명하지 않은 상대방 한 명 | 계약 READY·주문 AWAITING_CONTRACT 유지 |
+| 두 번째 서명으로 계약 성립 | 기존 `ORDER_CONTRACT_SIGNED` | 마지막 서명자의 상대방 한 명 | 계약 SIGNED·주문 AWAITING_PAYMENT |
+
+첫 알림은 "상대방이 계약에 먼저 서명했습니다. 주문 상세에서 계약과 서명 상태를 확인해 주세요.", 완료 알림은 "양측 서명이 완료되어 계약이 성립했습니다. 주문 상세에서 다음 절차를 확인해 주세요."로 구분한다. 실제 배달은 기존 아웃박스 처리와 알림 조회 주기를 따른다. 새로운 소켓·메일 알림은 아니다.
+
+첫 서명 행과 아웃박스 이벤트는 같은 트랜잭션이다. 이벤트 저장 실패 시 서명도 롤백하며, 커밋 후 알림 전달 실패는 기존 백오프/재시도로 처리한다. 같은 서명 재요청은 기존 결과를 반환하고 이벤트를 만들지 않는다. 주문 잠금·서명 UNIQUE와 `CONTRACT_SIGNATURE_REQUESTED:<signatureId>`의 이름 기반 UUID·아웃박스/알림 UNIQUE를 함께 사용한다. 새 계약 버전은 새 서명 ID이므로 해당 버전의 첫 서명도 한 번 알릴 수 있다. 기존에 이미 첫 서명을 마친 계약을 일괄 보정 발송하지 않는다.
+
+페이로드는 `orderId`, `contractId`, `contractVersion`, `signatureId`, `action=CONTRACT_SIGNATURE_REQUESTED`, `recipientIds`다. ID는 문자열이며 해시·PDF 원문·요구사항·개인정보를 넣지 않는다. 주문 이력 `CONTRACT_SIGNED`는 계속 양측 완료만 의미한다. 첫 서명의 보존 원천은 `contract_signatures`이므로 새 이력 행동이나 Flyway 변경은 필요 없다.
+
+검증(2026-11-06): 격리 MySQL 8.4에서 백엔드 `clean build`·907건(실패·오류·건너뜀 0), 프런트 전체 224건·lint·TypeScript 포함 build 통과. 구매자/판매자 각각의 첫 서명 수신자, 실제 아웃박스 처리 후 수신자별 알림 저장, 반복·동시 서명, 계약 버전 교체, 이벤트 저장 실패 시 서명 롤백·재시도를 검사했다. 실제 브라우저·운영 스케줄 배달은 아직 확인하지 않았다.
+
 작성일: 2026-11-05. 담당: 정은찬. 최초 브랜치: `feature/order-notifications`(main 반영 #79), 보완: `fix/notification-outbox-hardening`. 기준: [4인 고도화 설계](advanced-design-four-person.md) §6, [DB 설계](advanced-db-design.md) §7, V5 `outbox_events`·`notifications`.
 
 ## 범위

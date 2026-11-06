@@ -1,5 +1,7 @@
 # 공통 이벤트 ID·버전·오류 계약 (C1)
 
+2026-11-06 첫 계약 서명 알림 후속(로컬): `ORDER_CONTRACT_SIGNATURE_REQUESTED`는 `contract_signatures`의 저장된 첫 서명을 원천으로 한다. 고정 kind `CONTRACT_SIGNATURE_REQUESTED`와 서명 ID로 이름 기반 이벤트 UUID를 만든다. ORDER 버전 1에 첫 서명 변형(`orderId`, `contractId`, `contractVersion`, `signatureId`, `action`, `recipientIds`)을 추가하며 기존 필드 의미는 바꾸지 않는다. 이 변형에는 `historyId`가 없다. 첫 서명은 주문 상태 전환/이력이 아니고 서명 행으로 보존되며, 처리기는 기존처럼 집계·버전·수신자를 검증한다. [정책·중복 방지](notifications.md#첫-계약-서명-알림--2026-11-06-로컬-후속).
+
 작성일: 2026-11-06. 담당: 정은찬(아웃박스), 황준범(채팅 소켓, 검토). 브랜치 `feature/common-event-contract`. DB 변경(Flyway) 없음: V5 `outbox_events`의 `event_id` UNIQUE·`schema_version`·`last_error_code`를 그대로 쓴다. 관련: [주문 알림·아웃박스](notifications.md), [V3 알림](v3-notices.md), [채팅 실시간](order-chat-realtime.md), [API 공통 오류](api-spec.md).
 
 ## 1. 이벤트 ID
@@ -7,7 +9,7 @@
 | 경우 | 규칙 | 사용처 |
 | --- | --- | --- |
 | 업무 행동마다 한 번 | 무작위 UUID(v4). `OutboxEvent.pending(type, schemaVersion, …)` | 주문 이력 기반 알림(`OrderEventPublisher.publish`) |
-| 같은 원천에서 한 번만 | `OutboxEvent.nameBasedId(kind, sourceId)` = `"<kind>:<sourceId>"`의 이름 기반 UUID(v3) | 자동 구매 확정 사전 안내 `AUTO_CONFIRM_NOTICE:<timerId>` |
+| 같은 원천에서 한 번만 | `OutboxEvent.nameBasedId(kind, sourceId)` = `"<kind>:<sourceId>"`의 이름 기반 UUID(v3) | 자동 구매 확정 사전 안내 `AUTO_CONFIRM_NOTICE:<timerId>`, 첫 계약 서명 `CONTRACT_SIGNATURE_REQUESTED:<signatureId>` |
 
 - 이름 기반 ID는 여러 서버·반복 실행에서 같은 값이 나오므로 `event_id` UNIQUE가 중복 저장을 막는다. 미리 `existsByEventId`로 건너뛰는 것은 잠금 비용을 줄이는 최적화일 뿐이고 최종 보장은 UNIQUE다.
 - `kind`는 대문자·숫자·밑줄(`[A-Z][A-Z0-9_]{0,59}`)만 쓴다. 한 번 정한 kind는 바꾸지 않는다(바꾸면 이미 저장된 이벤트와 다른 ID가 되어 중복 방지가 깨진다). `AUTO_CONFIRM_NOTICE`는 #105에서 저장된 값과 같은 ID를 만든다(`OutboxEventContractTests`로 고정).

@@ -24,6 +24,13 @@ test('every order event type has its own Korean message and unknown types fall b
   assert.equal(fallback, '거래 상태가 변경되었습니다.')
 })
 
+test('first signature asks the counterpart to check signing while final signature announces formation', () => {
+  assert.match(notificationMessage('ORDER_CONTRACT_SIGNATURE_REQUESTED'), /먼저 서명/)
+  assert.match(notificationMessage('ORDER_CONTRACT_SIGNATURE_REQUESTED'), /서명 상태를 확인/)
+  assert.doesNotMatch(notificationMessage('ORDER_CONTRACT_SIGNATURE_REQUESTED'), /계약이 성립/)
+  assert.match(notificationMessage('ORDER_CONTRACT_SIGNED'), /양측 서명이 완료되어 계약이 성립/)
+})
+
 test('only valid order IDs become links, keeping large IDs as strings', () => {
   assert.equal(notificationTarget({ orderId: '9007199254740993' }), '/orders/9007199254740993')
   for (const orderId of [null, '', '0', '-1', '1.5', 'abc', '01', '12345678901234567890'])

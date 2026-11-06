@@ -525,7 +525,7 @@ class ContractDocumentIntegrationTests {
                     + " aggregate_id=?",
                 Long.class,
                 orderId))
-        .isEqualTo(3);
+        .isEqualTo(4);
     assertThat(
             jdbc.queryForObject(
                 "SELECT COUNT(*) FROM payments WHERE order_id=?", Long.class, orderId))

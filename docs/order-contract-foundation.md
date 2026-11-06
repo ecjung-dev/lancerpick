@@ -1,5 +1,7 @@
 # 전자계약 버전·서명 기반 1차 구현
 
+2026-11-06 사용자 확정 후속: [첫 서명 알림](notifications.md#첫-계약-서명-알림--2026-11-06-로컬-후속)을 추가했다(`feature/first-contract-signature-notification`, 로컬). 첫 서명은 READY/AWAITING_CONTRACT를 유지하며 미서명 상대방에게만 알리고, 양측 완료의 상태 전환·이력·기존 완료 알림은 유지한다. 아래 초기 구현 기록의 "두 번째 서명 이벤트"를 첫 서명 알림 금지 정책으로 해석하지 않는다.
+
 2026-11-05 신규 정책: CONTRACT_V3는 [결제 금액 보관·판매자 적립금 지급·자동 구매 확정](full-funding-policy.md)을 따른다. V7은 main `2fec099`에 반영돼 업무 테이블 30개와 새 모드를 제공한다. 아래 선금/잔금·보상·V1~V6/29개 설명은 해당 버전의 이력이다. 신규 V3 금액 명령·스케줄러의 완료를 뜻하지 않는다.
 
 작성일: 2026-11-05. 공유 브랜치: feature/advanced-common-foundation. 초기 작업 브랜치 feature/contract-finance-foundation에서 공통 기반을 분리했다. 정책은 [4인 설계](advanced-design-four-person.md)를 따른다.
