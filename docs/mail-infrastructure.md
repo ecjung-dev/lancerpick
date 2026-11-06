@@ -66,6 +66,7 @@ Docker가 없으면 Mailpit 공식 Windows 실행 파일(GitHub 릴리스 `mailp
 - HTML 메일·첨부·발송량 제한(전체·IP)은 없다.
 - 서버 종료 때 진행 중인 발송은 중단 신호를 받는다. 이미 SMTP 서버가 받은 뒤라면 실제로 전달됐어도 `FAILED`로 기록될 수 있다(사용자에게는 메일이 도착).
 - 비밀번호 변경·재설정 완료 안내 메일, 이메일 인증 가입·아이디 안내 메일은 K1(김창재)에서 이 발송기를 그대로 사용해 추가한다.
+- 토큰이 없어 `account_challenges` 행이 없는 안내 메일(아이디 안내 등)은 `AccountMail.untracked(to, subject, body)`로 만든다. `challengeId`가 null이면 Dispatcher·발송기가 `AccountMailDeliveryRecorder`를 부르지 않고 로그(`challengeId=null`·오류 코드)만 남긴다(2026-11-06 결정, DB 변경 없음). 그래서 이런 메일의 발송 결과는 DB로 확인할 수 없다.
 
 ## 검증
 
@@ -76,3 +77,5 @@ Docker가 없으면 Mailpit 공식 Windows 실행 파일(GitHub 릴리스 `mailp
 - 실제 서버 + Mailpit(2026-11-05, 개발 DB, `MAIL_ENABLED=true`, API 호출로 확인): 가입 → 재설정 요청 202 → Mailpit에 메일 1통 도착(보낸 사람 `LancerPick <no-reply@lancerpick.local>`, 한글 제목·본문, `text/plain; charset=UTF-8`, 링크 `http://localhost:5173/password-reset#token=…` 43자) → 그 토큰으로 재설정 204 → 옛 비밀번호 로그인 401, 새 비밀번호 로그인 200 → 같은 토큰 재사용 400. 서버 로그에 메일 경고·이메일·토큰 없음.
 - 확인하지 않은 것: `account_challenges.delivery_status`가 `SENT`인지 DB에서 직접 조회하지 않았다(로컬에 MySQL 클라이언트 없음, 기록 실패 로그가 없는 것으로만 확인). 브라우저 화면으로 재설정 링크를 연 확인은 하지 않았다. 60초 안에 같은 이메일로 다시 요청하면 메일이 오지 않는 것(요청 제한)은 의도된 동작임을 확인했다.
 - 후속(2026-11-06, 김창재): 위 확인하지 않은 것 중 브라우저 화면 확인을 채웠다. Mailpit 실행 파일 + 내장 브라우저로 요청 → 수신 → 링크 → 새 비밀번호 → 세션 폐기·재로그인·같은 링크 재사용 거부를 확인했다. DB의 `SENT` 직접 조회는 여전히 하지 않았다. [로그인 문서 기록](auth-login.md#브라우저--mailpit-확인--2026-11-06).
+- 후속(2026-11-06, 정은찬, `test/v3-gate-remaining-check`): 개발 DB·`MAIL_ENABLED=true` 서버 + Mailpit(Docker) + Playwright로 재설정 요청 화면 → Mailpit 수신(제목 「[랜서픽] 비밀번호 재설정 안내」, 보낸 사람 `no-reply@lancerpick.local`) → Mailpit 화면에서 링크 클릭 → 새 비밀번호 설정 화면 표시·주소창 토큰 제거까지 확인했다(비밀번호는 바꾸지 않음). **DB `account_challenges.delivery_status`=`SENT`, `last_error_code` NULL을 직접 조회해 확인**했다. 서버 로그에 수신 이메일·토큰 0건.
+- 기록 없는 안내 메일(`AccountMail.untracked`, 2026-11-06): `AccountMailDispatcherTests` 2건 추가(발송기 없음·큐 가득 참에서 기록 호출 없음), `SmtpAccountMailSenderTests` 2건 추가(성공·실패 모두 기록 호출 없음, 뒤의 기록 대상 메일은 정상 기록). 백엔드 `clean build`(로컬 `lancerpick_test`) 908건 통과, 실패·오류·건너뜀 0. 아이디 안내 화면·API가 아직 없어 실제 서버 발송은 확인하지 않았다.
