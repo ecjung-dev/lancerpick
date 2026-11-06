@@ -51,7 +51,7 @@ MVP의 화면과 서버가 사용할 요청·응답·권한·중복 처리 기�
 
 목록은 page=0, size=20, 최대 100. 최신 생성순과 ID 내림차순을 기본으로 하며 categories는 displayOrder·ID 오름차순이다. 목록 응답은 items, page, size, totalElements, totalPages를 가진다.
 
-GET·수정·업무 명령 성공은 200, 리소스 생성은 201, 로그아웃은 204. 안전한 생성 재호출은 200과 기존 결과. 오류는 code, message, fieldErrors(배열), traceId를 반환한다. 비공개 타인 자원은 404, 관리자 기능 권한 부족은 403으로 처리한다.
+GET·수정·업무 명령 성공은 200, 리소스 생성은 201, 로그아웃은 204. 안전한 생성 재호출은 200과 기존 결과. 오류는 code, message, fieldErrors(배열), traceId를 반환한다. 채팅 소켓 오류도 같은 필드에 HTTP 상태와 같은 의미의 status를 더해 보낸다([공통 이벤트·오류 계약](event-contract.md)). 비공개 타인 자원은 404, 관리자 기능 권한 부족은 403으로 처리한다.
 
 fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 오류 코드 문자열), message(안내 문자열)를 가진다. 필드와 무관한 오류는 빈 배열이다. rejectedValue는 반환하지 않는다. 다음은 응답 형식 예시이며 문자열 길이 정책을 확정하는 예시는 아니다.
 

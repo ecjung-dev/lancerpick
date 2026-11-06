@@ -1,6 +1,7 @@
 package com.example.lancerpick.notification.service;
 
 import com.example.lancerpick.notification.entity.Notification;
+import com.example.lancerpick.notification.entity.OutboxErrorCode;
 import com.example.lancerpick.notification.entity.OutboxEvent;
 import com.example.lancerpick.notification.repository.NotificationRepository;
 import com.example.lancerpick.notification.repository.OutboxEventRepository;
@@ -15,6 +16,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -105,28 +107,33 @@ public class OutboxDispatcher {
   }
 
   private List<Notification> toNotifications(OutboxEvent event) {
-    if (!OrderEventPublisher.AGGREGATE_ORDER.equals(event.getAggregateType()) || event.getSchemaVersion() != 1)
-      throw new UnsupportedEventException();
+    if (!OrderEventPublisher.AGGREGATE_ORDER.equals(event.getAggregateType())
+        || event.getSchemaVersion() != OrderEventPublisher.ORDER_SCHEMA_VERSION)
+      throw new EventRejected(OutboxErrorCode.UNSUPPORTED_EVENT);
     JsonNode payload;
     try {
       payload = mapper.readTree(event.getPayload());
     } catch (JacksonException e) {
-      throw new UnsupportedEventException();
+      throw new EventRejected(OutboxErrorCode.INVALID_PAYLOAD);
     }
     JsonNode recipients = payload.get("recipientIds");
-    if (recipients == null || !recipients.isArray() || recipients.isEmpty()) throw new UnsupportedEventException();
+    if (recipients == null || !recipients.isArray() || recipients.isEmpty())
+      throw new EventRejected(OutboxErrorCode.INVALID_PAYLOAD);
     // 페이로드를 신뢰하지 않는다. 현재 주문의 구매자·판매자가 아닌 수신자가 있으면 이벤트 전체를 실패 처리한다.
-    var order = orders.findById(event.getAggregateId()).orElseThrow(UnsupportedEventException::new);
+    var order =
+        orders
+            .findById(event.getAggregateId())
+            .orElseThrow(() -> new EventRejected(OutboxErrorCode.AGGREGATE_NOT_FOUND));
     var recipientIds = new LinkedHashSet<Long>();
     for (JsonNode recipient : recipients) {
       long recipientId;
       try {
         recipientId = Long.parseLong(recipient.asString());
       } catch (RuntimeException e) {
-        throw new UnsupportedEventException();
+        throw new EventRejected(OutboxErrorCode.INVALID_PAYLOAD);
       }
       if (recipientId != order.getBuyerId() && recipientId != order.getSellerId())
-        throw new UnsupportedEventException();
+        throw new EventRejected(OutboxErrorCode.INVALID_RECIPIENT);
       recipientIds.add(recipientId);
     }
     var result = new ArrayList<Notification>();
@@ -148,21 +155,33 @@ public class OutboxDispatcher {
     // 기한이 지난 PENDING만 기록한다. 같은 이벤트를 고른 다른 처리기가 이미 실패를 기록해 다음 시도를 미뤘다면
     // 이번 실패는 같은 시도로 보고 횟수를 다시 올리지 않는다(동시 경합만으로 FAILED가 되는 것을 막는다).
     if (event == null || !event.isDue(at)) return;
+    var code = errorCode(exception);
     // 형식·수신자 오류는 다시 시도해도 성공할 수 없으므로 바로 FAILED로 멈춘다.
-    int maxAttempts =
-        exception instanceof UnsupportedEventException ? event.getAttemptCount() + 1 : MAX_ATTEMPTS;
+    int maxAttempts = code.permanent() ? event.getAttemptCount() + 1 : MAX_ATTEMPTS;
     long backoff = Math.min(3600, 30L << Math.min(event.getAttemptCount(), 7));
-    event.fail(exception.getClass().getSimpleName(), at, maxAttempts, backoff);
+    event.fail(code, at, maxAttempts, backoff);
     events.flush();
+  }
+
+  /** 예외 클래스 이름 대신 고정 코드로 남긴다. 잠금 실패만 별도로 구분하고 나머지는 일반 처리 실패로 본다. */
+  static OutboxErrorCode errorCode(RuntimeException exception) {
+    if (exception instanceof EventRejected rejected) return rejected.code;
+    if (exception instanceof PessimisticLockingFailureException) return OutboxErrorCode.LOCK_UNAVAILABLE;
+    return OutboxErrorCode.PROCESSING_FAILED;
   }
 
   private LocalDateTime now() {
     return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
   }
 
-  static final class UnsupportedEventException extends RuntimeException {
-    UnsupportedEventException() {
-      super("Unsupported outbox event", null, false, false);
+  /** 다시 시도해도 성공할 수 없는 이벤트. 코드는 {@link OutboxErrorCode#permanent()}가 true인 값만 쓴다. */
+  static final class EventRejected extends RuntimeException {
+    private final OutboxErrorCode code;
+
+    EventRejected(OutboxErrorCode code) {
+      super(code.name(), null, false, false);
+      if (!code.permanent()) throw new IllegalArgumentException("Rejection code must be permanent");
+      this.code = code;
     }
   }
 }

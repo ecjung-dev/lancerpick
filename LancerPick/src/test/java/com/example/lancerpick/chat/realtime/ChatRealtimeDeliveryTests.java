@@ -30,7 +30,7 @@ class ChatRealtimeDeliveryTests {
             "1", "11", "1", "7", key, "비공개 본문", OffsetDateTime.parse("2026-11-05T00:00:00Z"));
     assertThatCode(() -> delivery.acknowledge("expired", message)).doesNotThrowAnyException();
     assertThatCode(
-            () -> delivery.error("expired", new ChatSendError("11", key, "CHAT_CLOSED", "종료된 주문")))
+            () -> delivery.error("expired", new ChatSendError("11", key, 409, "CHAT_CLOSED", "종료된 주문", "trace")))
         .doesNotThrowAnyException();
     verifyNoInteractions(template);
   }

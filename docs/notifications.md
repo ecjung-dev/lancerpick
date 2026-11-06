@@ -18,6 +18,8 @@ V3 주문의 기한 통지(E8)·보관/지급/반환 알림 유형·자동 확�
    - 실패 기록은 기한이 지난 `PENDING`에만 남긴다. 같은 이벤트를 고른 다른 처리기가 이미 다음 시도를 미뤘다면 횟수를 다시 올리지 않아, 동시 경합만으로 `FAILED`가 되지 않는다.
    - 실패 기록 자체가 실패해도(잠금 대기 초과 등) 예외를 이벤트 단위로 삼키고 로그만 남긴다. 이벤트는 `PENDING`으로 남아 다음 배치에서 다시 처리되며, 같은 배치의 다른 이벤트는 계속 처리된다.
 
+2026-11-06 C1: `last_error_code`에는 예외 클래스 이름 대신 고정 코드(`UNSUPPORTED_EVENT`·`INVALID_PAYLOAD`·`INVALID_RECIPIENT`·`AGGREGATE_NOT_FOUND`·`LOCK_UNAVAILABLE`·`PROCESSING_FAILED`)를 저장한다. 앞의 네 개가 즉시 `FAILED` 대상이다. 이벤트 ID·스키마 버전 규칙과 함께 [공통 이벤트 계약](event-contract.md)에 정리했다.
+
 `lease_owner`·`lease_until` 컬럼은 트랜잭션 밖 장시간 처리용으로 남겨 두었고, 현재 처리는 DB 안에서 끝나므로 사용하지 않는다. `FAILED` 이벤트의 재처리 명령은 관리자 고도화(김창재)에서 연결할 후속 범위다.
 
 ## 수신자와 유형

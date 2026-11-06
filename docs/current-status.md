@@ -3,15 +3,25 @@
 ## 관리자 금융 조회·재처리 연결 준비 — 2026-11-06 로컬 후속
 
 main `a1f7fda`(#114)에서 `feature/admin-finance-support`를 시작했다. 황준범이 관리자 전용 충전·결제/환불 목록, 주문별 보관/정산/종료 분배, 충전 복구 Batch 실행 조회와 재처리 후보 조건을 제공한다. 각 진입은 현재 DB 관리자 역할을 확인하며 결제 키·토큰·원문 예외는 반환하지 않는다. 읽기만 제공하고 금융/처리권/감사 이력은 변경하지 않는다. 새 DDL·API·화면은 없고, 김창재의 관리자 연결과 실제 실행·감사 기록은 남았다. 격리 MySQL에서 전체 백엔드 `clean build` 894건 통과(신규 19건 포함, 실패·오류·건너뜀 0). 프런트 변경/재검사·원격 CI·관리자 화면 확인은 없다. [내부 계약·검증 기록](admin-finance-support.md).
+## 공통 이벤트 ID·버전·오류 계약(C1) — 2026-11-06
+
+관리자 금융 작업 브랜치에서도 main `f82c49d`(#115)을 통합했고, 현황의 금융 준비 절과 이 C1 절을 모두 보존했다. 병합 후 관리자 금융 선택 19건·프런트 전체 219건·lint/build 통과. 금융 구현의 백엔드 전체 894건은 병합 전 기록이며 합산하지 않는다. [금융 연결 검증 기록](admin-finance-support.md#검증).
+
+`feature/common-event-contract`(정은찬, PR 전, main `6d2dac5`에서 분기): [공통 이벤트 계약](event-contract.md). 아웃박스 `last_error_code`에 예외 클래스 이름 대신 고정 코드 6개(즉시 실패 4·재시도 2)를 저장하고, 이름 기반 이벤트 ID를 `OutboxEvent.nameBasedId`로 모았으며(#105 사전 안내 ID 값 유지), 스키마 버전을 집계별 상수로 넘긴다. 채팅 소켓 업무 오류에 REST와 같은 `fieldErrors`·`traceId`와 HTTP 상태 의미의 `status`를 더했고 STOMP `ERROR` 본문에도 `traceId`를 넣었다. 프런트는 서버 `status`·`traceId`를 `ApiError`로 넘긴다(상태 없는 이전 프레임은 기존 판단). DB·REST API·알림 응답 변경 없음. **영향 범위**: 채팅(황준범) `ChatSendError`·`ChatSocketController`·`ChatSocketErrorHandler`·`order-chat/realtime.ts`.
+
+검증(커밋 전 작업 트리, 로컬 `lancerpick_test` 3307): 백엔드 `clean build` 865건 통과(실패·오류·건너뜀 0). 신규 `OutboxEventContractTests` 5건(DB 없음), `ChatSocketErrorHandlerTests` 2건, `NotificationIntegrationTests` 신규 3건(스키마 버전·없는 주문·잠금 실패 코드)과 기존 3건 기대 코드 변경, WebSocket 통합 오류 프레임 필드 검사 보강. 프런트 typecheck·lint·`test:api` 219건·build 통과. 실행하지 않은 검증: 실제 브라우저 채팅 오류 표시, 원격 CI.
+
+최신 main `a1f7fda`(#114 충전 복구 Batch·V9)를 작업 브랜치에 병합했다. 충돌은 이 문서 맨 위 절 1곳뿐이었고 두 절을 모두 남겼다. 병합 후 로컬 `lancerpick_test`에 V9 적용, 백엔드 `clean build` 885건 통과(실패·오류·건너뜀 0), 프런트 typecheck·lint·`test:api` 219건·build 통과. 병합 전 865건은 별도 실행이며 합산하지 않는다.
 
 ## 미확정 충전 복구 J5 — 2026-11-06 로컬 후속
 
 `feature/wallet-topup-recovery-batch`에서 Spring Batch 기반 미확정 충전 조회·복구, 처리권 만료·동시 실행 방어, 백오프/횟수 제한, 기존 지급 롤백·중복 방지, 체크포인트 재시작을 구현했다. 외부 승인 재호출 없이 저장된 키로 조회하며 기본 비활성이다. main `6d2dac5` 통합 시 V8 관심 상품과 겹치던 미공유 복구 스키마를 V9로 옮겼다. V9는 Batch 6.0.6 공식 시스템 테이블 9개만 추가하고 업무 테이블은 V8까지 31개다. V1~V8은 유지한다. 병합 후 격리 MySQL에서 V1~V9 적용과 백엔드 전체 `clean build` 875건, 프런트 218건·lint·TypeScript 포함 build가 통과했다. 병합 전 839건/선택 20건은 과거 실행이며 합산하지 않는다. [복구 작업 기록](wallet-topup-recovery-batch.md)을 따른다. 원격 반영·실제 토스 조회·관리자 운영 화면(K6)은 아직이다.
 
 우선순위 변경(2026-11-06, 사용자 확정): Redis(C4)는 **보류·최하위**다. 단일 서버 구성을 유지하고 남은 기능·연결·충전 복구 작업을 먼저 진행한다. Redis 세션 공유·Pub/Sub 등은 다른 기능이나 V3 신규 거래 활성화의 선행·완료 조건이 아니다. [작업표](work-plan.md)와 [4인 설계](advanced-design-four-person.md)에 반영했다.
+
 ## 회원·지급 경합 보완 — 2026-11-06
 
-main `2272969`에서 분기한 `codex/fix-profile-payout-races` 로컬 변경이다. 표시 이름 저장을 비밀번호 변경·재설정과 같은 회원 행 잠금으로 직렬화했다. 수동·자동 구매 확정은 판매자 지갑 잠금 뒤의 시각으로 지급·종료 기록을 남기고, 수동 확정의 타이머 만료도 그 시각으로 다시 판단한다. API·DB·금액 정책·V3 생성 기본 false는 유지한다.
+main 반영(#111). 아래는 병합 전 `codex/fix-profile-payout-races` 작업 기록이다. 표시 이름 저장을 비밀번호 변경·재설정과 같은 회원 행 잠금으로 직렬화했다. 수동·자동 구매 확정은 판매자 지갑 잠금 뒤의 시각으로 지급·종료 기록을 남기고, 수동 확정의 타이머 만료도 그 시각으로 다시 판단한다. API·DB·금액 정책·V3 생성 기본 false는 유지한다.
 
 수정 전 신규 회귀 검사 5건에서 인증 버전 복원 2건, 수동·자동 지급 시각 역전 2건, 지갑 대기 중 만료 누락 1건을 재현했다. 수정 후 동일 5건 통과. 실행 환경은 개인 DB와 분리한 임시 MySQL 8.4.13의 `lancerpick_ci`다. main `2272969` 기준 수정 후 `gradlew.bat test --offline --no-daemon` 선택 검사는 7개 클래스 70건 통과, 실패·오류·건너뜀 0이다. 신규 5건을 포함한 결과이며 앞선 실행 수와 합산하지 않는다. 전체 빌드·프런트·브라우저·원격 CI는 이번 검증 범위가 아니다.
 
@@ -29,7 +39,7 @@ main `2272969`에서 분기한 `codex/fix-profile-payout-races` 로컬 변경이
 
 ## 이메일 인증 가입(K1 일부) — 2026-11-06
 
-`feature/email-verification`(김창재, PR 전): 가입이 이메일 인증 후에만 가능해졌다. `/signup`에서 인증 메일을 요청(가입 여부와 무관한 같은 202) → 메일 링크 `/signup/verify`에서 "인증하기"로 가입 증명을 받고 → 비밀번호·표시 이름 입력 → `POST /api/members`(`emailVerificationProof` 필수)가 증명 소비·회원(`email_verified_at`)·지갑·100만원을 한 트랜잭션으로 만든다. DB·라이브러리 변경 없음(V5 `account_challenges` `SIGNUP_EMAIL`). **팀 영향**: 증명 없는 가입 경로가 없어 메일이 꺼진 기본 상태에서는 화면에서 새 계정을 만들 수 없다(새 계정이 필요하면 Mailpit). 테스트에서 회원을 만들 때는 `support/TestMembers`를 쓴다(기존 테스트 10개 파일 전환). 기존 회원 인증 전환·아이디 안내는 남음. [상세](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification)
+main 반영(#113, 김창재, 작업 브랜치 `feature/email-verification`): 가입이 이메일 인증 후에만 가능해졌다. `/signup`에서 인증 메일을 요청(가입 여부와 무관한 같은 202) → 메일 링크 `/signup/verify`에서 "인증하기"로 가입 증명을 받고 → 비밀번호·표시 이름 입력 → `POST /api/members`(`emailVerificationProof` 필수)가 증명 소비·회원(`email_verified_at`)·지갑·100만원을 한 트랜잭션으로 만든다. DB·라이브러리 변경 없음(V5 `account_challenges` `SIGNUP_EMAIL`). **팀 영향**: 증명 없는 가입 경로가 없어 메일이 꺼진 기본 상태에서는 화면에서 새 계정을 만들 수 없다(새 계정이 필요하면 Mailpit). 테스트에서 회원을 만들 때는 `support/TestMembers`를 쓴다(기존 테스트 10개 파일 전환). 기존 회원 인증 전환·아이디 안내는 남음. [상세](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification)
 
 ## V3 활성화 게이트(G1) 시나리오 — 2026-11-06
 

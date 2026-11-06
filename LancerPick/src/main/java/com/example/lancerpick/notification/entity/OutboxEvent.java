@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -78,15 +79,23 @@ public class OutboxEvent {
 
   protected OutboxEvent() {}
 
+  /** 업무 행동마다 한 번 저장되는 이벤트. 이벤트 ID는 무작위 UUID다. */
   public static OutboxEvent pending(
-      String type, String aggregateType, long aggregateId, String payload, LocalDateTime at) {
-    return pending(UUID.randomUUID().toString(), type, aggregateType, aggregateId, payload, at);
+      String type,
+      int schemaVersion,
+      String aggregateType,
+      long aggregateId,
+      String payload,
+      LocalDateTime at) {
+    return pending(
+        UUID.randomUUID().toString(), type, schemaVersion, aggregateType, aggregateId, payload, at);
   }
 
-  /** 중복 방지를 위해 호출자가 정한 이벤트 ID(UUID 형식)로 저장한다. */
+  /** 중복 방지를 위해 호출자가 정한 이벤트 ID(UUID 형식, 보통 {@link #nameBasedId})로 저장한다. */
   public static OutboxEvent pending(
       String eventId,
       String type,
+      int schemaVersion,
       String aggregateType,
       long aggregateId,
       String payload,
@@ -94,6 +103,7 @@ public class OutboxEvent {
     UUID.fromString(eventId);
     if (type == null || type.isBlank() || type.length() > 60)
       throw new IllegalArgumentException("Invalid event type");
+    if (schemaVersion < 1) throw new IllegalArgumentException("Invalid schema version");
     if (aggregateType == null || aggregateType.isBlank() || aggregateType.length() > 30)
       throw new IllegalArgumentException("Invalid aggregate type");
     if (aggregateId <= 0 || payload == null || at == null)
@@ -101,7 +111,7 @@ public class OutboxEvent {
     var event = new OutboxEvent();
     event.eventId = eventId;
     event.type = type;
-    event.schemaVersion = 1;
+    event.schemaVersion = schemaVersion;
     event.aggregateType = aggregateType;
     event.aggregateId = aggregateId;
     event.payload = payload;
@@ -110,6 +120,18 @@ public class OutboxEvent {
     event.createdAt = at.truncatedTo(ChronoUnit.MICROS);
     event.nextAttemptAt = event.createdAt;
     return event;
+  }
+
+  /**
+   * 같은 원천에서 한 번만 생겨야 하는 이벤트의 ID. {@code "<kind>:<sourceId>"}의 이름 기반 UUID(v3)라 여러 서버·반복
+   * 실행에서도 같은 값이 나오고, event_id UNIQUE가 중복 저장을 막는다. kind는 대문자·숫자·밑줄만 쓰며 바꾸면 기존
+   * 이벤트와 다른 ID가 되므로 한 번 정한 kind는 바꾸지 않는다.
+   */
+  public static String nameBasedId(String kind, long sourceId) {
+    if (kind == null || !kind.matches("[A-Z][A-Z0-9_]{0,59}") || sourceId <= 0)
+      throw new IllegalArgumentException("Invalid event id source");
+    return UUID.nameUUIDFromBytes((kind + ":" + sourceId).getBytes(StandardCharsets.UTF_8))
+        .toString();
   }
 
   public boolean isDue(LocalDateTime now) {
@@ -124,11 +146,11 @@ public class OutboxEvent {
   }
 
   /** 실패 횟수를 늘리고 다음 시도 시각을 미룬다. 최대 횟수에 도달하면 FAILED로 멈춘다. */
-  public void fail(String errorCode, LocalDateTime at, int maxAttempts, long backoffSeconds) {
-    if (!PENDING.equals(status) || at == null || maxAttempts < 1 || backoffSeconds < 0)
+  public void fail(OutboxErrorCode errorCode, LocalDateTime at, int maxAttempts, long backoffSeconds) {
+    if (!PENDING.equals(status) || errorCode == null || at == null || maxAttempts < 1 || backoffSeconds < 0)
       throw new IllegalStateException("Event is not pending");
     attemptCount++;
-    lastErrorCode = errorCode == null ? null : errorCode.substring(0, Math.min(100, errorCode.length()));
+    lastErrorCode = errorCode.name();
     nextAttemptAt = at.plusSeconds(backoffSeconds).truncatedTo(ChronoUnit.MICROS);
     if (attemptCount >= maxAttempts) status = FAILED;
   }

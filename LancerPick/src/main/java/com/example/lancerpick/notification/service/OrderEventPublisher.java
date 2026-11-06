@@ -8,7 +8,6 @@ import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderHistoryAction;
 import com.example.lancerpick.order.entity.OrderResponseTimer;
 import com.example.lancerpick.order.entity.OrderStatus;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.EnumSet;
@@ -16,7 +15,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -31,7 +29,13 @@ import tools.jackson.databind.json.JsonMapper;
 @Profile("!demo")
 public class OrderEventPublisher {
   static final String AGGREGATE_ORDER = "ORDER";
+  /**
+   * ORDER 집계 페이로드 버전. 필드를 추가만 하면 그대로 두고, 필드 의미를 바꾸거나 지우면 올린다. 올릴 때는 처리기가 이전
+   * 버전도 계속 읽도록 {@link OutboxDispatcher}의 지원 목록에 함께 추가한다(이미 저장된 PENDING 이벤트가 있다).
+   */
+  static final int ORDER_SCHEMA_VERSION = 1;
   public static final String AUTO_CONFIRM_SOON = "ORDER_AUTO_CONFIRM_SOON";
+  private static final String AUTO_CONFIRM_NOTICE_KIND = "AUTO_CONFIRM_NOTICE";
   private static final Set<OrderStatus> PAID_WORK =
       EnumSet.of(
           OrderStatus.IN_PROGRESS,
@@ -68,6 +72,7 @@ public class OrderEventPublisher {
     events.saveAndFlush(
         OutboxEvent.pending(
             notificationType(order, history),
+            ORDER_SCHEMA_VERSION,
             AGGREGATE_ORDER,
             order.getId(),
             mapper.writeValueAsString(payload),
@@ -95,6 +100,7 @@ public class OrderEventPublisher {
         OutboxEvent.pending(
             eventId,
             AUTO_CONFIRM_SOON,
+            ORDER_SCHEMA_VERSION,
             AGGREGATE_ORDER,
             order.getId(),
             mapper.writeValueAsString(payload),
@@ -102,11 +108,9 @@ public class OrderEventPublisher {
     return true;
   }
 
-  /** 같은 타이머에는 항상 같은 이벤트 ID가 나온다. */
+  /** 같은 타이머에는 항상 같은 이벤트 ID가 나온다. kind를 바꾸면 이미 저장된 안내와 중복되므로 바꾸지 않는다. */
   public static String autoConfirmNoticeEventId(long timerId) {
-    return UUID.nameUUIDFromBytes(
-            ("AUTO_CONFIRM_NOTICE:" + timerId).getBytes(StandardCharsets.UTF_8))
-        .toString();
+    return OutboxEvent.nameBasedId(AUTO_CONFIRM_NOTICE_KIND, timerId);
   }
 
   static String notificationType(OrderHistoryAction action) {
