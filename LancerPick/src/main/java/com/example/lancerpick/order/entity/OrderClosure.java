@@ -78,6 +78,27 @@ public class OrderClosure {
         orderId, sellerId, cancellationRequestId, FullFundingPolicy.cancelled(amount), occurredAt);
   }
 
+  /** 검수 무응답 타이머 만료에 따른 시스템 구매 확정. 정상 확정과 같은 10% 수수료로 분배한다. */
+  public static OrderClosure autoConfirmed(
+      long orderId, long timerId, long amount, LocalDateTime occurredAt) {
+    if (orderId < 1 || timerId < 1 || occurredAt == null)
+      throw new IllegalArgumentException("Invalid auto confirmation closure");
+    var distribution = FullFundingPolicy.completed(amount);
+    var closure = new OrderClosure();
+    closure.orderId = orderId;
+    closure.reason = "AUTO_CONFIRMED";
+    closure.actorType = "SYSTEM";
+    closure.actorId = null;
+    closure.sourceTimerId = timerId;
+    closure.paidAmount = distribution.fundedAmount();
+    closure.buyerRefundAmount = distribution.buyerRefund();
+    closure.feeAmount = distribution.fee();
+    closure.sellerNetAmount = distribution.sellerPayout();
+    closure.sellerGrossAmount = distribution.fee() + distribution.sellerPayout();
+    closure.createdAt = occurredAt;
+    return closure;
+  }
+
   private static OrderClosure create(
       long orderId,
       long actorId,

@@ -15,6 +15,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  migrations:
+    name: Migration immutability
+    # Squash merge만 main에 들어오므로 PR에서만 검사한다.
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Block changes to migrations already on the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          MIGRATION_DIR: LancerPick/src/main/resources/db/migration/
+        run: |
+          set -euo pipefail
+          # 이름 변경은 삭제+추가로 보이게 해서 D로 잡는다. PR 안에서 새로 추가한 파일(A)은 자유롭게 고칠 수 있다.
+          changed="$(git diff --name-status --no-renames --diff-filter=MDT "origin/${BASE_REF}...HEAD" -- "$MIGRATION_DIR")"
+          if [ -z "$changed" ]; then
+            echo "기존 마이그레이션 변경 없음"
+            exit 0
+          fi
+          while IFS=$'\t' read -r status path; do
+            echo "::error file=${path}::이미 ${BASE_REF}에 있는 마이그레이션은 수정·삭제·이름 변경할 수 없습니다(${status}). 다음 버전 파일을 추가하세요."
+          done <<< "$changed"
+          exit 1
+
   frontend:
     name: Frontend checks
     runs-on: ubuntu-24.04

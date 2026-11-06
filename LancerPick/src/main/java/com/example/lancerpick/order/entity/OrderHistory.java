@@ -125,6 +125,42 @@ public class OrderHistory {
         history.fromStatus = OrderStatus.AWAITING_CONFIRMATION;
         return history;
     }
+    /** 판매자가 검수 무응답 자동 구매 확정 타이머를 시작했다. 주문 상태는 검수 대기로 유지된다. */
+    public static OrderHistory timerStarted(Long orderId, Long sellerId, LocalDateTime at, long timerId) {
+        var history = decision(orderId, sellerId, at, OrderHistoryAction.TIMER_STARTED, OrderStatus.AWAITING_CONFIRMATION, null);
+        history.fromStatus = OrderStatus.AWAITING_CONFIRMATION;
+        history.details = "{\"timerId\": \"" + timerId + "\"}";
+        return history;
+    }
+
+    /** 구매자 응답·구매 확정으로 활성 타이머가 만료 전에 끝났다. 상태 변화는 함께 기록되는 행동 이력이 나타낸다. */
+    public static OrderHistory timerCancelled(Long orderId, Long actorId, OrderStatus status, LocalDateTime at,
+            long timerId, String endReason) {
+        var history = decision(orderId, actorId, at, OrderHistoryAction.TIMER_CANCELLED, status, null);
+        history.fromStatus = status;
+        history.details = "{\"timerId\": \"" + timerId + "\", \"endReason\": \"" + endReason + "\"}";
+        return history;
+    }
+
+    public static OrderHistory timerAdminStopped(Long orderId, Long adminId, LocalDateTime at, long timerId, String reason) {
+        var history = decision(orderId, adminId, at, OrderHistoryAction.TIMER_ADMIN_STOPPED, OrderStatus.AWAITING_CONFIRMATION, reason);
+        history.fromStatus = OrderStatus.AWAITING_CONFIRMATION;
+        history.details = "{\"timerId\": \"" + timerId + "\"}";
+        return history;
+    }
+
+    /** 타이머 만료에 따른 시스템 구매 확정. 실행 회원이 없으며 같은 타이머로 두 번 기록되지 않도록 원천 키를 둔다. */
+    public static OrderHistory autoConfirmed(Long orderId, long timerId, LocalDateTime at) {
+        if (timerId < 1) throw invalidInput("타이머 ID가 올바르지 않습니다.");
+        var history = decision(orderId, 1L, at, OrderHistoryAction.COMPLETED, OrderStatus.COMPLETED, null);
+        history.actorId = null;
+        history.actorType = "SYSTEM";
+        history.fromStatus = OrderStatus.AWAITING_CONFIRMATION;
+        history.sourceEventKey = "AUTO_CONFIRM:" + timerId;
+        history.details = "{\"closureReason\": \"AUTO_CONFIRMED\", \"timerId\": \"" + timerId + "\"}";
+        return history;
+    }
+
     public static OrderHistory cancelled(Long orderId, Long actor, OrderStatus from, LocalDateTime at, String reason) {
         var history = decision(orderId, actor, at, OrderHistoryAction.CANCELLED, OrderStatus.CANCELLED, reason);
         history.fromStatus = from;

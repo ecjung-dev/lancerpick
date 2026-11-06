@@ -4,6 +4,7 @@ import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.product.dto.ProductSummaryResponse;
+import com.example.lancerpick.product.dto.ProductSearchOptions;
 import com.example.lancerpick.product.dto.ProductDetailResponse;
 import com.example.lancerpick.product.repository.ProductSearchQueries;
 import java.util.List;
@@ -24,18 +25,18 @@ public class ProductSearchService {
 
     @Transactional(readOnly = true)
     public PageResponse<ProductSummaryResponse> search(
-            String keyword, String categoryId, int page, int size) {
+            String keyword, String categoryId, int page, int size, ProductSearchOptions options) {
 
         validatePage(page, size);
 
         String normalizedKeyword = normalizeKeyword(keyword);
         Long parsedCategoryId = parseCategoryId(categoryId);
 
-        long total = queries.count(normalizedKeyword, parsedCategoryId);
+        long total = queries.count(normalizedKeyword, parsedCategoryId, options);
         long offset = (long) page * size;
 
         var items = offset >= total ? List.<ProductSummaryResponse>of() : queries.find(
-                normalizedKeyword, parsedCategoryId, size, offset
+                normalizedKeyword, parsedCategoryId, options, size, offset
         );
 
         long pages = total / size + (total % size == 0 ? 0 : 1);

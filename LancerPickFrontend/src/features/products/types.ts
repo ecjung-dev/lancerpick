@@ -8,7 +8,16 @@ export interface ProductSummary {
   category: Category
   seller: { id: string; displayName: string }
 }
-export interface ProductSearch { keyword: string; categoryId: string; page: number; size: number }
+export interface ProductSearch {
+  keyword: string
+  categoryId: string
+  page: number
+  size: number
+  minPrice?: string
+  maxPrice?: string
+  maxDurationDays?: string
+  sort?: string
+}
 export interface OwnedProductSummary extends ProductSummary {
   saleStatus: 'ON_SALE' | 'STOPPED'
   isHidden: boolean

@@ -11,6 +11,7 @@ import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderClosure;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderHistoryAction;
+import com.example.lancerpick.order.entity.OrderResponseTimer;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.CancellationRequestRepository;
 import com.example.lancerpick.order.repository.DeliveryRepository;
@@ -18,7 +19,6 @@ import com.example.lancerpick.order.repository.OrderClosureRepository;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
-import com.example.lancerpick.order.repository.OrderResponseTimerRepository;
 import com.example.lancerpick.order.repository.OrderTradeTermsRepository;
 import com.example.lancerpick.payment.entity.OrderFunds;
 import com.example.lancerpick.payment.entity.Payment;
@@ -69,7 +69,7 @@ public class FullFundingService {
   private final OrderClosureRepository orderClosureRepository;
   private final CancellationRequestRepository cancellationRequestRepository;
   private final DeliveryRepository deliveryRepository;
-  private final OrderResponseTimerRepository orderResponseTimerRepository;
+  private final ReviewTimers reviewTimers;
   private final OrderHistoryRepository orderHistoryRepository;
   private final OrderEventPublisher orderEventPublisher;
   private final OrderDetailQueries orderDetailQueries;
@@ -145,7 +145,7 @@ public class FullFundingService {
     }
     requireSignedContract(order);
     requireNoPendingCancellation(order);
-    requireNoActiveTimer(order);
+    reviewTimers.requireNoActive(order);
     var wallet =
         walletRepository
             .findByMemberIdForUpdate(memberId)
@@ -183,7 +183,6 @@ public class FullFundingService {
       throw invalidState();
     }
     requireNoPendingCancellation(order);
-    requireNoActiveTimer(order);
     if (!deliveryRepository.existsByOrderIdAndSequenceNo(orderId, 1)
         || (deliveryRepository.revisions(orderId) > 0
             && !deliveryRepository.existsByOrderIdAndSequenceNo(orderId, 2))) {
@@ -193,12 +192,14 @@ public class FullFundingService {
         || settlementRepository.findByOrderId(orderId).isPresent()) {
       throw integrityError();
     }
+    var occurredAt = currentTime();
+    // 구매자 확정은 활성 자동 확정 타이머를 끝낸다. 만료 시각이 지났으면 자동 확정이 우선이라 충돌로 응답한다.
+    reviewTimers.closeForBuyerResponse(order, memberId, occurredAt, ReviewTimers.ORDER_CLOSED);
     var distribution = FullFundingPolicy.completed(payment.amount());
     var wallet =
         walletRepository
             .findByMemberIdForUpdate(order.getSellerId())
             .orElseThrow(FullFundingService::integrityError);
-    var occurredAt = currentTime();
     wallet.creditSettlement(distribution.sellerPayout(), occurredAt);
     walletEntryRepository.saveAndFlush(
         WalletEntry.sellerPayout(
@@ -260,7 +261,7 @@ public class FullFundingService {
     if (request.getRequestedBy() != order.getBuyerId()) {
       throw integrityError();
     }
-    requireNoActiveTimer(order);
+    reviewTimers.requireNoActive(order);
     if (orderClosureRepository.findByOrderId(orderId).isPresent()
         || settlementRepository.findByOrderId(orderId).isPresent()) {
       throw integrityError();
@@ -300,6 +301,60 @@ public class FullFundingService {
         orderHistoryRepository.saveAndFlush(
             OrderHistory.cancelled(orderId, memberId, previousStatus, occurredAt, reason)));
     return orderResponse(order, memberId);
+  }
+
+  /**
+   * 만료된 자동 구매 확정 타이머로 시스템이 구매를 확정한다. 호출자가 주문 배타 잠금과 타이머 만료를 확인한 같은 트랜잭션에서
+   * 호출한다. 수동 확정과 같은 금액·원장·정산을 남기고 종료 기록은 SYSTEM/AUTO_CONFIRMED로 구분한다.
+   */
+  public void autoConfirm(Order order, OrderResponseTimer timer, LocalDateTime occurredAt) {
+    if (!TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion())
+        || timer.getOrderId() != order.getId()
+        || !timer.isDue(occurredAt)) {
+      throw integrityError();
+    }
+    long orderId = order.getId();
+    var payment = requirePayment(order);
+    var orderFunds = requireOrderFunds(order, payment);
+    requirePaymentEntry(order, payment);
+    if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION
+        || !"PAID".equals(payment.status())
+        || !"HELD".equals(orderFunds.getStatus())
+        || !cancellationRequestRepository.findByOrderIdAndStatus(orderId, "PENDING").isEmpty()
+        || deliveryRepository
+            .findFirstByOrderIdOrderBySequenceNoDesc(orderId)
+            .map(delivery -> delivery.getId() != timer.getDeliveryId())
+            .orElse(true)
+        || orderClosureRepository.findByOrderId(orderId).isPresent()
+        || settlementRepository.findByOrderId(orderId).isPresent()) {
+      throw integrityError();
+    }
+    var distribution = FullFundingPolicy.completed(payment.amount());
+    var wallet =
+        walletRepository
+            .findByMemberIdForUpdate(order.getSellerId())
+            .orElseThrow(FullFundingService::integrityError);
+    wallet.creditSettlement(distribution.sellerPayout(), occurredAt);
+    walletEntryRepository.saveAndFlush(
+        WalletEntry.sellerPayout(
+            order.getSellerId(),
+            payment.id(),
+            distribution.sellerPayout(),
+            wallet.getBalance(),
+            occurredAt));
+    settlementRepository.saveAndFlush(
+        Settlement.create(orderId, payment.amount(), FEE_RATE_BPS, occurredAt));
+    orderClosureRepository.saveAndFlush(
+        OrderClosure.autoConfirmed(orderId, timer.getId(), payment.amount(), occurredAt));
+    timer.expire(occurredAt);
+    orderFunds.release(occurredAt);
+    order.confirm(occurredAt);
+    orderRepository.flush();
+    orderFundsRepository.flush();
+    orderEventPublisher.publish(
+        order,
+        orderHistoryRepository.saveAndFlush(
+            OrderHistory.autoConfirmed(orderId, timer.getId(), occurredAt)));
   }
 
   private Order lockOrder(long memberId, long orderId) {
@@ -415,9 +470,7 @@ public class FullFundingService {
     var distribution = FullFundingPolicy.completed(payment.amount());
     if (!"PAID".equals(payment.status())
         || !"RELEASED".equals(orderFunds.getStatus())
-        || !"COMPLETED".equals(closure.getReason())
-        || !"MEMBER".equals(closure.getActorType())
-        || !Objects.equals(closure.getActorId(), order.getBuyerId())
+        || !isCompletionClosure(order, closure)
         || !"NORMAL".equals(settlement.getSettlementType())
         || closure.getFeeAmount() != distribution.fee()
         || closure.getSellerNetAmount() != distribution.sellerPayout()
@@ -437,15 +490,19 @@ public class FullFundingService {
         "SELLER_PAYOUT:");
   }
 
+  private static boolean isCompletionClosure(Order order, OrderClosure closure) {
+    if ("COMPLETED".equals(closure.getReason()))
+      return "MEMBER".equals(closure.getActorType())
+          && Objects.equals(closure.getActorId(), order.getBuyerId());
+    return "AUTO_CONFIRMED".equals(closure.getReason())
+        && "SYSTEM".equals(closure.getActorType())
+        && closure.getActorId() == null
+        && closure.getSourceTimerId() != null;
+  }
+
   private void requireNoPendingCancellation(Order order) {
     if (!cancellationRequestRepository.findByOrderIdAndStatus(order.getId(), "PENDING").isEmpty()) {
       throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
-    }
-  }
-
-  private void requireNoActiveTimer(Order order) {
-    if (orderResponseTimerRepository.existsByOrderIdAndStatus(order.getId(), "ACTIVE")) {
-      throw conflict("TIMER_INTEGRATION_NOT_READY", "활성 검수 타이머 처리가 연결되기 전에는 금액 처리를 진행할 수 없습니다.");
     }
   }
 
