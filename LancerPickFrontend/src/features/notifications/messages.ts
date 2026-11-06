@@ -14,6 +14,11 @@ const messages: Record<string, string> = {
   ORDER_CANCELLATION_WITHDRAWN: '구매자가 취소 요청을 철회했습니다.',
   ORDER_CANCELLED: '주문이 취소되었습니다.',
   ORDER_COMPLETED: '구매자가 구매를 확정했습니다.',
+  ORDER_TIMER_STARTED:
+    '판매자가 자동 구매 확정 타이머를 시작했습니다. 기한 안에 검수 결과를 알려 주세요.',
+  ORDER_TIMER_ADMIN_STOPPED: '관리자가 자동 구매 확정 타이머를 해제했습니다.',
+  ORDER_AUTO_CONFIRMED:
+    '검수 응답 기한이 지나 구매가 자동으로 확정되었습니다.',
 }
 
 /** 서버가 새 유형을 먼저 배포해도 화면이 깨지지 않도록 일반 문구로 대신한다. */

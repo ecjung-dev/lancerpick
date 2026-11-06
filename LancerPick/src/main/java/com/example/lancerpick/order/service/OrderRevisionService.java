@@ -32,6 +32,7 @@ public class OrderRevisionService {
   private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final OrderFundingGuard funding;
+  private final ReviewTimers reviewTimers;
   private final Clock clock;
 
   public OrderRevisionService(
@@ -42,6 +43,7 @@ public class OrderRevisionService {
       OrderEventPublisher events,
       OrderDetailQueries details,
       OrderFundingGuard funding,
+      ReviewTimers reviewTimers,
       Clock clock) {
     this.orders = orders;
     this.deliveries = deliveries;
@@ -50,6 +52,7 @@ public class OrderRevisionService {
     this.events = events;
     this.details = details;
     this.funding = funding;
+    this.reviewTimers = reviewTimers;
     this.clock = clock;
   }
 
@@ -78,9 +81,10 @@ public class OrderRevisionService {
     if (deliveries.pendingCancellations(orderId) > 0)
       throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
     funding.requireHeldForWork(order);
-    // E7(검수 타이머)이 연결되면 V3 수정 요청은 같은 트랜잭션에서 활성 AUTO_CONFIRM 타이머를 취소해야 한다.
     LocalDateTime at =
         LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    // 수정 요청은 구매자의 검수 응답이다. 활성 자동 확정 타이머를 끝내고, 재납품이 새 기산점이 된다.
+    reviewTimers.closeForBuyerResponse(order, memberId, at, ReviewTimers.BUYER_RESPONSE);
     var revision =
         RevisionRequest.create(
             orderId, deliveryId, input.reason(), at, order.getDurationDaysSnapshot());

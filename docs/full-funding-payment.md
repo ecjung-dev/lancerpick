@@ -62,11 +62,11 @@ LEGACY_V1의 수익 기록과 구매 지갑 분리 정책은 유지한다. CONTR
 | 409 `CANCELLATION_REQUEST_REQUIRED` | 구매자 요청 없이 결제 후 판매자 직접 취소 시도 |
 | 409 `PAYMENT_ALREADY_REFUNDED` | 반환한 결제의 재결제 시도 |
 | 409 `ORDER_STATE_CONFLICT` | 현재 주문/보관 상태에서 명령 불가 |
-| 409 `TIMER_INTEGRATION_NOT_READY` | 활성 검수 타이머가 존재하는 금액 명령. 아래 후속 연결 전에는 처리 차단 |
+| 409 `AUTO_CONFIRM_DUE` | 만료 시각이 지난 자동 확정 타이머가 있는 주문의 구매 확정(2026-11-06 E7, 아래 참고) |
 | 409 `INSUFFICIENT_BALANCE` | 지갑 잔액 부족 |
 | 500 `DATA_INTEGRITY_ERROR` | 결제·보관금·원장·종료·정산 근거 불일치 |
 
-`OrderResponseTimer` 매핑은 **읽기 전용 차단 확인**이다. 타이머를 생성·종료하거나 부분 행을 저장하지 않는다. 다음 단계에서 48시간/7일·만료 우선·수정/취소 응답에 따른 취소/새 기산점·관리자 해제·SYSTEM 자동 확정/알림을 함께 연결해야 한다. 그 전에는 ACTIVE 타이머가 있는 명령을 409로 막는다. 타이머가 있는 경우에도 수동 확정이 이미 완성된 것으로 해석하지 않는다.
+2026-11-06 E7(`feature/v3-auto-confirm-timer`, main 병합 전)에서 타이머를 연결했다. 수동 구매 확정은 활성 타이머를 `ORDER_CLOSED`로 끝내고 진행하며, 결제·승인 환불 시점의 활성 타이머는 앞 단계(취소 요청)에서 끝났어야 하므로 500 `DATA_INTEGRITY_ERROR`다. 이전의 409 `TIMER_INTEGRATION_NOT_READY` 차단은 없앴다. 자동 확정은 `FullFundingService.autoConfirm`이 같은 금액 경로로 처리한다. 상세는 [자동 구매 확정](auto-confirm-timer.md).
 
 ## 검증 기록
 

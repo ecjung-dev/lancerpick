@@ -8,6 +8,7 @@ import type {
   OrderSummary,
   CancellationResult,
   OrderFunds,
+  ReviewTimer,
 } from './types'
 
 function orderPath(id: string) {
@@ -110,3 +111,13 @@ export const getOrderFunds = (id: string, signal?: AbortSignal) =>
     signal,
     cache: 'no-store',
   })
+
+export const getReviewTimer = (id: string, signal?: AbortSignal) =>
+  apiRequest<ReviewTimer>(`${orderPath(id)}/review-timer`, {
+    signal,
+    cache: 'no-store',
+  })
+
+/** 판매자의 자동 구매 확정 타이머 시작. 본문 없이 서버가 시각·기산점을 판단한다. */
+export const startReviewTimer = (id: string) =>
+  apiRequest<ReviewTimer>(`${orderPath(id)}/review-timer`, { method: 'POST' })

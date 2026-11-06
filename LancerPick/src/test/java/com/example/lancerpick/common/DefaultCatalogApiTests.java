@@ -30,11 +30,16 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
                 + "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration,"
                 + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration",
-        "lancerpick.notifications.dispatch-enabled=false"
+        "lancerpick.notifications.dispatch-enabled=false",
+        "lancerpick.order.review-timer.expiry-enabled=false"
 })
 class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
     com.example.lancerpick.order.service.FullFundingService fullFundingService;
+    @MockitoBean
+    com.example.lancerpick.order.service.ReviewTimerService reviewTimerService;
+    @MockitoBean
+    com.example.lancerpick.order.service.ReviewTimers reviewTimers;
     @MockitoBean
     com.example.lancerpick.contract.service.ContractDocumentTransactions contractDocumentTransactions;
     // This HTTP-only context excludes JPA; contract persistence is tested against MySQL separately.

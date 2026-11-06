@@ -24,6 +24,7 @@ import { orderCommandFailureMessage } from '../failure'
 import { ReviewForm } from '../../reviews/components/ReviewForm'
 import { ContractPanel } from '../../contracts/components/ContractPanel'
 import { OrderFundsPanel } from '../components/OrderFundsPanel'
+import { ReviewTimerPanel } from '../components/ReviewTimerPanel'
 
 export function OrderDetailPage() {
   const { id = '' } = useParams()
@@ -203,6 +204,9 @@ function OrderDetail({ id }: { id: string }) {
       </p>
       {order.policyVersion === 'CONTRACT_V3' && (
         <OrderFundsPanel orderId={order.id} />
+      )}
+      {order.policyVersion === 'CONTRACT_V3' && (
+        <ReviewTimerPanel orderId={order.id} sellerId={order.seller.id} />
       )}
       {['CONTRACT_V2', 'CONTRACT_V3'].includes(order.policyVersion) && (
         <ContractPanel

@@ -26,7 +26,9 @@ public class OrderEventPublisher {
   static final String AGGREGATE_ORDER = "ORDER";
 
   // 승인은 같은 트랜잭션의 CANCELLED 이력과 수신자가 같아 중복 알림이 되므로 제외한다.
-  private static final Set<OrderHistoryAction> SILENT = EnumSet.of(OrderHistoryAction.CANCELLATION_APPROVED);
+  // 타이머 종료(구매자 응답)는 함께 기록되는 수정 요청·취소 요청·구매 확정 알림이 대신한다.
+  private static final Set<OrderHistoryAction> SILENT =
+      EnumSet.of(OrderHistoryAction.CANCELLATION_APPROVED, OrderHistoryAction.TIMER_CANCELLED);
 
   private final OutboxEventRepository events;
   private final JsonMapper mapper;
@@ -52,7 +54,7 @@ public class OrderEventPublisher {
     payload.put("recipientIds", recipients.stream().map(String::valueOf).toList());
     events.saveAndFlush(
         OutboxEvent.pending(
-            notificationType(history.getAction()),
+            notificationType(history),
             AGGREGATE_ORDER,
             order.getId(),
             mapper.writeValueAsString(payload),
@@ -61,6 +63,13 @@ public class OrderEventPublisher {
 
   static String notificationType(OrderHistoryAction action) {
     return "ORDER_" + action.name();
+  }
+
+  /** 시스템 구매 확정은 구매자 확정과 문구가 달라 별도 유형으로 보낸다. */
+  static String notificationType(OrderHistory history) {
+    if (history.getAction() == OrderHistoryAction.COMPLETED && "SYSTEM".equals(history.getActorType()))
+      return "ORDER_AUTO_CONFIRMED";
+    return notificationType(history.getAction());
   }
 
   /** 행동한 당사자에게는 알리지 않는다. 시스템 처리(actor 없음)는 양측 모두에게 알린다. */

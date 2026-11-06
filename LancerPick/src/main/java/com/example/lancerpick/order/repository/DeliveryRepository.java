@@ -9,6 +9,9 @@ import java.util.Optional;
 public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     boolean existsByOrderIdAndSequenceNo(long orderId, int sequenceNo);
 
+    /** 현재 검수 대상(가장 마지막 회차) 납품. */
+    Optional<Delivery> findFirstByOrderIdOrderBySequenceNoDesc(long orderId);
+
     @Query(value = "select d.sequenceNo from Delivery d where d.id=:deliveryId and d.orderId=:orderId")
     Optional<Integer> sequenceForOrderDelivery(@Param("orderId") long orderId, @Param("deliveryId") long deliveryId);
 

@@ -1,0 +1,598 @@
+package com.example.lancerpick.order;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.common.security.AuthenticatedMember;
+import com.example.lancerpick.contract.service.ContractDocumentService;
+import com.example.lancerpick.contract.service.OrderContractService;
+import com.example.lancerpick.member.entity.Member;
+import com.example.lancerpick.member.repository.MemberRepository;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
+import com.example.lancerpick.order.dto.CreateCancellationRequest;
+import com.example.lancerpick.order.dto.CreateDeliveryRequest;
+import com.example.lancerpick.order.dto.CreateRevisionRequest;
+import com.example.lancerpick.order.entity.Order;
+import com.example.lancerpick.order.entity.OrderSnapshot;
+import com.example.lancerpick.order.entity.OrderTradeTerms;
+import com.example.lancerpick.order.repository.OrderRepository;
+import com.example.lancerpick.order.repository.OrderSnapshotRepository;
+import com.example.lancerpick.order.repository.OrderTradeTermsRepository;
+import com.example.lancerpick.order.service.FullFundingService;
+import com.example.lancerpick.order.service.OrderCancellationRequestService;
+import com.example.lancerpick.order.service.OrderConfirmationService;
+import com.example.lancerpick.order.service.OrderDeliveryService;
+import com.example.lancerpick.order.service.OrderPaymentService;
+import com.example.lancerpick.order.service.OrderRevisionService;
+import com.example.lancerpick.order.service.ReviewTimerService;
+import com.example.lancerpick.support.IntegrationTest;
+import com.example.lancerpick.wallet.entity.Wallet;
+import com.example.lancerpick.wallet.entity.WalletEntry;
+import com.example.lancerpick.wallet.repository.WalletEntryRepository;
+import com.example.lancerpick.wallet.repository.WalletRepository;
+import java.nio.file.*;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+/**
+ * E7 검수 무응답 자동 구매 확정. 실제 커밋·잠금으로 검사하며, 48시간·7일 경과는 DB의 납품·타이머 시각을 같은 폭으로 과거로 옮겨
+ * 재현한다(DB CHECK의 시각 관계는 유지된다).
+ */
+@IntegrationTest
+@AutoConfigureMockMvc
+class ReviewTimerIntegrationTests {
+  static final long AMOUNT = 600001;
+  static final long PAYOUT = 540001;
+  static final Path directory = temp();
+
+  static Path temp() {
+    try {
+      return Files.createTempDirectory("lancerpick-review-timer-");
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
+  @DynamicPropertySource
+  static void props(DynamicPropertyRegistry p) {
+    p.add("contracts.storage-root", directory::toString);
+  }
+
+  @Autowired MemberRepository members;
+  @Autowired WalletRepository wallets;
+  @Autowired WalletEntryRepository entries;
+  @Autowired OrderRepository orders;
+  @Autowired OrderSnapshotRepository snapshots;
+  @Autowired OrderTradeTermsRepository terms;
+  @Autowired OrderContractService contracts;
+  @Autowired ContractDocumentService documents;
+  @Autowired OrderPaymentService payments;
+  @Autowired OrderConfirmationService confirmations;
+  @Autowired OrderDeliveryService deliveries;
+  @Autowired OrderRevisionService revisions;
+  @Autowired OrderCancellationRequestService requests;
+  @Autowired FullFundingService funding;
+  @Autowired ReviewTimerService timers;
+  @Autowired JdbcTemplate jdbc;
+  @Autowired PlatformTransactionManager manager;
+  @Autowired MockMvc mvc;
+  @MockitoSpyBean OrderEventPublisher events;
+  long buyer, seller, other, admin, product, category, id;
+  final List<Long> ids = new ArrayList<>();
+
+  record Principal(Long memberId) implements AuthenticatedMember {}
+
+  UsernamePasswordAuthenticationToken auth(long id) {
+    return UsernamePasswordAuthenticationToken.authenticated(
+        new Principal(id), null, AuthorityUtils.createAuthorityList("ROLE_USER"));
+  }
+
+  @BeforeEach
+  void fixture() {
+    new TransactionTemplate(manager)
+        .executeWithoutResult(ignored -> {
+          var at = LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1).truncatedTo(ChronoUnit.MICROS);
+          buyer = member(at);
+          seller = member(at);
+          other = member(at);
+          admin = member(at);
+          jdbc.update("UPDATE members SET role='ADMIN' WHERE id=?", admin);
+          String name = "review-timer-" + UUID.randomUUID();
+          jdbc.update("INSERT INTO categories(name,display_order) VALUES (?,0)", name);
+          category =
+              jdbc.queryForObject("SELECT id FROM categories WHERE name=?", Long.class, name);
+          jdbc.update(
+              "INSERT INTO"
+                  + " products(seller_id,category_id,title,description,scope_description,preparation_description,price,duration_days,created_at,updated_at)"
+                  + " VALUES (?,?,'상품','설명','범위','준비',?,1,?,?)",
+              seller,
+              category,
+              AMOUNT,
+              at,
+              at);
+          product =
+              jdbc.queryForObject("SELECT id FROM products WHERE seller_id=?", Long.class, seller);
+        });
+    id = create();
+  }
+
+  long member(LocalDateTime at) {
+    long m =
+        members
+            .saveAndFlush(Member.create(UUID.randomUUID() + "@timer.test", "fixture", "표시 이름", at))
+            .getId();
+    wallets.saveAndFlush(Wallet.withInitialGrant(m, at));
+    entries.saveAndFlush(WalletEntry.initialGrant(m, at));
+    return m;
+  }
+
+  long create() {
+    long result =
+        new TransactionTemplate(manager)
+            .execute(ignored -> {
+              var at = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+              var o =
+                  Order.create(
+                      buyer, seller, product, UUID.randomUUID(), AMOUNT, 1, at,
+                      TradePolicyVersion.CONTRACT_V3);
+              o.accept(at);
+              orders.saveAndFlush(o);
+              ids.add(o.getId());
+              terms.saveAndFlush(OrderTradeTerms.fullFunding(o.getId()));
+              snapshots.saveAndFlush(
+                  OrderSnapshot.create(o.getId(), 0L, "상품", "설명", "범위", "준비", "전액 보관", "요구사항"));
+              return o.getId();
+            });
+    var draft = contracts.prepare(seller, result, 0, "");
+    var ready = documents.generate(seller, result, draft.version());
+    contracts.sign(buyer, result, ready.version(), ready.contentHash(), ready.fileHash());
+    contracts.sign(seller, result, ready.version(), ready.contentHash(), ready.fileHash());
+    return result;
+  }
+
+  @AfterEach
+  void cleanup() throws Exception {
+    for (long order : ids) {
+      var keys =
+          jdbc.queryForList(
+              "SELECT file_storage_key FROM order_contracts WHERE order_id=? AND file_storage_key"
+                  + " IS NOT NULL",
+              String.class,
+              order);
+      jdbc.update("DELETE FROM notifications WHERE order_id=?", order);
+      jdbc.update(
+          "DELETE FROM outbox_events WHERE aggregate_type='ORDER' AND aggregate_id=?", order);
+      for (String table :
+          List.of("order_histories", "order_closures", "order_funds", "settlements"))
+        jdbc.update("DELETE FROM " + table + " WHERE order_id=?", order);
+      jdbc.update(
+          "DELETE FROM wallet_entries WHERE payment_id IN (SELECT id FROM payments WHERE"
+              + " order_id=?)",
+          order);
+      for (String table :
+          List.of(
+              "payments",
+              "cancellation_requests",
+              "order_response_timers",
+              "revision_requests",
+              "deliveries")) jdbc.update("DELETE FROM " + table + " WHERE order_id=?", order);
+      jdbc.update(
+          "DELETE FROM contract_signatures WHERE contract_id IN (SELECT id FROM order_contracts"
+              + " WHERE order_id=?)",
+          order);
+      for (String table : List.of("order_contracts", "order_trade_terms", "order_snapshots"))
+        jdbc.update("DELETE FROM " + table + " WHERE order_id=?", order);
+      jdbc.update("DELETE FROM orders WHERE id=?", order);
+      for (String key : keys) Files.deleteIfExists(directory.resolve(key));
+    }
+    jdbc.update("DELETE FROM products WHERE id=?", product);
+    jdbc.update("DELETE FROM categories WHERE id=?", category);
+    jdbc.update(
+        "DELETE FROM wallet_entries WHERE member_id IN (?,?,?,?)", buyer, seller, other, admin);
+    jdbc.update("DELETE FROM wallets WHERE member_id IN (?,?,?,?)", buyer, seller, other, admin);
+    jdbc.update("DELETE FROM members WHERE id IN (?,?,?,?)", buyer, seller, other, admin);
+  }
+
+  @AfterAll
+  static void removeDirectory() throws Exception {
+    try (var files = Files.list(directory)) {
+      for (var p : files.toList()) Files.delete(p);
+    }
+    Files.delete(directory);
+  }
+
+  // ---------- helpers ----------
+
+  String str() {
+    return Long.toString(id);
+  }
+
+  long balance(long m) {
+    return wallets.findById(m).orElseThrow().getBalance();
+  }
+
+  long count(String table) {
+    return jdbc.queryForObject(
+        "SELECT COUNT(*) FROM " + table + " WHERE order_id=?", Long.class, id);
+  }
+
+  String orderStatus() {
+    return jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, id);
+  }
+
+  void paidAndDelivered() {
+    payments.pay(buyer, str(), true);
+    deliver(1);
+  }
+
+  void deliver(int sequence) {
+    deliveries.submit(
+        seller, str(), new CreateDeliveryRequest("납품", "https://example.invalid/result", sequence));
+  }
+
+  /** 납품·취소 처리 시각을 과거로 옮겨 기산점+48시간을 지난 상태를 만든다. */
+  void reviewWindowPassed() {
+    jdbc.update(
+        "UPDATE deliveries SET submitted_at=submitted_at - INTERVAL 49 HOUR WHERE order_id=?", id);
+    jdbc.update(
+        "UPDATE cancellation_requests SET requested_at=requested_at - INTERVAL 49 HOUR,"
+            + " resolved_at=resolved_at - INTERVAL 49 HOUR WHERE order_id=? AND resolved_at IS NOT"
+            + " NULL",
+        id);
+  }
+
+  /** 활성 타이머의 모든 시각을 같은 폭으로 옮겨 7일 만료를 재현한다. */
+  void timerExpired() {
+    jdbc.update(
+        "UPDATE order_response_timers SET basis_at=basis_at - INTERVAL 169 HOUR,"
+            + " eligible_at=eligible_at - INTERVAL 169 HOUR, started_at=started_at - INTERVAL 169"
+            + " HOUR, expires_at=expires_at - INTERVAL 169 HOUR WHERE order_id=? AND"
+            + " status='ACTIVE'",
+        id);
+  }
+
+  void startTimer() {
+    reviewWindowPassed();
+    assertThat(timers.start(seller, id).status()).isEqualTo("ACTIVE");
+  }
+
+  long deliveryId(int sequence) {
+    return jdbc.queryForObject(
+        "SELECT id FROM deliveries WHERE order_id=? AND sequence_no=?", Long.class, id, sequence);
+  }
+
+  String timerColumn(String column) {
+    return jdbc.queryForObject(
+        "SELECT " + column + " FROM order_response_timers WHERE order_id=? ORDER BY id DESC LIMIT 1",
+        String.class,
+        id);
+  }
+
+  long outbox(String type) {
+    return jdbc.queryForObject(
+        "SELECT COUNT(*) FROM outbox_events WHERE aggregate_type='ORDER' AND aggregate_id=? AND"
+            + " type=?",
+        Long.class,
+        id,
+        type);
+  }
+
+  String result(Runnable action) {
+    try {
+      action.run();
+      return "OK";
+    } catch (BusinessException e) {
+      return e.code();
+    }
+  }
+
+  @SafeVarargs
+  final List<String> parallel(Callable<String>... jobs) throws Exception {
+    var gate = new CountDownLatch(1);
+    try (var pool = Executors.newFixedThreadPool(jobs.length)) {
+      var futures = new ArrayList<Future<String>>();
+      for (var job : jobs)
+        futures.add(
+            pool.submit(() -> {
+              gate.await();
+              return job.call();
+            }));
+      gate.countDown();
+      var values = new ArrayList<String>();
+      for (var f : futures) values.add(f.get(30, TimeUnit.SECONDS));
+      return values;
+    }
+  }
+
+  static void error(Runnable task, String code) {
+    assertThatThrownBy(task::run)
+        .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.code()).isEqualTo(code));
+  }
+
+  // ---------- tests ----------
+
+  @Test
+  void sellerStartsAfter48HoursAndExpiryAutoConfirmsOnceAsSystem() {
+    paidAndDelivered();
+    assertThat(timers.status(seller, id).status()).isEqualTo("WAITING");
+    error(() -> timers.start(seller, id), "TIMER_NOT_ELIGIBLE");
+    error(() -> timers.start(buyer, id), "FORBIDDEN");
+    reviewWindowPassed();
+    assertThat(timers.status(seller, id).canStart()).isTrue();
+    assertThat(timers.status(buyer, id).canStart()).isFalse();
+    assertThat(timers.status(buyer, id).status()).isEqualTo("STARTABLE");
+
+    var started = timers.start(seller, id);
+    assertThat(started.status()).isEqualTo("ACTIVE");
+    assertThat(started.expiresAt()).isEqualTo(started.startedAt().plusHours(168));
+    assertThat(timers.start(seller, id).startedAt()).isEqualTo(started.startedAt());
+    assertThat(count("order_response_timers")).isEqualTo(1);
+    assertThat(outbox("ORDER_TIMER_STARTED")).isEqualTo(1);
+    assertThat(timers.expireDue(10)).isZero();
+
+    timerExpired();
+    // 만료 시각 이후의 구매자 응답은 타이머를 취소하지 않는다(만료 우선).
+    error(() -> confirmations.confirm(buyer, str()), "AUTO_CONFIRM_DUE");
+    error(
+        () ->
+            revisions.request(
+                buyer, str(), new CreateRevisionRequest(Long.toString(deliveryId(1)), "수정")),
+        "AUTO_CONFIRM_DUE");
+    error(
+        () ->
+            requests.create(
+                buyer, str(), new CreateCancellationRequest("취소", UUID.randomUUID().toString())),
+        "AUTO_CONFIRM_DUE");
+
+    assertThat(timers.expireDue(10)).isEqualTo(1);
+    assertThat(timers.expireDue(10)).isZero();
+    assertThat(orderStatus()).isEqualTo("COMPLETED");
+    assertThat(balance(seller)).isEqualTo(1000000 + PAYOUT);
+    assertThat(balance(buyer)).isEqualTo(1000000 - AMOUNT);
+    assertThat(count("settlements")).isEqualTo(1);
+    var closure =
+        jdbc.queryForMap(
+            "SELECT reason, actor_type, actor_id, source_timer_id, fee_amount, seller_net_amount"
+                + " FROM order_closures WHERE order_id=?",
+            id);
+    assertThat(closure.get("reason")).isEqualTo("AUTO_CONFIRMED");
+    assertThat(closure.get("actor_type")).isEqualTo("SYSTEM");
+    assertThat(closure.get("actor_id")).isNull();
+    assertThat(closure.get("source_timer_id")).isNotNull();
+    assertThat(((Number) closure.get("seller_net_amount")).longValue()).isEqualTo(PAYOUT);
+    assertThat(timerColumn("status")).isEqualTo("EXPIRED");
+    assertThat(timerColumn("end_reason")).isEqualTo("TIMEOUT");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COUNT(*) FROM order_histories WHERE order_id=? AND action='COMPLETED' AND"
+                    + " actor_type='SYSTEM' AND actor_id IS NULL",
+                Long.class,
+                id))
+        .isEqualTo(1);
+    assertThat(outbox("ORDER_AUTO_CONFIRMED")).isEqualTo(1);
+    assertThat(outbox("ORDER_COMPLETED")).isZero();
+    assertThat(timers.status(buyer, id).status()).isEqualTo("AUTO_CONFIRMED");
+    assertThat(funding.summary(seller, id).status()).isEqualTo("RELEASED");
+    // 자동 확정 후 구매자 확정·결제 재전송은 기존 완료 기록을 확인하고 추가 지급하지 않는다.
+    confirmations.confirm(buyer, str());
+    payments.pay(buyer, str(), true);
+    assertThat(balance(seller)).isEqualTo(1000000 + PAYOUT);
+  }
+
+  @Test
+  void revisionRequestCancelsTimerAndRedeliveryBecomesNewBasis() {
+    paidAndDelivered();
+    startTimer();
+    revisions.request(buyer, str(), new CreateRevisionRequest(Long.toString(deliveryId(1)), "수정"));
+    assertThat(timerColumn("status")).isEqualTo("CANCELLED");
+    assertThat(timerColumn("end_reason")).isEqualTo("BUYER_RESPONSE");
+    assertThat(timerColumn("ended_by")).isEqualTo(Long.toString(buyer));
+    assertThat(outbox("ORDER_TIMER_CANCELLED")).isZero();
+    assertThat(timers.status(seller, id).status()).isEqualTo("NOT_IN_REVIEW");
+
+    deliver(2);
+    assertThat(timers.status(seller, id).status()).isEqualTo("WAITING");
+    error(() -> timers.start(seller, id), "TIMER_NOT_ELIGIBLE");
+    reviewWindowPassed();
+    timers.start(seller, id);
+    assertThat(timerColumn("delivery_id")).isEqualTo(Long.toString(deliveryId(2)));
+    assertThat(timerColumn("cycle_no")).isEqualTo("1");
+    timerExpired();
+    assertThat(timers.expireDue(10)).isEqualTo(1);
+    assertThat(balance(seller)).isEqualTo(1000000 + PAYOUT);
+  }
+
+  @Test
+  void cancellationRequestCancelsTimerAndRejectionRestartsReviewWindow() {
+    paidAndDelivered();
+    startTimer();
+    requests.create(
+        buyer, str(), new CreateCancellationRequest("취소 요청", UUID.randomUUID().toString()));
+    assertThat(timerColumn("status")).isEqualTo("CANCELLED");
+    assertThat(timers.status(seller, id).status()).isEqualTo("CANCELLATION_PENDING");
+    error(() -> timers.start(seller, id), "CANCELLATION_PENDING");
+
+    long request =
+        jdbc.queryForObject("SELECT id FROM cancellation_requests WHERE order_id=?", Long.class, id);
+    requests.resolve(
+        seller,
+        str(),
+        Long.toString(request),
+        OrderCancellationRequestService.Resolution.REJECTED,
+        "작업 계속");
+    // 납품 후 48시간은 이미 지났지만 거절 시각이 새 기산점이라 다시 48시간을 기다린다.
+    var waiting = timers.status(seller, id);
+    assertThat(waiting.status()).isEqualTo("WAITING");
+    error(() -> timers.start(seller, id), "TIMER_NOT_ELIGIBLE");
+
+    reviewWindowPassed();
+    timers.start(seller, id);
+    assertThat(timerColumn("cycle_no")).isEqualTo("2");
+    assertThat(timerColumn("delivery_id")).isEqualTo(Long.toString(deliveryId(1)));
+  }
+
+  @Test
+  void manualConfirmationClosesActiveTimer() {
+    paidAndDelivered();
+    startTimer();
+    confirmations.confirm(buyer, str());
+    assertThat(orderStatus()).isEqualTo("COMPLETED");
+    assertThat(timerColumn("status")).isEqualTo("CANCELLED");
+    assertThat(timerColumn("end_reason")).isEqualTo("ORDER_CLOSED");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT reason FROM order_closures WHERE order_id=?", String.class, id))
+        .isEqualTo("COMPLETED");
+    assertThat(timers.expireDue(10)).isZero();
+    assertThat(balance(seller)).isEqualTo(1000000 + PAYOUT);
+  }
+
+  @Test
+  void adminStopIsAdminOnlyAndBlocksRestartForSameBasis() {
+    paidAndDelivered();
+    startTimer();
+    error(() -> timers.adminStop(seller, id, "해제"), "FORBIDDEN");
+    error(() -> timers.adminStop(admin, id, "   "), "VALIDATION_FAILED");
+    var stopped = timers.adminStop(admin, id, "운영 문의 확인");
+    assertThat(stopped.status()).isEqualTo("ADMIN_STOPPED");
+    assertThat(timerColumn("end_reason")).isEqualTo("ADMIN_STOP");
+    assertThat(timerColumn("admin_stop_reason")).isEqualTo("운영 문의 확인");
+    assertThat(outbox("ORDER_TIMER_ADMIN_STOPPED")).isEqualTo(1);
+    error(() -> timers.start(seller, id), "TIMER_ADMIN_STOPPED");
+    error(() -> timers.adminStop(admin, id, "다시"), "TIMER_NOT_ACTIVE");
+    assertThat(timers.expireDue(10)).isZero();
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+  }
+
+  @Test
+  void adminCannotStopDueTimerBecauseExpiryWins() {
+    paidAndDelivered();
+    startTimer();
+    timerExpired();
+    error(() -> timers.adminStop(admin, id, "해제"), "AUTO_CONFIRM_DUE");
+    assertThat(timers.expireDue(10)).isEqualTo(1);
+  }
+
+  @Test
+  void concurrentExpiryRunsPaySellerOnlyOnce() throws Exception {
+    paidAndDelivered();
+    startTimer();
+    timerExpired();
+    var results =
+        parallel(
+            () -> Integer.toString(timers.expireDue(10)),
+            () -> Integer.toString(timers.expireDue(10)));
+    assertThat(results.stream().mapToInt(Integer::parseInt).sum()).isEqualTo(1);
+    assertThat(balance(seller)).isEqualTo(1000000 + PAYOUT);
+    assertThat(count("settlements")).isEqualTo(1);
+    assertThat(count("order_closures")).isEqualTo(1);
+  }
+
+  @Test
+  void autoConfirmFailureRollsBackPayoutAndKeepsTimerActive() {
+    paidAndDelivered();
+    startTimer();
+    timerExpired();
+    var publisher =
+        org.springframework.test.util.AopTestUtils.<OrderEventPublisher>getUltimateTargetObject(
+            events);
+    doThrow(new IllegalStateException("outbox unavailable")).when(publisher).publish(any(), any());
+    assertThat(timers.expireDue(10)).isZero();
+    assertThat(balance(seller)).isEqualTo(1000000);
+    assertThat(count("order_closures")).isZero();
+    assertThat(timerColumn("status")).isEqualTo("ACTIVE");
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+    reset(publisher);
+    assertThat(timers.expireDue(10)).isEqualTo(1);
+    assertThat(balance(seller)).isEqualTo(1000000 + PAYOUT);
+  }
+
+  @Test
+  void persistentlyFailingTimerDoesNotBlockLaterDueTimers() {
+    paidAndDelivered();
+    startTimer();
+    timerExpired();
+    long first = id;
+    long originalBuyer = buyer;
+    // 두 번째 주문은 다른 구매자로 결제해 잔액 부족 없이 만든다. 시작이 늦어 만료도 더 늦다.
+    buyer = other;
+    id = create();
+    long second = id;
+    paidAndDelivered();
+    startTimer();
+    timerExpired();
+    buyer = originalBuyer;
+    id = first;
+
+    var publisher =
+        org.springframework.test.util.AopTestUtils.<OrderEventPublisher>getUltimateTargetObject(
+            events);
+    doThrow(new IllegalStateException("outbox unavailable"))
+        .when(publisher)
+        .publish(argThat(order -> order != null && order.getId() == first), any());
+    // 배치 크기 1에서도 먼저 만료된 실패 건 뒤의 정상 타이머까지 같은 실행에서 처리한다.
+    assertThat(timers.expireDue(1)).isEqualTo(1);
+    assertThat(timers.expireDue(1)).isZero();
+    assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, second))
+        .isEqualTo("COMPLETED");
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+    assertThat(timerColumn("status")).isEqualTo("ACTIVE");
+    assertThat(balance(seller)).isEqualTo(1000000 + PAYOUT);
+  }
+
+  @Test
+  void httpEndpointsCheckParticipantRoleAndCsrf() throws Exception {
+    paidAndDelivered();
+    reviewWindowPassed();
+    mvc.perform(get("/api/orders/" + id + "/review-timer").with(authentication(auth(buyer))))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "no-store"))
+        .andExpect(jsonPath("$.status").value("STARTABLE"))
+        .andExpect(jsonPath("$.canStart").value(false));
+    mvc.perform(get("/api/orders/" + id + "/review-timer").with(authentication(auth(other))))
+        .andExpect(status().isNotFound());
+    mvc.perform(get("/api/orders/" + id + "/review-timer")).andExpect(status().isUnauthorized());
+    mvc.perform(post("/api/orders/" + id + "/review-timer").with(authentication(auth(seller))))
+        .andExpect(status().isForbidden());
+    mvc.perform(
+            post("/api/orders/" + id + "/review-timer")
+                .with(authentication(auth(buyer)))
+                .with(csrf()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    mvc.perform(
+            post("/api/orders/" + id + "/review-timer")
+                .with(authentication(auth(seller)))
+                .with(csrf()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("ACTIVE"))
+        .andExpect(jsonPath("$.expiresAt").isNotEmpty());
+  }
+}
