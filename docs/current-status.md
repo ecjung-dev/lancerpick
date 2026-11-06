@@ -4,6 +4,8 @@
 
 통합 검증(2026-11-06, main `80840bf` 통합 코드): 격리 MySQL 8.4에서 백엔드 전체 `clean build` 822건, 프런트 전체 195건·lint·TypeScript 포함 build 통과. 원격 CI와 실제 브라우저 전체 확인은 별도다. [검사 범위](order-chat-realtime.md#자동-검증-기록).
 
+추가 main `5a36ef4`(#101)도 통합했다. 프런트 전체 197건·lint/build와 변경된 상품 검색 HTTP·MySQL 검사 33건 통과. 백엔드 전체 822건은 #101 이전 통합 실행 결과이며 선택 검사 수와 합산하지 않는다.
+
 ## V3 검수 무응답 자동 구매 확정(E7) — 2026-11-06
 
 main 반영(#99, `feature/v3-auto-confirm-timer`, 정은찬): 판매자가 납품(또는 거절·철회된 취소 요청 처리) 후 48시간이 지나면 7일 타이머를 시작하고, 만료되면 스케줄러가 정상 확정과 같은 수수료로 시스템 구매 확정(`AUTO_CONFIRMED`·SYSTEM 이력·`ORDER_AUTO_CONFIRMED` 알림)을 한다. 수정 요청·취소 요청·구매 확정은 활성 타이머를 끝내고, 만료 시각 이후의 응답은 409 `AUTO_CONFIRM_DUE`(만료 우선). 관리자 해제는 내부 서비스만 있다(K5 화면·API 김창재). 주문 상세에 타이머 패널을 추가했다. DB 변경 없음. 자동 테스트: 병합 전 작업 브랜치에서 로컬 `lancerpick_test` 대상 새 통합 테스트 10건, 프런트 typecheck·lint·test:api 177건·build 통과. 백엔드 전체 `clean build` 796건 통과(실패·오류·건너뜀 0). 병합 후 main에서 재실행하지 않았으며 원격 CI는 PR 기록을 따른다. 실제 서버 스케줄러·브라우저 확인은 하지 않았다. [상세](auto-confirm-timer.md)
