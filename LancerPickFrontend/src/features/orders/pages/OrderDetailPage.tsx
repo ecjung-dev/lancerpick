@@ -382,7 +382,7 @@ function OrderDetail({ id }: { id: string }) {
         <fieldset disabled={disabled}>
           <legend>주문 수락</legend>
           <p>
-            보관된 거래 조건과 구매자의 요구사항을 확인해 주세요. 수락하면
+            보관된 거래 조건과 구매자의 요구사항을 확인해 주세요. 수락하면{' '}
             {order.policyVersion === 'LEGACY_V1'
               ? '구매자가 결제할 수 있습니다.'
               : '계약 작성·양측 서명 후 전액 결제를 진행합니다.'}

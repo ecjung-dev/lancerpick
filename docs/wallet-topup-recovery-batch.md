@@ -1,6 +1,6 @@
 # 미확정 충전 복구 Batch (J5)
 
-2026-11-06, 황준범. `feature/wallet-topup-recovery-batch`의 로컬 구현 기록이다. 원격 main 반영·실제 토스 조회·관리자 재처리 화면 확인과 구분한다.
+2026-11-06, 황준범. main 반영(#114, 작업 브랜치 `feature/wallet-topup-recovery-batch`). 실제 토스 조회·관리자 재처리 화면 확인과 구분한다.
 
 ## 처리 범위
 

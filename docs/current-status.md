@@ -1,16 +1,25 @@
 # 랜서픽 현재 구현·검증 현황
 
+## V3 화면 전체 거래·알림·계정 전환 브라우저 확인 — 2026-11-06
+
+`test/v3-gate-browser-check`(정은찬, PR 전, main `f82c49d`): 개인 DB 실서버(V3 생성은 실행 인자로만 켬) + Vite + Playwright 두 계정으로 **화면 버튼만으로** V3 정상 거래(주문 21: 계약·특약·PDF·양측 서명·결제·납품·수정 요청·재납품·구매 확정·판매자 45,000원 지급)와 결제 후 취소 요청·판매자 승인 전액 반환(주문 22)을 마쳤다. 다운로드 PDF 해시 = DB `file_hash` = 서명 시점 해시, PDF 본문(한글·금액·특약·정책) 확인, 제3자 주문·계약·PDF·대금 404, 불변식 조회 0행. 상세·발견 3건은 [활성화 게이트 7절](v3-activation-gate.md#7-화면-버튼-전체-거래-확인--2026-11-06).
+
+- E1 알림(브라우저): 양측 알림 목록이 아웃박스 이벤트·수신자와 일치하고, 알림을 누르면 주문 상세로 이동하며 읽음 처리된다.
+- C2 계정 전환: 같은 탭 로그아웃 → 다른 계정 로그인 시 헤더·알림 수·판매 내역이 새 계정 기준으로 바뀌고 이전 계정 데이터가 남지 않음. 비밀번호 변경 시 다른 세션의 채팅 소켓이 끊기고 "로그인이 필요합니다"가 표시되며 이후 조회는 401로 막힌다. **발견**: 끊긴 세션 탭의 헤더는 새로고침 전까지 로그인 이름·알림 수를 그대로 보인다(401 응답이 세션 재확인으로 이어지지 않음). 테스트 계정 비밀번호는 확인 후 원래대로 되돌렸다.
+- 고친 것: 판매자 수락 안내 문구 공백 누락(`OrderDetailPage.tsx`). 프런트 typecheck·lint·`test:api` 219건·build 통과. 백엔드 변경 없음(재실행 안 함). 수정 후 화면 재확인은 안 함.
+- 실행하지 않은 검증: E7 타이머 "진행 중" 패널(48시간 대기 또는 DB 시각 조정 필요), 좁은 화면(G4), 원격 CI.
+
 ## 공통 이벤트 ID·버전·오류 계약(C1) — 2026-11-06
 
-`feature/common-event-contract`(정은찬, PR 전, main `6d2dac5`에서 분기): [공통 이벤트 계약](event-contract.md). 아웃박스 `last_error_code`에 예외 클래스 이름 대신 고정 코드 6개(즉시 실패 4·재시도 2)를 저장하고, 이름 기반 이벤트 ID를 `OutboxEvent.nameBasedId`로 모았으며(#105 사전 안내 ID 값 유지), 스키마 버전을 집계별 상수로 넘긴다. 채팅 소켓 업무 오류에 REST와 같은 `fieldErrors`·`traceId`와 HTTP 상태 의미의 `status`를 더했고 STOMP `ERROR` 본문에도 `traceId`를 넣었다. 프런트는 서버 `status`·`traceId`를 `ApiError`로 넘긴다(상태 없는 이전 프레임은 기존 판단). DB·REST API·알림 응답 변경 없음. **영향 범위**: 채팅(황준범) `ChatSendError`·`ChatSocketController`·`ChatSocketErrorHandler`·`order-chat/realtime.ts`.
+main 반영(#115, 정은찬, 작업 브랜치 `feature/common-event-contract`): [공통 이벤트 계약](event-contract.md). 아웃박스 `last_error_code`에 예외 클래스 이름 대신 고정 코드 6개(즉시 실패 4·재시도 2)를 저장하고, 이름 기반 이벤트 ID를 `OutboxEvent.nameBasedId`로 모았으며(#105 사전 안내 ID 값 유지), 스키마 버전을 집계별 상수로 넘긴다. 채팅 소켓 업무 오류에 REST와 같은 `fieldErrors`·`traceId`와 HTTP 상태 의미의 `status`를 더했고 STOMP `ERROR` 본문에도 `traceId`를 넣었다. 프런트는 서버 `status`·`traceId`를 `ApiError`로 넘긴다(상태 없는 이전 프레임은 기존 판단). DB·REST API·알림 응답 변경 없음. **영향 범위**: 채팅(황준범) `ChatSendError`·`ChatSocketController`·`ChatSocketErrorHandler`·`order-chat/realtime.ts`.
 
 검증(커밋 전 작업 트리, 로컬 `lancerpick_test` 3307): 백엔드 `clean build` 865건 통과(실패·오류·건너뜀 0). 신규 `OutboxEventContractTests` 5건(DB 없음), `ChatSocketErrorHandlerTests` 2건, `NotificationIntegrationTests` 신규 3건(스키마 버전·없는 주문·잠금 실패 코드)과 기존 3건 기대 코드 변경, WebSocket 통합 오류 프레임 필드 검사 보강. 프런트 typecheck·lint·`test:api` 219건·build 통과. 실행하지 않은 검증: 실제 브라우저 채팅 오류 표시, 원격 CI.
 
 최신 main `a1f7fda`(#114 충전 복구 Batch·V9)를 작업 브랜치에 병합했다. 충돌은 이 문서 맨 위 절 1곳뿐이었고 두 절을 모두 남겼다. 병합 후 로컬 `lancerpick_test`에 V9 적용, 백엔드 `clean build` 885건 통과(실패·오류·건너뜀 0), 프런트 typecheck·lint·`test:api` 219건·build 통과. 병합 전 865건은 별도 실행이며 합산하지 않는다.
 
-## 미확정 충전 복구 J5 — 2026-11-06 로컬 후속
+## 미확정 충전 복구 J5 — 2026-11-06
 
-`feature/wallet-topup-recovery-batch`에서 Spring Batch 기반 미확정 충전 조회·복구, 처리권 만료·동시 실행 방어, 백오프/횟수 제한, 기존 지급 롤백·중복 방지, 체크포인트 재시작을 구현했다. 외부 승인 재호출 없이 저장된 키로 조회하며 기본 비활성이다. main `6d2dac5` 통합 시 V8 관심 상품과 겹치던 미공유 복구 스키마를 V9로 옮겼다. V9는 Batch 6.0.6 공식 시스템 테이블 9개만 추가하고 업무 테이블은 V8까지 31개다. V1~V8은 유지한다. 병합 후 격리 MySQL에서 V1~V9 적용과 백엔드 전체 `clean build` 875건, 프런트 218건·lint·TypeScript 포함 build가 통과했다. 병합 전 839건/선택 20건은 과거 실행이며 합산하지 않는다. [복구 작업 기록](wallet-topup-recovery-batch.md)을 따른다. 원격 반영·실제 토스 조회·관리자 운영 화면(K6)은 아직이다.
+main 반영(#114, 황준범, 작업 브랜치 `feature/wallet-topup-recovery-batch`). Spring Batch 기반 미확정 충전 조회·복구, 처리권 만료·동시 실행 방어, 백오프/횟수 제한, 기존 지급 롤백·중복 방지, 체크포인트 재시작을 구현했다. 외부 승인 재호출 없이 저장된 키로 조회하며 기본 비활성이다. main `6d2dac5` 통합 시 V8 관심 상품과 겹치던 미공유 복구 스키마를 V9로 옮겼다. V9는 Batch 6.0.6 공식 시스템 테이블 9개만 추가하고 업무 테이블은 V8까지 31개다. V1~V8은 유지한다. 병합 후 격리 MySQL에서 V1~V9 적용과 백엔드 전체 `clean build` 875건, 프런트 218건·lint·TypeScript 포함 build가 통과했다. 병합 전 839건/선택 20건은 과거 실행이며 합산하지 않는다. [복구 작업 기록](wallet-topup-recovery-batch.md)을 따른다. 실제 토스 조회·관리자 운영 화면(K6)은 아직이다.
 
 우선순위 변경(2026-11-06, 사용자 확정): Redis(C4)는 **보류·최하위**다. 단일 서버 구성을 유지하고 남은 기능·연결·충전 복구 작업을 먼저 진행한다. Redis 세션 공유·Pub/Sub 등은 다른 기능이나 V3 신규 거래 활성화의 선행·완료 조건이 아니다. [작업표](work-plan.md)와 [4인 설계](advanced-design-four-person.md)에 반영했다.
 
