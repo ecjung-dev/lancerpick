@@ -6,6 +6,7 @@ import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { formatWon } from '../../../shared/lib/format'
 import { useProductDetail } from '../../products/queries'
+import { orderMinimumNotice } from '../../products/orderMinimum'
 import { getMemberSession } from '../../auth/api'
 import type { Member } from '../../auth/types'
 import type { ProductDetail } from '../../products/types'
@@ -106,6 +107,9 @@ function OrderForm({
   const [attempt, setAttempt] = useState<CreateOrderInput | null>(
     restored.input,
   )
+  const minimumNotice = orderMinimumNotice(product)
+  // 서버는 이미 만들어진 주문의 같은 요청 키 재확인을 신규 주문 검증보다 먼저 처리한다.
+  const belowMinimum = minimumNotice !== null && !attempt
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
   const [blocked, setBlocked] = useState(restored.failed)
@@ -120,7 +124,7 @@ function OrderForm({
   }, [])
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (inFlight.current || checking || blocked) return
+    if (inFlight.current || checking || blocked || belowMinimum) return
     let input: CreateOrderInput
     try {
       input =
@@ -193,12 +197,13 @@ function OrderForm({
         id="order-requirements"
         value={attempt?.requirements ?? requirements}
         onChange={(event) => setRequirements(event.target.value)}
-        disabled={pending || !!attempt || checking || blocked}
+        disabled={pending || !!attempt || checking || blocked || belowMinimum}
         rows={8}
       />
       <p>
         판매자 수락 후 거래 조건을 확인하고 결제해요. 지금은 주문 요청만 보내요.
       </p>
+      {minimumNotice && <p>{minimumNotice}</p>}
       {restored.failed && (
         <p role="alert">
           저장된 요청을 읽지 못했어요. 새 주문 전 내 주문 내역을 확인해 주세요.
@@ -229,7 +234,7 @@ function OrderForm({
         </p>
       )}
       <div className={styles.actions}>
-        <Button type="submit" disabled={pending || checking || blocked}>
+        <Button type="submit" disabled={pending || checking || blocked || belowMinimum}>
           {pending
             ? '주문 확인 중…'
             : attempt

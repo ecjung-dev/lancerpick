@@ -3,6 +3,7 @@ package com.example.lancerpick.product.service;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.common.web.PageResponse;
+import com.example.lancerpick.order.service.NewOrderPolicy;
 import com.example.lancerpick.product.dto.ProductSummaryResponse;
 import com.example.lancerpick.product.dto.ProductSearchOptions;
 import com.example.lancerpick.product.dto.ProductDetailResponse;
@@ -18,9 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductSearchService {
 
     private final ProductSearchQueries queries;
+    private final NewOrderPolicy newOrderPolicy;
 
-    public ProductSearchService(ProductSearchQueries queries) {
+    public ProductSearchService(ProductSearchQueries queries, NewOrderPolicy newOrderPolicy) {
         this.queries = queries;
+        this.newOrderPolicy = newOrderPolicy;
     }
 
     @Transactional(readOnly = true)
@@ -59,7 +62,8 @@ public class ProductSearchService {
             throw invalid("상품 번호가 허용 범위를 벗어났습니다.");
         }
         if (id <= 0) throw invalid("상품 번호는 양의 정수여야 합니다.");
-        return queries.findPublicDetail(id).orElseThrow(() -> new BusinessException(
+        return queries.findPublicDetail(id, NewOrderPolicy.minimumAmount(newOrderPolicy.current()))
+                .orElseThrow(() -> new BusinessException(
                 HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "상품을 찾을 수 없습니다."));
     }
 

@@ -1,6 +1,7 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.payment.service.ContractPaymentPolicy;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -33,5 +34,9 @@ public class NewOrderPolicy {
     return contractV2CreationEnabled
         ? TradePolicyVersion.CONTRACT_V2
         : TradePolicyVersion.LEGACY_V1;
+  }
+
+  public static Long minimumAmount(TradePolicyVersion policy) {
+    return TradePolicyVersion.isContract(policy.name()) ? ContractPaymentPolicy.MIN_TOTAL : null;
   }
 }
