@@ -25,7 +25,6 @@ import { ReviewForm } from '../../reviews/components/ReviewForm'
 import { ContractPanel } from '../../contracts/components/ContractPanel'
 import { OrderFundsPanel } from '../components/OrderFundsPanel'
 import { OrderChatPanel } from '../../order-chat/components/OrderChatPanel'
-
 import { ReviewTimerPanel } from '../components/ReviewTimerPanel'
 
 export function OrderDetailPage() {

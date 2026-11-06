@@ -2,7 +2,7 @@
 
 후속 로컬: 저장형 커밋 `8e92e28` 이후 [WebSocket/STOMP·재접속 복구·소켓 세션 폐기](order-chat-realtime.md)를 연결했다. 아래는 저장형 1차 단계의 범위와 검증 이력이며 ‘소켓 미포함/후속’은 당시 기준이다.
 
-2026-11-05, `feature/order-chat-storage`. 금융 PR #95가 병합된 main `03b5687`에서 시작한 로컬 후속 구현이다. [4인 설계](advanced-design-four-person.md)의 J1 중 저장·조회·화면 단계이며 **WebSocket/STOMP·실시간 전달·Redis·읽음 표시·첨부·메시지 수정/삭제는 포함하지 않는다**. 기존 HTTP 세션·CSRF·JPA/QueryDSL을 사용한다.
+2026-11-05, `feature/order-chat-storage`. 금융 기능이 반영된 main `03b5687`에서 시작한 후속 구현이다. [4인 설계](advanced-design-four-person.md)의 J1 중 저장·조회·화면 단계이며 **WebSocket/STOMP·실시간 전달·Redis·읽음 표시·첨부·메시지 수정/삭제는 포함하지 않는다**. 기존 HTTP 세션·CSRF·JPA/QueryDSL을 사용한다.
 
 ## 확정 정책
 
