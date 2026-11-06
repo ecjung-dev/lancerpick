@@ -15,6 +15,7 @@ import com.example.lancerpick.contract.service.OrderContractService;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.repository.MemberRepository;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
+import com.example.lancerpick.notification.service.OutboxDispatcher;
 import com.example.lancerpick.order.dto.CreateCancellationRequest;
 import com.example.lancerpick.order.dto.CreateDeliveryRequest;
 import com.example.lancerpick.order.dto.CreateRevisionRequest;
@@ -24,6 +25,7 @@ import com.example.lancerpick.order.entity.OrderTradeTerms;
 import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.order.repository.OrderSnapshotRepository;
 import com.example.lancerpick.order.repository.OrderTradeTermsRepository;
+import com.example.lancerpick.order.service.DeadlineNotices;
 import com.example.lancerpick.order.service.FullFundingService;
 import com.example.lancerpick.order.service.OrderCancellationRequestService;
 import com.example.lancerpick.order.service.OrderConfirmationService;
@@ -42,6 +44,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -62,7 +65,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * E7 검수 무응답 자동 구매 확정. 실제 커밋·잠금으로 검사하며, 48시간·7일 경과는 DB의 납품·타이머 시각을 같은 폭으로 과거로 옮겨
+ * E7 검수 무응답 자동 구매 확정과 E8 기한 통지·E9 V3 알림(보관·지급·반환·자동 확정 사전 안내). 실제 커밋·잠금으로 검사하며, 48시간·7일 경과는 DB의 납품·타이머 시각을 같은 폭으로 과거로 옮겨
  * 재현한다(DB CHECK의 시각 관계는 유지된다).
  */
 @IntegrationTest
@@ -103,6 +106,8 @@ class ReviewTimerIntegrationTests {
   @Autowired JdbcTemplate jdbc;
   @Autowired PlatformTransactionManager manager;
   @Autowired MockMvc mvc;
+  @Autowired OutboxDispatcher dispatcher;
+  @Autowired DeadlineNotices deadlineNotices;
   @MockitoSpyBean OrderEventPublisher events;
   long buyer, seller, other, admin, product, category, id;
   final List<Long> ids = new ArrayList<>();
@@ -594,5 +599,199 @@ class ReviewTimerIntegrationTests {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("ACTIVE"))
         .andExpect(jsonPath("$.expiresAt").isNotEmpty());
+  }
+
+  // ---------- E8 기한 통지 · E9 알림 ----------
+
+  Map<String, Object> deadlineHistory(String sourceKey) {
+    return jdbc.queryForMap(
+        "SELECT actor_type, actor_id, from_status, to_status,"
+            + " JSON_UNQUOTE(JSON_EXTRACT(details,'$.kind')) kind,"
+            + " JSON_UNQUOTE(JSON_EXTRACT(details,'$.basisAt')) basis_at,"
+            + " JSON_UNQUOTE(JSON_EXTRACT(details,'$.dueAt')) due_at,"
+            + " JSON_EXTRACT(details,'$.deliverySequence') delivery_sequence,"
+            + " JSON_EXTRACT(details,'$.contractVersion') contract_version"
+            + " FROM order_histories WHERE order_id=? AND action='DEADLINE_NOTIFIED' AND"
+            + " source_event_key=?",
+        id,
+        sourceKey);
+  }
+
+  long deadlineHistories() {
+    return jdbc.queryForObject(
+        "SELECT COUNT(*) FROM order_histories WHERE order_id=? AND action='DEADLINE_NOTIFIED'",
+        Long.class,
+        id);
+  }
+
+  static String utc(LocalDateTime value) {
+    return value.atOffset(ZoneOffset.UTC).toString();
+  }
+
+  LocalDateTime time(String sql, Object... args) {
+    return jdbc.queryForObject(sql, LocalDateTime.class, args);
+  }
+
+  long paymentId() {
+    return jdbc.queryForObject("SELECT id FROM payments WHERE order_id=?", Long.class, id);
+  }
+
+  /** 이 주문의 대기 이벤트만 알림으로 바꾸고 수신자의 알림 유형을 생성 순서로 돌려준다. */
+  List<String> dispatchedTypes(long recipient) {
+    for (long event :
+        jdbc.queryForList(
+            "SELECT id FROM outbox_events WHERE aggregate_type='ORDER' AND aggregate_id=? AND"
+                + " status='PENDING' ORDER BY id",
+            Long.class,
+            id)) dispatcher.dispatch(event);
+    return jdbc.queryForList(
+        "SELECT type FROM notifications WHERE order_id=? AND recipient_id=? ORDER BY id",
+        String.class,
+        id,
+        recipient);
+  }
+
+  @Test
+  void paymentNotifiesDeliveryDeadlineOnceToBothPartiesWithV3HeldWording() {
+    payments.pay(buyer, str(), true);
+    long payment = paymentId();
+    var row = deadlineHistory("DEADLINE:PAYMENT:" + payment);
+    assertThat(row.get("actor_type")).isEqualTo("SYSTEM");
+    assertThat(row.get("actor_id")).isNull();
+    assertThat(row.get("from_status")).isEqualTo("IN_PROGRESS");
+    assertThat(row.get("to_status")).isEqualTo("IN_PROGRESS");
+    assertThat(row.get("kind")).isEqualTo("DELIVERY_DUE");
+    assertThat(row.get("basis_at"))
+        .isEqualTo(utc(time("SELECT paid_at FROM orders WHERE id=?", id)));
+    assertThat(row.get("due_at")).isEqualTo(utc(time("SELECT due_at FROM orders WHERE id=?", id)));
+    assertThat(String.valueOf(row.get("delivery_sequence"))).isEqualTo("1");
+    assertThat(String.valueOf(row.get("contract_version"))).isEqualTo("1");
+
+    // 결제 재전송은 기존 기록을 확인할 뿐 통지를 다시 만들지 않는다.
+    payments.pay(buyer, str(), true);
+    assertThat(deadlineHistories()).isEqualTo(1);
+    // 같은 결제로 통지를 다시 기록하려 해도 원천 키 UNIQUE가 막는다.
+    assertThatThrownBy(() ->
+            new TransactionTemplate(manager)
+                .executeWithoutResult(ignored ->
+                    deadlineNotices.deliveryDue(orders.findById(id).orElseThrow(), payment)))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    assertThat(deadlineHistories()).isEqualTo(1);
+
+    assertThat(outbox("ORDER_DELIVERY_DUE_NOTIFIED")).isEqualTo(1);
+    assertThat(outbox("ORDER_FUNDS_HELD")).isEqualTo(1);
+    assertThat(outbox("ORDER_PAID")).isZero();
+    // 결제 이전의 계약 알림을 제외하고, 결제로 생긴 알림만 본다.
+    assertThat(dispatchedTypes(seller))
+        .containsSubsequence("ORDER_FUNDS_HELD", "ORDER_DELIVERY_DUE_NOTIFIED")
+        .doesNotContain("ORDER_PAID");
+    assertThat(dispatchedTypes(buyer))
+        .contains("ORDER_DELIVERY_DUE_NOTIFIED")
+        .doesNotContain("ORDER_FUNDS_HELD");
+  }
+
+  @Test
+  void revisionNotifiesRedeliveryDeadlineFromRequestTime() {
+    paidAndDelivered();
+    revisions.request(buyer, str(), new CreateRevisionRequest(Long.toString(deliveryId(1)), "수정"));
+    long revision =
+        jdbc.queryForObject("SELECT id FROM revision_requests WHERE order_id=?", Long.class, id);
+    var row = deadlineHistory("DEADLINE:REVISION:" + revision);
+    assertThat(row.get("to_status")).isEqualTo("REVISION_IN_PROGRESS");
+    assertThat(row.get("kind")).isEqualTo("REDELIVERY_DUE");
+    assertThat(row.get("basis_at"))
+        .isEqualTo(utc(time("SELECT requested_at FROM revision_requests WHERE id=?", revision)));
+    assertThat(row.get("due_at"))
+        .isEqualTo(utc(time("SELECT due_at FROM revision_requests WHERE id=?", revision)));
+    assertThat(String.valueOf(row.get("delivery_sequence"))).isEqualTo("2");
+    assertThat(deadlineHistories()).isEqualTo(2);
+    assertThat(outbox("ORDER_REDELIVERY_DUE_NOTIFIED")).isEqualTo(1);
+    assertThat(dispatchedTypes(seller)).contains("ORDER_REDELIVERY_DUE_NOTIFIED");
+    assertThat(dispatchedTypes(buyer)).contains("ORDER_REDELIVERY_DUE_NOTIFIED");
+  }
+
+  @Test
+  void manualConfirmationAndApprovedRefundUseV3FundsWording() {
+    paidAndDelivered();
+    confirmations.confirm(buyer, str());
+    assertThat(outbox("ORDER_FUNDS_RELEASED")).isEqualTo(1);
+    assertThat(outbox("ORDER_COMPLETED")).isZero();
+    assertThat(dispatchedTypes(seller)).contains("ORDER_FUNDS_RELEASED");
+
+    long originalBuyer = buyer;
+    buyer = other;
+    id = create();
+    payments.pay(buyer, str(), true);
+    requests.create(
+        buyer, str(), new CreateCancellationRequest("취소 요청", UUID.randomUUID().toString()));
+    funding.refund(seller, id, "취소 승인");
+    assertThat(outbox("ORDER_FUNDS_REFUNDED")).isEqualTo(1);
+    assertThat(outbox("ORDER_CANCELLED")).isZero();
+    assertThat(dispatchedTypes(buyer)).contains("ORDER_FUNDS_REFUNDED");
+    buyer = originalBuyer;
+  }
+
+  /** 활성 타이머의 시각을 같은 폭으로 옮겨 만료까지 23시간 남은 상태를 만든다. */
+  void timerInNoticeWindow() {
+    jdbc.update(
+        "UPDATE order_response_timers SET basis_at=basis_at - INTERVAL 145 HOUR,"
+            + " eligible_at=eligible_at - INTERVAL 145 HOUR, started_at=started_at - INTERVAL 145"
+            + " HOUR, expires_at=expires_at - INTERVAL 145 HOUR WHERE order_id=? AND"
+            + " status='ACTIVE'",
+        id);
+  }
+
+  @Test
+  void autoConfirmNoticeIsSentOnceToBuyerWithin24HoursOfExpiry() throws Exception {
+    paidAndDelivered();
+    startTimer();
+    timers.noticeDue(10);
+    assertThat(outbox(OrderEventPublisher.AUTO_CONFIRM_SOON)).isZero();
+
+    timerInNoticeWindow();
+    parallel(
+        () -> Integer.toString(timers.noticeDue(10)),
+        () -> Integer.toString(timers.noticeDue(10)));
+    timers.noticeDue(10);
+    assertThat(outbox(OrderEventPublisher.AUTO_CONFIRM_SOON)).isEqualTo(1);
+    long timer =
+        jdbc.queryForObject(
+            "SELECT id FROM order_response_timers WHERE order_id=? AND status='ACTIVE'",
+            Long.class,
+            id);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT event_id FROM outbox_events WHERE aggregate_id=? AND type=?",
+                String.class,
+                id,
+                OrderEventPublisher.AUTO_CONFIRM_SOON))
+        .isEqualTo(OrderEventPublisher.autoConfirmNoticeEventId(timer));
+    assertThat(dispatchedTypes(buyer)).contains(OrderEventPublisher.AUTO_CONFIRM_SOON);
+    assertThat(dispatchedTypes(seller)).doesNotContain(OrderEventPublisher.AUTO_CONFIRM_SOON);
+    // 사전 안내는 타이머·주문 상태를 바꾸지 않는다.
+    assertThat(timerColumn("status")).isEqualTo("ACTIVE");
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+
+    timerExpired();
+    assertThat(timers.expireDue(10)).isEqualTo(1);
+    assertThat(dispatchedTypes(buyer)).contains("ORDER_AUTO_CONFIRMED");
+    assertThat(dispatchedTypes(seller)).contains("ORDER_AUTO_CONFIRMED");
+  }
+
+  @Test
+  void autoConfirmNoticeIsNotSentForEndedOrExpiredTimers() {
+    paidAndDelivered();
+    startTimer();
+    timerInNoticeWindow();
+    revisions.request(buyer, str(), new CreateRevisionRequest(Long.toString(deliveryId(1)), "수정"));
+    timers.noticeDue(10);
+    assertThat(outbox(OrderEventPublisher.AUTO_CONFIRM_SOON)).isZero();
+
+    deliver(2);
+    startTimer();
+    timerExpired();
+    // 이미 만료 시각이 지난 타이머에는 사전 안내 대신 자동 확정 결과만 보낸다.
+    timers.noticeDue(10);
+    assertThat(outbox(OrderEventPublisher.AUTO_CONFIRM_SOON)).isZero();
   }
 }

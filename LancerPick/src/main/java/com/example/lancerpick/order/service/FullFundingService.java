@@ -73,6 +73,7 @@ public class FullFundingService {
   private final OrderHistoryRepository orderHistoryRepository;
   private final OrderEventPublisher orderEventPublisher;
   private final OrderDetailQueries orderDetailQueries;
+  private final DeadlineNotices deadlineNotices;
   private final Clock clock;
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -164,6 +165,7 @@ public class FullFundingService {
     orderEventPublisher.publish(
         order,
         orderHistoryRepository.saveAndFlush(OrderHistory.paid(orderId, memberId, occurredAt)));
+    deadlineNotices.deliveryDue(order, payment.id());
     return orderResponse(order, memberId);
   }
 

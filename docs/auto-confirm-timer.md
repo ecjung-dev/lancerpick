@@ -59,7 +59,7 @@
 ## 알림·화면
 
 - 이력·아웃박스: `TIMER_STARTED`(구매자에게 `ORDER_TIMER_STARTED`), `TIMER_ADMIN_STOPPED`(양측), 자동 확정 `COMPLETED`(양측에 `ORDER_AUTO_CONFIRMED`). 구매자 응답에 따른 `TIMER_CANCELLED`는 이력만 남기고 알림을 보내지 않는다(함께 기록되는 수정 요청·취소 요청·구매 확정 알림이 대신함).
-- 만료 전 사전 안내 알림은 아직 없다(E9).
+- 만료 24시간 전 구매자 사전 안내(`ORDER_AUTO_CONFIRM_SOON`)와 V3 금액 알림 문구는 E9에서 추가했다([V3 알림](v3-notices.md)).
 - 주문 상세(V3)에 `ReviewTimerPanel`: 상태 안내, 자동 확정 예정 시각, 서버 `canStart`일 때만 판매자 시작 버튼. 시작 요청은 자동 재전송하지 않고 성공·실패 모두 `['wallet']` 조회를 다시 한다. 조회 키 `['wallet', 'order-review-timer', id]`는 기존 계정 전환 정리 대상이다. 검수 대기 중 상태(`WAITING`·`STARTABLE`·`ACTIVE`·`CANCELLATION_PENDING`·`ADMIN_STOPPED`)는 시간 경과나 상대방 행동(판매자의 타이머 시작, 취소 요청 처리, 재납품)으로 바뀔 수 있어 1분마다 다시 조회하고, `NOT_IN_REVIEW`·`AUTO_CONFIRMED`와 백그라운드 탭·조회 실패 시에는 멈춘다, 상태 변화(자동 확정 완료 등)를 발견하면 `['wallet']`을 무효화해 주문 상세·대금도 다시 확인한다(Codex 리뷰 반영).
 - 거래 이력에서 실행 회원이 없는 `COMPLETED`는 "자동 구매 확정 · 시스템"으로 표시한다.
 
