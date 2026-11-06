@@ -258,3 +258,26 @@ test('when the session recheck itself fails, later 401s do not keep asking with 
   assert.equal(meCalls, 1, '캐시 정리 뒤 재조회의 401로 /api/me를 반복 호출하지 않는다')
   client.clear()
 })
+
+test('a late recheck response after another login or logout does not overwrite the newer account state', async () => {
+  const other = { ...member, id: '42', displayName: '다른 회원' }
+  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] })
+  for (const [label, late] of [['로그인 안 함 응답', () => error('AUTHENTICATION_REQUIRED', 401)], ['통신 실패', () => { throw new TypeError('network failed') }]]) {
+    let release
+    const waiting = new Promise((resolve) => { release = resolve })
+    globalThis.fetch = async () => { await waiting; return late() }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(memberQueryKey, member)
+
+    const recheck = recheckAfterUnauthorized(client, expired)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await resetAccountState(client, other) // 재확인 응답을 기다리는 동안 다른 계정으로 로그인 완료
+    client.setQueryData(['wallet', other.id, 'balance'], { balance: 7 })
+    release()
+
+    assert.equal(await recheck, 'superseded', label)
+    assert.deepEqual(client.getQueryData(memberQueryKey), other, `${label}: 새 계정 상태 유지`)
+    assert.deepEqual(client.getQueryData(['wallet', other.id, 'balance']), { balance: 7 }, `${label}: 새 계정 캐시 유지`)
+    client.clear()
+  }
+})

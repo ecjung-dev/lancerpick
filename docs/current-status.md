@@ -2,9 +2,9 @@
 
 ## 끊긴 세션 탭의 헤더 정리(C2 후속) — 2026-11-06
 
-`fix/session-expired-header`(정은찬, PR 전, main `15358e0`): 다른 곳에서 로그아웃·비밀번호 변경으로 세션이 끝난 탭이 새로고침 전까지 헤더에 이전 로그인 이름·알림 수를 보이던 문제를 고쳤다. 공통 QueryClient의 조회 오류 처리(`QueryCache` `onError`)에서 401을 받으면, 헤더가 로그인 회원을 보이는 동안에만 `recheckSession`으로 서버에 로그인 상태를 다시 묻는다(`features/auth/session.ts`의 `recheckAfterUnauthorized`). 로그인 안 함이면 헤더가 로그인 메뉴로 바뀌고 개인 캐시를 지운다. 동시에 받은 401은 재확인 한 번으로 묶고, 재확인이 실패하면 같은 로그인 상태로는 다시 묻지 않는다(재조회 반복 방지). 변경 요청(mutation)의 401은 기존처럼 각 화면이 처리한다. API·DB·백엔드 변경 없음.
+`fix/session-expired-header`(정은찬, PR 전, main `15358e0`): 다른 곳에서 로그아웃·비밀번호 변경으로 세션이 끝난 탭이 새로고침 전까지 헤더에 이전 로그인 이름·알림 수를 보이던 문제를 고쳤다. 공통 QueryClient의 조회 오류 처리(`QueryCache` `onError`)에서 401을 받으면, 헤더가 로그인 회원을 보이는 동안에만 `recheckSession`으로 서버에 로그인 상태를 다시 묻는다(`features/auth/session.ts`의 `recheckAfterUnauthorized`). 로그인 안 함이면 헤더가 로그인 메뉴로 바뀌고 개인 캐시를 지운다. 동시에 받은 401은 재확인 한 번으로 묶고, 재확인이 실패하면 같은 로그인 상태로는 다시 묻지 않는다(재조회 반복 방지). 재확인 응답을 기다리는 동안 로그인·로그아웃이 끝나면(계정 전환 세대 변경) 늦은 응답으로 새 상태를 덮지 않는다(`superseded`, Codex 리뷰 반영). 변경 요청(mutation)의 401은 기존처럼 각 화면이 처리한다. API·DB·백엔드 변경 없음.
 
-검증: 신규 자동 테스트 3건(`tests/auth.test.mjs`) 포함 프런트 typecheck·lint·`test:api` 222건·build 통과. 실행하지 않은 검증: 실제 브라우저 두 세션 재확인, 원격 CI.
+검증: 신규 자동 테스트 4건(`tests/auth.test.mjs`) 포함 프런트 typecheck·lint·`test:api` 223건·build 통과. 실행하지 않은 검증: 실제 브라우저 두 세션 재확인, 원격 CI.
 
 ## V3 화면 전체 거래·알림·계정 전환 브라우저 확인 — 2026-11-06
 
