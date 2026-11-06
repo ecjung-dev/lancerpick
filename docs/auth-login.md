@@ -206,7 +206,7 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 
 ### 한계
 
-- 실제 메일 발송은 C3 발송기(`MAIL_ENABLED=true` + Mailpit)로 가능해졌다. 확인 범위는 [메일 인프라](mail-infrastructure.md#검증)를 따른다. 재설정 흐름 자체는 자동 테스트의 가짜 발송기로 끝까지 검증했다.
+- 실제 메일 발송은 C3 발송기(`MAIL_ENABLED=true` + Mailpit)로 가능해졌다. 확인 범위는 [메일 인프라](mail-infrastructure.md#검증)를 따른다. 재설정 흐름 자체는 자동 테스트의 가짜 발송기로 끝까지 검증했고, 2026-11-06 브라우저 + Mailpit으로도 확인했다(아래 [브라우저 확인](#브라우저--mailpit-확인--2026-11-06)).
 - 1시간 제한은 고정 구간이라 두 구간에 걸치면 짧은 시간에 최대 10회까지 허용될 수 있다(60초 간격은 항상 보장).
 - IP·전체 발송량 제한, 재설정 POST 실패 횟수 제한(토큰이 256비트라 추측은 현실적이지 않음), 로그인 상태 비밀번호 변경의 시도 제한은 없다.
 - 만료된 `account_challenges`·`auth_request_limits` 정리 작업은 없다(공통 스케줄러·Batch 담당과 함께 정한다). `account_challenges.email`에는 스키마상 정규화 이메일이 저장된다.
@@ -215,4 +215,23 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 
 ### 검증
 
-백엔드 `PasswordResetIntegrationTests`(실제 Security 필터·MySQL, 가짜 발송기): 전체 흐름(기존 세션 폐기·옛 비밀번호 401·새 비밀번호 로그인·auth_version 1·지갑 잔액·원장 불변), 링크 주소·DB에는 해시만·15분·발송 결과 기록(SENT 뒤 늦은 실패가 덮어쓰지 않음), 가입 안 된 이메일의 같은 응답·미발급·같은 제한, 이메일 정규화·형식 400, 60초 내 재요청 미발급과 이후 재발급, 1시간 5회, 같은 이메일 동시 4건 중 1건만 발급, 일회용, 만료, 다른 링크 사용 후 무효, 비밀번호 변경 후 링크 무효, 잘못된 토큰 5종 같은 400, 새 비밀번호 규칙 위반 시 토큰 유지, 같은 토큰 동시 2건 중 1건만 성공, 큐 가득 참·예외 시 같은 202와 FAILED 기록, CSRF 403. `AccountMailDispatcherTests`(DB 없음): 발송기 없음 → MAIL_NOT_CONFIGURED, 기록 실패도 예외 없음. 프런트 `tests/password-reset.test.mjs` 12건. 실행 결과는 PR에 기록한다.
+백엔드 `PasswordResetIntegrationTests`(실제 Security 필터·MySQL, 가짜 발송기): 전체 흐름(기존 세션 폐기·옛 비밀번호 401·새 비밀번호 로그인·auth_version 1·지갑 잔액·원장 불변), 링크 주소·DB에는 해시만·15분·발송 결과 기록(SENT 뒤 늦은 실패가 덮어쓰지 않음), 가입 안 된 이메일의 같은 응답·미발급·같은 제한, 이메일 정규화·형식 400, 60초 내 재요청 미발급과 이후 재발급, 1시간 5회, 같은 이메일 동시 4건 중 1건만 발급, 일회용, 만료, 다른 링크 사용 후 무효, 비밀번호 변경 후 링크 무효, 잘못된 토큰 5종 같은 400, 새 비밀번호 규칙 위반 시 토큰 유지, 같은 토큰 동시 2건 중 1건만 성공, 큐 가득 참·예외 시 같은 202와 FAILED 기록, CSRF 403. `AccountMailDispatcherTests`(DB 없음): 발송기 없음 → MAIL_NOT_CONFIGURED, 기록 실패도 예외 없음. 프런트 `tests/password-reset.test.mjs` 12건. 실행 결과는 PR에 기록한다(#89: 병합 전 브랜치에서 백엔드 관련 71건·`clean build` 759건, 프런트 167건 통과, CI 성공).
+
+### 브라우저 + Mailpit 확인 — 2026-11-06
+
+C3 전달 사항 6번 요청에 따라 실제 화면에서 처음부터 끝까지 확인했다. 환경: main `0f67606`, 로컬 개발 DB, 백엔드 `bootRun`(이번 실행만 환경변수 `MAIL_ENABLED=true`, 요청 제한 키는 미설정이라 임의 키), 프런트 `npm run dev`, Mailpit v1.33.0. 이 PC에는 Docker가 없어 Docker 대신 Mailpit 공식 Windows 실행 파일(GitHub 릴리스, SHA-256 일치 확인)을 `--smtp 127.0.0.1:1025 --listen 127.0.0.1:8025`로 실행했다. 에이전트가 Claude 데스크톱 앱 내장 브라우저로 조작했고, 새 확인 계정 `pwreset-1106a@example.com`을 화면에서 가입해 사용했다.
+
+| 단계 | 결과 |
+| --- | --- |
+| 로그인 화면 | "비밀번호를 잊으셨나요?" 링크 → `/password-reset/request` |
+| 재설정 요청(로그인 세션을 둔 상태) | POST 1회 202, 같은 안내 문구, 버튼 "59초 후 다시 요청할 수 있어요"로 잠김 |
+| Mailpit 수신 | 1통. 보낸 사람 `LancerPick <no-reply@lancerpick.local>`, 제목 `[랜서픽] 비밀번호 재설정 안내`, `text/plain; charset=UTF-8`, 15분 안내, 링크 `http://localhost:5173/password-reset#token=`+43자, 본문에 비밀번호 없음 |
+| 메일 링크 열기 | "새 비밀번호 설정" 화면. 주소창이 `/password-reset`로 바뀌어 토큰이 사라지고, 화면 HTML·localStorage·sessionStorage에 토큰 없음. 여는 것만으로는 POST 없음 |
+| 확인 칸 불일치 제출 | "새 비밀번호가 서로 달라요." 안내, POST 0회 |
+| 정상 제출 | POST `/api/auth/password-resets` 1회 204 → `/login`으로 이동, "비밀번호를 다시 설정했어요…" 안내, 헤더 비로그인 표시, 기존 로그인 세션 `/api/me` 401(폐기) |
+| 로그인 | 옛 비밀번호 401 `INVALID_CREDENTIALS`, 새 비밀번호 200 |
+| 같은 링크 재사용 | 새 비밀번호 입력 후 제출 → "링크를 쓸 수 없어요" 화면(재설정 메일 다시 받기·로그인 링크). 비밀번호는 바뀌지 않음(재사용 시 입력한 값 로그인 401, 앞의 새 비밀번호 200) |
+| 서버 로그 | `account mail` 경고·ERROR 0건. 재사용 거부는 `password reset rejected reason=ALREADY_CONSUMED challengeId=1`만 남고 토큰·이메일 없음 |
+| 320×740 | 요청·새 비밀번호·링크 사용 불가·로그인 화면 모두 문서 너비 320, 넘친 요소 0 |
+
+확인하지 않은 것: `account_challenges.delivery_status`의 `SENT`는 DB를 직접 조회하지 않았다(발송 실패·기록 실패 로그가 없는 것으로만 확인). 외부 SMTP·실제 받은편지함·실기기 모바일·다른 브라우저는 범위 밖이다. 60초·1시간 제한과 만료는 자동 테스트 결과를 따른다.
