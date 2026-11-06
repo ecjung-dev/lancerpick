@@ -27,7 +27,7 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 1. **켜는 법**: 기본은 꺼짐(`MAIL_ENABLED=false`)이라 아무것도 안 하면 지금과 같다(`FAILED`·`MAIL_NOT_CONFIGURED`). 로컬에서 Docker로 Mailpit을 띄우고(`docker run -d --name lancerpick-mailpit -p 1025:1025 -p 8025:8025 axllent/mailpit:v1.33.0`) `local-application.properties`에 `MAIL_ENABLED=true`를 넣으면 http://localhost:8025 에서 받는다. 테스트 프로필은 항상 꺼져 있어 개인 설정이 테스트에 영향을 주지 않는다.
 2. **새 메일 추가 방법**: 발송기는 고치지 않는다. 기존 재설정과 같이 발급 트랜잭션 커밋 후 `AccountMailDispatcher.dispatch(new AccountMail(challengeId, to, subject, body))`를 부르면 큐 → 발송 → `delivery_status`(`SENT`/`FAILED`) 기록까지 처리된다. 본문은 UTF-8 평문이며, 내용 구성은 `PasswordResetMailContent`처럼 K1 쪽에 둔다.
 3. **이메일 인증 가입**: V5 `account_challenges.purpose='SIGNUP_EMAIL'`(member_id·credential_version NULL)로 발급하면 위 경로를 그대로 쓸 수 있다.
-4. **아이디 안내는 먼저 상의**: `AccountMail`·`AccountMailDeliveryRecorder`가 `challengeId`(=`account_challenges` 행)를 전제로 한다. 아이디 안내처럼 토큰이 없는 메일은 이 행이 없으므로, challenge 행을 만들지, 발송 결과 기록 없이 보낼 수 있게 계약을 넓힐지 구현 전에 정은찬과 정한다(DB 변경이 필요하면 황준범).
+4. **아이디 안내는 기록 없는 메일로 보낸다(2026-11-06 정은찬 결정)**: 토큰이 없는 아이디 안내는 `account_challenges` 행을 만들지 않고 `AccountMail.untracked(to, subject, body)`로 보낸다. `challengeId`가 없으면 발송기는 결과를 DB에 기록하지 않고 안전한 로그(오류 코드)만 남긴다. DB 변경은 없다. 대안이던 challenge 행 방식은 `purpose` CHECK 제약 변경(Flyway)과 쓰지 않는 토큰이 필요해 택하지 않았다. 대신 아이디 안내의 발송 성공·실패는 DB로 조회할 수 없다. 응답은 가입 여부와 관계없이 같아야 한다는 기존 규칙은 그대로다.
 5. **지키는 것**: 본문(토큰)·수신자를 로그·DB·아웃박스에 남기지 않는다. 자동 재발송은 없으며 요청 제한 안에서 사용자가 다시 요청한다. 메모리 큐라 서버 종료 시 남은 메일은 `PENDING`으로 남는다.
 6. **확인 부탁**: 재설정 화면(`/password-reset/request` → 메일 링크 → 새 비밀번호)을 Mailpit 켠 상태로 브라우저에서 한 번 확인해 주면 C3·K1의 남은 브라우저 확인을 채울 수 있다(C3 쪽은 API로만 확인함).
 
@@ -55,7 +55,7 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 | E4 | V2 수락 → `AWAITING_CONTRACT` → 양측 서명 → 선금 대기 상태·이력, 계약 확정 시 하한 재검사, 선금 전 V2 취소 | E3 | 완료(#85) | 선금 대기는 V2의 `AWAITING_PAYMENT`([DB 전환 기준](advanced-db-transitions.md) §1). 병합 전 브랜치에서 백엔드 clean build 693건 통과. 계약 API·화면(E5)·실제 PDF(J3)가 없어 서명은 테스트 고정값으로만 확인, 브라우저 확인 없음 |
 | E5 | 계약 조회·확인 API, 주문 상세의 계약 화면 | E4, J3 | 완료(`2fec099`, 황준범 구현) | `/api/orders/{orderId}/contract` 수락·초안·서명·조회·PDF 생성/다운로드와 `ContractPanel`([PDF 연결](contract-pdf-delivery.md)). 수락 경로는 `POST /api/orders/{id}/accept` 하나로 정리(`/contract/accept`·계약 영역 수락 버튼 삭제, #92). 남은 것: 실제 브라우저 계약 거래 확인 |
 | E6 | V3 검수·수정/재납품·합의/관리자 취소·구매 확정 연결 | E4, J4 | 대부분 완료(main `03b5687`) | 납품·수정·재납품(#93), 수동 구매 확정 지급·구매자 취소 요청→판매자 승인 전액 반환·V3 `allowedActions`·대금 패널(`03b5687`). 남음: 관리자 승인 취소(K4 연결). [구현 범위](full-funding-payment.md) |
-| E7 | 검수 무응답 48시간 → 판매자 7일 타이머 → 자동 구매 확정 | E6, J4 | 완료(#99) | 수정/취소 응답 시 이전 타이머 취소, 새 기산점/회차. 관리자 해제는 내부 서비스 `ReviewTimerService.adminStop`까지(K5가 연결). [상세](auto-confirm-timer.md). 실제 서버 스케줄러·브라우저 확인은 남음 |
+| E7 | 검수 무응답 48시간 → 판매자 7일 타이머 → 자동 구매 확정 | E6, J4 | 완료(#99) | 수정/취소 응답 시 이전 타이머 취소, 새 기산점/회차. 관리자 해제는 내부 서비스 `ReviewTimerService.adminStop`까지(K5가 연결). [상세](auto-confirm-timer.md). 실서버 만료 스케줄러(주문 20)·타이머 시작 가능→진행 중 패널(주문 23) 확인(2026-11-06, 개인 DB 시각 조정) |
 | E8 | 전액 결제 완료 기준 납기·재납품 기한·중복 없는 통지 | E4, E6, J4 | 완료(#105) | 납기 `03b5687`, 재납품 기한 #93. 결제·수정 요청 트랜잭션의 `DEADLINE_NOTIFIED` SYSTEM 이력(원천 키 UNIQUE)·양측 알림([V3 알림](v3-notices.md)). 실서버·브라우저 확인 완료(2026-11-06) |
 | E9 | V3 보관·지급·반환·자동 확정 예정/결과 알림 | E1, E4 | 완료(#105) | V3 금액 알림 유형 3종, 만료 24시간 전 구매자 사전 안내(타이머당 1회). 잔금 미지급 종료 알림은 제외. 금액 알림·사전 안내 스케줄러 실서버·브라우저 확인(2026-11-06, 사전 안내는 개인 DB 시각 조정) |
 
@@ -75,10 +75,10 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 | --- | --- | --- | --- | --- |
 | K1 | 이메일 인증 가입·비밀번호 재설정/변경·아이디 안내·요청 제한 | F1 | 진행 중 | 로그인 상태 비밀번호 변경 완료(#84). 비밀번호 재설정·재설정 요청 제한 완료(#89, 실제 메일 발송은 C3 #90 반영으로 `MAIL_ENABLED=true` 시 가능). 브라우저 + Mailpit 확인 완료(2026-11-06, [기록](auth-login.md#브라우저--mailpit-확인--2026-11-06)). 이메일 인증 가입 main 반영(#113, [기록](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification)). 기존 회원 이메일 인증 전환·아이디 안내는 남음. V5 토큰 스키마 사용. 메일 인프라는 C3 |
 | K2 | 인증 버전 기반 세션 무효화 계약 제공 | K1 | 완료(#84) | HTTP 세션 폐기 필터·`AuthVersionLookup` 계약. 소켓 종료(C2)는 이 계약 사용. 브라우저 2개 동시 확인은 자동 테스트로 대체 |
-| K3 | 관리자 운영 현황·충전/금액 처리 조회 | E4, J4 | 내부 금융 조회 로컬 준비 | 황준범이 [금융 조회 서비스·DTO](admin-finance-support.md) 제공. 전체 백엔드 894건 통과(신규 19 포함). 김창재의 관리자 API·화면 연결은 남음 |
+| K3 | 관리자 운영 현황·충전/금액 처리 조회 | E4, J4 | 내부 금융 조회 main 반영(#117) | 황준범이 [금융 조회 서비스·DTO](admin-finance-support.md) 제공. 전체 백엔드 894건 통과(신규 19 포함). 김창재의 관리자 API·화면 연결은 남음 |
 | K4 | 구매자 운영 문의, 판매자 무응답 취소의 관리자 승인/거절 | E6 | 시작 전 | 실제 취소·반환 서비스는 정은찬·황준범. 주문 쪽 서비스가 트랜잭션을 소유하고 문의 종료 메서드를 그 안에서 호출([경계](full-funding-policy.md#1-거래-흐름과-금액)). closure에 `inquiry_id`가 필수라 문의 엔티티가 선행 |
 | K5 | 관리자 타이머 해제 화면·API | E7 | 시작 전 | 서비스 `ReviewTimerService.adminStop(adminId, orderId, reason)` 사용([자동 구매 확정](auto-confirm-timer.md)) |
-| K6 | 실패 작업 조회·재처리(알림 `FAILED`·PDF·충전), 관리자 작업 이력 | E1, J3 | 충전/Batch 조회·조건 로컬 준비 | [충전·Batch 후보 판단](admin-finance-support.md) 제공. 실제 관리자 실행·사유·감사 이력·API/화면은 미연결. 알림/PDF 재처리는 각 담당 서비스와 별도 연결 |
+| K6 | 실패 작업 조회·재처리(알림 `FAILED`·PDF·충전), 관리자 작업 이력 | E1, J3 | 충전/Batch 조회·조건 main 반영(#117) | [충전·Batch 후보 판단](admin-finance-support.md) 제공. 실제 관리자 실행·사유·감사 이력·API/화면은 미연결. 알림/PDF 재처리는 각 담당 서비스와 별도 연결 |
 
 #### K4·K5 연결 안내 (정은찬 → 김창재, 2026-11-06)
 
@@ -113,16 +113,16 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 | ID | 작업 | 선행 | 상태 | 비고 |
 | --- | --- | --- | --- | --- |
 | C1 | 공통 이벤트 ID·버전·오류 계약 | E1 | main 반영(#115) | [공통 이벤트 계약](event-contract.md). 아웃박스 고정 오류 코드(K6 기준)·이름 기반 이벤트 ID·집계별 스키마 버전, 채팅 소켓 오류에 REST와 같은 fieldErrors·traceId와 status. DB 변경 없음. 채팅 영역(황준범) 수정 포함 |
-| C2 | 계정 전환·비밀번호 변경 시 소켓 연결 폐기·개인 캐시 정리 | K2, J1 | main 반영(#103) | [세션 ID·DB 인증 버전 재검사·로그아웃 이벤트·유휴 소켓 정리](order-chat-realtime.md). 세션 유휴 만료·버전 변경·권한 실패·클라이언트 정리 자동 검사. 브라우저 계정 전환·비밀번호 변경 시 소켓 폐기 확인(2026-11-06). 끊긴 탭 헤더가 새로고침 전까지 로그인 상태로 남던 점은 조회 401 시 세션 재확인으로 수정(`fix/session-expired-header`, PR 전, 자동 테스트만) |
-| C3 | 메일 발송 인프라(Spring Mail·Mailpit) | — | 완료(#90) | [메일 인프라](mail-infrastructure.md). 실제 서버+Mailpit API 확인, 브라우저 화면 확인은 남음. `SmtpAccountMailSender`(발송 스레드 1개·고정 큐), 기본 꺼짐(`MAIL_ENABLED`). K1 선행. 연결 지점: `auth/mail/AccountMailSender`(비동기 큐에 넣고 바로 반환) 구현 Bean + 발송 후 `AccountMailDeliveryRecorder` 호출([계약](auth-login.md#메일-발송-경계-c3-연결-계약)) |
-| C4 | Redis 세션 공유·Pub/Sub | J1 | 보류·최하위 | 단일 서버 유지. 다른 기능·G1의 선행 조건에서 제외. Redis 관련 작업은 필요성 재검토 후 재개하며 DB 잠금·UNIQUE를 대체하지 않음 |
-| C5 | 계측(Actuator·Micrometer·k6) | — | 조정 가능 | |
+| C2 | 계정 전환·비밀번호 변경 시 소켓 연결 폐기·개인 캐시 정리 | K2, J1 | main 반영(#103) | [세션 ID·DB 인증 버전 재검사·로그아웃 이벤트·유휴 소켓 정리](order-chat-realtime.md). 세션 유휴 만료·버전 변경·권한 실패·클라이언트 정리 자동 검사. 브라우저 계정 전환·비밀번호 변경 시 소켓 폐기 확인(2026-11-06). 끊긴 탭 헤더가 새로고침 전까지 로그인 상태로 남던 점은 조회 401 시 세션 재확인으로 수정(main 반영 #118, 병합 제목은 #116과 같게 잘못 들어감). 다른 세션 비밀번호 변경 후 새로고침 없이 헤더가 로그인 메뉴로 바뀌는 것 브라우저 확인(2026-11-06, [기록](current-status.md)) |
+| C3 | 메일 발송 인프라(Spring Mail·Mailpit) | — | 완료(#90) | [메일 인프라](mail-infrastructure.md). 실제 서버+Mailpit API·브라우저 확인(김창재·정은찬, 2026-11-06), DB `SENT` 직접 조회 확인(정은찬). 토큰 없는 안내 메일용 `AccountMail.untracked`(결과 기록 없음) 추가. `SmtpAccountMailSender`(발송 스레드 1개·고정 큐), 기본 꺼짐(`MAIL_ENABLED`). K1 선행. 연결 지점: `auth/mail/AccountMailSender`(비동기 큐에 넣고 바로 반환) 구현 Bean + 발송 후 `AccountMailDeliveryRecorder` 호출([계약](auth-login.md#메일-발송-경계-c3-연결-계약)) |
+| C4 | Redis 세션 공유·Pub/Sub | J1 | 제외(2026-11-06 정은찬 결정) | 단일 서버라 세션 공유·교차 서버 전달이 필요 없고, 12/5 기능 추가 중단 전에 다중 서버 장애 복구까지 검증할 시간이 없다. 영향: 세션·채팅 소켓은 서버 1대 기준(서버를 늘리면 세션·브로커 공유가 먼저 필요). 금액 일관성은 기존 DB 잠금·UNIQUE가 맡는다. 발표 후 서버 확장이 필요할 때 다시 검토 |
+| C5 | 계측(Actuator·Micrometer·k6) | — | 제외(2026-11-06 정은찬 결정) | 측정·병목 개선을 한 번 마치려면 부하 시나리오·지표 대시보드·개선 검증까지 필요해 12/5 전에 기능 완성(K4·G1)과 함께 하기 어렵다. 영향: 처리 지연·연결 수·DB 사용량 수치는 없음. 경합 안전성은 실제 커밋·동시 스레드 통합 테스트(게이트 3절)로 확인한다 |
 
 ### 활성화 게이트
 
 | ID | 조건 | 담당 | 상태 |
 | --- | --- | --- | --- |
-| G1 | V3 API·화면·금액/보관/원장·권한·경합·PDF 실제 검증 후 신규 생성 허용 | 정은찬·황준범 | 추가 테스트 main 반영(#109, [활성화 게이트](v3-activation-gate.md)). 화면 버튼 전체 거래·PDF 해시·권한 확인(2026-11-06, 게이트 7절). 판정은 K4·타이머 진행 중 패널·좁은 화면 확인으로 보류 |
+| G1 | V3 API·화면·금액/보관/원장·권한·경합·PDF 실제 검증 후 신규 생성 허용 | 정은찬·황준범 | 추가 테스트 main 반영(#109, [활성화 게이트](v3-activation-gate.md)). 화면 버튼 전체 거래·PDF 해시·권한 확인(2026-11-06, 게이트 7절), 타이머 진행 중 패널·320px 화면 확인(게이트 8절). 판정은 K4(B4·C8) 연결로 보류 |
 
 권장 순서: (완료) E2 → E3·E4 → J3·E5 → J2(V7) → J4·E6 대부분 / E7(#99) / E8 통지·E9(#105) / G1 추가 테스트(#109) / (남음) K4 연결·G1 남은 확인 → G1 판정. 채팅(J1·C2)은 #103, 상품 S1~S3는 #98·#101·#107로 main에 반영됐다. 회원(K1) 등 남은 작업은 V3 흐름과 독립으로 병행한다. K1 선행인 C3(메일)는 완료(#90).
 

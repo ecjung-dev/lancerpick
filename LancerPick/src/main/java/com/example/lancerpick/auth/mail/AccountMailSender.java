@@ -10,6 +10,7 @@ package com.example.lancerpick.auth.mail;
  *   SMTP 통신을 요청 스레드에서 하면 가입된 이메일만 응답이 느려져 가입 여부가 드러난다.
  * - 큐에 넣었으면 true, 가득 차서 넣지 못했으면 false. 예외를 던져도 요청 응답은 같은 202다.
  * - 실제 발송이 끝나면 AccountMailDeliveryRecorder.markSent / markFailed(안전한 오류 코드)를 호출한다.
+ *   challengeId가 없는 안내 메일(AccountMail.untracked)은 기록하지 않는다.
  * - 메일 본문(토큰)을 로그·DB·거래 아웃박스(outbox_events)에 평문으로 남기지 않는다.
  * - 메모리 큐는 서버 종료 때 작업을 잃을 수 있다. 사용자는 요청 제한 안에서 다시 요청해 복구한다.
  */
