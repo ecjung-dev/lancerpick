@@ -86,7 +86,9 @@ public class MemberService {
     @Transactional
     public MemberResponse updateMe(long memberId, UpdateMeRequest request) {
         String displayName = normalizeDisplayName(request.displayName());
-        Member member = findLoggedInMember(memberId);
+        // 비밀번호 변경·재설정과 직렬화해, 이전 엔티티 상태가 자격 증명을 덮어쓰지 않게 한다.
+        Member member = memberRepository.findByIdForUpdate(memberId)
+                .orElseThrow(MemberService::authenticationRequired);
         if (!displayName.equals(member.getDisplayName())) {
             LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
             member.changeDisplayName(displayName, now);   // 트랜잭션 종료 시 변경 감지로 UPDATE

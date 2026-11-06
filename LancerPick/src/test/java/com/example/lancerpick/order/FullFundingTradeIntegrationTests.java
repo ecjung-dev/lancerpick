@@ -30,14 +30,19 @@ import com.example.lancerpick.order.service.OrderConfirmationService;
 import com.example.lancerpick.order.service.OrderDeliveryService;
 import com.example.lancerpick.order.service.OrderPaymentService;
 import com.example.lancerpick.order.service.OrderRevisionService;
+import com.example.lancerpick.order.service.ReviewTimerService;
 import com.example.lancerpick.support.IntegrationTest;
 import com.example.lancerpick.support.V3FundsInvariant;
 import com.example.lancerpick.wallet.entity.Wallet;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
 import com.example.lancerpick.wallet.repository.WalletRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.nio.file.*;
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +52,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -59,6 +67,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /** Real committed transactions, independent workers, actual PDFs, no external payment calls. */
@@ -82,7 +91,8 @@ class FullFundingTradeIntegrationTests {
   }
 
   @Autowired MemberRepository members;
-  @Autowired WalletRepository wallets;
+  @MockitoSpyBean WalletRepository wallets;
+  @MockitoSpyBean Clock clock;
   @Autowired WalletEntryRepository entries;
   @Autowired OrderRepository orders;
   @Autowired OrderSnapshotRepository snapshots;
@@ -96,8 +106,10 @@ class FullFundingTradeIntegrationTests {
   @Autowired OrderCancellationRequestService requests;
   @Autowired OrderCancellationService cancellations;
   @Autowired FullFundingService funding;
+  @Autowired ReviewTimerService timers;
   @Autowired JdbcTemplate jdbc;
   @Autowired PlatformTransactionManager manager;
+  @Autowired EntityManager entityManager;
   @Autowired MockMvc mvc;
   @MockitoSpyBean OrderEventPublisher events;
   long buyer, seller, other, product, category, id;
@@ -407,6 +419,68 @@ class FullFundingTradeIntegrationTests {
     assertThat(balance(seller)).isEqualTo(1540001);
     assertThat(count("settlements")).isEqualTo(1);
     assertThat(count("order_closures")).isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void differentOrdersPayingSameSellerUseTimeAfterWalletLock(boolean automatic) {
+    long second = create();
+    jdbc.update("UPDATE wallets SET balance=2000000 WHERE member_id=?", buyer);
+    payments.pay(buyer, str(), true);
+    payments.pay(buyer, Long.toString(second), true);
+    deliver();
+    deliveries.submit(seller, Long.toString(second),
+        new CreateDeliveryRequest("다른 주문 납품", "https://example.invalid/second", 1));
+    Instant firstTime = Instant.now().plusSeconds(49 * 3600);
+    doReturn(firstTime).when(clock).instant();
+    if (automatic) {
+      timers.start(seller, id);
+      firstTime = firstTime.plusSeconds(8 * 24 * 3600);
+      doReturn(firstTime).when(clock).instant();
+    }
+    Instant laterTime = firstTime.plusSeconds(1);
+    var intervened = new AtomicBoolean();
+    var separateTransaction = new TransactionTemplate(manager);
+    separateTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    // 첫 주문의 지갑 잠금 직전에 다른 주문의 실제 지급 트랜잭션을 커밋한다.
+    doAnswer(invocation -> {
+      if (intervened.compareAndSet(false, true)) {
+        doReturn(laterTime).when(clock).instant();
+        separateTransaction.executeWithoutResult(ignored ->
+            confirmations.confirm(buyer, Long.toString(second)));
+      }
+      return java.util.Optional.ofNullable(
+          entityManager.find(Wallet.class, seller, LockModeType.PESSIMISTIC_WRITE));
+    }).when(wallets).findByMemberIdForUpdate(seller);
+
+    if (automatic) assertThat(timers.expireDue(10)).isEqualTo(1);
+    else confirmations.confirm(buyer, str());
+    assertThat(balance(seller)).isEqualTo(1000000 + 2 * 540001);
+    for (long orderId : List.of(id, second)) {
+      assertThat(funding.summary(seller, orderId).status()).isEqualTo("RELEASED");
+      assertThat(orders.findById(orderId).orElseThrow().getCompletedAt())
+          .isEqualTo(LocalDateTime.ofInstant(laterTime, ZoneOffset.UTC)
+              .truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+    }
+  }
+
+  @Test
+  void manualConfirmationRechecksExpiryAfterWaitingForSellerWallet() {
+    payments.pay(buyer, str(), true);
+    deliver();
+    doReturn(Instant.now().plusSeconds(49 * 3600)).when(clock).instant();
+    var timer = timers.start(seller, id);
+    doReturn(timer.expiresAt().toInstant().minusSeconds(1)).when(clock).instant();
+    doAnswer(invocation -> {
+      doReturn(timer.expiresAt().toInstant().plusSeconds(1)).when(clock).instant();
+      return java.util.Optional.ofNullable(
+          entityManager.find(Wallet.class, seller, LockModeType.PESSIMISTIC_WRITE));
+    }).when(wallets).findByMemberIdForUpdate(seller);
+
+    error(() -> confirmations.confirm(buyer, str()), "AUTO_CONFIRM_DUE");
+    assertThat(funding.summary(buyer, id).status()).isEqualTo("HELD");
+    assertThat(balance(seller)).isEqualTo(1000000);
+    assertThat(timers.status(buyer, id).status()).isEqualTo("ACTIVE");
   }
 
   @Test
