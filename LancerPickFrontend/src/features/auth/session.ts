@@ -71,6 +71,31 @@ export async function recheckSession(queryClient: QueryClient): Promise<RecheckO
   return current ? 'changed' : 'signedOut'
 }
 
+const pendingRechecks = new WeakMap<QueryClient, Promise<RecheckOutcome>>()
+/** 마지막으로 재확인한 로그인 상태 캐시의 갱신 시각. 재확인이 실패(unknown)해 값이 그대로면 다시 묻지 않는다. */
+const lastRecheckedAt = new WeakMap<QueryClient, number>()
+
+/**
+ * 조회가 401을 받았는데 헤더는 아직 로그인 회원을 보이고 있을 때 호출한다(QueryCache 공통 onError).
+ * 다른 곳에서 로그아웃·비밀번호 변경으로 세션이 끝난 탭이 새로고침 전까지 이전 이름·알림 수를 보이지 않게 한다.
+ * - 401이 아니거나 이미 로그인 안 함(null)·확인 전이면 아무것도 하지 않는다(반복 조회 방지).
+ * - 동시에 받은 401은 재확인 한 번으로 묶는다.
+ * - 재확인이 실패해 로그인 상태가 그대로면 같은 상태로는 다시 묻지 않는다(캐시 정리 → 재조회 → 401 반복 방지).
+ * 변경 요청(mutation)의 401은 각 화면이 결과를 안내하며 정리하므로 여기서 다루지 않는다.
+ */
+export function recheckAfterUnauthorized(queryClient: QueryClient, error: unknown): Promise<RecheckOutcome | undefined> {
+  if (!(error instanceof ApiError) || error.status !== 401) return Promise.resolve(undefined)
+  const pending = pendingRechecks.get(queryClient)
+  if (pending) return pending
+  if (!queryClient.getQueryData<Member | null>(memberQueryKey)) return Promise.resolve(undefined)
+  const updatedAt = queryClient.getQueryState(memberQueryKey)?.dataUpdatedAt ?? 0
+  if (lastRecheckedAt.get(queryClient) === updatedAt) return Promise.resolve(undefined)
+  lastRecheckedAt.set(queryClient, updatedAt)
+  const recheck = recheckSession(queryClient).finally(() => pendingRechecks.delete(queryClient))
+  pendingRechecks.set(queryClient, recheck)
+  return recheck
+}
+
 /**
  * 로그인 후 돌아갈 주소. 같은 사이트 안의 경로만 허용한다.
  * "//evil.com" 이나 "https://..." 를 넣어 다른 사이트로 보내는 공격(오픈 리다이렉트)을 막는다.

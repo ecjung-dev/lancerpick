@@ -113,7 +113,7 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 | ID | 작업 | 선행 | 상태 | 비고 |
 | --- | --- | --- | --- | --- |
 | C1 | 공통 이벤트 ID·버전·오류 계약 | E1 | main 반영(#115) | [공통 이벤트 계약](event-contract.md). 아웃박스 고정 오류 코드(K6 기준)·이름 기반 이벤트 ID·집계별 스키마 버전, 채팅 소켓 오류에 REST와 같은 fieldErrors·traceId와 status. DB 변경 없음. 채팅 영역(황준범) 수정 포함 |
-| C2 | 계정 전환·비밀번호 변경 시 소켓 연결 폐기·개인 캐시 정리 | K2, J1 | main 반영(#103) | [세션 ID·DB 인증 버전 재검사·로그아웃 이벤트·유휴 소켓 정리](order-chat-realtime.md). 세션 유휴 만료·버전 변경·권한 실패·클라이언트 정리 자동 검사. 브라우저 계정 전환·비밀번호 변경 시 소켓 폐기 확인(2026-11-06). 끊긴 탭 헤더가 새로고침 전까지 로그인 상태로 남는 점은 후속 |
+| C2 | 계정 전환·비밀번호 변경 시 소켓 연결 폐기·개인 캐시 정리 | K2, J1 | main 반영(#103) | [세션 ID·DB 인증 버전 재검사·로그아웃 이벤트·유휴 소켓 정리](order-chat-realtime.md). 세션 유휴 만료·버전 변경·권한 실패·클라이언트 정리 자동 검사. 브라우저 계정 전환·비밀번호 변경 시 소켓 폐기 확인(2026-11-06). 끊긴 탭 헤더가 새로고침 전까지 로그인 상태로 남던 점은 조회 401 시 세션 재확인으로 수정(`fix/session-expired-header`, PR 전, 자동 테스트만) |
 | C3 | 메일 발송 인프라(Spring Mail·Mailpit) | — | 완료(#90) | [메일 인프라](mail-infrastructure.md). 실제 서버+Mailpit API 확인, 브라우저 화면 확인은 남음. `SmtpAccountMailSender`(발송 스레드 1개·고정 큐), 기본 꺼짐(`MAIL_ENABLED`). K1 선행. 연결 지점: `auth/mail/AccountMailSender`(비동기 큐에 넣고 바로 반환) 구현 Bean + 발송 후 `AccountMailDeliveryRecorder` 호출([계약](auth-login.md#메일-발송-경계-c3-연결-계약)) |
 | C4 | Redis 세션 공유·Pub/Sub | J1 | 보류·최하위 | 단일 서버 유지. 다른 기능·G1의 선행 조건에서 제외. Redis 관련 작업은 필요성 재검토 후 재개하며 DB 잠금·UNIQUE를 대체하지 않음 |
 | C5 | 계측(Actuator·Micrometer·k6) | — | 조정 가능 | |
