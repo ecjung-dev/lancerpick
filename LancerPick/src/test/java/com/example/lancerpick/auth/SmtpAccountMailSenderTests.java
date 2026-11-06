@@ -105,6 +105,33 @@ class SmtpAccountMailSenderTests {
     }
 
     @Test
+    void untrackedMailIsSentWithoutRecordingTheResult() {
+        sender = new SmtpAccountMailSender(mailSender, recorder, FROM, 10);
+
+        assertThat(sender.enqueue(AccountMail.untracked("user@example.com", "[랜서픽] 아이디 안내", "본문"))).isTrue();
+
+        verify(mailSender, timeout(2000)).send(any(SimpleMailMessage.class));
+        // 발송 스레드가 기록 단계까지 끝나도록 같은 큐에 기록 대상 메일을 하나 더 넣고 그 결과를 기다린다.
+        sender.enqueue(mail(9L));
+        verify(recorder, timeout(2000)).markSent(9L);
+        verify(recorder).markSent(anyLong());   // 기록 대상 메일 1건만 기록됨
+        verify(recorder, never()).markFailed(anyLong(), anyString());
+    }
+
+    @Test
+    void untrackedMailFailureIsNotRecorded() {
+        doThrow(new MailSendException("connection refused")).doNothing()
+                .when(mailSender).send(any(SimpleMailMessage.class));
+        sender = new SmtpAccountMailSender(mailSender, recorder, FROM, 10);
+
+        sender.enqueue(AccountMail.untracked("user@example.com", "[랜서픽] 아이디 안내", "본문"));
+        sender.enqueue(mail(9L));
+
+        verify(recorder, timeout(2000)).markSent(9L);
+        verify(recorder, never()).markFailed(anyLong(), anyString());
+    }
+
+    @Test
     void smtpFailuresAreRecordedAsSafeCodes() {
         doThrow(new MailAuthenticationException("bad password for user@example.com"))
                 .when(mailSender).send(any(SimpleMailMessage.class));

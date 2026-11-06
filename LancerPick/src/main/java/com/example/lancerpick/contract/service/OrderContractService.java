@@ -143,7 +143,7 @@ public class OrderContractService {
 
   public ContractResponse sign(
       long memberId, long orderId, int version, String contentHash, String fileHash) {
-    // 계약 성립 후 주문은 선금 대기(AWAITING_PAYMENT)가 되므로, 그 상태에서는 같은 서명의 재요청만 허용한다.
+    // 계약 성립 후 주문은 결제 대기(AWAITING_PAYMENT)가 되므로, 그 상태에서는 같은 서명의 재요청만 허용한다.
     var order =
         lock(memberId, orderId, OrderStatus.AWAITING_CONTRACT, OrderStatus.AWAITING_PAYMENT);
     var contract =
@@ -160,7 +160,10 @@ public class OrderContractService {
     if (order.getStatus() != OrderStatus.AWAITING_CONTRACT || !"READY".equals(contract.getStatus()))
       throw conflict("서명 가능한 계약이 아닙니다.");
     var at = now();
-    signatures.saveAndFlush(ContractSignature.sign(contract, memberId, role, at));
+    var signature = signatures.saveAndFlush(ContractSignature.sign(contract, memberId, role, at));
+    if (existing.isEmpty()) {
+      events.publishFirstContractSignature(order, contract, signature);
+    }
     if (signatures.findByContractIdOrderByIdAsc(contract.getId()).size() == 2) {
       // 계약 확정 시점에도 최소 계약 금액을 다시 확인한다(생성 후 정책·데이터 변경 대비).
       installments(order);

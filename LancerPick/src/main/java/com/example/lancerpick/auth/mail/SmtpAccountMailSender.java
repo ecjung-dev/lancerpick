@@ -83,7 +83,7 @@ public class SmtpAccountMailSender implements AccountMailSender {
         if (failure != null) {
             log.warn("account mail send failed challengeId={} code={}", mail.challengeId(), failure);
         }
-        record(mail.challengeId(), failure);
+        if (mail.tracked()) record(mail.challengeId(), failure);   // 안내 메일(challengeId 없음)은 기록하지 않는다.
     }
 
     private void record(long challengeId, String failure) {

@@ -50,6 +50,10 @@ test('order history distinguishes state changes from events that leave state unc
   assert.deepEqual(describeHistory(event, order), { action: '취소 요청', actor: '구매자', transition: '상태 유지: 진행 중', reason: '취소 사유' })
   assert.equal(describeHistory({ ...event, actorId: '2', action: 'CANCELLED', toStatus: 'CANCELLED' }, order).transition, '진행 중 → 취소됨')
   assert.equal(describeHistory({ ...event, action: 'CREATED', fromStatus: null, toStatus: 'REQUESTED', reason: null }, order).transition, '상태: 수락 대기')
+  // 운영 문의를 검토한 관리자의 거절(K4): 당사자가 아닌 실행자는 관리자로 표시한다.
+  assert.deepEqual(describeHistory({ ...event, actorId: '77', action: 'CANCELLATION_REJECTED', reason: '판매자 작업 진행 확인' }, order),
+    { action: '취소 요청 거절', actor: '관리자', transition: '상태 유지: 진행 중', reason: '판매자 작업 진행 확인' })
+  assert.equal(describeHistory({ ...event, actorId: null, action: 'COMPLETED', toStatus: 'COMPLETED' }, order).actor, '시스템')
 })
 
 test('cancellation commands preserve UUID and IDs and omit optional empty rejection body', async () => {

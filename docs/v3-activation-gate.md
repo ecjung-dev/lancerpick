@@ -9,7 +9,7 @@
 - **같은 소스**: 활성화 후보 커밋 하나에서 백엔드 `clean build`, 프런트 `typecheck`·`lint`·`test:api`·`build`, 실서버·브라우저 확인을 모두 한다. 이전 커밋의 결과를 합산하지 않는다.
 - **세 가지 증거를 구분**해 기록한다: 자동 테스트(로컬 `lancerpick_test`/CI), 실서버+실제 DB(개인 DB에서 스위치를 켠 실행), 브라우저(두 계정 실제 로그인).
 - **필수 조건**: 아래 표의 필수(●) 항목이 모두 통과하고, 4절 금액 불변식 조회 결과가 0행이며, 열린 결함이 없을 것.
-- **켜지 않는 사유**: K4 미연결이면 결제 후 판매자 무응답 취소를 처리할 운영 경로가 없으므로 활성화하지 않는다(K4 결정 전까지 G1 보류).
+- **켜지 않는 사유**: K4 미연결이면 결제 후 판매자 무응답 취소를 처리할 운영 경로가 없으므로 활성화하지 않는다. 주문 쪽 서비스는 #121로 반영됐고, 관리자 API·화면 연결 전까지 G1 보류.
 - 판정 기록은 이 문서 6절과 [현재 현황](current-status.md)에 남긴다.
 
 ## 2. 시나리오
@@ -33,7 +33,7 @@
 | B1 ● | 결제 전 취소(수락 전·계약 대기·서명 후) | 금액 이동 없음, `ORDER_CANCELLED` | `V3ActivationGateIntegrationTests`.cancellationBeforePaymentMovesNoMoney…(V3 수락 전·계약 대기·서명 후 구매자/판매자), V2 기준 `OrderContractIntegrationTests` | — |
 | B2 ● | 결제 후 구매자 취소 요청 → 판매자 승인 | 보관금 전액 반환·REFUNDED·수익/수수료 0·`ORDER_FUNDS_REFUNDED` | `FullFundingTradeIntegrationTests.approvedCancellationRefundsOnce…`, `manualConfirmationAndApprovedRefundUseV3FundsWording` | 브라우저 |
 | B3 ● | 취소 요청 거절·철회 후 재개 | 타이머 종료, 해결 시각이 새 기산점 | `cancellationRequestCancelsTimerAndRejectionRestartsReviewWindow` | — |
-| B4 ● | 판매자 무응답 → 운영 문의 → 관리자 승인 취소(K4) | 전액 반환·`ADMIN_CANCELLATION`(`inquiry_id`)·문의 종료 한 트랜잭션 | **미구현**(김창재 문의 엔티티 선행) | K4 구현 후 통합 테스트·화면 |
+| B4 ● | 판매자 무응답 → 운영 문의 → 관리자 승인 취소(K4) | 전액 반환·`ADMIN_CANCELLATION`(`inquiry_id`)·문의 종료 한 트랜잭션 | 서비스 통합 테스트(`AdminCancellationReviewIntegrationTests`, 승인·거절·재전송·실패 롤백, main 반영 #121) | 관리자 API·화면 연결 후 실서버·브라우저 |
 | B5 ● | 결제 후 판매자 단독 취소 시도 | 409 `CANCELLATION_REQUEST_REQUIRED` | `pendingCancellationBlocksConfirmationAndWrongActors…` | — |
 
 ### C. 경합(실제 커밋·동시 스레드)
@@ -47,7 +47,7 @@
 | C5 ● | 타이머 만료 vs 구매자 확정/수정/취소 요청 | 만료 시각 이상이면 만료 우선(409 `AUTO_CONFIRM_DUE`), 응답이 먼저 커밋되면 만료 작업은 지급 안 함 | 순차: `ReviewTimerIntegrationTests`(AUTO_CONFIRM_DUE 3건). 동시: `V3ActivationGateIntegrationTests`.expiryRacingBuyerResponses…(만료 후 만료 처리·수정·취소 요청·확정 4개 동시), responseCommittedBeforeExpiry…(만료 전 동시 → 끝난 타이머는 이후 만료 실행에서도 지급 안 함) | — |
 | C6 ● | 관리자 해제 vs 자동 확정 | 같은 잠금으로 직렬화, 만료 후 해제는 409 | 순차: `adminCannotStopDueTimerBecauseExpiryWins`. 동시: `V3ActivationGateIntegrationTests`.adminStopRacingDueExpiry…, adminStopBeforeExpiry… | — |
 | C7 ● | 여러 서버의 만료 스케줄러 동시 실행 | 지급 1건 | `concurrentExpiryRunsPaySellerOnlyOnce` | — |
-| C8 ○ | 관리자 승인 취소 vs 판매자 승인/구매 확정 | 하나만 성공 | K4 미구현 | K4와 함께 |
+| C8 ○ | 관리자 승인 취소 vs 판매자 승인/구매 확정 | 하나만 성공 | 관리자 승인 vs 판매자 승인·구매자 철회·구매 확정 동시 실행(`AdminCancellationReviewIntegrationTests`, main 반영 #121) | — |
 
 ### D. 실패 시 전체 롤백
 
@@ -149,7 +149,8 @@ WHERE (
 | 날짜 | 커밋 | 자동 테스트 | 실서버·브라우저 | 불변식 | 판정 |
 | --- | --- | --- | --- | --- | --- |
 | 2026-11-06 | `test/v3-activation-gate` 작업 트리 | 로컬 `lancerpick_test` 백엔드 `clean build` 835건 통과(실패·오류·건너뜀 0). 프런트 변경 없음 | API 실서버·일부 브라우저([V3 알림](v3-notices.md#실서버브라우저-확인--2026-11-06-main-9f9aa8f)), 화면 버튼 전체 거래 아직 | 실서버 3건 0행, 자동 테스트 정리 단계 판정 | 보류(K4 미연결) |
-| 2026-11-06 | main `f82c49d` + `test/v3-gate-browser-check` 작업 트리 | 백엔드 재실행 안 함(운영 코드 변경 없음). 프런트 typecheck·lint·`test:api` 219건·build 통과 | [화면 버튼 전체 거래](#7-화면-버튼-전체-거래-확인--2026-11-06): G1(A1·B2)·G5 확인, A2는 앞선 API 실서버 기록 | 주문 18~22 전체 0행 | 보류(K4 미연결, G2 타이머 진행 중 패널·G4 미확인) |
+| 2026-11-06 | main `f82c49d` + `test/v3-gate-browser-check` 작업 트리(main 반영 #116) | 백엔드 재실행 안 함(운영 코드 변경 없음). 프런트 typecheck·lint·`test:api` 219건·build 통과 | [화면 버튼 전체 거래](#7-화면-버튼-전체-거래-확인--2026-11-06): G1(A1·B2)·G5 확인, A2는 앞선 API 실서버 기록 | 주문 18~22 전체 0행 | 보류(K4 미연결, G2 타이머 진행 중 패널·G4 미확인) |
+| 2026-11-06 | main `7329be1` + `test/v3-gate-remaining-check` 작업 트리(main 반영 #120) | 재실행 안 함(운영 코드 변경 없음) | [남은 화면 확인](#8-남은-화면-확인--2026-11-06): G2 타이머 시작 가능→진행 중 패널(판매자·구매자), G4 320px(주문 17·21·22·23) | 주문 18~23 전체 0행 | 보류(K4 미연결, B4·C8) |
 
 ## 7. 화면 버튼 전체 거래 확인 — 2026-11-06
 
@@ -162,13 +163,25 @@ WHERE (
 - **G5 PDF**: 두 당사자가 화면에서 받은 PDF의 SHA-256이 `order_contracts.file_hash`와 일치하고, 양측 `contract_signatures`의 서명 시점 파일·본문 해시도 현재 계약과 일치. PDFBox 텍스트 추출로 3쪽, 한글 본문·총금액 50000·특약·수수료 1000bps·`CONTRACT_V3` 표시 확인(글꼴 렌더링 눈 확인은 안 함).
 - **권한**: 제3자 계정은 주문 화면 "주문을 찾을 수 없습니다", `GET /api/orders/21`·`/contract`·`/contract/file`·`/funds`가 모두 404. 당사자는 같은 PDF 주소에서 200 `application/pdf`.
 
-발견(이 확인 범위에서 고치지 않음):
+발견(이 확인 범위에서 고치지 않음. 3건 모두 계약·정산 영역으로 황준범에게 전달했고 황준범이 처리 예정, 2026-11-06):
 1. 계약 서명 알림은 두 번째 서명에서만 생긴다(`ORDER_CONTRACT_SIGNED` 한 건, 마지막 서명자의 상대방에게). 먼저 서명한 쪽의 상대방은 서명 차례라는 알림을 받지 못한다. [계약 기반](order-contract-foundation.md) 설계대로이며, 첫 서명 알림을 추가할지는 결정이 필요하다.
 2. 판매 수익 화면 안내가 "구매 적립금과 별도로 관리"인데, V3는 판매자 구매용 지갑에 `SELLER_PAYOUT`으로 지급한다(지갑 화면에도 "판매대금 지급"으로 보임). 정산 화면(황준범) 문구 확인 필요.
 3. 결제 대기 전 계약 패널이 계약이 없을 때 오류 형태(alert)로 "아직 작성된 계약이 없거나 접근할 수 없습니다."를 보이고 콘솔에 404가 남는다. 정상 상태 안내로 바꿀지 검토(계약 화면, 황준범).
 
-후속 수정(2026-11-06, `fix/trade-finance-guidance`, 로컬): 위 발견 2·3의 판매 수익 지급 안내와 정상 계약 미작성 alert 표시를 보완했다. 기존 거래 수익의 별도 기록과 새 계약의 구매 적립금 지급을 구분하고, 생성 이력·기존 데이터·계약 필수 상태·오류 종류로 미작성 안내와 실제 실패를 구분한다. API/DB·서명 알림은 변경하지 않는다. 프런트 전체 222건·lint·TypeScript 포함 build 통과(신규 회귀 3건). SSR 자동 검사이며 실제 브라우저 재확인은 하지 않았다. 발견 1의 첫 서명 알림 추가는 정책 결정 전까지 유지한다.
+후속 수정(2026-11-06, `fix/trade-finance-guidance`, 로컬): 위 발견 2·3의 판매 수익 지급 안내와 정상 계약 미작성 alert 표시를 보완했다. 기존 거래 수익의 별도 기록과 새 계약의 구매 적립금 지급을 구분하고, 생성 이력·기존 데이터·계약 필수 상태·오류 종류로 미작성 안내와 실제 실패를 구분한다. 이 화면 수정은 API/DB·서명 알림을 변경하지 않는다. 초기 프런트 전체 222건·lint·TypeScript 포함 build 통과(신규 회귀 3건). SSR 자동 검사이며 실제 브라우저 재확인은 하지 않았다. 발견 1의 첫 서명 알림 추가는 이후 별도 PR #123으로 main에 반영됐다.
+
+후속 정책 확정(2026-11-06, 사용자): 위 발견 1의 첫 서명 알림을 추가한다. `feature/first-contract-signature-notification`의 로컬 구현은 미서명 상대방에게만 `ORDER_CONTRACT_SIGNATURE_REQUESTED`를 보내고, 양측 완료 전환·완료 알림은 유지한다. 서명 이력/아웃박스의 원자 처리·반복 및 동시 요청 중복 방지는 [알림 기록](notifications.md#첫-계약-서명-알림--2026-11-06-로컬-후속)을 따른다. 실제 브라우저 재확인은 아직이다.
 
 고친 것: 판매자 수락 안내 "수락하면계약 작성·…"의 공백 누락(JSX 줄바꿈 공백 제거, `OrderDetailPage.tsx`). 프런트 검사 통과, 수정 후 화면 재확인은 안 함.
 
-남은 G 항목: G2 타이머 "진행 중" 패널 화면(시작 가능 시각 48시간 대기 또는 DB 시각 조정 필요), G4 좁은 화면, K4 연결 후 B4·C8.
+남은 G 항목: G2 타이머 "진행 중" 패널 화면(시작 가능 시각 48시간 대기 또는 DB 시각 조정 필요), G4 좁은 화면, K4 연결 후 B4·C8. → G2 패널·G4는 8절에서 확인.
+
+## 8. 남은 화면 확인 — 2026-11-06
+
+환경: main `7329be1` 백엔드 `bootRun`(개인 개발 DB, 실행 인자로만 V3 생성 허용) + Vite + Playwright 격리 컨텍스트(구매자 14·판매자 15). 담당표의 G4는 황준범이지만 이번 확인은 정은찬이 했다.
+
+- **G2 타이머 진행 중 패널(주문 23)**: 주문 생성→수락→계약 초안·PDF·양측 서명→결제→1차 납품은 **API 호출**로 진행했다(화면 버튼 거래는 7절). 개인 DB에서 이 주문의 `deliveries.submitted_at` 한 행만 49시간 앞당겼다. 판매자 패널 "자동 구매 확정 타이머 시작 가능" → 화면 버튼 "7일 자동 구매 확정 타이머 시작" → "자동 구매 확정 타이머 진행 중 · 2026. 11. 13. 오후 4:55까지 구매자 응답(구매 확정·수정 요청·취소 요청)이 없으면 자동으로 구매가 확정됩니다". 구매자 패널도 같은 진행 중 안내이며 시작 버튼이 없다. DB: 타이머 `AUTO_CONFIRM` ACTIVE 1행(시작+7일 만료), `order_funds` HELD 50,000원.
+- **G4 320px**: 구매자로 주문 23(진행 중 타이머·보관 중 대금)·21(지급 완료)·22(전액 반환)·17(계약 대기)에서 문서 가로 넘침 없음(`scrollWidth`=`clientWidth`, 화면 밖 요소 0). 대금·타이머 패널 문구가 줄바꿈되고 겹치지 않음을 스크린샷으로 확인.
+- **불변식**: 4절 조회 0행(주문 18~23).
+
+남은 G 항목: K4 관리자 API·화면 연결 후 B4 실서버·브라우저 확인과 활성화 판정(B4·C8 자동 테스트는 #121). 실제 48시간·7일 시간 경과는 확인하지 않았다(시각 조정으로 대신함).

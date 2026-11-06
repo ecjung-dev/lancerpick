@@ -30,7 +30,7 @@ public class AccountMailDispatcher {
         AccountMailSender sender = senders.getIfAvailable();
         if (sender == null) {
             // 메일 발송이 꺼져 있다(lancerpick.mail.enabled=false, 기본). 앱은 메일 서버 없이도 동작한다.
-            fail(mail.challengeId(), "MAIL_NOT_CONFIGURED");
+            fail(mail, "MAIL_NOT_CONFIGURED");
             return;
         }
         boolean queued;
@@ -38,17 +38,19 @@ public class AccountMailDispatcher {
             queued = sender.enqueue(mail);
         } catch (RuntimeException e) {
             log.warn("account mail enqueue failed challengeId={} type={}", mail.challengeId(), e.getClass().getName());
-            fail(mail.challengeId(), "MAIL_ENQUEUE_FAILED");
+            fail(mail, "MAIL_ENQUEUE_FAILED");
             return;
         }
         if (!queued) {
-            fail(mail.challengeId(), "MAIL_QUEUE_FULL");
+            fail(mail, "MAIL_QUEUE_FULL");
         }
         // 큐에 넣었으면 PENDING 그대로 두고, 발송기가 끝난 뒤 markSent/markFailed를 호출한다.
     }
 
-    private void fail(long challengeId, String code) {
+    private void fail(AccountMail mail, String code) {
+        Long challengeId = mail.challengeId();
         log.warn("account mail not sent challengeId={} code={}", challengeId, code);
+        if (!mail.tracked()) return;   // 기록 대상 행이 없는 안내 메일은 로그만 남긴다.
         try {
             recorder.markFailed(challengeId, code);
         } catch (RuntimeException e) {

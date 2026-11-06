@@ -1,6 +1,8 @@
 package com.example.lancerpick.contract;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.contract.entity.OrderContract;
@@ -8,6 +10,9 @@ import com.example.lancerpick.contract.repository.*;
 import com.example.lancerpick.contract.service.OrderContractService;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.repository.MemberRepository;
+import com.example.lancerpick.notification.entity.OutboxEvent;
+import com.example.lancerpick.notification.service.OrderEventPublisher;
+import com.example.lancerpick.notification.service.OutboxDispatcher;
 import com.example.lancerpick.order.entity.*;
 import com.example.lancerpick.order.repository.*;
 import com.example.lancerpick.order.service.OrderPaymentService;
@@ -20,14 +25,19 @@ import java.util.concurrent.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.util.AopTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import tools.jackson.databind.json.JsonMapper;
 
 @IntegrationTest
 @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -46,6 +56,9 @@ class OrderContractIntegrationTests {
   @Autowired com.example.lancerpick.order.service.OrderCancellationService cancellations;
   @Autowired com.example.lancerpick.order.service.OrderConfirmationService confirmations;
   @Autowired com.example.lancerpick.order.service.OrderDecisionService decisions;
+  @Autowired OutboxDispatcher dispatcher;
+  @Autowired JsonMapper mapper;
+  @MockitoSpyBean OrderEventPublisher eventPublisher;
 
   @Test
   void contractOrderReportsPolicyAndBlocksLegacyMutations() {
@@ -153,14 +166,13 @@ class OrderContractIntegrationTests {
   }
 
   /**
-   * 10,000원 미만 계약 주문은 V3 ck_orders_v2_price가 저장 단계에서 막는다. 서비스의 초안·확정 시 하한 검사는 이 제약을
-   * 409 업무 오류로 한 번 더 지키는 방어선이라 저장된 데이터로는 도달할 수 없다.
+   * 10,000원 미만 계약 주문은 V3 ck_orders_v2_price가 저장 단계에서 막는다. 서비스의 초안·확정 시 하한 검사는 이 제약을 409 업무 오류로 한 번
+   * 더 지키는 방어선이라 저장된 데이터로는 도달할 수 없다.
    */
   @Test
   void databaseRejectsContractOrderBelowMinimumAmount() {
     em.flush();
-    assertThatThrownBy(() ->
-            jdbc.update("UPDATE orders SET price_amount=9999 WHERE id=?", orderId))
+    assertThatThrownBy(() -> jdbc.update("UPDATE orders SET price_amount=9999 WHERE id=?", orderId))
         .hasMessageContaining("ck_orders_v2_price");
     assertThatThrownBy(() -> requestedContractOrder(9999L))
         .hasMessageContaining("ck_orders_v2_price");
@@ -211,6 +223,7 @@ class OrderContractIntegrationTests {
         jdbc.queryForObject("SELECT product_id FROM orders WHERE id=?", Long.class, orderId);
     Long category =
         jdbc.queryForObject("SELECT category_id FROM products WHERE id=?", Long.class, product);
+    jdbc.update("DELETE FROM notifications WHERE order_id=?", orderId);
     jdbc.update(
         "DELETE FROM contract_signatures WHERE contract_id IN (SELECT id FROM order_contracts WHERE"
             + " order_id=?)",
@@ -273,6 +286,110 @@ class OrderContractIntegrationTests {
     assertThat(contracts.findById(Long.parseLong(draft.id())).orElseThrow().getStatus())
         .isEqualTo("SIGNED");
     assertThat(signatures.findByContractIdOrderByIdAsc(Long.parseLong(draft.id()))).hasSize(2);
+    assertThat(outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId))
+        .extracting(OutboxEvent::getType)
+        .containsExactly(
+            "ORDER_CONTRACT_CREATED",
+            "ORDER_CONTRACT_SIGNATURE_REQUESTED",
+            "ORDER_CONTRACT_SIGNED");
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void firstSignerNotifiesOnlyUnsignedCounterpartAndReplaysNeverDuplicate(boolean buyerFirst) {
+    var draft = service.prepare(seller, orderId, 0, "");
+    new TransactionTemplate(transactionManager).executeWithoutResult(ignored -> ready(draft.id()));
+    String file = fileHash(draft.id());
+    long first = buyerFirst ? buyer : seller;
+    long second = buyerFirst ? seller : buyer;
+    assertThatThrownBy(() -> service.sign(other, orderId, 1, draft.contentHash(), file))
+        .isInstanceOfSatisfying(
+            BusinessException.class, e -> assertThat(e.code()).isEqualTo("RESOURCE_NOT_FOUND"));
+    service.sign(first, orderId, 1, draft.contentHash(), file);
+    service.sign(first, orderId, 1, draft.contentHash(), file);
+    var signature = signatures.findByContractIdOrderByIdAsc(Long.parseLong(draft.id())).getFirst();
+    var requests =
+        outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId).stream()
+            .filter(e -> e.getType().equals(OrderEventPublisher.CONTRACT_SIGNATURE_REQUESTED))
+            .toList();
+    assertThat(requests).hasSize(1);
+    var request = requests.getFirst();
+    assertThat(request.getEventId())
+        .isEqualTo(OutboxEvent.nameBasedId("CONTRACT_SIGNATURE_REQUESTED", signature.getId()));
+    var payload = mapper.readTree(request.getPayload());
+    assertThat(payload.get("recipientIds").size()).isEqualTo(1);
+    assertThat(payload.get("recipientIds").get(0).asString()).isEqualTo(Long.toString(second));
+    assertThat(request.getPayload()).doesNotContain(file, draft.contentHash(), "requirements");
+    assertThat(orders.findById(orderId).orElseThrow().getStatus())
+        .isEqualTo(OrderStatus.AWAITING_CONTRACT);
+    assertThat(contracts.findById(Long.parseLong(draft.id())).orElseThrow().getStatus())
+        .isEqualTo("READY");
+    assertThat(dispatcher.dispatch(request.getId())).isTrue();
+    assertThat(dispatcher.dispatch(request.getId())).isFalse();
+    assertThat(
+            jdbc.queryForList(
+                "SELECT recipient_id FROM notifications WHERE event_id=?",
+                Long.class,
+                request.getEventId()))
+        .containsExactly(second);
+    // 저장된 서명의 이벤트를 직접 다시 발행해도 중복되지 않는다.
+    boolean republished =
+        new TransactionTemplate(transactionManager)
+            .execute(ignored ->
+                eventPublisher.publishFirstContractSignature(
+                    orders.findById(orderId).orElseThrow(),
+                    contracts.findById(Long.parseLong(draft.id())).orElseThrow(),
+                    signature));
+    assertThat(republished).isFalse();
+    service.sign(second, orderId, 1, draft.contentHash(), file);
+    service.sign(first, orderId, 1, draft.contentHash(), file);
+    service.sign(second, orderId, 1, draft.contentHash(), file);
+    var events = outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId);
+    assertThat(events)
+        .extracting(OutboxEvent::getType)
+        .containsExactly(
+            "ORDER_CONTRACT_CREATED",
+            "ORDER_CONTRACT_SIGNATURE_REQUESTED",
+            "ORDER_CONTRACT_SIGNED");
+    var completed = events.getLast();
+    assertThat(dispatcher.dispatch(completed.getId())).isTrue();
+    assertThat(
+            jdbc.queryForList(
+                "SELECT recipient_id FROM notifications WHERE event_id=?",
+                Long.class,
+                completed.getEventId()))
+        .containsExactly(first);
+    assertThat(orders.findById(orderId).orElseThrow().getStatus())
+        .isEqualTo(OrderStatus.AWAITING_PAYMENT);
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void failureToSaveFirstSignatureEventRollsBackSignatureAndCanRetry() {
+    var draft = service.prepare(seller, orderId, 0, "");
+    new TransactionTemplate(transactionManager).executeWithoutResult(ignored -> ready(draft.id()));
+    String file = fileHash(draft.id());
+    OrderEventPublisher target = AopTestUtils.getUltimateTargetObject(eventPublisher);
+    doThrow(new IllegalStateException("injected event storage failure"))
+        .doCallRealMethod()
+        .when(target)
+        .publishFirstContractSignature(any(), any(), any());
+    assertThatThrownBy(() -> service.sign(buyer, orderId, 1, draft.contentHash(), file))
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(signatures.findByContractIdOrderByIdAsc(Long.parseLong(draft.id()))).isEmpty();
+    assertThat(outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId))
+        .extracting(OutboxEvent::getType)
+        .containsExactly("ORDER_CONTRACT_CREATED");
+    assertThat(contracts.findById(Long.parseLong(draft.id())).orElseThrow().getStatus())
+        .isEqualTo("READY");
+    assertThat(orders.findById(orderId).orElseThrow().getStatus())
+        .isEqualTo(OrderStatus.AWAITING_CONTRACT);
+    service.sign(buyer, orderId, 1, draft.contentHash(), file);
+    assertThat(signatures.findByContractIdOrderByIdAsc(Long.parseLong(draft.id()))).hasSize(1);
+    assertThat(outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId))
+        .extracting(OutboxEvent::getType)
+        .containsExactly("ORDER_CONTRACT_CREATED", "ORDER_CONTRACT_SIGNATURE_REQUESTED");
   }
 
   long buyer, seller, other, orderId;
@@ -380,7 +497,10 @@ class OrderContractIntegrationTests {
         .isEqualTo(seller);
     assertThat(outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId))
         .extracting(e -> e.getType())
-        .containsExactly("ORDER_CONTRACT_CREATED", "ORDER_CONTRACT_SIGNED");
+        .containsExactly(
+            "ORDER_CONTRACT_CREATED",
+            "ORDER_CONTRACT_SIGNATURE_REQUESTED",
+            "ORDER_CONTRACT_SIGNED");
     assertThatThrownBy(() -> service.prepare(seller, orderId, 1, "changed"))
         .isInstanceOf(BusinessException.class);
   }
@@ -401,6 +521,15 @@ class OrderContractIntegrationTests {
     assertThat(signatures.findByContractIdOrderByIdAsc(Long.parseLong(first.id()))).hasSize(1);
     assertThatThrownBy(() -> service.sign(buyer, orderId, 1, first.contentHash(), file))
         .isInstanceOf(BusinessException.class);
+    ready(second.id());
+    service.sign(buyer, orderId, second.version(), second.contentHash(), fileHash(second.id()));
+    assertThat(
+            outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId).stream()
+                .filter(e -> e.getType().equals(OrderEventPublisher.CONTRACT_SIGNATURE_REQUESTED))
+                .map(OutboxEvent::getEventId)
+                .toList())
+        .hasSize(2)
+        .doesNotHaveDuplicates();
   }
 
   @Test

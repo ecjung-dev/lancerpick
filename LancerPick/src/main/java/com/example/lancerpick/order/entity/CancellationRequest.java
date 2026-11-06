@@ -38,5 +38,7 @@ public class CancellationRequest {
 
     public static CancellationRequest create(long order,long buyer,String key,String reason,LocalDateTime at){var r=new CancellationRequest();r.orderId=order;r.requestedBy=buyer;r.requestKey=key;r.reason=reason;r.status="PENDING";r.requestedAt=at;return r;}
     public void resolve(String status,long actor,String reason,LocalDateTime at){if(!"PENDING".equals(this.status) || !java.util.Set.of("APPROVED","REJECTED","WITHDRAWN").contains(status) || actor<=0 || at==null || at.isBefore(requestedAt))throw new IllegalStateException("Invalid resolution");this.status=status;this.resolvedBy=actor;this.responseReason=reason;this.resolvedAt=at;this.resolutionSource="WITHDRAWN".equals(status)?"BUYER":"SELLER";}
+    /** 운영 문의를 검토한 관리자의 승인/거절(K4). 관리자 사유를 응답 사유로 남긴다. */
+    public void resolveByAdmin(String status,long admin,String reason,LocalDateTime at){if(!"PENDING".equals(this.status) || !java.util.Set.of("APPROVED","REJECTED").contains(status) || admin<=0 || reason==null || at==null || at.isBefore(requestedAt))throw new IllegalStateException("Invalid admin resolution");this.status=status;this.resolvedBy=admin;this.responseReason=reason;this.resolvedAt=at;this.resolutionSource="ADMIN";}
     public void clearApprovalResponseReason(){if("APPROVED".equals(status))responseReason=null;}
 }

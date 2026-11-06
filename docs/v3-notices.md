@@ -24,7 +24,8 @@
 | PAID | `ORDER_FUNDS_HELD` (대금 보관) | 판매자 |
 | COMPLETED(구매자) | `ORDER_FUNDS_RELEASED` (수수료 제외 적립금 지급) | 판매자 |
 | COMPLETED(SYSTEM) | `ORDER_AUTO_CONFIRMED` (자동 확정·적립금 지급, 문구 보강) | 양측 |
-| CANCELLED(결제 후 상태에서) | `ORDER_FUNDS_REFUNDED` (보관금 전액 반환) | 행동하지 않은 당사자 |
+| CANCELLED(결제 후 상태에서) | `ORDER_FUNDS_REFUNDED` (보관금 전액 반환) | 행동하지 않은 당사자(관리자 승인 취소는 양측) |
+| CANCELLATION_REJECTED(관리자 실행) | `ORDER_CANCELLATION_ADMIN_REJECTED` (운영 문의 검토 거절, 2026-11-06 K4) | 양측 |
 
 결제 전 V3 취소는 기존 `ORDER_CANCELLED`다. 잔금 미지급 종료 알림은 만들지 않는다.
 

@@ -22,6 +22,18 @@ test('every order event type has its own Korean message and unknown types fall b
   assert.equal(messages.size, types.length)
   assert.ok(!messages.has(fallback))
   assert.equal(fallback, '거래 상태가 변경되었습니다.')
+  // 관리자 거절(K4)은 판매자 거절과 다른 문구다.
+  const adminRejected = notificationMessage('ORDER_CANCELLATION_ADMIN_REJECTED')
+  assert.notEqual(adminRejected, fallback)
+  assert.notEqual(adminRejected, notificationMessage('ORDER_CANCELLATION_REJECTED'))
+  assert.match(adminRejected, /관리자/)
+})
+
+test('first signature asks the counterpart to check signing while final signature announces formation', () => {
+  assert.match(notificationMessage('ORDER_CONTRACT_SIGNATURE_REQUESTED'), /먼저 서명/)
+  assert.match(notificationMessage('ORDER_CONTRACT_SIGNATURE_REQUESTED'), /서명 상태를 확인/)
+  assert.doesNotMatch(notificationMessage('ORDER_CONTRACT_SIGNATURE_REQUESTED'), /계약이 성립/)
+  assert.match(notificationMessage('ORDER_CONTRACT_SIGNED'), /양측 서명이 완료되어 계약이 성립/)
 })
 
 test('only valid order IDs become links, keeping large IDs as strings', () => {
