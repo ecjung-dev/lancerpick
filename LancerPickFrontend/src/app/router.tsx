@@ -3,6 +3,7 @@ import { OrderDetailPage } from '../features/orders/pages/OrderDetailPage'
 import { SettlementPage } from '../features/settlements/pages/SettlementPage'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { SignupPage } from '../features/auth/pages/SignupPage'
+import { SignupVerifyPage } from '../features/auth/pages/SignupVerifyPage'
 import { PasswordResetPage } from '../features/auth/pages/PasswordResetPage'
 import { PasswordResetRequestPage } from '../features/auth/pages/PasswordResetRequestPage'
 import { ProductListPage } from '../features/products/pages/ProductListPage'
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
       { path: 'products/:id/order', element: <OrderCreatePage /> },
       { path: 'login', element: <LoginPage /> },
       { path: 'signup', element: <SignupPage /> },
+      { path: 'signup/verify', element: <SignupVerifyPage /> },
       { path: 'password-reset/request', element: <PasswordResetRequestPage /> },
       { path: 'password-reset', element: <PasswordResetPage /> },
       { path: 'orders', element: <OrderListPage /> },

@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,8 +19,11 @@ import org.hibernate.type.SqlTypes;
 
 /**
  * 계정 복구용 일회용 증명(V5 account_challenges). 토큰 원문은 저장하지 않고 SHA-256 해시만 저장한다.
- * 이번 작업은 비밀번호 재설정(PASSWORD_RESET)만 만든다: member_id와 발급 당시 auth_version(credential_version)이 필수다.
- * 비밀번호가 한 번이라도 바뀌면 auth_version이 올라가므로, 그 전에 발급한 다른 재설정 링크는 버전 불일치로 쓸 수 없다.
+ * - PASSWORD_RESET: member_id와 발급 당시 auth_version(credential_version)이 필수다.
+ *   비밀번호가 한 번이라도 바뀌면 auth_version이 올라가므로, 그 전에 발급한 다른 재설정 링크는 버전 불일치로 쓸 수 없다.
+ * - SIGNUP_EMAIL: 가입 전이라 member_id가 없다. 메일 링크로 인증하면 같은 행이 가입 증명(proof)으로 바뀌고(verified_at),
+ *   가입할 때 증명을 사용 처리(consumed_at)하면서 회원·지갑을 함께 만든다.
+ * 목적이 다르면 서로의 토큰으로 쓸 수 없다(각 확인 메서드가 purpose를 먼저 본다).
  */
 @Entity
 @Table(name = "account_challenges")
@@ -43,8 +47,9 @@ public class AccountChallenge {
     @Column(name = "email", nullable = false, length = 254, updatable = false)
     private String email;                                 // 정규화된 이메일. 스키마가 요구하는 값(NOT NULL)
 
-    @Column(name = "token_hash", nullable = false, updatable = false, columnDefinition = "BINARY(32)")
-    private byte[] tokenHash;                             // SHA-256(토큰 원문 32바이트). 원문은 메일에만 있다
+    // 가입 인증(SIGNUP_EMAIL)은 인증하는 순간 메일 링크 토큰의 해시를 가입 증명(proof)의 해시로 바꾼다(verifyForSignup).
+    @Column(name = "token_hash", nullable = false, columnDefinition = "BINARY(32)")
+    private byte[] tokenHash;                             // SHA-256(토큰 원문 32바이트). 원문은 메일·인증 응답에만 있다
 
     @Column(name = "credential_version", updatable = false)
     private Long credentialVersion;                       // 발급 당시 members.auth_version
@@ -54,8 +59,8 @@ public class AccountChallenge {
     private LocalDateTime issuedAt;                       // UTC
 
     @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
-    @Column(name = "expires_at", nullable = false, updatable = false)
-    private LocalDateTime expiresAt;                      // UTC
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiresAt;                      // UTC. 가입 인증은 인증 시점에 증명 만료로 다시 정한다
 
     @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
     @Column(name = "verified_at")
@@ -89,6 +94,70 @@ public class AccountChallenge {
     }
 
     /**
+     * 가입 이메일 인증 메일 발급(3인 설계 §5.1). 가입 전이라 member_id·credential_version은 없다(V5 CHECK).
+     * 이미 가입된 주소에도 같은 행을 만든다(요청 단계에서 가입 여부를 드러내지 않음).
+     */
+    public static AccountChallenge signupEmail(String email, byte[] tokenHash, LocalDateTime issuedAt,
+            LocalDateTime expiresAt) {
+        AccountChallenge challenge = new AccountChallenge();
+        challenge.purpose = ChallengePurpose.SIGNUP_EMAIL;
+        challenge.email = email;
+        challenge.tokenHash = tokenHash.clone();
+        challenge.issuedAt = issuedAt;
+        challenge.expiresAt = expiresAt;
+        challenge.deliveryStatus = ChallengeDeliveryStatus.PENDING;
+        return challenge;
+    }
+
+    /** 메일 링크 토큰으로 인증할 수 없는 이유. 인증할 수 있으면 null. 이 행을 잠근 뒤에 호출한다. */
+    public String signupVerificationRejection(byte[] lockedTokenHash, LocalDateTime now) {
+        if (purpose != ChallengePurpose.SIGNUP_EMAIL) {
+            return "WRONG_PURPOSE";
+        }
+        // 잠금을 기다리는 동안 다른 요청이 먼저 인증하면 해시가 증명 해시로 바뀐다. 같은 링크 동시 인증은 한 번만 성공한다.
+        if (verifiedAt != null || !Arrays.equals(tokenHash, lockedTokenHash)) {
+            return "ALREADY_VERIFIED";
+        }
+        if (consumedAt != null) {
+            return "ALREADY_CONSUMED";
+        }
+        if (!now.isBefore(expiresAt)) {
+            return "EXPIRED";
+        }
+        return null;
+    }
+
+    /**
+     * 인증 완료: 메일 링크 토큰을 더는 쓸 수 없게 하고, 같은 행을 가입 증명(proof)으로 바꾼다.
+     * 증명 원문은 응답에만 있고 DB에는 해시만 남는다. 증명 만료는 인증 시점부터 다시 센다(입력할 시간 확보).
+     */
+    public void verifyForSignup(byte[] proofHash, LocalDateTime now, LocalDateTime proofExpiresAt) {
+        this.tokenHash = proofHash.clone();
+        this.verifiedAt = now;
+        this.expiresAt = proofExpiresAt;
+    }
+
+    /** 가입 증명으로 가입할 수 없는 이유. 쓸 수 있으면 null. 이 행을 잠근 뒤에 호출한다. 응답은 모두 같은 400이다. */
+    public String signupProofRejection(String normalizedEmail, LocalDateTime now) {
+        if (purpose != ChallengePurpose.SIGNUP_EMAIL) {
+            return "WRONG_PURPOSE";
+        }
+        if (verifiedAt == null) {
+            return "NOT_VERIFIED";   // 메일 링크 토큰 자체를 증명으로 보낸 경우
+        }
+        if (consumedAt != null) {
+            return "ALREADY_CONSUMED";
+        }
+        if (!now.isBefore(expiresAt)) {
+            return "EXPIRED";
+        }
+        if (!email.equals(normalizedEmail)) {
+            return "EMAIL_MISMATCH";
+        }
+        return null;
+    }
+
+    /**
      * 재설정에 쓸 수 없는 이유. 쓸 수 있으면 null. 회원·이 행을 잠근 뒤에 호출해야 한다.
      * 이유는 서버 로그용 안전한 코드이고, 응답은 모두 같은 PASSWORD_RESET_TOKEN_INVALID다.
      */
@@ -112,7 +181,7 @@ public class AccountChallenge {
         return null;
     }
 
-    /** 사용 처리. passwordResetRejection이 null일 때만 호출한다. */
+    /** 사용 처리. passwordResetRejection 또는 signupProofRejection이 null일 때만 호출한다. */
     public void consume(LocalDateTime now) {
         this.consumedAt = now;
     }

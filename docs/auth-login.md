@@ -235,3 +235,66 @@ C3 전달 사항 6번 요청에 따라 실제 화면에서 처음부터 끝까�
 | 320×740 | 요청·새 비밀번호·링크 사용 불가·로그인 화면 모두 문서 너비 320, 넘친 요소 0 |
 
 확인하지 않은 것: `account_challenges.delivery_status`의 `SENT`는 DB를 직접 조회하지 않았다(발송 실패·기록 실패 로그가 없는 것으로만 확인). 외부 SMTP·실제 받은편지함·실기기 모바일·다른 브라우저는 범위 밖이다. 60초·1시간 제한과 만료는 자동 테스트 결과를 따른다.
+
+## 이메일 인증 가입 — 2026-11-06 (`feature/email-verification`)
+
+4인 설계 §4 1번과 3인 설계 §5.1·7·8절을 구현했다. DB·라이브러리 변경은 없다(V5 `account_challenges`의 `SIGNUP_EMAIL`, `members.email_verified_at` 사용). 메일은 C3 발송기(#90)를 그대로 쓴다. 기존 회원의 이메일 인증 전환(§5.2, `EXISTING_EMAIL`)과 재설정 성공 시 인증 시각 기록 여부는 다음 작업으로 나눴다.
+
+### 흐름과 계약
+
+```text
+/signup 이메일 입력 → POST /api/auth/signup-email-requests (항상 같은 202)
+→ 메일 링크 /signup/verify#token=… (열기만 해서는 아무것도 바뀌지 않음)
+→ "인증하기" → POST /api/auth/signup-email-verifications → 가입 증명(proof)
+→ 비밀번호·표시 이름 입력 → POST /api/members(+emailVerificationProof)
+→ 증명 소비 + 회원(email_verified_at) + 지갑 + 100만원, 한 트랜잭션 → /login(자동 로그인 없음)
+```
+
+| 경로 | 입력·권한 | 결과 |
+| --- | --- | --- |
+| POST /api/auth/signup-email-requests | 비로그인 가능 + CSRF; email | 202 `{message}` `no-store`. 이미 가입된 이메일·제한 초과·발송 실패와 무관하게 같은 응답. 형식 오류만 400 VALIDATION_FAILED |
+| POST /api/auth/signup-email-verifications | 비로그인 가능 + CSRF; token | 200 `{email, proof, proofExpiresAt, alreadyRegistered}` `no-store`. 위조·만료·이미 인증·목적 다름은 400 SIGNUP_EMAIL_TOKEN_INVALID |
+| POST /api/members | 비로그인 + CSRF; email, password, displayName, emailVerificationProof | 201 Member. 증명 없음 400 VALIDATION_FAILED, 증명 오류 400 EMAIL_VERIFICATION_INVALID, 이미 가입 409 EMAIL_ALREADY_EXISTS |
+
+- **이미 가입된 이메일**: 요청 단계에서는 같은 202로 인증 메일도 똑같이 보낸다. 메일을 받은 본인이 인증한 뒤에만 `alreadyRegistered=true`로 알려 주고, 화면은 로그인·비밀번호 재설정으로 안내한다. 가입 API도 409로 한 번 더 막는다(3인 설계 §5.2 마지막 문단).
+- **우회 경로 없음**: 증명 없는 구형 가입 요청은 400이다(3인 설계 §5.1). 메일이 꺼진 기본 상태(`MAIL_ENABLED=false`)에서는 화면에서 새 계정을 만들 수 없다. 로컬에서 새 계정이 필요하면 Mailpit을 켠다([메일 인프라](mail-infrastructure.md#로컬-mailpit-확인), Docker가 없으면 Mailpit 공식 실행 파일 사용). 기존 계정과 시드 SQL 계정은 그대로 로그인된다.
+
+### 서버 처리
+
+요청(`SignupEmailService.requestVerification`): 이메일 정규화(`EmailRules`) → 제한 행 준비(별도 커밋, 교착 시 재시도) → 업무 트랜잭션: 제한 확인(scope `SIGNUP_EMAIL_INTERVAL`·`SIGNUP_EMAIL_HOUR`, 60초 간격·1시간 5회, 재설정과 따로 센다) → `SIGNUP_EMAIL` 행 저장(링크 토큰 SHA-256 해시, 15분, `member_id`·`credential_version` NULL) → 커밋 뒤 `AccountMailDispatcher`로 메일(`SignupEmailMailContent`). 비밀번호는 받지도 저장하지도 않고, 회원·지갑·적립금도 만들지 않는다.
+
+인증(`verify`, 한 트랜잭션): 링크 토큰 해시로 행 `FOR UPDATE` → 목적·미인증·미사용·만료 재확인 → **같은 행의 `token_hash`를 새 증명의 해시로 바꾸고 `verified_at` 기록, `expires_at` = 인증 시각 + 30분**(입력할 시간 확보, 2026-11-06 결정). 링크 토큰은 그 순간 무효다. 같은 링크 동시 인증은 잠금에서 한 줄로 서고 늦은 쪽은 400이다.
+
+가입(`MemberService.signup`, 한 트랜잭션): 이메일·표시 이름 정규화 → 증명 해시로 행 `FOR UPDATE` → 목적·인증됨·미사용·미만료·이메일 일치 재확인 → 중복 이메일 409 → `Member.createVerified`(email_verified_at = 가입 시각) 저장 → 증명 `consumed_at` → 지갑·최초 지급. 어느 단계든 실패하면 증명 사용까지 롤백돼 같은 증명으로 다시 시도할 수 있다. 같은 증명 동시 가입은 한 건만 성공(나머지 400), 같은 이메일·다른 증명 동시 가입은 이메일 UNIQUE로 한 건만 성공(나머지 409, 그쪽 증명 사용은 롤백). 잠금 순서: 증명 행 → 새 회원 행 → 지갑.
+
+목적은 엄격히 나뉜다: 가입 증명은 비밀번호 재설정 토큰으로, 재설정 토큰은 가입 인증·증명으로 쓸 수 없다(각 확인 메서드가 `purpose`를 먼저 본다).
+
+공통 코드 정리: 토큰 유틸 이름을 `OneTimeTokens`로 바꿨고(재설정·가입 공용), 제한 행 생성의 교착 재시도를 `AuthRequestLimiter.prepare` 안으로 옮겼으며, 메일 링크 주소 검사를 `FrontendLinks`로 분리했다(재설정·가입 메일 공용).
+
+### 화면
+
+| 파일 | 역할 |
+| --- | --- |
+| `pages/SignupPage.tsx` | `/signup`. 이메일만 입력(비밀번호 칸 없음), 같은 안내, 60초 재요청 잠금 |
+| `pages/SignupVerifyPage.tsx` | `/signup/verify#token=…`. "인증하기" → 가입 정보 입력(이메일은 읽기 전용) → 가입. 이미 가입이면 로그인·재설정 안내, 링크 오류·인증 만료는 인증 메일 다시 받기 안내 |
+| `components/EmailLinkRequestForm.tsx` | 이메일 링크 메일 요청 공통 폼(가입 인증·재설정 요청이 함께 사용) |
+| `linkToken.ts`, `useLinkToken.ts` | `#token=` 읽기(43자만)와 주소창에서 지우기(가입 인증·재설정 화면 공용) |
+| `signupEmail.ts` | `verifyFailureKind`, `signupFailureKind`(code 기준 분류) |
+| `api.ts` | `requestSignupEmail`, `verifySignupEmail`, `signup`(증명 포함) |
+
+자동 재전송 없음, 두 번 클릭 방지, 증명·토큰은 메모리에만 둔다. 인증 결과가 불명확(통신 오류·5xx)하면 같은 링크를 다시 보내지 않고 새 인증 메일을 안내하고, 가입 결과가 불명확하면 다시 보내지 않고 로그인부터 시도하도록 안내한다.
+
+### 테스트 회원 만들기 (팀 공통 영향)
+
+`POST /api/members`를 부르는 기존 테스트는 증명이 필요하다. 테스트마다 메일 → 인증을 거치지 않도록 공통 도우미 `support/TestMembers`가 인증된 증명 행을 테스트 DB에 넣고 원문을 돌려준다(`signupJson`·`signupBody`·`signupRequest`). 이번 작업에서 기존 테스트 9개 파일의 가입 호출을 이 도우미로 바꿨다(각 1~2줄). 가짜 메일 발송기는 `support/FakeAccountMailSender`로 옮겨 재설정·가입 테스트가 같은 Spring 컨텍스트를 쓴다.
+
+### 한계
+
+- 기존 회원 이메일 인증 전환(§5.2)과 재설정 성공 시 `email_verified_at` 기록은 하지 않았다(다음 작업). 기존 회원의 `email_verified_at`은 NULL 그대로다.
+- 메일이 꺼진 기본 상태에서는 화면 가입이 불가하다(위 "우회 경로 없음").
+- 사용하지 않은 가입 인증 행·증명의 정리 작업은 없다. 테스트 도우미가 넣은 행도 각 테스트가 지우지 않으면 테스트 DB에 남는다(회원 FK가 없어 다른 테스트에 영향 없음).
+- 아이디 안내는 메일 계약을 정은찬과 먼저 정한 뒤 진행한다(작업표 C3 전달 4번).
+
+### 검증
+
+백엔드 `SignupEmailIntegrationTests`(실제 Security 필터·MySQL, 가짜 발송기): 전체 흐름(인증 전 회원 없음·링크 1회·증명 1회·email_verified_at·지갑 100만원·로그인), DB에는 해시만·15분·증명 30분, 이미 가입된 이메일의 같은 202·인증 후 alreadyRegistered·409, 만료된 링크·증명, 인증 전 토큰·다른 이메일·목적 혼용(재설정 ↔ 가입) 거부, 잘못된 토큰·증명 같은 오류·구형 요청 400, 60초 재요청 미발급·정규화 이메일 같은 제한, 같은 링크 동시 인증 1건, 같은 증명 동시 가입 1건, 같은 이메일 다른 증명 동시 가입 1건(진 쪽 증명 롤백), CSRF 403. `MemberServiceTests`(DB 없음) 증명 형식·다른 이메일 거부, `MemberSignupRollbackIntegrationTests` 지갑 실패 시 회원·증명 사용 롤백. 프런트 `tests/signup-email.test.mjs`. 실행 결과는 PR에 기록한다.

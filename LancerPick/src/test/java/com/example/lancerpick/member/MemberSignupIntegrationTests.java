@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.lancerpick.support.IntegrationTest;
+import com.example.lancerpick.support.TestMembers;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -38,6 +39,7 @@ class MemberSignupIntegrationTests {
         for (Long id : ids) jdbc.update("DELETE FROM wallet_entries WHERE member_id = ?", id);
         for (Long id : ids) jdbc.update("DELETE FROM wallets WHERE member_id = ?", id);
         for (Long id : ids) jdbc.update("DELETE FROM members WHERE id = ?", id);
+        TestMembers.deleteSignupProofs(jdbc, "%" + EMAIL_PREFIX + "%");
     }
 
     @Test
@@ -61,13 +63,17 @@ class MemberSignupIntegrationTests {
         assertThat(jdbc.queryForObject(
                 "SELECT COUNT(*) FROM wallet_entries WHERE member_id = ? AND type = 'INITIAL_GRANT' AND amount_delta = 1000000",
                 Long.class, id)).isEqualTo(1L);
+        // 이메일 인증을 마친 가입이므로 인증 시각이 가입 시각으로 기록된다.
+        assertThat(jdbc.queryForObject("SELECT email_verified_at = created_at FROM members WHERE id = ?", Boolean.class, id))
+                .isTrue();
     }
 
     @Test
     void roleInRequestBodyIsIgnored() throws Exception {
         String email = uniqueEmail();
         mvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"abcd1234\",\"displayName\":\"권한\",\"role\":\"ADMIN\"}"))
+                        .content("{\"email\":\"" + email + "\",\"password\":\"abcd1234\",\"displayName\":\"권한\",\"role\":\"ADMIN\""
+                                + ",\"emailVerificationProof\":\"" + TestMembers.verifiedProof(jdbc, email) + "\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.role").value("USER"));
         assertThat(jdbc.queryForObject("SELECT role FROM members WHERE email = ?", String.class, email)).isEqualTo("USER");
@@ -156,9 +162,10 @@ class MemberSignupIntegrationTests {
         assertNoMember(email);
     }
 
+    /** 매번 이 이메일에 묶인 새 가입 증명을 만들어 함께 보낸다(TestMembers). */
     private ResultActions signup(String email, String password, String displayName) throws Exception {
         return mvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content(body(email, password, displayName)));
+                .content(TestMembers.signupJson(jdbc, email, password, displayName)));
     }
 
     private static String body(String email, String password, String displayName) {

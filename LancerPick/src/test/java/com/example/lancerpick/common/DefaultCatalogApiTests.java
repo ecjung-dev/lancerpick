@@ -151,6 +151,9 @@ class DefaultCatalogApiTests extends CommonApiTests {
     com.example.lancerpick.auth.service.PasswordResetService passwordResetService;
     @MockitoBean
     com.example.lancerpick.auth.service.AuthRequestLimiter authRequestLimiter;
+    // 가입 이메일 인증도 DB를 사용하므로 대체한다. 실제 처리는 SignupEmailIntegrationTests(MySQL)에서 검증한다.
+    @MockitoBean
+    com.example.lancerpick.auth.service.SignupEmailService signupEmailService;
     @MockitoBean
     com.example.lancerpick.auth.mail.AccountMailDeliveryRecorder accountMailDeliveryRecorder;
 }

@@ -46,15 +46,20 @@ test('login sends CSRF and the raw password once, without retrying a failure', a
 
 test('signup and logout use the documented paths and methods', async () => {
   const calls = []
+  const bodies = []
   globalThis.fetch = async (url, options) => {
     if (url === '/api/auth/csrf') return json({ token: 'csrf', headerName: 'X-CSRF-TOKEN' })
     calls.push(`${options.method} ${url}`)
+    if (options.body) bodies.push(JSON.parse(options.body))
     if (url === '/api/auth/logout') return new Response(null, { status: 204 })
     return json(member, 201)
   }
-  assert.equal((await signup({ email: 'a@example.com', password: 'abcd1234', displayName: '회원' })).email, 'a@example.com')
+  const proof = 'P'.repeat(43)
+  assert.equal((await signup({ email: 'a@example.com', password: 'abcd1234', displayName: '회원', emailVerificationProof: proof })).email, 'a@example.com')
   assert.equal(await logout(), undefined)
   assert.deepEqual(calls, ['POST /api/members', 'POST /api/auth/logout'])
+  // 가입 본문에는 이메일 인증 증명이 함께 간다(2026-11-06부터 필수).
+  assert.deepEqual(bodies[0], { email: 'a@example.com', password: 'abcd1234', displayName: '회원', emailVerificationProof: proof })
 })
 
 test('reset after login drops the old CSRF token and previous account caches but keeps the auth query', async () => {

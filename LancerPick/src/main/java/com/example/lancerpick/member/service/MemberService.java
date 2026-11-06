@@ -1,5 +1,8 @@
 package com.example.lancerpick.member.service;
 
+import com.example.lancerpick.auth.entity.AccountChallenge;
+import com.example.lancerpick.auth.repository.AccountChallengeRepository;
+import com.example.lancerpick.auth.service.OneTimeTokens;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.member.dto.ChangePasswordRequest;
@@ -18,6 +21,8 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import org.hibernate.exception.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -31,30 +36,52 @@ public class MemberService {
     /** V1__init.sql의 members 이메일 UNIQUE 제약 이름 */
     private static final String EMAIL_UNIQUE_CONSTRAINT = "uk_members_email";
 
+    private static final Logger log = LoggerFactory.getLogger(MemberService.class);
+
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final WalletInitializationService walletInitializationService;
+    private final AccountChallengeRepository challengeRepository;
 
     public MemberService(MemberRepository memberRepository, PasswordEncoder passwordEncoder, Clock clock,
-            WalletInitializationService walletInitializationService) {
+            WalletInitializationService walletInitializationService, AccountChallengeRepository challengeRepository) {
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
         this.walletInitializationService = walletInitializationService;
+        this.challengeRepository = challengeRepository;
     }
 
+    /**
+     * POST /api/members — 이메일 인증을 마친 가입(3인 설계 §5.1).
+     * 한 트랜잭션: 가입 증명 잠금·확인 → 회원 저장(email_verified_at 기록) → 증명 사용 처리 → 지갑·최초 지급.
+     * 어느 단계든 실패하면 증명 사용 처리까지 함께 롤백되어, 같은 증명으로 다시 시도할 수 있다.
+     * - 같은 증명 동시 가입: 증명 행 잠금에서 한 줄로 서고, 늦은 쪽은 "이미 사용됨"으로 400.
+     * - 같은 이메일·다른 증명 동시 가입: 이메일 UNIQUE로 한 건만 성공하고 나머지는 409(그쪽 증명 사용도 롤백).
+     * 잠금 순서: 증명 행 → (새) 회원 행 → 지갑. 이 시점에는 기존 회원 행을 잠그지 않는다.
+     */
     @Transactional
     public MemberResponse signup(SignupRequest request) {
         String email = normalizeEmail(request.email());
         String displayName = normalizeDisplayName(request.displayName());
 
+        byte[] proofHash = OneTimeTokens.hashOf(request.emailVerificationProof())
+                .orElseThrow(() -> verificationInvalid("MALFORMED", null));
+        AccountChallenge proof = challengeRepository.findByTokenHashForUpdate(proofHash)
+                .orElseThrow(() -> verificationInvalid("UNKNOWN", null));
+        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        String rejection = proof.signupProofRejection(email, now);
+        if (rejection != null) {
+            throw verificationInvalid(rejection, proof.getId());
+        }
+
+        // 증명 확인 뒤에 중복을 알려 준다. 증명은 메일을 받은 본인만 가지므로 가입 여부가 남에게 드러나지 않는다.
         if (memberRepository.existsByEmail(email)) {
             throw emailAlreadyExists();
         }
 
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
-        Member member = Member.create(email, passwordEncoder.encode(request.password()), displayName, now);
+        Member member = Member.createVerified(email, passwordEncoder.encode(request.password()), displayName, now);
 
         try {
             memberRepository.saveAndFlush(member);
@@ -67,6 +94,8 @@ public class MemberService {
             }
             throw e;
         }
+
+        proof.consume(now);   // 트랜잭션 종료 시 consumed_at UPDATE. 아래 지갑이 실패하면 함께 롤백된다
 
         // 지갑 생성 + 초기 적립금 100만원 (황준범 담당 서비스, 같은 트랜잭션).
         // try-catch로 감싸지 않는다: 지급이 실패하면 예외가 전파되어 회원 저장까지 함께 롤백된다.
@@ -190,6 +219,13 @@ public class MemberService {
 
     private BusinessException invalidInput() {
         return new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "입력값을 확인해 주세요.");
+    }
+
+    /** 가입 증명 오류는 원인과 상관없이 하나로 응답하고, 원인은 안전한 코드로 로그에만 남긴다(증명 원문 X). */
+    private static BusinessException verificationInvalid(String reason, Long challengeId) {
+        log.info("signup proof rejected reason={} challengeId={}", reason, challengeId);
+        return new BusinessException(HttpStatus.BAD_REQUEST, "EMAIL_VERIFICATION_INVALID",
+                "이메일 인증이 만료됐거나 유효하지 않습니다. 인증 메일을 다시 요청해 주세요.");
     }
 
     private BusinessException emailAlreadyExists() {

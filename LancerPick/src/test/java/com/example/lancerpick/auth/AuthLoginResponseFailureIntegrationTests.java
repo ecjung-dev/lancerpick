@@ -1,5 +1,7 @@
 package com.example.lancerpick.auth;
 
+import com.example.lancerpick.support.TestMembers;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
@@ -55,7 +57,7 @@ class AuthLoginResponseFailureIntegrationTests {
     void responseLookupFailureLeavesNoLoggedInSession() throws Exception {
         String email = EMAIL_PREFIX + UUID.randomUUID().toString().substring(0, 12) + "@example.com";
         mvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\",\"displayName\":\"조회실패\"}"))
+                        .content(TestMembers.signupJson(jdbc, email, PASSWORD, "조회실패")))
                 .andExpect(status().isCreated());
         doThrow(new IllegalStateException("db failure")).when(members).countSellerProfiles(anyLong());
 

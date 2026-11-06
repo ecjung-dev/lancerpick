@@ -18,7 +18,6 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -88,31 +87,11 @@ public class PasswordResetService {
         byte[] subject = hasher.subject(HMAC_PURPOSE, email);
         LocalDateTime now = now();
 
-        prepareLimitRows(subject, now);
+        limiter.prepare(REQUEST_POLICY, subject, now);   // 별도 커밋, 교착 시 재시도는 limiter가 한다
         Optional<AccountMail> mail = transaction.execute(status -> issue(email, subject, now));
 
         // 커밋이 끝난 뒤에만 여기 온다. 발송 실패는 응답에 드러내지 않는다(dispatch는 예외를 던지지 않음).
         mail.ifPresent(mailDispatcher::dispatch);
-    }
-
-    /**
-     * 제한 행 만들기(별도 트랜잭션)를 교착 상태(deadlock) 때만 최대 3번 시도한다.
-     * 같은 새 이메일로 요청이 동시에 처음 들어오면 MySQL이 같은 키의 "insert … on duplicate key update"끼리
-     * 교착 상태로 판단해 한쪽을 롤백할 수 있다. 행 만들기는 몇 번 해도 결과가 같고(이미 있으면 아무것도 안 함),
-     * 다시 시도할 때는 행이 이미 있어 같은 교착이 생기지 않는다. 회원 조회 전 단계라 가입 여부와 무관하다.
-     */
-    private void prepareLimitRows(byte[] subject, LocalDateTime now) {
-        for (int attempt = 1; ; attempt++) {
-            try {
-                limiter.prepare(REQUEST_POLICY, subject, now);
-                return;
-            } catch (PessimisticLockingFailureException e) {
-                if (attempt >= 3) {
-                    throw e;
-                }
-                log.info("auth request limit row creation retried attempt={}", attempt);
-            }
-        }
     }
 
     private Optional<AccountMail> issue(String email, byte[] subject, LocalDateTime now) {
@@ -123,7 +102,7 @@ public class PasswordResetService {
         if (member == null) {
             return Optional.empty();   // 가입하지 않은 이메일: 발급하지 않는다. 응답은 같은 202
         }
-        ResetTokens.Issued token = ResetTokens.issue();
+        OneTimeTokens.Issued token = OneTimeTokens.issue();
         AccountChallenge challenge = AccountChallenge.passwordReset(member.getId(), email, token.hash(),
                 member.getAuthVersion(), now, now.plus(TOKEN_TTL));
         challenges.saveAndFlush(challenge);
@@ -138,7 +117,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void resetPassword(String token, String newPassword) {
-        byte[] tokenHash = ResetTokens.hashOf(token).orElseThrow(() -> rejected("MALFORMED", null));
+        byte[] tokenHash = OneTimeTokens.hashOf(token).orElseThrow(() -> rejected("MALFORMED", null));
 
         // 1) 잠그지 않고 회원 ID만 찾는다 → 2) 회원 잠금 → 3) 토큰 잠금. 잠금 순서: 회원 → 토큰(3인 설계 7.1).
         Long memberId = challenges.findMemberIdByTokenHash(tokenHash).orElseThrow(() -> rejected("UNKNOWN", null));

@@ -1,5 +1,9 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 이메일 인증 가입(K1 일부) — 2026-11-06
+
+`feature/email-verification`(김창재, PR 전): 가입이 이메일 인증 후에만 가능해졌다. `/signup`에서 인증 메일을 요청(가입 여부와 무관한 같은 202) → 메일 링크 `/signup/verify`에서 "인증하기"로 가입 증명을 받고 → 비밀번호·표시 이름 입력 → `POST /api/members`(`emailVerificationProof` 필수)가 증명 소비·회원(`email_verified_at`)·지갑·100만원을 한 트랜잭션으로 만든다. DB·라이브러리 변경 없음(V5 `account_challenges` `SIGNUP_EMAIL`). **팀 영향**: 증명 없는 가입 경로가 없어 메일이 꺼진 기본 상태에서는 화면에서 새 계정을 만들 수 없다(새 계정이 필요하면 Mailpit). 테스트에서 회원을 만들 때는 `support/TestMembers`를 쓴다(기존 테스트 9개 파일 전환). 기존 회원 인증 전환·아이디 안내는 남음. [상세](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification)
+
 ## V3 검수 무응답 자동 구매 확정(E7) — 2026-11-06
 
 main 반영(#99, `feature/v3-auto-confirm-timer`, 정은찬): 판매자가 납품(또는 거절·철회된 취소 요청 처리) 후 48시간이 지나면 7일 타이머를 시작하고, 만료되면 스케줄러가 정상 확정과 같은 수수료로 시스템 구매 확정(`AUTO_CONFIRMED`·SYSTEM 이력·`ORDER_AUTO_CONFIRMED` 알림)을 한다. 수정 요청·취소 요청·구매 확정은 활성 타이머를 끝내고, 만료 시각 이후의 응답은 409 `AUTO_CONFIRM_DUE`(만료 우선). 관리자 해제는 내부 서비스만 있다(K5 화면·API 김창재). 주문 상세에 타이머 패널을 추가했다. DB 변경 없음. 자동 테스트: 병합 전 작업 브랜치에서 로컬 `lancerpick_test` 대상 새 통합 테스트 10건, 프런트 typecheck·lint·test:api 177건·build 통과. 백엔드 전체 `clean build` 796건 통과(실패·오류·건너뜀 0). 병합 후 main에서 재실행하지 않았으며 원격 CI는 PR 기록을 따른다. 실제 서버 스케줄러·브라우저 확인은 하지 않았다. [상세](auto-confirm-timer.md)

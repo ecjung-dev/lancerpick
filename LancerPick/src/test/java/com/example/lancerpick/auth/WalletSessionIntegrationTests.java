@@ -1,5 +1,7 @@
 package com.example.lancerpick.auth;
 
+import com.example.lancerpick.support.TestMembers;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -16,7 +18,7 @@ class WalletSessionIntegrationTests extends AuthLoginIntegrationTests {
     private MockHttpSession loginNewMember() throws Exception {
         String email="login-it-wallet-"+UUID.randomUUID()+"@example.com";
         mvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\""+email+"\",\"password\":\"abcd1234\",\"displayName\":\"wallet-session\"}")).andExpect(status().isCreated());
+                .content(TestMembers.signupJson(jdbc,email,"abcd1234","wallet-session"))).andExpect(status().isCreated());
         var result=mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\""+email+"\",\"password\":\"abcd1234\"}")).andExpect(status().isOk()).andReturn();
         return (MockHttpSession)result.getRequest().getSession(false);

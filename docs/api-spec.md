@@ -71,7 +71,9 @@ fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 
 | 메서드·경로 | 입력·권한 | 출력·처리 |
 | --- | --- | --- |
 | GET /auth/csrf | 전체 | token, headerName |
-| POST /members | 비로그인; email,password,displayName | 201 Member; 회원·지갑·100만원 지급 원자적 생성 |
+| POST /auth/signup-email-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답 |
+| POST /auth/signup-email-verifications | 비로그인 가능+CSRF; token | 200 `{email, proof, proofExpiresAt, alreadyRegistered}`; 메일 링크 토큰으로 인증하고 가입 증명 발급 |
+| POST /members | 비로그인+CSRF; email,password,displayName,**emailVerificationProof**(2026-11-06부터 필수) | 201 Member; 증명 소비·회원(email_verified_at)·지갑·100만원 지급 원자적 생성 |
 | POST /auth/login | 비로그인; email,password | 200 Member; 세션 발급 |
 | POST /auth/logout | 회원; 없음 | 204; 세션 무효화 |
 | GET /me | 회원 | Member |
@@ -80,9 +82,11 @@ fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 
 | POST /auth/password-reset-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답 |
 | POST /auth/password-resets | 비로그인 가능+CSRF; token,newPassword | 204; 일회용 토큰으로 비밀번호 변경, auth_version 증가로 모든 세션·다른 재설정 링크 폐기. 자동 로그인 없음 |
 
-Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·소문자 정규화 후 중복 확인한다. 가입 후 로그인 화면으로 이동하며 자동 로그인하지 않는다. 로그인·로그아웃 후 CSRF 토큰을 다시 획득한다.
+Member: id,email,displayName,role,hasSellerProfile(email_verified_at은 응답에 넣지 않는다). 이메일은 공백 제거·소문자 정규화 후 중복 확인한다. 가입 후 로그인 화면으로 이동하며 자동 로그인하지 않는다. 로그인·로그아웃 후 CSRF 토큰을 다시 획득한다.
 
 비밀번호 변경(2026-11-05 구현): 두 값 모두 정리하지 않는다. newPassword는 10절 비밀번호 원문 정책, currentPassword는 형식 검사 없음. 현재 비밀번호 불일치 400 CURRENT_PASSWORD_INCORRECT, 새 비밀번호가 현재와 같으면 400 PASSWORD_UNCHANGED, 폐기된 세션·동시 변경의 늦은 요청은 401 AUTHENTICATION_REQUIRED. 로그인 세션은 로그인 당시 auth_version을 갖고, DB 값과 다르면 다음 요청에서 폐기되어 비로그인으로 처리된다. 상세는 [로그인 문서](auth-login.md#비밀번호-변경세션-폐기--2026-11-05-featurepassword-change).
+
+이메일 인증 가입(2026-11-06 구현): 요청 email은 가입과 같이 정규화·형식 검사하며 형식 오류만 400 VALIDATION_FAILED다. 그 밖에는 이미 가입된 이메일·이메일+목적당 60초 간격·1시간 5회 제한 초과·발송 실패 모두 같은 202다(이미 가입된 주소에도 인증 메일을 보낸다). 메일 링크 `/signup/verify#token=`의 token으로 인증하며 위조·만료(15분)·이미 인증·목적 다름은 400 SIGNUP_EMAIL_TOKEN_INVALID다. 인증하면 링크 토큰은 무효가 되고 가입 증명 proof(일회용, 인증 시점부터 30분)를 받는다. `alreadyRegistered`는 메일을 받은 본인이 인증한 뒤에만 알려 준다. 가입 시 증명 없음은 400 VALIDATION_FAILED, 위조·만료·사용됨·다른 이메일·인증 전 링크 토큰·재설정 토큰은 400 EMAIL_VERIFICATION_INVALID, 이미 가입된 이메일은 409 EMAIL_ALREADY_EXISTS다. 증명 없이 가입하는 경로는 없다. 상세는 [로그인 문서](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification).
 
 비밀번호 재설정(2026-11-05 구현): 요청 email은 가입과 같이 정규화·형식 검사하며 형식 오류만 400 VALIDATION_FAILED다. 그 밖에는 모두 같은 202·본문·`no-store`다(가입 안 된 이메일, 이메일+목적당 60초 간격·1시간 5회 제한 초과, 메일 발송 실패 포함). 재설정 token은 메일 링크 `#token=`의 값이며, 위조·만료(15분)·이미 사용·발급 후 비밀번호 변경은 모두 400 PASSWORD_RESET_TOKEN_INVALID다. newPassword는 10절 비밀번호 원문 정책(위반 400 VALIDATION_FAILED, field=newPassword)이고 현재 비밀번호와 같아도 거절하지 않는다. 상세는 [로그인 문서](auth-login.md#비밀번호-재설정요청-제한--2026-11-05-featurepassword-recovery).
 
@@ -328,7 +332,7 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 
 | HTTP | 주요 코드 |
 | --- | --- |
-| 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED, PASSWORD_RESET_TOKEN_INVALID |
+| 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED, PASSWORD_RESET_TOKEN_INVALID, SIGNUP_EMAIL_TOKEN_INVALID, EMAIL_VERIFICATION_INVALID |
 | 401 | AUTHENTICATION_REQUIRED, INVALID_CREDENTIALS |
 | 403 / 404 | FORBIDDEN, CSRF_INVALID / RESOURCE_NOT_FOUND |
 | 409 | EMAIL_ALREADY_EXISTS, PRODUCT_VERSION_CONFLICT, PRODUCT_NOT_ORDERABLE, SELF_PURCHASE_NOT_ALLOWED, CONTRACT_MINIMUM_AMOUNT_NOT_MET(V2 생성 활성화 후에만) |

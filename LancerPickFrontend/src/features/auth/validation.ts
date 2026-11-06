@@ -42,11 +42,18 @@ function emailError(email: string) {
   return undefined
 }
 
-export function validateSignup(draft: { email: string; password: string; passwordConfirm: string; displayName: string }) {
+/**
+ * 가입 입력. 이메일은 인증 응답의 값을 그대로 쓰지만 같은 규칙으로 한 번 더 검사한다.
+ * emailVerificationProof는 인증 응답의 증명이다(화면이 입력받지 않음, 검사하지 않고 그대로 보냄).
+ */
+export function validateSignup(draft: {
+  email: string; password: string; passwordConfirm: string; displayName: string; emailVerificationProof?: string
+}) {
   const input: SignupInput = {
     email: normalizeEmail(draft.email),
     password: draft.password, // 비밀번호는 절대 정리하지 않는다
     displayName: validateDisplayName(draft.displayName).displayName,
+    emailVerificationProof: draft.emailVerificationProof ?? '',
   }
   const errors: SignupErrors = {}
   const emailProblem = emailError(input.email)

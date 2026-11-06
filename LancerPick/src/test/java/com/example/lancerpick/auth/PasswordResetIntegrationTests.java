@@ -1,5 +1,7 @@
 package com.example.lancerpick.auth;
 
+import com.example.lancerpick.support.TestMembers;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -10,10 +12,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.lancerpick.auth.mail.AccountMail;
 import com.example.lancerpick.auth.mail.AccountMailDeliveryRecorder;
-import com.example.lancerpick.auth.mail.AccountMailSender;
 import com.example.lancerpick.auth.service.AuthSubjectHasher;
 import com.example.lancerpick.auth.service.PasswordResetService;
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.support.FakeAccountMailSender;
 import com.example.lancerpick.support.IntegrationTest;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -21,7 +23,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -33,9 +34,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
@@ -45,42 +45,21 @@ import org.springframework.test.web.servlet.ResultActions;
 
 /**
  * 비밀번호 재설정(POST /api/auth/password-reset-requests, /api/auth/password-resets).
- * 실제 Security 필터 → Controller → Service → MySQL. 메일은 가짜 발송기(FakeMailSender)가 받아서
+ * 실제 Security 필터 → Controller → Service → MySQL. 메일은 가짜 발송기(support/FakeAccountMailSender)가 받아서
  * 테스트가 링크의 토큰을 꺼내 끝까지 진행한다. 이 테스트가 만든 회원(pw-reset-it- 접두어)과 그 제한 행만 정리한다.
  */
 @IntegrationTest
 @AutoConfigureMockMvc
+@Import(FakeAccountMailSender.Config.class)
 class PasswordResetIntegrationTests {
     private static final String EMAIL_PREFIX = "pw-reset-it-";
     private static final String PASSWORD = "abcd1234";
     private static final String NEW_PASSWORD = "reset5678x";
     private static final Pattern TOKEN_IN_LINK = Pattern.compile("/password-reset#token=([A-Za-z0-9_-]{43})");
 
-    /** C3 메일 인프라 대신 쓰는 가짜 발송기. 받은 메일을 모아 두고, mode로 큐 가득 참·예외를 흉내 낸다. */
-    static class FakeMailSender implements AccountMailSender {
-        final List<AccountMail> sent = new CopyOnWriteArrayList<>();
-        volatile String mode = "ACCEPT";
-
-        @Override
-        public boolean enqueue(AccountMail mail) {
-            if (mode.equals("THROW")) throw new IllegalStateException("smtp down");
-            if (mode.equals("FULL")) return false;
-            sent.add(mail);
-            return true;
-        }
-    }
-
-    @TestConfiguration
-    static class FakeMailConfig {
-        @Bean
-        FakeMailSender fakeMailSender() {
-            return new FakeMailSender();
-        }
-    }
-
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
-    @Autowired FakeMailSender mails;
+    @Autowired FakeAccountMailSender mails;
     @Autowired AuthSubjectHasher hasher;
     @Autowired PasswordResetService passwordResetService;
     @Autowired AccountMailDeliveryRecorder deliveryRecorder;
@@ -89,8 +68,7 @@ class PasswordResetIntegrationTests {
 
     @BeforeEach
     void resetFakeMailer() {
-        mails.sent.clear();
-        mails.mode = "ACCEPT";
+        mails.reset();
     }
 
     @AfterEach
@@ -148,7 +126,8 @@ class PasswordResetIntegrationTests {
         String token = onlyToken(email);
         Map<String, Object> row = jdbc.queryForMap(
                 "SELECT purpose, email, token_hash, credential_version, delivery_status, "
-                        + "TIMESTAMPDIFF(SECOND, issued_at, expires_at) AS ttl FROM account_challenges WHERE email = ?", email);
+                        + "TIMESTAMPDIFF(SECOND, issued_at, expires_at) AS ttl FROM account_challenges "
+                        + "WHERE purpose = 'PASSWORD_RESET' AND email = ?", email);
         assertThat(row.get("purpose")).isEqualTo("PASSWORD_RESET");
         assertThat(row.get("credential_version")).isEqualTo(0L);
         assertThat(row.get("delivery_status")).isEqualTo("PENDING");   // 큐에 넣었고 발송 결과는 아직
@@ -272,7 +251,7 @@ class PasswordResetIntegrationTests {
         requestReset(email);
         String token = onlyToken(email);
         jdbc.update("UPDATE account_challenges SET expires_at = DATE_SUB(expires_at, INTERVAL 1 HOUR), "
-                + "issued_at = DATE_SUB(issued_at, INTERVAL 1 HOUR) WHERE email = ?", email);
+                + "issued_at = DATE_SUB(issued_at, INTERVAL 1 HOUR) WHERE purpose = 'PASSWORD_RESET' AND email = ?", email);
 
         resetPassword(token, NEW_PASSWORD).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("PASSWORD_RESET_TOKEN_INVALID"));
@@ -406,8 +385,7 @@ class PasswordResetIntegrationTests {
         String email = EMAIL_PREFIX + UUID.randomUUID().toString().substring(0, 12) + "@example.com";
         usedEmails.add(email);
         mvc.perform(post("/api/members").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD
-                                + "\",\"displayName\":\"재설정\"}"))
+                        .content(TestMembers.signupJson(jdbc, email, PASSWORD, "재설정")))
                 .andExpect(status().isCreated());
         return email;
     }
@@ -468,7 +446,9 @@ class PasswordResetIntegrationTests {
     }
 
     private int challengeCount(String email) {
-        return jdbc.queryForObject("SELECT COUNT(*) FROM account_challenges WHERE email = ?", Integer.class, email);
+        // 테스트 회원은 가입 증명 행(SIGNUP_EMAIL)도 갖고 있으므로 재설정 행만 센다.
+        return jdbc.queryForObject("SELECT COUNT(*) FROM account_challenges WHERE purpose = 'PASSWORD_RESET' AND email = ?",
+                Integer.class, email);
     }
 
     private int limitRowCount(String email) {
@@ -478,7 +458,8 @@ class PasswordResetIntegrationTests {
 
     private String deliveryOf(String email) {
         return jdbc.queryForObject(
-                "SELECT CONCAT(delivery_status, ':', COALESCE(last_error_code, '')) FROM account_challenges WHERE email = ?",
+                "SELECT CONCAT(delivery_status, ':', COALESCE(last_error_code, '')) FROM account_challenges "
+                        + "WHERE purpose = 'PASSWORD_RESET' AND email = ?",
                 String.class, email);
     }
 

@@ -67,6 +67,16 @@ public class Member {
         return member;
     }
 
+    /**
+     * 이메일 인증을 마친 가입용(3인 설계 §5.1). email_verified_at에 가입 시각을 기록한다. 권한은 항상 USER다.
+     * 인증 시각은 가입 증명을 소비한 같은 트랜잭션의 시각이다.
+     */
+    public static Member createVerified(String email, String passwordHash, String displayName, LocalDateTime now) {
+        Member member = create(email, passwordHash, displayName, now);
+        member.emailVerifiedAt = now;
+        return member;
+    }
+
     /** PATCH /api/me 표시 이름 수정용. */
     public void changeDisplayName(String displayName, LocalDateTime now) {
         this.displayName = displayName;

@@ -5,10 +5,16 @@ import com.example.lancerpick.auth.repository.AuthRequestLimitRepository;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * 인증 메일 요청 제한(3인 설계 7.1·7.3): 같은 목적+이메일에 최소 간격, 1시간 고정 구간당 최대 횟수.
@@ -33,19 +39,43 @@ public class AuthRequestLimiter {
     public record Policy(String intervalScope, Duration minInterval, String hourlyScope, int hourlyLimit) {
     }
 
-    private final AuthRequestLimitRepository limits;
+    private static final Logger log = LoggerFactory.getLogger(AuthRequestLimiter.class);
+    private static final int PREPARE_ATTEMPTS = 3;
 
-    public AuthRequestLimiter(AuthRequestLimitRepository limits) {
+    private final AuthRequestLimitRepository limits;
+    private final TransactionTemplate separateTransaction;
+
+    public AuthRequestLimiter(AuthRequestLimitRepository limits, PlatformTransactionManager transactionManager) {
         this.limits = limits;
+        this.separateTransaction = new TransactionTemplate(transactionManager);
+        this.separateTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /**
      * 제한 행이 없으면 만들고 바로 커밋한다(별도 트랜잭션). 이미 있으면 아무것도 하지 않는다.
      * 행 생성을 업무 트랜잭션과 나누면, 처음 들어온 동시 요청들도 이미 있는 행을 잠그는 단순한 경로만 탄다.
      * 다른 트랜잭션 안에서 부르면 DB 연결을 두 개 잡으므로, 트랜잭션 밖에서만 호출한다.
+     *
+     * 같은 새 이메일로 요청이 동시에 처음 들어오면 MySQL이 같은 키의 "insert … on duplicate key update"끼리
+     * 교착 상태(deadlock)로 판단해 한쪽을 롤백할 수 있다. 행 만들기는 몇 번 해도 결과가 같고(이미 있으면 아무것도 안 함),
+     * 다시 시도할 때는 행이 이미 있어 같은 교착이 생기지 않으므로 교착 때만 최대 3번 시도한다.
+     * 회원 조회 전 단계라 가입 여부와 무관하다(비밀번호 재설정·가입 인증 요청이 함께 쓴다).
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void prepare(Policy policy, byte[] subject, LocalDateTime now) {
+        for (int attempt = 1; ; attempt++) {
+            try {
+                separateTransaction.executeWithoutResult(status -> insertRows(policy, subject, now));
+                return;
+            } catch (PessimisticLockingFailureException e) {
+                if (attempt >= PREPARE_ATTEMPTS) {
+                    throw e;
+                }
+                log.info("auth request limit row creation retried attempt={}", attempt);
+            }
+        }
+    }
+
+    private void insertRows(Policy policy, byte[] subject, LocalDateTime now) {
         // 처음 만든 간격 행은 이미 지난 시각으로 만료돼 있어 첫 요청은 통과한다(CHECK expires_at > window_start).
         limits.insertIfAbsent(policy.intervalScope(), subject, INTERVAL_ANCHOR, INTERVAL_ANCHOR.plusSeconds(1));
         LocalDateTime hourStart = hourStart(now);
