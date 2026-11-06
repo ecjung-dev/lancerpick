@@ -1,3 +1,5 @@
+import type { PageResponse } from '../../shared/api/types'
+
 export interface PublicReview {
   id: string
   authorDisplayName: string
@@ -8,3 +10,7 @@ export interface PublicReview {
 
 export interface Review extends PublicReview { orderId: string }
 export interface ReviewInput { rating: number; content: string | null }
+
+export interface ProductReviewsResponse extends PageResponse<PublicReview> {
+  summary: { averageRating: number | null; reviewCount: number }
+}
