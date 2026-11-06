@@ -6,14 +6,16 @@ import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import styles from './ProductDetailPage.module.css'
 import { ProductReviews } from '../../reviews/components/ProductReviews'
+import { ProductFavoriteButton } from '../components/ProductFavoriteButton'
 
 export function ProductDetailPage() {
   const { id = '' } = useParams()
   const location = useLocation()
   const from: unknown = location.state?.from
   const fromSeller = typeof from === 'string' && /^\/sellers\/[0-9]{1,19}(\?[^#]*)?$/.test(from)
+  const fromFavorites = typeof from === 'string' && /^\/mypage\/favorites(\?[^#]*)?$/.test(from)
   const back =
-    typeof from === 'string' && (from === '/' || from.startsWith('/?') || fromSeller)
+    typeof from === 'string' && (from === '/' || from.startsWith('/?') || fromSeller || fromFavorites)
       ? from
       : '/'
   const product = useProductDetail(id)
@@ -23,7 +25,7 @@ export function ProductDetailPage() {
   return (
     <section className={styles.page}>
       <Link to={back} state={fromSeller ? location.state?.sellerState : undefined}>
-        {fromSeller ? '← 판매자 상품으로' : '← 상품 목록으로'}
+        {fromSeller ? '← 판매자 상품으로' : fromFavorites ? '← 내 관심 상품으로' : '← 상품 목록으로'}
       </Link>
       {product.isPending ? (
         <AsyncState title="상품을 불러오고 있어요" />
@@ -86,6 +88,7 @@ export function ProductDetailPage() {
                   주문 요청 작성하기 →
                 </Link>
               )}
+              <ProductFavoriteButton productId={product.data.id} />
             </aside>
           </div>
           <footer className={styles.dates}>
