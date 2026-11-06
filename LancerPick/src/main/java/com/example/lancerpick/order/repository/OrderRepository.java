@@ -50,6 +50,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     return order;
   }
 
+  /** 회원 실행자가 없는 시스템 처리(자동 구매 확정)와 관리자 처리의 주문 배타 잠금. 당사자 조건이 없으므로 호출자가 권한을 확인한다. */
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select o from Order o where o.id=:orderId")
+  Optional<Order> findForSystemUpdate(@Param("orderId") long orderId);
+
   Optional<Order> findByBuyerIdAndRequestKey(Long buyerId, String requestKey);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -41,6 +41,7 @@ public class OrderCancellationRequestService {
   private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final OrderCancellationService cancellations;
+  private final ReviewTimers reviewTimers;
   private final Clock clock;
 
   public OrderCancellationRequestService(
@@ -50,6 +51,7 @@ public class OrderCancellationRequestService {
       OrderEventPublisher events,
       OrderDetailQueries details,
       OrderCancellationService cancellations,
+      ReviewTimers reviewTimers,
       Clock clock) {
     this.orders = orders;
     this.requests = requests;
@@ -57,6 +59,7 @@ public class OrderCancellationRequestService {
     this.events = events;
     this.details = details;
     this.cancellations = cancellations;
+    this.reviewTimers = reviewTimers;
     this.clock = clock;
   }
 
@@ -76,6 +79,8 @@ public class OrderCancellationRequestService {
     requirePaidOpen(order);
     if (requests.pending(orderId) > 0) throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청이 있습니다.");
     LocalDateTime at = now(order);
+    // 취소 요청 대기 중에는 자동 확정하지 않는다. 거절·철회 시각이 다음 검수 기산점이 된다.
+    reviewTimers.closeForBuyerResponse(order, memberId, at, ReviewTimers.BUYER_RESPONSE);
     long requestId = requests.insert(orderId, memberId, key, reason, at);
     events.publish(
         order,

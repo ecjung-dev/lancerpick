@@ -1,5 +1,7 @@
 # 랜서픽 MVP API 명세서
 
+2026-11-06 `feature/v3-auto-confirm-timer`(main 병합 전): V3 당사자 `GET /api/orders/{id}/review-timer`(no-store)와 판매자 `POST /api/orders/{id}/review-timer`(본문 없음, 7일 자동 구매 확정 타이머 시작)를 추가했다. 만료 후 구매자 응답은 409 `AUTO_CONFIRM_DUE`, 금액 명령의 `TIMER_INTEGRATION_NOT_READY`는 제거. [상태·오류·처리](auto-confirm-timer.md).
+
 2026-11-05 후속 로컬 `feature/full-funding-payments`: V3는 기존 payment/confirm/취소 요청 승인 API로 결제 금액 보관·수동 확정 지급·전액 반환을 처리한다. 당사자 `GET /api/orders/{id}/funds`를 추가했다. [요청·응답·오류·트랜잭션](full-funding-payment.md). 기존 V1 동작·V2 금융 차단 유지, 자동 확정/관리자 승인 후속, 생성 플래그 기본 false. 아래 과거 정책 경계와 구분한다.
 
 2026-11-05 최신 변경: CONTRACT_V3 결제 금액 보관 정책/V7/새 계약 본문과 계약 PDF·수락/초안/서명 HTTP API·주문 상세 계약 화면이 main `2fec099`에 반영됐다. 기존 V1/V2/서명 문서는 유지한다. 상세 정책·DB·미구현 금액 명령·활성화 조건은 [결제 금액 보관 설계](full-funding-policy.md)를 따른다.

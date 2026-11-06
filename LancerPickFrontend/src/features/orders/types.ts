@@ -20,7 +20,8 @@ export interface OrderDetail {
   review: { id: string; orderId: string; authorDisplayName: string; rating: number; content: string | null; createdAt: string } | null
 }
 export interface OrderHistory {
-  id: string; actorId: string; action: string; fromStatus: string | null
+  // 시스템 처리(자동 구매 확정)는 실행 회원이 없어 null이다.
+  id: string; actorId: string | null; action: string; fromStatus: string | null
   toStatus: string; reason: string | null; createdAt: string
 }
 export interface CancellationRequest {
@@ -35,6 +36,23 @@ export interface CreateOrderInput {
   expectedProductVersion: number
   requirements: string
   requestKey: string
+}
+
+/** V3 검수 무응답 자동 구매 확정 타이머. 서버 시각 기준 상태와 판매자 시작 가능 여부를 그대로 표시한다. */
+export interface ReviewTimer {
+  status:
+    | 'NOT_IN_REVIEW'
+    | 'CANCELLATION_PENDING'
+    | 'WAITING'
+    | 'STARTABLE'
+    | 'ADMIN_STOPPED'
+    | 'ACTIVE'
+    | 'AUTO_CONFIRMED'
+  basisAt: string | null
+  eligibleAt: string | null
+  startedAt: string | null
+  expiresAt: string | null
+  canStart: boolean
 }
 
 export interface OrderFunds {

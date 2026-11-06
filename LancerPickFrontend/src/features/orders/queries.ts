@@ -1,5 +1,6 @@
 import { getMemberSession } from '../auth/api'
-import { getOrder, getOrders, getOrderFunds } from './api'
+import { getOrder, getOrders, getOrderFunds, getReviewTimer } from './api'
+import { reviewTimerRefetchInterval } from './reviewTimer'
 import { useQuery } from '@tanstack/react-query'
 
 export function useOrders(
@@ -40,5 +41,18 @@ export function useOrderFunds(id: string) {
     queryFn: ({ signal }) => getOrderFunds(id, signal),
     retry: false,
     gcTime: 0,
+  })
+}
+
+// 주문 변경 후 ['wallet'] 무효화로 함께 다시 조회되도록 wallet 하위 키를 쓴다.
+export function useReviewTimer(id: string) {
+  return useQuery({
+    queryKey: ['wallet', 'order-review-timer', id],
+    queryFn: ({ signal }) => getReviewTimer(id, signal),
+    retry: false,
+    gcTime: 0,
+    refetchInterval: (query) =>
+      reviewTimerRefetchInterval(query.state.data, !!query.state.error),
+    refetchIntervalInBackground: false,
   })
 }
