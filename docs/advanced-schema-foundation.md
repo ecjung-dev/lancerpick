@@ -18,7 +18,7 @@ V1/V2의 17개 + V4 계약 2개 + V5 7개 + V6 3개 = **29개 업무 테이블**
 | order_chat_messages | 주문별 대화·순번·요청 중복 방지 | 황준범 |
 | outbox_events·notifications | 이벤트 처리 상태·사용자 알림·읽음 | 정은찬(기존 주문 알림 반영 #79, #80) |
 | account_challenges·auth_request_limits | 목적별 인증 증명·메일/인증 요청 제한 | 김창재 |
-| support_inquiries·support_messages | 구매자 운영 문의·관리자 답변 | 김창재 |
+| support_inquiries·support_messages | 구매자 운영 문의·관리자 답변 | 김창재(문의 엔티티·K4 승인/거절 서비스는 정은찬이 먼저 구현, [관리자 취소 검토](admin-cancellation-review.md)) |
 | order_trade_terms | 신규 주문의 고정 비율·응답 기한 | 황준범·정은찬 |
 | order_response_timers | 검수/잔금 기한·관리자 해제 근거 | 정은찬·황준범, 관리자 화면 김창재 |
 | order_closures | 한 번의 종료 결과·선금 분배 | 황준범·정은찬 |

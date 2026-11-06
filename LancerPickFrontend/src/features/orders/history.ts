@@ -14,7 +14,8 @@ const actions: Record<string, string> = {
 export function describeHistory(history: OrderHistory, order: Pick<OrderDetail, 'buyer' | 'seller'>) {
   const actor = history.actorId === null ? '시스템'
     : history.actorId === order.buyer.id ? '구매자'
-    : history.actorId === order.seller.id ? '판매자' : '기록자'
+    // 당사자가 아닌 회원 실행자는 관리자뿐이다(타이머 해제·운영 문의 취소 검토).
+    : history.actorId === order.seller.id ? '판매자' : '관리자'
   const from = history.fromStatus === null ? null : orderStatusLabel(history.fromStatus)
   const to = orderStatusLabel(history.toStatus)
   return {

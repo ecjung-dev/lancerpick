@@ -7,6 +7,7 @@ import com.example.lancerpick.contract.repository.OrderContractRepository;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.dto.OrderFundsResponse;
+import com.example.lancerpick.order.entity.CancellationRequest;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderClosure;
 import com.example.lancerpick.order.entity.OrderHistory;
@@ -236,6 +237,8 @@ public class FullFundingService {
           orderClosureRepository
               .findByOrderId(orderId)
               .orElseThrow(FullFundingService::integrityError);
+      // 관리자 승인으로 이미 취소된 주문은 판매자 승인의 재전송이 아니다.
+      if ("ADMIN_CANCELLATION".equals(closure.getReason())) throw invalidState();
       if (!"REFUNDED".equals(payment.status())
           || !"REFUNDED".equals(orderFunds.getStatus())
           || !"MUTUAL_CANCELLATION".equals(closure.getReason())
@@ -304,6 +307,79 @@ public class FullFundingService {
         orderHistoryRepository.saveAndFlush(
             OrderHistory.cancelled(orderId, memberId, previousStatus, occurredAt, reason)));
     return orderResponse(order, memberId);
+  }
+
+  /**
+   * 운영 문의(취소 검토)에 대한 관리자 승인 취소(K4). 호출자가 관리자 공유 잠금 → 주문 배타 잠금 → 문의 잠금을 얻고 대기 취소
+   * 요청·문의를 확인한 같은 트랜잭션에서 호출한다. 판매자 승인과 같은 전액 반환·원장을 남기고, 취소 요청은 ADMIN 처리로,
+   * 종료 기록은 ADMIN_CANCELLATION(문의 ID 포함)으로 구분한다.
+   */
+  public void adminRefund(
+      Order order,
+      CancellationRequest request,
+      long adminId,
+      long inquiryId,
+      String reason,
+      LocalDateTime occurredAt) {
+    long orderId = order.getId();
+    if (!TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion())
+        || request.getOrderId() != orderId
+        || request.getRequestedBy() != order.getBuyerId()
+        || !"PENDING".equals(request.getStatus())) {
+      throw integrityError();
+    }
+    var payment = requirePayment(order);
+    var orderFunds = requireOrderFunds(order, payment);
+    requirePaymentEntry(order, payment);
+    if (!Set.of(
+                OrderStatus.IN_PROGRESS,
+                OrderStatus.AWAITING_CONFIRMATION,
+                OrderStatus.REVISION_IN_PROGRESS)
+            .contains(order.getStatus())
+        || !"PAID".equals(payment.status())
+        || !"HELD".equals(orderFunds.getStatus())) {
+      throw invalidState();
+    }
+    // 취소 요청 접수 시 활성 타이머는 이미 끝났다. 남아 있으면 기록 불일치다.
+    reviewTimers.requireNoActive(order);
+    if (orderClosureRepository.findByOrderId(orderId).isPresent()
+        || settlementRepository.findByOrderId(orderId).isPresent()) {
+      throw integrityError();
+    }
+    var wallet =
+        walletRepository
+            .findByMemberIdForUpdate(order.getBuyerId())
+            .orElseThrow(FullFundingService::integrityError);
+    wallet.refund(payment.amount(), occurredAt);
+    payment.refund(occurredAt);
+    orderFunds.refund(occurredAt);
+    request.resolveByAdmin("APPROVED", adminId, reason, occurredAt);
+    walletEntryRepository.saveAndFlush(
+        WalletEntry.refund(
+            order.getBuyerId(), payment.id(), payment.amount(), wallet.getBalance(), occurredAt));
+    orderClosureRepository.saveAndFlush(
+        OrderClosure.adminCancelled(
+            orderId, adminId, request.getId(), inquiryId, payment.amount(), occurredAt));
+    var previousStatus = order.getStatus();
+    order.cancel(occurredAt);
+    orderRepository.flush();
+    paymentRepository.flush();
+    orderFundsRepository.flush();
+    cancellationRequestRepository.flush();
+    orderEventPublisher.publish(
+        order,
+        orderHistoryRepository.saveAndFlush(
+            OrderHistory.cancellationRequestEvent(
+                orderId,
+                adminId,
+                OrderHistoryAction.CANCELLATION_APPROVED,
+                previousStatus,
+                occurredAt,
+                reason)));
+    orderEventPublisher.publish(
+        order,
+        orderHistoryRepository.saveAndFlush(
+            OrderHistory.cancelled(orderId, adminId, previousStatus, occurredAt, reason)));
   }
 
   /**

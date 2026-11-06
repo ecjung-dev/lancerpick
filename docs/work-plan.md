@@ -54,7 +54,7 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 | E3 | V2 주문 생성·`order_trade_terms` 저장·최소 계약 금액 10,000원 서버 검증 | F3 | 완료(#82) | 생성 경로는 설정 `lancerpick.order.contract-v2-creation-enabled` 기본 false로 닫아 둠(G1 전까지). 계약 확정 시 하한 재검증은 E4 |
 | E4 | V2 수락 → `AWAITING_CONTRACT` → 양측 서명 → 선금 대기 상태·이력, 계약 확정 시 하한 재검사, 선금 전 V2 취소 | E3 | 완료(#85) | 선금 대기는 V2의 `AWAITING_PAYMENT`([DB 전환 기준](advanced-db-transitions.md) §1). 병합 전 브랜치에서 백엔드 clean build 693건 통과. 계약 API·화면(E5)·실제 PDF(J3)가 없어 서명은 테스트 고정값으로만 확인, 브라우저 확인 없음 |
 | E5 | 계약 조회·확인 API, 주문 상세의 계약 화면 | E4, J3 | 완료(`2fec099`, 황준범 구현) | `/api/orders/{orderId}/contract` 수락·초안·서명·조회·PDF 생성/다운로드와 `ContractPanel`([PDF 연결](contract-pdf-delivery.md)). 수락 경로는 `POST /api/orders/{id}/accept` 하나로 정리(`/contract/accept`·계약 영역 수락 버튼 삭제, #92). 남은 것: 실제 브라우저 계약 거래 확인 |
-| E6 | V3 검수·수정/재납품·합의/관리자 취소·구매 확정 연결 | E4, J4 | 대부분 완료(main `03b5687`) | 납품·수정·재납품(#93), 수동 구매 확정 지급·구매자 취소 요청→판매자 승인 전액 반환·V3 `allowedActions`·대금 패널(`03b5687`). 남음: 관리자 승인 취소(K4 연결). [구현 범위](full-funding-payment.md) |
+| E6 | V3 검수·수정/재납품·합의/관리자 취소·구매 확정 연결 | E4, J4 | 대부분 완료(main `03b5687`) | 납품·수정·재납품(#93), 수동 구매 확정 지급·구매자 취소 요청→판매자 승인 전액 반환·V3 `allowedActions`·대금 패널(`03b5687`). 관리자 승인/거절 내부 서비스 `AdminCancellationReviewService`(로컬 구현·자동 테스트, `feature/admin-cancellation-review`). 남음: 관리자 API·화면(K4). [구현 범위](full-funding-payment.md)·[관리자 취소 검토](admin-cancellation-review.md) |
 | E7 | 검수 무응답 48시간 → 판매자 7일 타이머 → 자동 구매 확정 | E6, J4 | 완료(#99) | 수정/취소 응답 시 이전 타이머 취소, 새 기산점/회차. 관리자 해제는 내부 서비스 `ReviewTimerService.adminStop`까지(K5가 연결). [상세](auto-confirm-timer.md). 실서버 만료 스케줄러(주문 20)·타이머 시작 가능→진행 중 패널(주문 23) 확인(2026-11-06, 개인 DB 시각 조정) |
 | E8 | 전액 결제 완료 기준 납기·재납품 기한·중복 없는 통지 | E4, E6, J4 | 완료(#105) | 납기 `03b5687`, 재납품 기한 #93. 결제·수정 요청 트랜잭션의 `DEADLINE_NOTIFIED` SYSTEM 이력(원천 키 UNIQUE)·양측 알림([V3 알림](v3-notices.md)). 실서버·브라우저 확인 완료(2026-11-06) |
 | E9 | V3 보관·지급·반환·자동 확정 예정/결과 알림 | E1, E4 | 완료(#105) | V3 금액 알림 유형 3종, 만료 24시간 전 구매자 사전 안내(타이머당 1회). 잔금 미지급 종료 알림은 제외. 금액 알림·사전 안내 스케줄러 실서버·브라우저 확인(2026-11-06, 사전 안내는 개인 DB 시각 조정) |
@@ -76,7 +76,7 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 | K1 | 이메일 인증 가입·비밀번호 재설정/변경·아이디 안내·요청 제한 | F1 | 진행 중 | 로그인 상태 비밀번호 변경 완료(#84). 비밀번호 재설정·재설정 요청 제한 완료(#89, 실제 메일 발송은 C3 #90 반영으로 `MAIL_ENABLED=true` 시 가능). 브라우저 + Mailpit 확인 완료(2026-11-06, [기록](auth-login.md#브라우저--mailpit-확인--2026-11-06)). 이메일 인증 가입 main 반영(#113, [기록](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification)). 기존 회원 이메일 인증 전환·아이디 안내는 남음. V5 토큰 스키마 사용. 메일 인프라는 C3 |
 | K2 | 인증 버전 기반 세션 무효화 계약 제공 | K1 | 완료(#84) | HTTP 세션 폐기 필터·`AuthVersionLookup` 계약. 소켓 종료(C2)는 이 계약 사용. 브라우저 2개 동시 확인은 자동 테스트로 대체 |
 | K3 | 관리자 운영 현황·충전/금액 처리 조회 | E4, J4 | 내부 금융 조회 main 반영(#117) | 황준범이 [금융 조회 서비스·DTO](admin-finance-support.md) 제공. 전체 백엔드 894건 통과(신규 19 포함). 김창재의 관리자 API·화면 연결은 남음 |
-| K4 | 구매자 운영 문의, 판매자 무응답 취소의 관리자 승인/거절 | E6 | 시작 전 | 실제 취소·반환 서비스는 정은찬·황준범. 주문 쪽 서비스가 트랜잭션을 소유하고 문의 종료 메서드를 그 안에서 호출([경계](full-funding-policy.md#1-거래-흐름과-금액)). closure에 `inquiry_id`가 필수라 문의 엔티티가 선행 |
+| K4 | 구매자 운영 문의, 판매자 무응답 취소의 관리자 승인/거절 | E6 | 서비스·문의 엔티티 로컬 구현(정은찬, `feature/admin-cancellation-review`), API·화면 남음 | 문의 엔티티 `SupportInquiry`·저장소와 주문 쪽 승인/거절 서비스를 정은찬이 먼저 구현(2026-11-06 조장 결정). 김창재는 구매자 문의 접수·관리자 문의 목록·승인/거절 API·화면을 이 서비스로 연결([계약](admin-cancellation-review.md)) |
 | K5 | 관리자 타이머 해제 화면·API | E7 | 시작 전 | 서비스 `ReviewTimerService.adminStop(adminId, orderId, reason)` 사용([자동 구매 확정](auto-confirm-timer.md)) |
 | K6 | 실패 작업 조회·재처리(알림 `FAILED`·PDF·충전), 관리자 작업 이력 | E1, J3 | 충전/Batch 조회·조건 main 반영(#117) | [충전·Batch 후보 판단](admin-finance-support.md) 제공. 실제 관리자 실행·사유·감사 이력·API/화면은 미연결. 알림/PDF 재처리는 각 담당 서비스와 별도 연결 |
 
@@ -96,7 +96,7 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 - 대상: `type=CANCELLATION_REVIEW`이고 열린 문의, 연결된 취소 요청이 PENDING, V3 결제 후 주문
 - 주문 쪽 서비스가 트랜잭션을 소유하고 관리자 공유 잠금 → 주문 → 구매자 지갑 순으로 잠근다. 승인 시 취소 요청 APPROVED(`resolution_source=ADMIN`)·보관금 전액 반환·closure `ADMIN_CANCELLATION`·이력·아웃박스, 거절 시 REJECTED(`ADMIN`)와 타이머 새 기산점
 - 문의 종료(`CLOSED`)는 문의 영역이 제공하는 메서드를 이 트랜잭션 안에서 호출한다. 관리자 화면·API는 이 주문 쪽 서비스를 호출한다
-- 김창재 요청: `support_inquiries` 엔티티·저장소와 문의 종료 메서드가 main에 들어오면 알려 준다. closure `ADMIN_CANCELLATION`은 DB CHECK상 `inquiry_id`가 필수라 이것이 K4 승인 구현·테스트의 선행 조건이다
+- (2026-11-06 변경) 문의 엔티티·저장소·종료 메서드는 정은찬이 `inquiry` 패키지에 먼저 만들었고, 승인/거절 서비스 `AdminCancellationReviewService.approve/reject(adminId, inquiryId, reason)`도 구현했다(오류 코드·잠금 순서·응답은 [관리자 취소 검토](admin-cancellation-review.md)). 김창재는 문의 접수 검증(신청자=구매자, 연결 요청 PENDING)·관리자 API·화면을 이 계약으로 연결한다
 
 ### 박소현 — 상품·판매자·후기
 
