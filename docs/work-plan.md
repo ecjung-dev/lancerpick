@@ -78,6 +78,24 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 | K5 | 관리자 타이머 해제 화면·API | E7 | 시작 전 | 서비스 `ReviewTimerService.adminStop(adminId, orderId, reason)` 사용([자동 구매 확정](auto-confirm-timer.md)) |
 | K6 | 실패 작업 조회·재처리(알림 `FAILED`·PDF·충전), 관리자 작업 이력 | E1, J3 | 시작 전 | 재처리 서비스는 정은찬·황준범 |
 
+#### K4·K5 연결 안내 (정은찬 → 김창재, 2026-11-06)
+
+**K5 타이머 해제** — main #99에 서비스가 있다. 관리자 API는 아래 서비스를 그대로 호출한다.
+
+- `ReviewTimerService.adminStop(long adminId, long orderId, String reason)` → `ReviewTimerResponse`
+- 서비스가 처리: ADMIN 역할 확인(아니면 403 `FORBIDDEN`), 사유 공백 정리 후 1~1000자(400 `VALIDATION_FAILED`), V3 주문만(아니면 404), 주문 잠금·트랜잭션·이력 `TIMER_ADMIN_STOPPED`
+- 409: `TIMER_NOT_ACTIVE`(활성 타이머 없음), `AUTO_CONFIRM_DUE`(만료 시각이 지나 자동 확정 우선)
+- 컨트롤러가 할 일: POST·CSRF·no-store, `@CurrentMemberId`로 관리자 ID 전달
+- 해제된 기산점으로는 판매자가 재시작할 수 없다([정책](full-funding-policy.md) §2-5). 상세는 [자동 구매 확정](auto-confirm-timer.md)
+
+**K4 관리자 승인 취소** — 주문 쪽 서비스는 정은찬이 구현한다. 경계는 [정책](full-funding-policy.md) §1(#102)을 따른다.
+
+- 예정 시그니처: `approve(long adminId, long inquiryId, String reason)`, `reject(long adminId, long inquiryId, String reason)`
+- 대상: `type=CANCELLATION_REVIEW`이고 열린 문의, 연결된 취소 요청이 PENDING, V3 결제 후 주문
+- 주문 쪽 서비스가 트랜잭션을 소유하고 관리자 공유 잠금 → 주문 → 구매자 지갑 순으로 잠근다. 승인 시 취소 요청 APPROVED(`resolution_source=ADMIN`)·보관금 전액 반환·closure `ADMIN_CANCELLATION`·이력·아웃박스, 거절 시 REJECTED(`ADMIN`)와 타이머 새 기산점
+- 문의 종료(`CLOSED`)는 문의 영역이 제공하는 메서드를 이 트랜잭션 안에서 호출한다. 관리자 화면·API는 이 주문 쪽 서비스를 호출한다
+- 김창재 요청: `support_inquiries` 엔티티·저장소와 문의 종료 메서드가 main에 들어오면 알려 준다. closure `ADMIN_CANCELLATION`은 DB CHECK상 `inquiry_id`가 필수라 이것이 K4 승인 구현·테스트의 선행 조건이다
+
 ### 박소현 — 상품·판매자·후기
 
 | ID | 작업 | 선행 | 상태 | 비고 |
