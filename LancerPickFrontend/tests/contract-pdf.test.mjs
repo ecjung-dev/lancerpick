@@ -111,7 +111,7 @@ test('download hash must equal the fixed server metadata', async () => {
   await assert.rejects(verifyContractPdf(file, ''), /해시/)
 })
 
-function render(status, memberId = '7', fileHash = null, denied = false) {
+function render(status, memberId = '7', fileHash = null, denied = false, panelProps = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryOnMount: false } },
   })
@@ -138,6 +138,7 @@ function render(status, memberId = '7', fileHash = null, denied = false) {
           orderId: '11',
           sellerId: '7',
           orderStatus: 'AWAITING_CONTRACT',
+          ...panelProps,
         }),
       ),
     )
@@ -145,6 +146,19 @@ function render(status, memberId = '7', fileHash = null, denied = false) {
     client.clear()
   }
 }
+test('signed contract asks for payment only while the order is awaiting payment', () => {
+  const v3 = (orderStatus) =>
+    render('SIGNED', '8', 'a'.repeat(64), false, { orderStatus, policyVersion: 'CONTRACT_V3' })
+  assert.match(v3('AWAITING_PAYMENT'), /전액 적립금 결제를 진행해 주세요/)
+  for (const orderStatus of ['IN_PROGRESS', 'AWAITING_CONFIRMATION', 'COMPLETED', 'CANCELLED']) {
+    const html = v3(orderStatus)
+    assert.match(html, /계약이 성립했습니다/)
+    assert.doesNotMatch(html, /결제를 진행해 주세요/, orderStatus)
+  }
+  const v2 = (orderStatus) => render('SIGNED', '8', 'a'.repeat(64), false, { orderStatus })
+  assert.match(v2('AWAITING_PAYMENT'), /선금 결제 기능 연결 전까지/)
+  assert.doesNotMatch(v2('CANCELLED'), /선금 결제 기능 연결 전까지/)
+})
 test('seller sees draft generation and retry while buyer cannot generate', () => {
   assert.match(render('DRAFT'), /PDF 생성<\/button>/)
   assert.match(render('FAILED'), /생성 재시도/)

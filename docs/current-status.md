@@ -8,7 +8,7 @@
 
 ## V3 활성화 게이트(G1) 시나리오 — 2026-11-06
 
-문서만(`docs/v3-activation-gate.md`, 정은찬): 신규 V3 생성 스위치를 켜기 전 확인할 정상·취소·경합·롤백·권한·호환·실서버/브라우저 시나리오와 기존 테스트 근거, 추가할 테스트(처음부터 끝까지 거래, V3 결제 전 취소, 만료 vs 수정 요청·관리자 해제 동시 실행, 금액 불변식 공통 검사), 불변식 확인 조회, 활성화·되돌리기 절차를 정리했다. 후속 `test/v3-activation-gate`: 3절 추가 테스트 7건(`V3ActivationGateIntegrationTests`, 실제 생성 설정 on)과 공통 불변식 검사 `support/V3FundsInvariant`를 추가해 기존 V3 금융·타이머 통합 테스트 정리 단계에서도 판정한다. 운영 코드 변경 없음. 로컬 `lancerpick_test`에서 백엔드 전체 `clean build` 835건 통과(실패·오류·건너뜀 0). 원격 CI는 PR 기록을 따른다. 판정은 보류(K4 미연결).
+문서만(`docs/v3-activation-gate.md`, 정은찬): 신규 V3 생성 스위치를 켜기 전 확인할 정상·취소·경합·롤백·권한·호환·실서버/브라우저 시나리오와 기존 테스트 근거, 추가할 테스트(처음부터 끝까지 거래, V3 결제 전 취소, 만료 vs 수정 요청·관리자 해제 동시 실행, 금액 불변식 공통 검사), 불변식 확인 조회, 활성화·되돌리기 절차를 정리했다. 후속 `test/v3-activation-gate`: 3절 추가 테스트 7건(`V3ActivationGateIntegrationTests`, 실제 생성 설정 on)과 공통 불변식 검사 `support/V3FundsInvariant`를 추가해 기존 V3 금융·타이머 통합 테스트 정리 단계에서도 판정한다. 운영 코드 변경 없음. 로컬 `lancerpick_test`에서 백엔드 전체 `clean build` 835건 통과(실패·오류·건너뜀 0). 원격 CI는 PR 기록을 따른다. 판정은 보류(K4 미연결). 함께 계약 패널의 결제 안내 문구가 결제 대기(`AWAITING_PAYMENT`) 주문에만 보이도록 고쳤다(계약 영역, 프런트 typecheck·lint·test:api 200건·build 통과, 브라우저 재확인은 안 함).
 
 ## V3 기한 통지(E8)·V3 알림(E9) — 2026-11-06
 
