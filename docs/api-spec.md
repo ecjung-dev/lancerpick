@@ -104,6 +104,10 @@ Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·
 | PATCH /products/{id} | 소유자; ProductPatch,expectedVersion 필수 | ProductDetail |
 | PATCH /products/{id}/sale-status | 소유자; saleStatus,expectedVersion | ProductDetail |
 | GET /products/{id}/reviews | 전체; 공개·판매 중 상품, page,size, 선택 rating(1~5) | Review 목록, 전체 평균 별점·후기 건수 |
+| GET /me/favorites | 회원; page 기본 0, size 기본 20(1~100) | 공개·판매 중인 관심 상품 ProductSummary 페이지, 최근 등록순 |
+| GET /me/favorites/{productId} | 회원 | 200 `{ favorited: boolean }` |
+| PUT /me/favorites/{productId} | 회원+CSRF; 공개·판매 중 상품 | 204, 중복 등록도 204. 상품이 없거나 비공개면 404 |
+| DELETE /me/favorites/{productId} | 회원+CSRF | 204, 이미 해제된 상품도 204 |
 
 SellerProfile: id(회원 ID),displayName,introduction,specialty,portfolioUrl. 이메일·잔액은 공개하지 않는다. ProductInput: categoryId,title,description,scopeDescription,preparationDescription,priceAmount,durationDays. 가격 1~1,000,000원, 기간 1~30일. portfolioUrl은 선택이다.
 
