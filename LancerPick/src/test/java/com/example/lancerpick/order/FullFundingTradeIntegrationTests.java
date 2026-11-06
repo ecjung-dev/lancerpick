@@ -31,6 +31,7 @@ import com.example.lancerpick.order.service.OrderDeliveryService;
 import com.example.lancerpick.order.service.OrderPaymentService;
 import com.example.lancerpick.order.service.OrderRevisionService;
 import com.example.lancerpick.support.IntegrationTest;
+import com.example.lancerpick.support.V3FundsInvariant;
 import com.example.lancerpick.wallet.entity.Wallet;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
@@ -183,6 +184,8 @@ class FullFundingTradeIntegrationTests {
 
   @AfterEach
   void cleanup() throws Exception {
+    // G1 금액 불변식: 지우기 전에 확인하고, 정리는 항상 끝낸 뒤 판정한다.
+    var violations = V3FundsInvariant.violations(jdbc, ids);
     for (long order : ids) {
       var keys =
           jdbc.queryForList(
@@ -221,6 +224,7 @@ class FullFundingTradeIntegrationTests {
     jdbc.update("DELETE FROM wallet_entries WHERE member_id IN (?,?,?)", buyer, seller, other);
     jdbc.update("DELETE FROM wallets WHERE member_id IN (?,?,?)", buyer, seller, other);
     jdbc.update("DELETE FROM members WHERE id IN (?,?,?)", buyer, seller, other);
+    assertThat(violations).as("V3 금액 불변식 위반").isEmpty();
   }
 
   @AfterAll

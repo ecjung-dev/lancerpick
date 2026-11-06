@@ -20,7 +20,7 @@
 
 | ID | 시나리오 | 기대 결과 | 현재 근거 | 남은 확인 |
 | --- | --- | --- | --- | --- |
-| A1 ● | 스위치 on 상태에서 HTTP 주문 생성 → 수락 → 초안 → PDF → 양측 서명 → 결제 → 납품 → 구매 확정 | 정책 V3 고정, 결제액만 차감·HELD, 확정 시 판매자 +90%·수수료 10%·완료, 이력·알림 순서 | 단계별로 나뉨: `OrderCreationIntegrationTests.fullFundingOrderFreezesNewTerms…`, `ContractDocumentIntegrationTests.httpAcceptDraftPdf…`(V2 기준), `FullFundingTradeIntegrationTests.httpPaymentIgnoresClientMoney…`(주문·수락은 fixture) | **한 주문으로 처음부터 끝까지 이어지는 통합 테스트 없음**. 신규 1건 추가 + 실서버·브라우저 |
+| A1 ● | 스위치 on 상태에서 HTTP 주문 생성 → 수락 → 초안 → PDF → 양측 서명 → 결제 → 납품 → 구매 확정 | 정책 V3 고정, 결제액만 차감·HELD, 확정 시 판매자 +90%·수수료 10%·완료, 이력·알림 순서 | `V3ActivationGateIntegrationTests`.switchOnHttpTradeRuns…(실제 설정 on, 전 단계 HTTP·이력·아웃박스 순서·대금 조회). 실서버 API 실행 기록: [V3 알림](v3-notices.md#실서버브라우저-확인--2026-11-06-main-9f9aa8f) | 화면 버튼으로 하는 전체 거래(G1 행) |
 | A2 ● | 수정 요청 1회 → 재납품 → 확정 | 재납품 기한=요청 시각+소요일, 두 번째 수정 요청 거절 | `ContractV3FulfillmentApiIntegrationTests.v3DeliveryRevisionAndRedelivery…`, `ReviewTimerIntegrationTests.revisionNotifiesRedeliveryDeadline…` | 브라우저 |
 | A3 ● | 납품 후 48시간 → 판매자 타이머 시작 → 7일 만료 → 자동 확정 | SYSTEM 완료·AUTO_CONFIRMED closure·수수료 동일·양측 알림·후기 가능 | `ReviewTimerIntegrationTests.sellerStartsAfter48Hours…`, `concurrentExpiryRunsPaySellerOnlyOnce` | 실서버 스케줄러 실제 실행(시간 단축 설정은 개인 DB에서만), 후기 작성 브라우저 |
 | A4 ○ | 만료 24시간 전 구매자 사전 안내 | 구매자에게 1회, 판매자 없음 | `autoConfirmNoticeIsSentOnceToBuyer…`, `…NotSentForEndedOrExpiredTimers` | 실서버 알림 목록 |
@@ -30,7 +30,7 @@
 
 | ID | 시나리오 | 기대 결과 | 현재 근거 | 남은 확인 |
 | --- | --- | --- | --- | --- |
-| B1 ● | 결제 전 취소(수락 전·계약 대기·서명 후) | 금액 이동 없음, `ORDER_CANCELLED` | `OrderContractIntegrationTests.contractOrderCanBeCancelledBeforeDeposit`, `signedContractCanBeCancelledBeforeDeposit…`(V2 기준) | V3 주문으로 같은 검사 1건 |
+| B1 ● | 결제 전 취소(수락 전·계약 대기·서명 후) | 금액 이동 없음, `ORDER_CANCELLED` | `V3ActivationGateIntegrationTests`.cancellationBeforePaymentMovesNoMoney…(V3 수락 전·계약 대기·서명 후 구매자/판매자), V2 기준 `OrderContractIntegrationTests` | — |
 | B2 ● | 결제 후 구매자 취소 요청 → 판매자 승인 | 보관금 전액 반환·REFUNDED·수익/수수료 0·`ORDER_FUNDS_REFUNDED` | `FullFundingTradeIntegrationTests.approvedCancellationRefundsOnce…`, `manualConfirmationAndApprovedRefundUseV3FundsWording` | 브라우저 |
 | B3 ● | 취소 요청 거절·철회 후 재개 | 타이머 종료, 해결 시각이 새 기산점 | `cancellationRequestCancelsTimerAndRejectionRestartsReviewWindow` | — |
 | B4 ● | 판매자 무응답 → 운영 문의 → 관리자 승인 취소(K4) | 전액 반환·`ADMIN_CANCELLATION`(`inquiry_id`)·문의 종료 한 트랜잭션 | **미구현**(김창재 문의 엔티티 선행) | K4 구현 후 통합 테스트·화면 |
@@ -44,8 +44,8 @@
 | C2 ● | 같은 주문 동시 결제·재전송 | 차감 1건 | `repeatedConcurrentPaymentsCreateOneDebit` | — |
 | C3 ● | 동시 구매 확정 | 판매자 지급 1건 | `simultaneousConfirmationsCreditSellerOnlyOnce` | — |
 | C4 ● | 취소 승인 vs 구매 확정 | 하나만 성공 | `cancellationAndConfirmationCannotBothWin` | — |
-| C5 ● | 타이머 만료 vs 구매자 확정/수정/취소 요청 | 만료 시각 이상이면 만료 우선(409 `AUTO_CONFIRM_DUE`), 응답이 먼저 커밋되면 만료 작업은 지급 안 함 | 순차 검사만: `ReviewTimerIntegrationTests`(AUTO_CONFIRM_DUE 3건) | **동시 스레드 검사 추가**(만료 처리와 수정 요청을 동시에) |
-| C6 ● | 관리자 해제 vs 자동 확정 | 같은 잠금으로 직렬화, 만료 후 해제는 409 | 순차 검사: `adminCannotStopDueTimerBecauseExpiryWins` | **동시 스레드 검사 추가** |
+| C5 ● | 타이머 만료 vs 구매자 확정/수정/취소 요청 | 만료 시각 이상이면 만료 우선(409 `AUTO_CONFIRM_DUE`), 응답이 먼저 커밋되면 만료 작업은 지급 안 함 | 순차: `ReviewTimerIntegrationTests`(AUTO_CONFIRM_DUE 3건). 동시: `V3ActivationGateIntegrationTests`.expiryRacingBuyerResponses…(만료 후 만료 처리·수정·취소 요청·확정 4개 동시), responseCommittedBeforeExpiry…(만료 전 동시 → 끝난 타이머는 이후 만료 실행에서도 지급 안 함) | — |
+| C6 ● | 관리자 해제 vs 자동 확정 | 같은 잠금으로 직렬화, 만료 후 해제는 409 | 순차: `adminCannotStopDueTimerBecauseExpiryWins`. 동시: `V3ActivationGateIntegrationTests`.adminStopRacingDueExpiry…, adminStopBeforeExpiry… | — |
 | C7 ● | 여러 서버의 만료 스케줄러 동시 실행 | 지급 1건 | `concurrentExpiryRunsPaySellerOnlyOnce` | — |
 | C8 ○ | 관리자 승인 취소 vs 판매자 승인/구매 확정 | 하나만 성공 | K4 미구현 | K4와 함께 |
 
@@ -88,17 +88,17 @@
 | G4 ○ | 좁은 화면에서 계약·대금·타이머 패널 | 황준범 |
 | G5 ● | 실제 V3 PDF 한글·금액·특약 표시, 다운로드 파일 해시가 화면 값과 일치 | 황준범 |
 
-## 3. 추가할 자동 테스트
+## 3. 추가한 자동 테스트 (2026-11-06)
 
-현재 근거에서 빠진 것만 추가한다. 모두 `@IntegrationTest`, 실제 커밋.
+현재 근거에서 빠진 것만 추가했다. 모두 `@IntegrationTest`, 실제 커밋. 위치 `order/V3ActivationGateIntegrationTests`(실제 설정 `lancerpick.order.full-funding-creation-enabled=true`로 컨텍스트를 띄우고 주문도 실제 생성 경로로 만든다).
 
-1. **A1 처음부터 끝까지**: 스위치 on 프로퍼티로 HTTP 생성 → 수락 → 초안·PDF·양측 서명 → 결제 → 납품 → 확정. 단계마다 상태·이력·아웃박스, 끝에서 4절 불변식.
-2. **B1 V3 결제 전 취소**: 수락 전/계약 대기/서명 후 각각 금액 이동 0.
-3. **C5 만료 vs 수정 요청 동시**: 만료 시각 직전·직후 두 경우. 어느 쪽이 이기든 지급·타이머·수정 요청이 한 결과로만 남는지.
-4. **C6 관리자 해제 vs 만료 처리 동시**.
-5. **불변식 공통 검사 메서드**: 각 V3 금융 테스트 끝에서 4절 조건을 확인(테스트 지원 코드, `src/test`라 JDBC 허용).
+1. **A1 처음부터 끝까지**: HTTP 생성 → 수락 → 초안·PDF·양측 서명 → 결제 → 납품 → 확정. 정책·거래 조건 고정, 잔액, 대금 조회, 이력 8단계·아웃박스 8종 순서.
+2. **B1 V3 결제 전 취소**: 수락 전(판매자 취소는 409)·계약 대기·서명 후(구매자·판매자 각각). 결제·보관·종료·정산·원장 0건, 취소 후 결제 거절.
+3. **C5 만료 vs 구매자 응답 동시**: 만료 시각 이후 4개 동시 실행은 자동 확정 하나만 남고 수정·취소 요청 행이 생기지 않음. 만료 전 동시 실행은 수정 요청이 타이머를 끝내고, 그 타이머의 만료 시각이 지나도 이후 만료 실행이 지급하지 않음.
+4. **C6 관리자 해제 vs 만료 처리 동시**: 같은 두 경우를 관리자 해제로 검사.
+5. **불변식 공통 검사**: `support/V3FundsInvariant`(4절 조회와 같은 조건, `src/test`라 JDBC 허용). 이 클래스와 `FullFundingTradeIntegrationTests`·`ReviewTimerIntegrationTests`의 모든 검사 뒤 정리 단계에서 판정한다. 차감 원장을 지운 상태를 위반으로 잡는지도 검사한다.
 
-K4 구현 시 B4·C8을 같이 추가한다.
+동시 검사는 두 스레드를 같은 시점에 출발시키지만 잠금 획득 순서를 강제하지 않는다. 그래서 순서와 관계없이 성립해야 하는 최종 상태(지급 1회, 남은 요청 행, 타이머 상태)를 판정한다. K4 구현 시 B4·C8을 같이 추가한다.
 
 ## 4. 금액 불변식 조회
 
@@ -148,4 +148,4 @@ WHERE (
 
 | 날짜 | 커밋 | 자동 테스트 | 실서버·브라우저 | 불변식 | 판정 |
 | --- | --- | --- | --- | --- | --- |
-| — | — | 아직 | 아직 | 아직 | 보류(K4 미연결, 3절 테스트 미추가) |
+| 2026-11-06 | `test/v3-activation-gate` 작업 트리 | 로컬 `lancerpick_test` 백엔드 `clean build` 835건 통과(실패·오류·건너뜀 0). 프런트 변경 없음 | API 실서버·일부 브라우저([V3 알림](v3-notices.md#실서버브라우저-확인--2026-11-06-main-9f9aa8f)), 화면 버튼 전체 거래 아직 | 실서버 3건 0행, 자동 테스트 정리 단계 판정 | 보류(K4 미연결) |
