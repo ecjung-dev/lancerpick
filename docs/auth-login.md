@@ -1,5 +1,11 @@
 # 로그인·로그아웃·내 정보 API
 
+## 프로필 저장·자격 증명 경합 보완 — 2026-11-06
+
+`codex/fix-profile-payout-races` 로컬 변경: 표시 이름 수정도 비밀번호 변경·재설정과 같은 회원 행 배타 잠금을 사용한다. 과거 회원 상태를 읽은 프로필 저장이 나중에 커밋되며 비밀번호 해시·`auth_version`을 되돌리던 경합을 막는다. API·응답·DB 구조는 유지한다.
+
+`ProfileCredentialRaceIntegrationTests`는 비밀번호 변경과 재설정 각각에 대해 실제 독립 트랜잭션의 순서를 제어한다. 수정 전 두 경우 모두 인증 버전이 0으로 돌아가 실패했고, 수정 후에는 새 비밀번호·인증 버전 1·새 표시 이름과 재설정 토큰 소비를 보존한다. SQL 조회 지점은 스파이와 실제 JPA 조회·행 잠금으로 제어하며 브라우저 조작 검증은 아니다. 최종 선택 검사 결과는 [현재 현황](current-status.md)을 따른다.
+
 > 최신 수동 확인(2026-11-04): 사용자가 실제 화면의 일반 거래 완료·정산, 취소·환불·잔액 반환과 기본 충전 실패 흐름 확인을 완료했다. 아래 날짜별 미확인·후속 표기는 당시 기록이며, 현재 남은 확인과 보류 사항은 [사용자 수동 검증 현황](manual-trade-verification.md)을 따른다.
 
 > 문서 읽기 기준(2026-11-04): 아래 날짜·브랜치별 구현 및 검증 설명은 당시 기록이다. 현재 반영 여부·남은 작업은 [현황표](current-status.md), 실행 설정은 [루트 README](../README.md), API 계약은 [API 명세](api-spec.md)를 따른다. 과거의 미구현·병합 전 표현과 검사 수를 현재 상태로 확대하지 않는다.
@@ -286,7 +292,7 @@ C3 전달 사항 6번 요청에 따라 실제 화면에서 처음부터 끝까�
 
 ### 테스트 회원 만들기 (팀 공통 영향)
 
-`POST /api/members`를 부르는 기존 테스트는 증명이 필요하다. 테스트마다 메일 → 인증을 거치지 않도록 공통 도우미 `support/TestMembers`가 인증된 증명 행을 테스트 DB에 넣고 원문을 돌려준다(`signupJson`·`signupBody`·`signupRequest`). 이번 작업에서 기존 테스트 9개 파일의 가입 호출을 이 도우미로 바꿨다(각 1~2줄). 가짜 메일 발송기는 `support/FakeAccountMailSender`로 옮겨 재설정·가입 테스트가 같은 Spring 컨텍스트를 쓴다.
+`POST /api/members`를 부르는 기존 테스트는 증명이 필요하다. 테스트마다 메일 → 인증을 거치지 않도록 공통 도우미 `support/TestMembers`가 인증된 증명 행을 테스트 DB에 넣고 원문을 돌려준다(`signupJson`·`signupBody`·`signupRequest`). 이번 작업에서 기존 테스트 10개 파일의 가입 호출을 이 도우미로 바꿨다(각 1~2줄, main #111의 `ProfileCredentialRaceIntegrationTests` 포함. 이 파일은 `ResetTokens` → `OneTimeTokens` 이름 변경도 반영). 가짜 메일 발송기는 `support/FakeAccountMailSender`로 옮겨 재설정·가입 테스트가 같은 Spring 컨텍스트를 쓴다.
 
 ### 한계
 

@@ -194,14 +194,15 @@ public class FullFundingService {
         || settlementRepository.findByOrderId(orderId).isPresent()) {
       throw integrityError();
     }
-    var occurredAt = currentTime();
-    // 구매자 확정은 활성 자동 확정 타이머를 끝낸다. 만료 시각이 지났으면 자동 확정이 우선이라 충돌로 응답한다.
-    reviewTimers.closeForBuyerResponse(order, memberId, occurredAt, ReviewTimers.ORDER_CLOSED);
     var distribution = FullFundingPolicy.completed(payment.amount());
     var wallet =
         walletRepository
             .findByMemberIdForUpdate(order.getSellerId())
             .orElseThrow(FullFundingService::integrityError);
+    // 지갑 잠금 대기 중 다른 거래가 지급할 수 있으므로, 잠금 뒤의 시각으로 지급·만료를 함께 판단한다.
+    var occurredAt = currentTime();
+    // 구매자 확정은 활성 자동 확정 타이머를 끝낸다. 만료 시각이 지났으면 자동 확정이 우선이라 충돌로 응답한다.
+    reviewTimers.closeForBuyerResponse(order, memberId, occurredAt, ReviewTimers.ORDER_CLOSED);
     wallet.creditSettlement(distribution.sellerPayout(), occurredAt);
     walletEntryRepository.saveAndFlush(
         WalletEntry.sellerPayout(
@@ -336,6 +337,9 @@ public class FullFundingService {
         walletRepository
             .findByMemberIdForUpdate(order.getSellerId())
             .orElseThrow(FullFundingService::integrityError);
+    // 처리 대상 선정 시각을 지급에 재사용하지 않는다. 다른 주문이 먼저 지갑을 갱신했을 수 있다.
+    occurredAt = currentTime();
+    if (!timer.isDue(occurredAt)) throw integrityError();
     wallet.creditSettlement(distribution.sellerPayout(), occurredAt);
     walletEntryRepository.saveAndFlush(
         WalletEntry.sellerPayout(
