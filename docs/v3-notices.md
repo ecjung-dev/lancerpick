@@ -1,6 +1,6 @@
 # V3 기한 통지(E8)·보관/지급/반환·자동 확정 사전 안내(E9)
 
-2026-11-06, `feature/v3-deadline-autoconfirm-notices`(정은찬). main `2188f8d` 기준. CONTRACT_V3 주문에만 적용하며 LEGACY_V1 알림은 바꾸지 않는다. DB 변경(Flyway) 없음: V6의 `DEADLINE_NOTIFIED` 행동·`source_event_key` UNIQUE·`details` JSON과 V5 `outbox_events.event_id` UNIQUE를 그대로 쓴다. 정책은 [결제 금액 보관 정책](full-funding-policy.md) §1·§2-6, 전달 구조는 [주문 알림·아웃박스](notifications.md)를 따른다.
+2026-11-06, `feature/v3-deadline-autoconfirm-notices`(정은찬), main 반영(#105). 작업 기준은 main `2188f8d`. CONTRACT_V3 주문에만 적용하며 LEGACY_V1 알림은 바꾸지 않는다. DB 변경(Flyway) 없음: V6의 `DEADLINE_NOTIFIED` 행동·`source_event_key` UNIQUE·`details` JSON과 V5 `outbox_events.event_id` UNIQUE를 그대로 쓴다. 정책은 [결제 금액 보관 정책](full-funding-policy.md) §1·§2-6, 전달 구조는 [주문 알림·아웃박스](notifications.md)를 따른다.
 
 ## E8 납기·재납품 기한 통지
 
