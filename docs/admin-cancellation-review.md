@@ -1,6 +1,6 @@
 # 운영 문의 취소 검토와 관리자 승인 취소(K4)
 
-작성: 2026-11-06, 정은찬, 작업 브랜치 `feature/admin-cancellation-review`(분기 main `92fabc3`, #120). 상태: **로컬 구현·자동 테스트 통과, PR 전**. 정책 경계는 [전액 보관 정책](full-funding-policy.md) §1, 금액 처리는 [전액 보관 구현](full-funding-payment.md)을 따른다.
+작성: 2026-11-06, 정은찬, 작업 브랜치 `feature/admin-cancellation-review`(분기 main `92fabc3`, #120). 상태: **main 반영(#121)**, 자동 테스트 통과. 관리자 API·화면 연결과 실서버·브라우저 확인은 남음. 정책 경계는 [전액 보관 정책](full-funding-policy.md) §1, 금액 처리는 [전액 보관 구현](full-funding-payment.md)을 따른다.
 
 ## 결론
 

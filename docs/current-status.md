@@ -2,7 +2,7 @@
 
 ## 운영 문의 엔티티·관리자 승인 취소 서비스(K4) — 2026-11-06
 
-`feature/admin-cancellation-review`(정은찬, 분기 main `92fabc3`, PR 전). [관리자 취소 검토](admin-cancellation-review.md).
+main 반영(#121, 정은찬, 작업 브랜치 `feature/admin-cancellation-review`, 분기 main `92fabc3`). [관리자 취소 검토](admin-cancellation-review.md).
 
 - **문의 엔티티**: 김창재 선행 작업이던 `support_inquiries` 엔티티 `inquiry/entity/SupportInquiry`·저장소를 K4 진행을 위해 정은찬이 먼저 만들었다(조장 결정). 취소 검토·일반 문의 생성, 제목 1~150자, 종료(`close`)만 제공한다. 문의 접수·목록·답변 API는 김창재 담당으로 남는다.
 - **관리자 승인/거절**: `AdminCancellationReviewService.approve/reject(adminId, inquiryId, reason)`. 관리자 공유 → 주문 → 문의 → (승인 시) 구매자 지갑 잠금. 승인은 보관금 전액 반환·종료 기록 `ADMIN_CANCELLATION`(문의 ID)·요청 `APPROVED`(`ADMIN`)·문의 종료, 거절은 요청 `REJECTED`(`ADMIN`)·문의 종료·새 검수 기산점. 같은 결정 재전송은 같은 결과, 판매자·구매자가 먼저 처리했으면 409.
@@ -10,7 +10,7 @@
 - DB·Flyway·HTTP API 변경 없음. 관리자 API·화면은 김창재가 이 서비스로 연결한다.
 - 문서 정리 포함: #120 상태 표기(이 문서 아래 두 절, 메일 인프라 후속, 활성화 게이트 판정 기록)를 main 반영으로 정정.
 
-검증(로컬 `lancerpick_test` 3307): 신규 `AdminCancellationReviewIntegrationTests` 9건(승인·거절·재전송·권한/입력·선처리 충돌·실패 롤백·동시 판매자 승인/구매자 철회/구매 확정, 매 검사 V3 금액 불변식 0행) 포함 백엔드 `clean build` 917건 통과(실패·오류·건너뜀 0). 처음 전체 빌드에서 DB 없는 `DefaultCatalogApiTests` 8건이 새 서비스 Bean 때문에 실패해 mock을 추가한 뒤 재실행했다. 프런트 typecheck·lint·`test:api` 223건·build 통과(알림 문구·이력 실행자 검사 보강). 실행하지 않은 검증: 관리자 API·화면이 없어 실서버·브라우저 확인 없음, 원격 CI.
+검증(병합 전 작업 브랜치, 로컬 `lancerpick_test` 3307): 신규 `AdminCancellationReviewIntegrationTests` 9건(승인·거절·재전송·권한/입력·선처리 충돌·실패 롤백·동시 판매자 승인/구매자 철회/구매 확정, 매 검사 V3 금액 불변식 0행) 포함 백엔드 `clean build` 917건 통과(실패·오류·건너뜀 0). 처음 전체 빌드에서 DB 없는 `DefaultCatalogApiTests` 8건이 새 서비스 Bean 때문에 실패해 mock을 추가한 뒤 재실행했다. 프런트 typecheck·lint·`test:api` 223건·build 통과(알림 문구·이력 실행자 검사 보강). 실행하지 않은 검증: 관리자 API·화면이 없어 실서버·브라우저 확인 없음. 원격 CI는 #121 PR 기록을 따른다.
 
 ## 기록 없는 안내 메일 계약·C3 DB 확인·C4/C5 제외 결정 — 2026-11-06
 
