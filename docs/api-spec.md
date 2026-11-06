@@ -103,7 +103,7 @@ Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·
 | POST /products | 판매자 프로필 보유; ProductInput | 201 ProductDetail |
 | PATCH /products/{id} | 소유자; ProductPatch,expectedVersion 필수 | ProductDetail |
 | PATCH /products/{id}/sale-status | 소유자; saleStatus,expectedVersion | ProductDetail |
-| GET /products/{id}/reviews | 전체; 공개·판매 중 상품, page,size | Review 목록 |
+| GET /products/{id}/reviews | 전체; 공개·판매 중 상품, page,size, 선택 rating(1~5) | Review 목록, 전체 평균 별점·후기 건수 |
 
 SellerProfile: id(회원 ID),displayName,introduction,specialty,portfolioUrl. 이메일·잔액은 공개하지 않는다. ProductInput: categoryId,title,description,scopeDescription,preparationDescription,priceAmount,durationDays. 가격 1~1,000,000원, 기간 1~30일. portfolioUrl은 선택이다.
 
