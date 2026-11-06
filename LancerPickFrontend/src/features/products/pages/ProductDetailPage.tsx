@@ -1,4 +1,5 @@
 import { useProductDetail } from '../queries'
+import { orderMinimumNotice } from '../orderMinimum'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
@@ -16,6 +17,7 @@ export function ProductDetailPage() {
       ? from
       : '/'
   const product = useProductDetail(id)
+  const minimumNotice = product.data ? orderMinimumNotice(product.data) : null
   const missing =
     product.error instanceof ApiError && product.error.status === 404
   return (
@@ -79,9 +81,11 @@ export function ProductDetailPage() {
                 <dt>판매 상태</dt>
                 <dd>판매 중</dd>
               </dl>
-              <Link to={`/products/${product.data.id}/order`}>
-                주문 요청 작성하기 →
-              </Link>
+              {minimumNotice ? <p>{minimumNotice}</p> : (
+                <Link to={`/products/${product.data.id}/order`}>
+                  주문 요청 작성하기 →
+                </Link>
+              )}
             </aside>
           </div>
           <footer className={styles.dates}>

@@ -6,6 +6,7 @@ import com.example.lancerpick.common.exception.ApiExceptionHandler;
 import com.example.lancerpick.common.security.SecurityConfig;
 import com.example.lancerpick.common.security.SecurityErrorWriter;
 import com.example.lancerpick.common.web.TraceIdFilter;
+import com.example.lancerpick.order.service.NewOrderPolicy;
 import com.example.lancerpick.product.controller.ProductSearchController;
 import com.example.lancerpick.product.repository.ProductSearchQueries;
 import com.example.lancerpick.product.service.ProductSearchService;
@@ -28,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         properties = "spring.config.location=optional:classpath:/default-catalog-test.properties")
 @ActiveProfiles("test")
 @Import({ProductSearchService.class, SecurityConfig.class, SecurityErrorWriter.class,
-        TraceIdFilter.class, ApiExceptionHandler.class})
+        TraceIdFilter.class, ApiExceptionHandler.class, NewOrderPolicy.class})
 class ProductSearchControllerTests {
     @Autowired MockMvc mvc;
     @MockitoBean ProductSearchQueries queries;
@@ -53,9 +54,10 @@ class ProductSearchControllerTests {
 
     @Test
     void absentDetailIsPublic404() throws Exception {
-        when(queries.findPublicDetail(12L)).thenReturn(java.util.Optional.empty());
+        when(queries.findPublicDetail(12L, null)).thenReturn(java.util.Optional.empty());
         mvc.perform(get("/api/products/12")).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
+        verify(queries).findPublicDetail(12L, null);
     }
 
     @ParameterizedTest

@@ -97,7 +97,7 @@ Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·
 | GET /me/seller-profile | 회원 | 본인 SellerProfile, 미등록 404 |
 | PUT /me/seller-profile | 회원; introduction,specialty,portfolioUrl | 생성 201 / 수정 200 |
 | GET /products | 전체; keyword,categoryId,minPrice,maxPrice,maxDurationDays,sort,sellerId,page,size | ProductSummary 목록 |
-| GET /products/{id} | 전체; 공개·판매 중 상품 | ProductDetail |
+| GET /products/{id} | 전체; 공개·판매 중 상품 | ProductDetail, 신규 계약 주문 최소 금액 `minimumOrderAmount` (기존 주문 정책은 `null`) |
 | GET /me/products | 회원; page,size | OwnedProductSummary 목록; 중지·숨김 포함 |
 | GET /me/products/{id} | 소유자 | 본인 ProductDetail |
 | POST /products | 판매자 프로필 보유; ProductInput | 201 ProductDetail |
