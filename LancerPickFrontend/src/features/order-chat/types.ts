@@ -27,3 +27,22 @@ export interface ChatMessagesOptions {
   afterSequence?: string
   limit?: number
 }
+
+export type ChatConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'offline'
+  | 'auth-required'
+
+export interface ChatCsrfToken {
+  headerName: string
+  token: string
+}
+
+export interface ChatSendError {
+  orderId: string | null
+  clientMessageId: string | null
+  code: string
+  message: string
+}

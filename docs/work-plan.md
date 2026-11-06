@@ -1,6 +1,6 @@
 # 랜서픽 구현 작업표
 
-후속 로컬 `feature/order-chat-storage`: J1 중 저장형 채팅의 API·화면·멱등/순번·커서/권한을 구현했다. 사용자 확인으로 종료 주문은 조회만 허용한다. 백엔드 clean build 793건·프런트 180건/lint/build 통과, WebSocket은 후속이다. 금융 PR #95는 main `03b5687`에 병합됐고 원격 CI가 통과했다. [채팅 구현 기록](order-chat-storage.md).
+후속 로컬 `feature/order-chat-realtime`: 저장형 채팅 `8e92e28`에 J1의 WebSocket/STOMP·재연결/순번 복구와 C2 세션·인증 버전 기반 연결 폐기를 추가했다. 사용자 확정에 따라 종료 주문은 조회만 허용한다. 금융 PR #95는 main `03b5687`에 병합됐고 원격 CI가 통과했다. [실시간 구현·최신 검증·한계](order-chat-realtime.md). 아래 J1·C2의 로컬 완료는 원격 병합·실제 브라우저 확인과 구분한다.
 
 2026-11-05 후속 로컬 `feature/full-funding-payments`: main `2fec099`(#87)에서 J4와 수동 거래 연결을 진행했다. 결제 금액 보관·수동 확정 지급·승인 환불·주문 상세 대금 표시를 구현하고 main 3fb181d의 V3 납품 기반까지 통합 후 백엔드 786건·프런트 172건/lint/build를 확인했다. 자동 확정·관리자 승인·새 정책 전체 브라우저 확인은 남았다. [구현 범위](full-funding-payment.md). 아래 표의 과거 main 기준 기록과 구분한다.
 
@@ -61,7 +61,7 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 
 | ID | 작업 | 선행 | 상태 | 비고 |
 | --- | --- | --- | --- | --- |
-| J1 | 저장형 채팅 → WebSocket/STOMP·재접속 복구 | F1 | 진행 중(로컬 저장형) | [저장·조회·화면](order-chat-storage.md). WebSocket·재접속·소켓 세션 폐기는 후속 |
+| J1 | 저장형 채팅 → WebSocket/STOMP·재접속 복구 | F1 | 로컬 구현 완료 | [실시간·멱등·누락 복구](order-chat-realtime.md). 실제 HTTP 세션·소켓 자동 검사, 브라우저 두 계정 확인·원격 병합 남음. Redis/읽음/첨부 제외 |
 | J2 | V7 결제 금액 보관·FULL 결제·판매자 원장·자동 확정 제약 | E4 | 완료(#87) | [최신 정책](full-funding-policy.md). 회차별 결제 전환은 신규 범위에서 제외 |
 | J3 | 계약 PDF 생성·비공개 저장·해시·권한 다운로드, `FAILED`·재시도 | F2 | 완료(#87) | [계약/PDF 구현 기록](contract-pdf-delivery.md). 미참조 파일 정리 Batch·다중 서버 저장은 후속 |
 | J4 | V3 결제 금액 보관·판매자 구매 적립금 지급·전액 반환·closure | J2 | 완료(#95, 수동 경로) | [구현 기록](full-funding-payment.md). 자동 확정·관리자 승인 후속, 생성 기본 비활성 |
@@ -93,7 +93,7 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 | ID | 작업 | 선행 | 상태 | 비고 |
 | --- | --- | --- | --- | --- |
 | C1 | 공통 이벤트 ID·버전·오류 계약 | E1 | 시작 전 | |
-| C2 | 계정 전환·비밀번호 변경 시 소켓 연결 폐기·개인 캐시 정리 | K2, J1 | 시작 전 | |
+| C2 | 계정 전환·비밀번호 변경 시 소켓 연결 폐기·개인 캐시 정리 | K2, J1 | 로컬 구현 완료 | [세션 ID·DB 인증 버전 재검사·로그아웃 이벤트·유휴 소켓 정리](order-chat-realtime.md). 세션 유휴 만료·버전 변경·권한 실패·클라이언트 정리 자동 검사. 브라우저 교차 계정 확인 남음 |
 | C3 | 메일 발송 인프라(Spring Mail·Mailpit) | — | 완료(#90) | [메일 인프라](mail-infrastructure.md). 실제 서버+Mailpit API 확인, 브라우저 화면 확인은 남음. `SmtpAccountMailSender`(발송 스레드 1개·고정 큐), 기본 꺼짐(`MAIL_ENABLED`). K1 선행. 연결 지점: `auth/mail/AccountMailSender`(비동기 큐에 넣고 바로 반환) 구현 Bean + 발송 후 `AccountMailDeliveryRecorder` 호출([계약](auth-login.md#메일-발송-경계-c3-연결-계약)) |
 | C4 | Redis 세션 공유·Pub/Sub | J1 | 조정 가능 | DB 잠금·UNIQUE를 대체하지 않음 |
 | C5 | 계측(Actuator·Micrometer·k6) | — | 조정 가능 | |

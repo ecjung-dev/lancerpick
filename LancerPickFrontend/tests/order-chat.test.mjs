@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createServer } from 'vite'
 import {
+  getChatCsrfToken,
   getChatMessages,
   sendChatMessage,
 } from '../src/features/order-chat/api.ts'
@@ -52,6 +53,23 @@ const page = (items = [], canSend = true) => ({
   hasMore: false,
   lastSequence: items.at(-1)?.sequence ?? '0',
   canSend,
+})
+
+test('socket CONNECT fetches a fresh CSRF token with session, no-store and cancellation', async () => {
+  const controller = new AbortController()
+  let requests = 0
+  globalThis.fetch = async (url, init) => {
+    assert.equal(url, '/api/auth/csrf')
+    assert.equal(init.credentials, 'same-origin')
+    assert.equal(init.cache, 'no-store')
+    assert.equal(init.signal, controller.signal)
+    return Response.json({
+      headerName: 'X-CSRF-TOKEN',
+      token: `fresh-${++requests}`,
+    })
+  }
+  assert.equal((await getChatCsrfToken(controller.signal)).token, 'fresh-1')
+  assert.equal((await getChatCsrfToken(controller.signal)).token, 'fresh-2')
 })
 
 test('chat lookup preserves BIGINT cursors, session, cancellation and no-store', async () => {

@@ -1,11 +1,17 @@
 import { apiRequest } from '../../shared/api/client.ts'
 import { prepareChatMessage, validChatSequence } from './validation.ts'
 import type {
+  ChatCsrfToken,
   ChatMessage,
   ChatMessagesOptions,
   ChatMessagesPage,
   SendChatMessageInput,
 } from './types.ts'
+
+/** 소켓 연결마다 새 마스킹 토큰을 받아 이전 세션의 CONNECT 토큰을 재사용하지 않는다. */
+export function getChatCsrfToken(signal?: AbortSignal) {
+  return apiRequest<ChatCsrfToken>('/auth/csrf', { signal, cache: 'no-store' })
+}
 
 function messagesPath(orderId: string) {
   if (!validChatSequence(orderId)) throw new Error('주문 번호를 확인해 주세요.')

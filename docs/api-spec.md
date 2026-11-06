@@ -1,6 +1,6 @@
 # 랜서픽 MVP API 명세서
 
-저장형 채팅 후속 로컬: 당사자 GET/POST `/api/orders/{orderId}/chat/messages` 추가. UUID 멱등 전송·before/after 단방향 커서·종료 후 조회 전용이다. [요청·응답·오류·권한](order-chat-storage.md). 소켓 API 활성화와 구분한다.
+채팅 후속 로컬: 당사자 GET/POST `/api/orders/{orderId}/chat/messages`의 UUID 멱등·순번 커서를 유지하고 `/ws` WebSocket/STOMP를 연결했다. `/app/orders/{orderId}/chat/messages` SEND, `/user/queue/chat`·`/user/queue/chat-errors` SUBSCRIBE만 허용한다. 종료 후 조회 전용. [HTTP 요청·응답](order-chat-storage.md), [소켓 계약·CSRF·세션 폐기·복구](order-chat-realtime.md). 원격 병합·배포 활성화 여부와 구분한다.
 
 2026-11-05 후속 로컬 `feature/full-funding-payments`: V3는 기존 payment/confirm/취소 요청 승인 API로 결제 금액 보관·수동 확정 지급·전액 반환을 처리한다. 당사자 `GET /api/orders/{id}/funds`를 추가했다. [요청·응답·오류·트랜잭션](full-funding-payment.md). 기존 V1 동작·V2 금융 차단 유지, 자동 확정/관리자 승인 후속, 생성 플래그 기본 false. 아래 과거 정책 경계와 구분한다.
 

@@ -12,6 +12,7 @@ import { sendChatMessage } from '../api'
 import { mergeChatMessages } from '../messages'
 import { chatKeys, useChatMember, useChatMessages } from '../queries'
 import { chatStatusAllowsSend, MAX_MESSAGE_LENGTH } from '../validation'
+import { useChatRealtime } from '../useChatRealtime'
 import type { ChatMessage, SendChatMessageInput } from '../types'
 import styles from './OrderChatPanel.module.css'
 
@@ -66,6 +67,11 @@ function ChatConversation({
 }: ChatConversationProps) {
   const client = useQueryClient()
   const query = useChatMessages(orderId, memberId)
+  const realtime = useChatRealtime(
+    orderId,
+    memberId,
+    query.data?.pages[0]?.lastSequence,
+  )
   const [content, setContent] = useState('')
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
@@ -143,7 +149,9 @@ function ChatConversation({
         clientMessageId: crypto.randomUUID(),
         content: normalizeText(content),
       }
-      await sendChatMessage(orderId, pending.current)
+      if (realtime.connection.current?.isConnected())
+        await realtime.connection.current.send(pending.current)
+      else await sendChatMessage(orderId, pending.current)
       await checkMember()
       if (!mounted.current) return
       completed()
@@ -171,6 +179,19 @@ function ChatConversation({
     }
   }
 
+  if (realtime.state === 'auth-required')
+    return (
+      <section className={styles.panel}>
+        <h2>주문 대화</h2>
+        <p role="alert">
+          로그인 상태가 변경되었거나 연결 권한을 확인하지 못했습니다. 다시
+          확인해 주세요.
+        </p>
+        <Button variant="secondary" onClick={realtime.reconnect}>
+          연결 다시 확인
+        </Button>
+      </section>
+    )
   if (query.isError)
     return (
       <section className={styles.panel}>
@@ -194,6 +215,18 @@ function ChatConversation({
         변경되지는 않습니다.
       </p>
       <div className={styles.toolbar}>
+        <span role="status">
+          {realtime.state === 'connected'
+            ? '실시간 연결됨'
+            : realtime.state === 'offline'
+              ? '실시간 연결 중단 · 조회·전송은 계속할 수 있습니다.'
+              : '실시간 연결 중 · 누락된 대화를 확인합니다.'}
+        </span>
+        {realtime.state === 'offline' && (
+          <Button variant="secondary" onClick={realtime.reconnect}>
+            다시 연결
+          </Button>
+        )}
         <Button
           variant="secondary"
           disabled={busy || query.isFetching}
