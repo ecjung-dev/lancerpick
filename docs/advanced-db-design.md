@@ -168,6 +168,8 @@ order_id FK, delivery_id FK, timer_type REVIEW_RESPONSE/BALANCE_PAYMENT, basis_a
 
 Spring Batch 실행 메타데이터는 선택 버전의 공식 BATCH_* 스키마를 별도로 적용한다. 이를 임의로 없애거나 업무 테이블에 합치지 않는다. 신규 업무 12개 수에는 포함하지 않으며 정확한 시스템 테이블 수는 도입 시 확인한다.
 
+2026-11-06 J5 로컬 후속: main `6d2dac5`의 V8 관심 상품을 보존하고, 아직 공유하지 않은 Batch 스키마만 V9로 옮겼다. V9는 Spring Batch 6.0.6 공식 MySQL 시스템 테이블 9개다. 업무 테이블은 V8 누적 31개이며 합계 40개(`flyway_schema_history` 제외)다. `wallet_topups` 복구 컬럼은 V5를 재사용하고 V1~V8은 수정하지 않는다. 활성화·재시작·검증은 [충전 복구 문서](wallet-topup-recovery-batch.md)를 따른다.
+
 상품 필터·판매자 공개 소개·후기 요약은 기존 테이블 조회로 구현한다. 관심 상품을 실제 선택하면 product_favorites(member_id,product_id,created_at), 복합 PK를 추가한다. 캐시와 통계 집계 테이블을 미리 만들지 않는다.
 
 ## 11. 상태·일관성·마이그레이션

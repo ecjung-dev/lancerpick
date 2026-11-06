@@ -6,6 +6,14 @@
 
 검증(커밋 전 작업 트리, 로컬 `lancerpick_test` 3307): 백엔드 `clean build` 865건 통과(실패·오류·건너뜀 0). 신규 `OutboxEventContractTests` 5건(DB 없음), `ChatSocketErrorHandlerTests` 2건, `NotificationIntegrationTests` 신규 3건(스키마 버전·없는 주문·잠금 실패 코드)과 기존 3건 기대 코드 변경, WebSocket 통합 오류 프레임 필드 검사 보강. 프런트 typecheck·lint·`test:api` 219건·build 통과. 실행하지 않은 검증: 실제 브라우저 채팅 오류 표시, 원격 CI.
 
+최신 main `a1f7fda`(#114 충전 복구 Batch·V9)를 작업 브랜치에 병합했다. 충돌은 이 문서 맨 위 절 1곳뿐이었고 두 절을 모두 남겼다. 병합 후 로컬 `lancerpick_test`에 V9 적용, 백엔드 `clean build` 885건 통과(실패·오류·건너뜀 0), 프런트 typecheck·lint·`test:api` 219건·build 통과. 병합 전 865건은 별도 실행이며 합산하지 않는다.
+
+## 미확정 충전 복구 J5 — 2026-11-06 로컬 후속
+
+`feature/wallet-topup-recovery-batch`에서 Spring Batch 기반 미확정 충전 조회·복구, 처리권 만료·동시 실행 방어, 백오프/횟수 제한, 기존 지급 롤백·중복 방지, 체크포인트 재시작을 구현했다. 외부 승인 재호출 없이 저장된 키로 조회하며 기본 비활성이다. main `6d2dac5` 통합 시 V8 관심 상품과 겹치던 미공유 복구 스키마를 V9로 옮겼다. V9는 Batch 6.0.6 공식 시스템 테이블 9개만 추가하고 업무 테이블은 V8까지 31개다. V1~V8은 유지한다. 병합 후 격리 MySQL에서 V1~V9 적용과 백엔드 전체 `clean build` 875건, 프런트 218건·lint·TypeScript 포함 build가 통과했다. 병합 전 839건/선택 20건은 과거 실행이며 합산하지 않는다. [복구 작업 기록](wallet-topup-recovery-batch.md)을 따른다. 원격 반영·실제 토스 조회·관리자 운영 화면(K6)은 아직이다.
+
+우선순위 변경(2026-11-06, 사용자 확정): Redis(C4)는 **보류·최하위**다. 단일 서버 구성을 유지하고 남은 기능·연결·충전 복구 작업을 먼저 진행한다. Redis 세션 공유·Pub/Sub 등은 다른 기능이나 V3 신규 거래 활성화의 선행·완료 조건이 아니다. [작업표](work-plan.md)와 [4인 설계](advanced-design-four-person.md)에 반영했다.
+
 ## 회원·지급 경합 보완 — 2026-11-06
 
 main 반영(#111). 아래는 병합 전 `codex/fix-profile-payout-races` 작업 기록이다. 표시 이름 저장을 비밀번호 변경·재설정과 같은 회원 행 잠금으로 직렬화했다. 수동·자동 구매 확정은 판매자 지갑 잠금 뒤의 시각으로 지급·종료 기록을 남기고, 수동 확정의 타이머 만료도 그 시각으로 다시 판단한다. API·DB·금액 정책·V3 생성 기본 false는 유지한다.

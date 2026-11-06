@@ -71,6 +71,8 @@ shared: 공통 UI·API 요청·공통 유틸리티
 
 실제 반복되거나 공통 정책이 필요한 코드만 공통 영역으로 옮긴다.
 
+2026-11-06 J5 구현: Spring Batch의 JDBC 기반 `BATCH_*` 실행 메타데이터는 프레임워크 내부 저장소로 구분한다. 업무 데이터는 기존 JPA/QueryDSL 규칙을 유지한다. V9는 선택 버전의 공식 시스템 스키마를 Flyway로 관리하며, 업무 Repository에 직접 JDBC를 추가하는 근거로 사용하지 않는다. [충전 복구 구현 기준](wallet-topup-recovery-batch.md)을 따른다.
+
 ### 버전 관리
 
 Java·Node·라이브러리의 정확한 버전은 초기 빌드·인증·DB 연결 검증 후 고정한다.
@@ -91,6 +93,7 @@ CI에서는 잠금 파일 기준으로 의존성을 설치한다.
 | --- | --- | --- |
 | 백엔드 | Java 25 / Eclipse Temurin, Spring Boot 4.1.2 | JDK 패치·이미지 버전 기록 |
 | 서버 라이브러리 | Spring MVC, Security, Data JPA, Bean Validation | Spring Boot 의존성 관리 사용 |
+| 충전 복구 Batch | Spring Batch 6.0.6 / `spring-boot-starter-batch-jdbc` | Boot 4.1.2 관리 버전. 기본 비활성, Flyway V9 공식 시스템 스키마, 업무는 JPA/QueryDSL 유지 |
 | 백엔드 빌드 | Gradle Wrapper 9.1.0 이상 9.x | Java 25·Boot 호환 버전 검증 후 고정 |
 | 화면 | React·React DOM 19.3.0, TypeScript | 두 React 버전 일치, TS 호환 안정 버전 |
 | 프런트 빌드 | Node.js 24 LTS, Vite 8.3 계열, npm | Node 버전·package-lock.json 기록 |

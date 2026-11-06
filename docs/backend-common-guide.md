@@ -16,6 +16,8 @@ Controller는 입력·인증 정보 수신과 응답 상태를 처리한다. Ser
 
 Entity 저장·변경은 JPA, 검색·조인·집계는 QueryDSL을 사용한다. 운영 코드에 JdbcTemplate·직접 JDBC·네이티브 SQL을 추가하지 않는다. Flyway와 테스트 fixture·DB 원문 검증 SQL은 별도로 관리한다. 지갑 최초 생성의 기존 HQL 충돌 처리와 useAffectedRows 설정은 함께 유지한다.
 
+J5의 Spring Batch JDBC 저장소는 프레임워크 실행 메타데이터(`BATCH_*`) 전용이다. 업무 Repository는 JPA/QueryDSL을 유지하며 시스템 테이블을 업무 엔티티로 재구현하지 않는다. [충전 복구 경계](wallet-topup-recovery-batch.md)를 따른다. `wallet/config`는 Job·설정 값·전용 스케줄러 구성, `wallet/batch`는 Tasklet, `wallet/service`는 복구 조율·짧은 지급 트랜잭션을 담당한다.
+
 기존에 적용한 Flyway 마이그레이션을 수정하지 않고 후속 버전을 추가한다. 서버 시작과 검사에서 ddl-auto=validate로 매핑을 확인한다. ID는 JSON 문자열, 금액은 정수 원, API 시각은 UTC ISO 8601 기준이다. MySQL DATETIME과 LocalDateTime의 UTC 보관 규칙을 유지한다.
 
 ## 인증·입력·오류

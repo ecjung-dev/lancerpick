@@ -8,6 +8,8 @@ Java 25 / Spring Boot 4.1.2 기반 백엔드입니다. 회원가입·세션 인�
 
 기본 패키지는 `com.example.lancerpick`입니다.
 
+미확정 충전 자동 복구(J5)는 [Batch 실행 안내](../docs/wallet-topup-recovery-batch.md)를 따릅니다. 기본 비활성이므로 팀원 개인 설정 추가는 필요하지 않습니다. Flyway V9는 공식 Batch 메타데이터 9개 테이블을 만들고, 기존 업무 테이블·적립금은 변경하지 않습니다. 자동 외부 조회는 `TOPUP_RECOVERY_ENABLED`와 `TOPUP_RECOVERY_SCHEDULING_ENABLED`를 모두 켠 환경에서만 시작합니다.
+
 ```text
 com.example.lancerpick/
   LancerPickApplication.java
