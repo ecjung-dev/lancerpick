@@ -1,5 +1,13 @@
-import { getMySellerProfile, getSellerSession } from './api'
+import { getMySellerProfile, getPublicSellerProfile, getSellerSession } from './api'
 import { useQuery } from '@tanstack/react-query'
+
+export function usePublicSellerProfile(id: string) {
+  return useQuery({
+    queryKey: ['public-seller-profile', id],
+    queryFn: ({ signal }) => getPublicSellerProfile(id, signal),
+    retry: false,
+  })
+}
 
 export function useSellerSession() {
   return useQuery({

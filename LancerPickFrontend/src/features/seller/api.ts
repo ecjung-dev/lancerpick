@@ -2,6 +2,13 @@ import { getMemberSession } from '../auth/api.ts'
 import { ApiError, apiRequest } from '../../shared/api/client.ts'
 import type { SellerProfile, SellerProfileInput } from './types.ts'
 
+export async function getPublicSellerProfile(id: string, signal?: AbortSignal) {
+  if (!/^[0-9]{1,19}$/.test(id) || BigInt(id) <= 0n || BigInt(id) > 9223372036854775807n) {
+    throw new Error('판매자 번호를 확인해 주세요.')
+  }
+  return apiRequest<SellerProfile>(`/sellers/${id}`, { signal })
+}
+
 export function getSellerSession(signal?: AbortSignal) {
   return getMemberSession(signal)
 }

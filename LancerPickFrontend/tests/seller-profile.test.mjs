@@ -1,12 +1,24 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { getSellerSession, getMySellerProfile, saveSellerProfile } from '../src/features/seller/api.ts'
+import { getSellerSession, getMySellerProfile, getPublicSellerProfile, saveSellerProfile } from '../src/features/seller/api.ts'
 import { validateSellerProfile } from '../src/features/seller/validation.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
 
 const original = globalThis.fetch
 afterEach(() => { globalThis.fetch = original; clearCsrfToken() })
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
+
+test('public profile preserves the seller ID and forwards cancellation', async () => {
+  const id = '9007199254740993'
+  const controller = new AbortController()
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, `/api/sellers/${id}`)
+    assert.equal(options.signal, controller.signal)
+    return json({ id, displayName: '판매자' })
+  }
+  assert.equal((await getPublicSellerProfile(id, controller.signal)).id, id)
+  await assert.rejects(getPublicSellerProfile('../me'), /판매자 번호/)
+})
 
 test('seller session and own profile use cookies and cancellation without client identity', async () => {
   const controller = new AbortController()

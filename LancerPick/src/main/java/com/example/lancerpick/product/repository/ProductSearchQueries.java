@@ -82,6 +82,7 @@ public class ProductSearchQueries {
             predicate.and(p.title.like(pattern, '!').or(p.description.like(pattern, '!')));
         }
         if (categoryId != null) predicate.and(p.categoryId.eq(categoryId));
+        if (options.sellerId() != null) predicate.and(p.sellerId.eq(options.sellerId()));
         if (options.minPrice() != null) predicate.and(p.price.goe(options.minPrice().longValue()));
         if (options.maxPrice() != null) predicate.and(p.price.loe(options.maxPrice().longValue()));
         if (options.maxDurationDays() != null) predicate.and(p.durationDays.loe(options.maxDurationDays()));

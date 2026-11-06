@@ -23,7 +23,7 @@ export function getProducts(search: ProductSearch, signal?: AbortSignal) {
   const params = new URLSearchParams({ page: String(search.page), size: String(search.size) })
   if (search.keyword) params.set('keyword', search.keyword)
   if (search.categoryId) params.set('categoryId', search.categoryId)
-  for (const key of ['minPrice', 'maxPrice', 'maxDurationDays', 'sort'] as const) {
+  for (const key of ['minPrice', 'maxPrice', 'maxDurationDays', 'sort', 'sellerId'] as const) {
     const value = search[key]
     if (value !== undefined) params.set(key, value)
   }
