@@ -15,7 +15,7 @@
 | 구매 확정 | `CANCELLED`/`ORDER_CLOSED` 후 정상 확정 | 없음 |
 
 - **만료 우선**: 활성 타이머의 만료 시각 이후에 들어온 구매자 응답·관리자 해제는 타이머를 취소하지 않고 409 `AUTO_CONFIRM_DUE`로 응답한다. 스케줄러가 곧 자동 확정한다. 판단은 모두 주문 배타 잠금 아래 서버 시각으로 한다.
-- **관리자 해제**: `ReviewTimerService.adminStop(adminId, orderId, reason)` 내부 명령만 있다(K5 화면·API는 김창재 담당). ADMIN 역할·사유 1~1000자 확인, `CANCELLED`/`ADMIN_STOP`, 이력 `TIMER_ADMIN_STOPPED`. 해제된 기산점으로는 다시 시작할 수 없고 새 납품이나 취소 요청 처리 이후 다시 시작할 수 있다(정책 문서에 명시되지 않아 이번에 정한 기준, 팀 확인 필요).
+- **관리자 해제**: `ReviewTimerService.adminStop(adminId, orderId, reason)` 내부 명령만 있다(K5 화면·API는 김창재 담당). ADMIN 역할·사유 1~1000자 확인, `CANCELLED`/`ADMIN_STOP`, 이력 `TIMER_ADMIN_STOPPED`. 해제된 기산점으로는 다시 시작할 수 없고 새 납품이나 취소 요청 처리 이후 다시 시작할 수 있다(2026-11-06 조장 결정, [정책](full-funding-policy.md) §2-5에 반영).
 - 납기 초과·미납품은 자동 확정 사유가 아니다(검수 대기에서만 시작).
 
 ## API
