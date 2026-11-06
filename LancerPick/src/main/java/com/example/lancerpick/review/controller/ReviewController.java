@@ -1,7 +1,6 @@
 package com.example.lancerpick.review.controller;
 
 import com.example.lancerpick.common.security.CurrentMemberId;
-import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.review.dto.*;
 import com.example.lancerpick.review.service.ReviewService;
 import tools.jackson.databind.JsonNode;
@@ -29,8 +28,9 @@ public class ReviewController {
                 .body(reviews.write(current.require(auth), id, ReviewRequest.parse(request)));
     }
     @GetMapping("/products/{id}/reviews")
-    public ResponseEntity<PageResponse<PublicReviewResponse>> list(@PathVariable String id,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(reviews.list(id, page, size));
+    public ResponseEntity<ProductReviewsResponse> list(@PathVariable String id,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String rating) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(reviews.list(id, page, size, rating));
     }
 }

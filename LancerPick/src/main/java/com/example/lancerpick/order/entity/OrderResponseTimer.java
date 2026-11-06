@@ -26,6 +26,8 @@ public class OrderResponseTimer {
   public static final String CANCELLED = "CANCELLED";
   public static final long ELIGIBLE_AFTER_HOURS = 48;
   public static final long EXPIRES_AFTER_HOURS = 168;
+  /** 만료 몇 시간 전부터 구매자에게 자동 구매 확정 사전 안내를 보낼지(E9). */
+  public static final long NOTICE_BEFORE_HOURS = 24;
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -121,6 +123,11 @@ public class OrderResponseTimer {
 
   public boolean isDue(LocalDateTime now) {
     return isActive() && !now.isBefore(expiresAt);
+  }
+
+  /** 활성이고 만료 전이며 사전 안내 구간(만료 24시간 전부터)에 들어왔다. */
+  public boolean isInNoticeWindow(LocalDateTime now) {
+    return isActive() && now.isBefore(expiresAt) && !now.isBefore(expiresAt.minusHours(NOTICE_BEFORE_HOURS));
   }
 
   /** 구매자 응답(BUYER_RESPONSE)이나 구매자 확정(ORDER_CLOSED)으로 만료 전에 끝낸다. */

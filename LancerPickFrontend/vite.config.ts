@@ -26,6 +26,12 @@ export default defineConfig(({ mode }) => {
         deny: ['.env', '.env.*', '*.{crt,pem,key,p12,pfx,cer,der}', '.npmrc', '.yarnrc.yml', '**/.git/**', '**/keys.env'],
       },
       proxy: {
+        '/ws': {
+          target: process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8080',
+          ws: true,
+          // Origin과 Host를 함께 유지하여 서버의 동일 출처 검사를 통과시킨다.
+          changeOrigin: false,
+        },
         '/api': {
           // 서버 포트가 사용 중이면 셸의 API_PROXY_TARGET으로만 변경한다. 브라우저에 노출하지 않는다.
           target: process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8080',

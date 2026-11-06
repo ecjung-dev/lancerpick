@@ -24,6 +24,7 @@ import { orderCommandFailureMessage } from '../failure'
 import { ReviewForm } from '../../reviews/components/ReviewForm'
 import { ContractPanel } from '../../contracts/components/ContractPanel'
 import { OrderFundsPanel } from '../components/OrderFundsPanel'
+import { OrderChatPanel } from '../../order-chat/components/OrderChatPanel'
 import { ReviewTimerPanel } from '../components/ReviewTimerPanel'
 
 export function OrderDetailPage() {
@@ -499,6 +500,7 @@ function OrderDetail({ id }: { id: string }) {
         run={run}
       />
       <OrderHistoryList order={order} />
+      <OrderChatPanel orderId={order.id} orderStatus={order.status} />
       <Link to="/mypage/settlements">판매 수익 확인 →</Link>
     </section>
   )

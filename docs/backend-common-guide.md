@@ -10,6 +10,8 @@ Controller는 입력·인증 정보 수신과 응답 상태를 처리한다. Ser
 
 정산 조회는 settlement/service/SettlementQueryService와 settlement/dto의 SettlementResponse·SettlementSummaryResponse를 사용한다. 내부 처리 결과 record와 Repository 조회 projection은 API 응답 DTO와 역할이 다르다.
 
+주문 채팅도 `chat/controller`·`service`·`dto`·`repository`·`entity`를 구분한다. 소켓 설정은 `chat/config`, 커밋 이벤트는 `chat/event`, handshake·프레임/세션 보안은 `chat/realtime`에 둔다. HTTP·소켓 Controller 모두 `OrderChatService`의 같은 저장·권한 검증을 재사용한다. [실시간 연결 계약](order-chat-realtime.md)을 따른다.
+
 ## 데이터 접근·변경
 
 Entity 저장·변경은 JPA, 검색·조인·집계는 QueryDSL을 사용한다. 운영 코드에 JdbcTemplate·직접 JDBC·네이티브 SQL을 추가하지 않는다. Flyway와 테스트 fixture·DB 원문 검증 SQL은 별도로 관리한다. 지갑 최초 생성의 기존 HQL 충돌 처리와 useAffectedRows 설정은 함께 유지한다.

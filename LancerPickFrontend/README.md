@@ -72,6 +72,8 @@ npm.cmd run build
 
 ## 백엔드 연결 준비
 
+주문 상세의 채팅은 `/ws` 네이티브 WebSocket/STOMP를 사용합니다. Vite가 `/api`와 같은 `API_PROXY_TARGET`으로 연결하며, 세션·CSRF는 기존 로그인에서 가져옵니다. 의존성 변경 후 `npm ci`와 백엔드 재시작이 필요합니다. [연결 계약·로컬 두 계정 확인 방법](../docs/order-chat-realtime.md)을 참고합니다.
+
 Vite는 /api 요청을 기본 http://127.0.0.1:8080 으로 전달합니다. 포트 변경 시 셸의 API_PROXY_TARGET을 사용하고 [프런트 가이드](../docs/frontend-common-guide.md#2-3-백엔드-포트가-8081일-때만)를 따릅니다. 백엔드는 별도로 실행해야 합니다. 프런트 코드에서는 /api 상대 경로를 사용합니다. 이 프록시는 개발용이며 배포 환경은 Nginx 등에서 별도 설정합니다.
 
 공통 요청의 CSRF·204·오류·중복 토큰 조회 등의 동작은 `test:api`로 검사합니다. 로그인·로그아웃 뒤 CSRF·캐시 정리는 `resetAccountState()`로 연결했고 `tests/auth.test.mjs`로 검사합니다. 자동 테스트 통과가 브라우저·실제 DB의 종단 간 검증 완료를 뜻하지는 않습니다. 현재 CI 워크플로는 test:api를 실행합니다. 실제 성공 여부는 해당 커밋의 Actions 결과를 확인합니다. JDK는 백엔드 기준인 25를 따르며 React 실행에는 Node.js를 사용합니다. 자세한 구현 방법은 [프런트 공통 가이드](../docs/frontend-common-guide.md)를 참고합니다.

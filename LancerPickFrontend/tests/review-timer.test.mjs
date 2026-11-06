@@ -126,3 +126,30 @@ test('every in-review state is polled (time or the other party can change it); f
   assert.equal(reviewTimerRefetchInterval(timer('ACTIVE'), true), false)
   assert.equal(reviewTimerRefetchInterval(undefined, false), false)
 })
+
+test('V3 funds, deadline and pre-notice notifications have their own wording', () => {
+  const fallback = notificationMessage('ORDER_SOMETHING_NEW')
+  for (const type of [
+    'ORDER_FUNDS_HELD', 'ORDER_FUNDS_RELEASED', 'ORDER_FUNDS_REFUNDED',
+    'ORDER_DELIVERY_DUE_NOTIFIED', 'ORDER_REDELIVERY_DUE_NOTIFIED', 'ORDER_AUTO_CONFIRM_SOON',
+  ]) assert.notEqual(notificationMessage(type), fallback, type)
+  assert.match(notificationMessage('ORDER_FUNDS_HELD'), /보관/)
+  assert.match(notificationMessage('ORDER_FUNDS_RELEASED'), /적립금으로 지급/)
+  assert.match(notificationMessage('ORDER_FUNDS_REFUNDED'), /전액 반환/)
+  assert.match(notificationMessage('ORDER_AUTO_CONFIRM_SOON'), /24시간 안에/)
+  assert.match(notificationMessage('ORDER_AUTO_CONFIRMED'), /판매자 적립금으로 지급/)
+  // 잔금 미지급 종료 알림은 V3 범위가 아니다.
+  assert.equal(notificationMessage('ORDER_TERMINATED'), fallback)
+})
+
+test('deadline notices are shown as system records by kind', () => {
+  const order = { buyer: { id: '1' }, seller: { id: '2' } }
+  const notice = (toStatus) => describeHistory({
+    id: '7', actorId: null, action: 'DEADLINE_NOTIFIED', fromStatus: toStatus,
+    toStatus, reason: null, createdAt: '2026-11-03T01:00:00Z',
+  }, order)
+  assert.deepEqual(notice('IN_PROGRESS'), {
+    action: '납기 통지', actor: '시스템', transition: '상태 유지: 진행 중', reason: null,
+  })
+  assert.equal(notice('REVISION_IN_PROGRESS').action, '재납품 기한 통지')
+})

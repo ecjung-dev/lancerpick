@@ -7,5 +7,6 @@ public record ProductDetailResponse(
         String id, String title, long priceAmount, int durationDays,
         CategoryResponse category, ProductSummaryResponse.Seller seller,
         String description, String scopeDescription, String preparationDescription,
-        long version, String saleStatus, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        long version, String saleStatus, OffsetDateTime createdAt, OffsetDateTime updatedAt,
+        Long minimumOrderAmount) {
 }

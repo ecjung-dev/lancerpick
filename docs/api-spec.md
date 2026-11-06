@@ -1,6 +1,8 @@
 # 랜서픽 MVP API 명세서
 
-2026-11-06 `feature/v3-auto-confirm-timer`(main 병합 전): V3 당사자 `GET /api/orders/{id}/review-timer`(no-store)와 판매자 `POST /api/orders/{id}/review-timer`(본문 없음, 7일 자동 구매 확정 타이머 시작)를 추가했다. 만료 후 구매자 응답은 409 `AUTO_CONFIRM_DUE`, 금액 명령의 `TIMER_INTEGRATION_NOT_READY`는 제거. [상태·오류·처리](auto-confirm-timer.md).
+채팅 후속 로컬: 당사자 GET/POST `/api/orders/{orderId}/chat/messages`의 UUID 멱등·순번 커서를 유지하고 `/ws` WebSocket/STOMP를 연결했다. `/app/orders/{orderId}/chat/messages` SEND, `/user/queue/chat`·`/user/queue/chat-errors` SUBSCRIBE만 허용한다. 종료 후 조회 전용. [HTTP 요청·응답](order-chat-storage.md), [소켓 계약·CSRF·세션 폐기·복구](order-chat-realtime.md). 원격 병합·배포 활성화 여부와 구분한다.
+
+2026-11-06 main 반영(#99, `eb6b40e`, `feature/v3-auto-confirm-timer`): V3 당사자 `GET /api/orders/{id}/review-timer`(no-store)와 판매자 `POST /api/orders/{id}/review-timer`(본문 없음, 7일 자동 구매 확정 타이머 시작)를 추가했다. 만료 후 구매자 응답은 409 `AUTO_CONFIRM_DUE`, 금액 명령의 `TIMER_INTEGRATION_NOT_READY`는 제거. [상태·오류·처리](auto-confirm-timer.md).
 
 2026-11-05 후속 로컬 `feature/full-funding-payments`: V3는 기존 payment/confirm/취소 요청 승인 API로 결제 금액 보관·수동 확정 지급·전액 반환을 처리한다. 당사자 `GET /api/orders/{id}/funds`를 추가했다. [요청·응답·오류·트랜잭션](full-funding-payment.md). 기존 V1 동작·V2 금융 차단 유지, 자동 확정/관리자 승인 후속, 생성 플래그 기본 false. 아래 과거 정책 경계와 구분한다.
 
@@ -99,13 +101,13 @@ Member: id,email,displayName,role,hasSellerProfile(email_verified_at은 응답�
 | GET /me/seller-profile | 회원 | 본인 SellerProfile, 미등록 404 |
 | PUT /me/seller-profile | 회원; introduction,specialty,portfolioUrl | 생성 201 / 수정 200 |
 | GET /products | 전체; keyword,categoryId,minPrice,maxPrice,maxDurationDays,sort,sellerId,page,size | ProductSummary 목록 |
-| GET /products/{id} | 전체; 공개·판매 중 상품 | ProductDetail |
+| GET /products/{id} | 전체; 공개·판매 중 상품 | ProductDetail, 신규 계약 주문 최소 금액 `minimumOrderAmount` (기존 주문 정책은 `null`) |
 | GET /me/products | 회원; page,size | OwnedProductSummary 목록; 중지·숨김 포함 |
 | GET /me/products/{id} | 소유자 | 본인 ProductDetail |
 | POST /products | 판매자 프로필 보유; ProductInput | 201 ProductDetail |
 | PATCH /products/{id} | 소유자; ProductPatch,expectedVersion 필수 | ProductDetail |
 | PATCH /products/{id}/sale-status | 소유자; saleStatus,expectedVersion | ProductDetail |
-| GET /products/{id}/reviews | 전체; 공개·판매 중 상품, page,size | Review 목록 |
+| GET /products/{id}/reviews | 전체; 공개·판매 중 상품, page,size, 선택 rating(1~5) | Review 목록, 전체 평균 별점·후기 건수 |
 
 SellerProfile: id(회원 ID),displayName,introduction,specialty,portfolioUrl. 이메일·잔액은 공개하지 않는다. ProductInput: categoryId,title,description,scopeDescription,preparationDescription,priceAmount,durationDays. 가격 1~1,000,000원, 기간 1~30일. portfolioUrl은 선택이다.
 
@@ -251,7 +253,7 @@ PAYMENT_ALREADY_REFUNDED 응답에는 재결제 성공 의미를 담지 않는�
 | POST /notifications/{id}/read | 본인+CSRF; 양수 알림 ID | 204. 이미 읽음도 204, 최초 읽은 시각 유지. 타인·없음 404, 형식 오류 400 |
 | POST /notifications/read-all | 회원+CSRF; 본문 없음 | 204. 요청 시점까지 생성된 본인 알림만 읽음 처리 |
 
-Notification: id,type,orderId,productTitle,read,createdAt. type은 `ORDER_` + 주문 이력 행동(CREATED·ACCEPTED·REJECTED·PAID·DELIVERED·REVISION_REQUESTED·CANCELLATION_REQUESTED·CANCELLATION_REJECTED·CANCELLATION_WITHDRAWN·CANCELLED·COMPLETED)이다. 문구는 화면이 type으로 정하고, 모르는 type은 일반 문구로 표시한다. productTitle은 주문 시점 스냅샷이다. 조회 응답은 `Cache-Control: no-store`다.
+Notification: id,type,orderId,productTitle,read,createdAt. type은 `ORDER_` + 주문 이력 행동(CREATED·ACCEPTED·REJECTED·PAID·DELIVERED·REVISION_REQUESTED·CANCELLATION_REQUESTED·CANCELLATION_REJECTED·CANCELLATION_WITHDRAWN·CANCELLED·COMPLETED)이다. CONTRACT_V3 주문은 PAID·구매자 COMPLETED·결제 후 CANCELLED를 각각 `ORDER_FUNDS_HELD`·`ORDER_FUNDS_RELEASED`·`ORDER_FUNDS_REFUNDED`로 보내고, 시스템 확정 `ORDER_AUTO_CONFIRMED`, 기한 통지 `ORDER_DELIVERY_DUE_NOTIFIED`·`ORDER_REDELIVERY_DUE_NOTIFIED`(양측), 만료 24시간 전 `ORDER_AUTO_CONFIRM_SOON`(구매자), 타이머 `ORDER_TIMER_STARTED`·`ORDER_TIMER_ADMIN_STOPPED`가 있다([V3 알림](v3-notices.md)). 문구는 화면이 type으로 정하고, 모르는 type은 일반 문구로 표시한다. productTitle은 주문 시점 스냅샷이다. 조회 응답은 `Cache-Control: no-store`다.
 
 ## 8 지갑·정산 담당 황준범, 후기 담당 박소현
 

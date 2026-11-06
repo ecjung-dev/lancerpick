@@ -22,5 +22,7 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, Long> 
   @Query("select e from OutboxEvent e where e.id = :id")
   Optional<OutboxEvent> lockById(@Param("id") long id);
 
+  boolean existsByEventId(String eventId);
+
   List<OutboxEvent> findByAggregateTypeAndAggregateIdOrderByIdAsc(String aggregateType, long aggregateId);
 }

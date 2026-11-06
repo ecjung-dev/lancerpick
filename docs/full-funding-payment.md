@@ -44,7 +44,7 @@ LEGACY_V1의 수익 기록과 구매 지갑 분리 정책은 유지한다. CONTR
 
 | 명령 | 함께 커밋/롤백하는 데이터 |
 | --- | --- |
-| 결제 | 구매자 잔액 감소·FULL 결제·HELD 보관금·PAYMENT 원장·진행 중 상태/납기·PAID 이력/아웃박스 |
+| 결제 | 구매자 잔액 감소·FULL 결제·HELD 보관금·PAYMENT 원장·진행 중 상태/납기·PAID 이력/아웃박스·납기 통지 이력/아웃박스(E8, [V3 알림](v3-notices.md)) |
 | 확정 | 보관금 RELEASED·수수료/정산·판매자 잔액/SELLER_PAYOUT 원장·COMPLETED 종료 기록·주문 완료·이력/아웃박스 |
 | 승인 환불 | 구매자 잔액/REFUND 원장·결제 REFUNDED·보관금 REFUNDED·취소 요청 APPROVED·MUTUAL_CANCELLATION 종료 기록·주문 취소·이력/아웃박스 |
 

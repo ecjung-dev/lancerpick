@@ -13,7 +13,6 @@ import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.order.repository.OrderSnapshotRepository;
 import com.example.lancerpick.order.repository.OrderTradeTermsRepository;
-import com.example.lancerpick.payment.service.ContractPaymentPolicy;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -123,8 +122,8 @@ public class OrderCreationService {
     }
     // 정책은 생성 시 한 번 고정한다. 기존 주문(같은 요청 키 재전송)은 위에서 이미 반환했다.
     TradePolicyVersion policy = newOrderPolicy.current();
-    if (TradePolicyVersion.isContract(policy.name())
-        && product.price() < ContractPaymentPolicy.MIN_TOTAL) {
+    Long minimumAmount = NewOrderPolicy.minimumAmount(policy);
+    if (minimumAmount != null && product.price() < minimumAmount) {
       throw new BusinessException(
           HttpStatus.CONFLICT,
           "CONTRACT_MINIMUM_AMOUNT_NOT_MET",

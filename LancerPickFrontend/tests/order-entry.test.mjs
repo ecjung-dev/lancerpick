@@ -9,10 +9,10 @@ const server = await createServer({ configFile: false, cacheDir: 'node_modules/.
 const { OrderCreatePage } = await server.ssrLoadModule('/src/features/orders/pages/OrderCreatePage.tsx')
 const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
 after(() => server.close())
-function render(memberId) {
-  const client = new QueryClient()
+function render(memberId, priceAmount = 50000, minimumOrderAmount = null) {
+  const client = new QueryClient({ defaultOptions: { queries: { refetchOnMount: false } } })
   client.setQueryData(['order-entry-session'], { id: memberId, displayName: '회원' })
-  client.setQueryData(['products', 'detail', '1'], { id: '1', title: '상품', seller: { id: '2', displayName: '판매자' }, priceAmount: 50000, durationDays: 3, scopeDescription: '범위', preparationDescription: '준비', version: 1 })
+  client.setQueryData(['products', 'detail', '1'], { id: '1', title: '상품', seller: { id: '2', displayName: '판매자' }, priceAmount, minimumOrderAmount, durationDays: 3, scopeDescription: '범위', preparationDescription: '준비', version: 1 })
   try { return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/products/1/order'] }, createElement(QueryClientProvider, { client }, createElement(Routes, null, createElement(Route, { path: '/products/:id/order', element: createElement(OrderCreatePage) }))))) }
   finally { client.clear() }
 }
@@ -27,6 +27,17 @@ test('own product entry never renders the order form', () => {
   const html = render('2')
   assert.match(html, /내 상품에는 주문할 수 없어요/)
   assert.doesNotMatch(html, /textarea|주문 요청 보내기/)
+})
+
+test('direct order entry blocks 9,999 won only when the contract minimum applies', () => {
+  const blocked = render('3', 9999, 10000)
+  assert.match(blocked, /계약 주문은 10,000원 이상/)
+  assert.match(blocked, /<button type="submit"[^>]* disabled="">주문 요청 보내기/)
+  for (const html of [render('3', 10000, 10000), render('3', 9999)]) {
+    assert.doesNotMatch(html, /계약 주문은 10,000원 이상/)
+    assert.match(html, /<button type="submit"[^>]*>주문 요청 보내기/)
+    assert.doesNotMatch(html, /<button type="submit"[^>]* disabled/)
+  }
 })
 
 test('expired session returns to this product order form after login', () => {

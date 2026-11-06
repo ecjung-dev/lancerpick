@@ -101,6 +101,7 @@ class ContractV3FulfillmentApiIntegrationTests {
               "payments",
               "order_histories",
               "order_snapshots",
+              "order_contracts",
               "order_trade_terms"))
         jdbc.update("DELETE FROM " + table + " WHERE order_id=?", order);
       jdbc.update(
@@ -158,7 +159,7 @@ class ContractV3FulfillmentApiIntegrationTests {
                 "SELECT action FROM order_histories WHERE order_id=? ORDER BY id",
                 String.class,
                 order))
-        .containsExactly("DELIVERED", "REVISION_REQUESTED", "DELIVERED");
+        .containsExactly("DELIVERED", "REVISION_REQUESTED", "DEADLINE_NOTIFIED", "DELIVERED");
     assertThat(
             jdbc.queryForObject(
                 "SELECT CONCAT(status,':',remaining_amount) FROM order_funds WHERE order_id=?",
@@ -254,6 +255,18 @@ class ContractV3FulfillmentApiIntegrationTests {
             paid_at=created_at,due_at=DATE_ADD(created_at,INTERVAL 3 DAY) WHERE id=?
         """,
         id);
+    if (policy == TradePolicyVersion.CONTRACT_V3) {
+      // 실제 V3 결제는 양측 서명 계약을 요구한다. 기한 통지가 기록하는 계약 버전용 최소 서명 계약 행.
+      jdbc.update(
+          """
+          INSERT INTO order_contracts(order_id,version,template_version,status,active_slot,special_terms,
+              canonical_content,content_hash,file_storage_key,file_backend,file_size,file_hash,generation_key,
+              created_by,signed_at,created_at,updated_at)
+          VALUES (?,1,'standard-v2-full-funding','SIGNED',1,'','{}',UNHEX(SHA2('c',256)),?,'LOCAL',1,
+              UNHEX(SHA2('f',256)),?,?,?,?,?)
+          """,
+          id, "fixture/" + UUID.randomUUID(), UUID.randomUUID().toString(), seller, PAID, PAID, PAID);
+    }
     if (held) {
       var payment = payments.saveAndFlush(Payment.fullFunding(id, 100000, PAID));
       funds.saveAndFlush(OrderFunds.hold(id, payment.id(), 100000, PAID));

@@ -80,6 +80,18 @@ public class OutboxEvent {
 
   public static OutboxEvent pending(
       String type, String aggregateType, long aggregateId, String payload, LocalDateTime at) {
+    return pending(UUID.randomUUID().toString(), type, aggregateType, aggregateId, payload, at);
+  }
+
+  /** 중복 방지를 위해 호출자가 정한 이벤트 ID(UUID 형식)로 저장한다. */
+  public static OutboxEvent pending(
+      String eventId,
+      String type,
+      String aggregateType,
+      long aggregateId,
+      String payload,
+      LocalDateTime at) {
+    UUID.fromString(eventId);
     if (type == null || type.isBlank() || type.length() > 60)
       throw new IllegalArgumentException("Invalid event type");
     if (aggregateType == null || aggregateType.isBlank() || aggregateType.length() > 30)
@@ -87,7 +99,7 @@ public class OutboxEvent {
     if (aggregateId <= 0 || payload == null || at == null)
       throw new IllegalArgumentException("Invalid outbox event");
     var event = new OutboxEvent();
-    event.eventId = UUID.randomUUID().toString();
+    event.eventId = eventId;
     event.type = type;
     event.schemaVersion = 1;
     event.aggregateType = aggregateType;

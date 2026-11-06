@@ -20,7 +20,9 @@ export function describeHistory(history: OrderHistory, order: Pick<OrderDetail, 
   return {
     action: history.action === 'COMPLETED' && history.actorId === null
       ? '자동 구매 확정'
-      : actions[history.action] ?? history.action,
+      : history.action === 'DEADLINE_NOTIFIED'
+        ? history.toStatus === 'REVISION_IN_PROGRESS' ? '재납품 기한 통지' : '납기 통지'
+        : actions[history.action] ?? history.action,
     actor,
     transition: from === null ? `상태: ${to}` : from === to ? `상태 유지: ${to}` : `${from} → ${to}`,
     reason: history.reason,

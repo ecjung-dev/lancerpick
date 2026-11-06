@@ -66,6 +66,23 @@ test('public seller shows the scoped product page and escapes profile text', () 
   } finally { client.clear() }
 })
 
+test('public product detail replaces the order link with the active contract minimum notice', () => {
+  const client = new QueryClient()
+  client.setQueryData(['products', 'detail', '1'], {
+    id: '1', title: '저가 상품', priceAmount: 9999, minimumOrderAmount: 10000, durationDays: 2,
+    category: { name: '개발' }, seller: { id: '2', displayName: '판매자' },
+    createdAt: '2026-11-04T00:00:00Z', updatedAt: '2026-11-04T00:00:00Z',
+  })
+  try {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/products/1'] },
+      createElement(QueryClientProvider, { client }, createElement(Routes, null,
+        createElement(Route, { path: '/products/:id', element: createElement(ProductDetailPage) })))))
+    assert.match(html, /저가 상품/)
+    assert.match(html, /계약 주문은 10,000원 이상/)
+    assert.doesNotMatch(html, /href="\/products\/1\/order"/)
+  } finally { client.clear() }
+})
+
 test('missing detail hides cached content and server failure offers retry with a safe back link', () => {
   for (const status of [404, 500]) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })

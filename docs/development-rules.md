@@ -95,6 +95,7 @@ CI에서는 잠금 파일 기준으로 의존성을 설치한다.
 | 화면 | React·React DOM 19.3.0, TypeScript | 두 React 버전 일치, TS 호환 안정 버전 |
 | 프런트 빌드 | Node.js 24 LTS, Vite 8.3 계열, npm | Node 버전·package-lock.json 기록 |
 | 라우팅·조회 | React Router 7 계열, TanStack Query 5 계열 | 공통 fetch·CSRF 처리, 잠금 파일 |
+| 주문 채팅 실시간 연결 | Spring WebSocket/STOMP·Security Messaging, `@stomp/stompjs` 7.2.0 | 서버는 Boot 관리 버전, 클라이언트는 package-lock.json. 단일 서버 simple broker·세션/CSRF·누락 복구([연결 계약](order-chat-realtime.md)) |
 | 스타일 | CSS Modules, 공통 UI | 필요한 컴포넌트부터 공유 |
 | DB·변경 | MySQL 8.4 LTS, Flyway | DB 이미지 고정, Boot 관리 버전·MySQL 모듈 |
 | 배포 | Docker Compose, Nginx, HTTPS | 도구·이미지 버전은 초기 배포 시 고정 |

@@ -57,7 +57,7 @@ public class ProductSearchQueries {
                 .toList();
     }
 
-    public Optional<ProductDetailResponse> findPublicDetail(long id) {
+    public Optional<ProductDetailResponse> findPublicDetail(long id, Long minimumOrderAmount) {
         var row = query.select(p.id, p.title, p.price, p.durationDays,
                         c.id, c.name, c.displayOrder, m.id, m.displayName,
                         p.description, p.scopeDescription, p.preparationDescription,
@@ -72,7 +72,8 @@ public class ProductSearchQueries {
                 new ProductSummaryResponse.Seller(row.get(m.id).toString(), row.get(m.displayName)),
                 row.get(p.description), row.get(p.scopeDescription), row.get(p.preparationDescription),
                 row.get(p.version), row.get(p.saleStatus),
-                row.get(p.createdAt).atOffset(ZoneOffset.UTC), row.get(p.updatedAt).atOffset(ZoneOffset.UTC)));
+                row.get(p.createdAt).atOffset(ZoneOffset.UTC), row.get(p.updatedAt).atOffset(ZoneOffset.UTC),
+                minimumOrderAmount));
     }
 
     private static BooleanBuilder where(String keyword, Long categoryId, ProductSearchOptions options) {

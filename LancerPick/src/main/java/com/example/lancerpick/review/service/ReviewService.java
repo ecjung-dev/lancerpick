@@ -2,7 +2,6 @@ package com.example.lancerpick.review.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
-import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.review.dto.*;
@@ -64,17 +63,25 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    public PageResponse<PublicReviewResponse> list(String id, int page, int size) {
+    public ProductReviewsResponse list(String id, int page, int size, String ratingParam) {
         long productId = parseId(id);
-        if (page < 0 || size < 1 || size > 100) throw invalid();
+        if (page < 0 || size < 1 || size > 100 || (ratingParam != null && !ratingParam.matches("[1-5]"))) {
+            throw invalid();
+        }
+        Integer rating = ratingParam == null ? null : Integer.valueOf(ratingParam);
         if (!queries.isPublicProduct(productId)) {
             throw error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "상품을 찾을 수 없습니다.");
         }
-        long total = queries.count(productId);
+        var counts = queries.countByRating(productId);
+        long reviewCount = counts.values().stream().mapToLong(Long::longValue).sum();
+        double ratingSum = counts.entrySet().stream()
+                .mapToDouble(entry -> entry.getKey() * (double) entry.getValue()).sum();
+        var summary = new ProductReviewsResponse.Summary(reviewCount == 0 ? null : ratingSum / reviewCount, reviewCount);
+        long total = rating == null ? reviewCount : counts.getOrDefault(rating, 0L);
         long offset = (long) page * size;
-        var items = offset >= total ? List.<PublicReviewResponse>of() : queries.find(productId, size, offset);
-        return new PageResponse<>(items, page, size, total,
-                (int) Math.min(Integer.MAX_VALUE, total / size + (total % size == 0 ? 0 : 1)));
+        var items = offset >= total ? List.<PublicReviewResponse>of() : queries.find(productId, rating, size, offset);
+        return new ProductReviewsResponse(items, page, size, total,
+                (int) Math.min(Integer.MAX_VALUE, total / size + (total % size == 0 ? 0 : 1)), summary);
     }
 
     private static String idOf(long id) { return Long.toString(id); }

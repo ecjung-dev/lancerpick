@@ -9,6 +9,7 @@ import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.order.service.NewOrderPolicy;
 import com.example.lancerpick.order.service.OrderCreationService;
 import com.example.lancerpick.order.service.OrderTerms;
+import com.example.lancerpick.product.service.ProductSearchService;
 import com.example.lancerpick.support.IntegrationTest;
 import java.sql.Statement;
 import java.time.LocalDateTime;
@@ -25,6 +26,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -49,6 +52,7 @@ import static org.mockito.Mockito.reset;
 class OrderCreationIntegrationTests {
     private static final LocalDateTime FIXTURE_TIME = LocalDateTime.parse("2026-11-02T06:00:00.123456");
     @Autowired OrderCreationService service;
+    @Autowired ProductSearchService products;
     @Autowired OrderSnapshotRepository snapshots;
     @MockitoSpyBean OrderHistoryRepository histories;
     @MockitoSpyBean OrderCreationQueries source;
@@ -417,10 +421,12 @@ class OrderCreationIntegrationTests {
         assertThat(snapshots.findById(result.orderId()).orElseThrow().getTermsSnapshot()).isEqualTo(frozen);
     }
 
-    @Test
-    void contractOrderRejectsTotalBelowMinimumWithoutWritingRows() {
-        enableContractCreation();
+    @ParameterizedTest
+    @EnumSource(value = TradePolicyVersion.class, names = {"CONTRACT_V2", "CONTRACT_V3"})
+    void contractOrderRejectsTotalBelowMinimumWithoutWritingRows(TradePolicyVersion policy) {
+        doReturn(policy).when(newOrderPolicy).current();
         jdbc.update("UPDATE products SET price = 9999 WHERE id = ?", productId);
+        assertThat(products.getPublicDetail(Long.toString(productId)).minimumOrderAmount()).isEqualTo(10000L);
         assertBusiness(() -> service.create(buyerId, request(UUID.randomUUID(), "요구사항")),
                 "CONTRACT_MINIMUM_AMOUNT_NOT_MET");
         assertCounts(0);
@@ -429,17 +435,20 @@ class OrderCreationIntegrationTests {
                 Long.class, productId)).isZero();
     }
 
-    @Test
-    void contractOrderAcceptsMinimumBoundary() {
-        enableContractCreation();
+    @ParameterizedTest
+    @EnumSource(value = TradePolicyVersion.class, names = {"CONTRACT_V2", "CONTRACT_V3"})
+    void contractOrderAcceptsMinimumBoundary(TradePolicyVersion policy) {
+        doReturn(policy).when(newOrderPolicy).current();
         jdbc.update("UPDATE products SET price = 10000 WHERE id = ?", productId);
         var result = service.create(buyerId, request(UUID.randomUUID(), "요구사항"));
-        assertThat(policyOf(result.orderId())).isEqualTo("CONTRACT_V2");
+        assertThat(policyOf(result.orderId())).isEqualTo(policy.name());
         assertThat(tradeTermsCount(result.orderId())).isOne();
     }
 
     @Test
     void replayKeepsPolicyFixedAtCreationEvenAfterSwitch() {
+        jdbc.update("UPDATE products SET price = 9999 WHERE id = ?", productId);
+        assertThat(products.getPublicDetail(Long.toString(productId)).minimumOrderAmount()).isNull();
         UUID legacyKey = UUID.randomUUID();
         var legacy = service.create(buyerId, request(legacyKey, "요구사항"));
         enableContractCreation();
@@ -449,6 +458,7 @@ class OrderCreationIntegrationTests {
         assertThat(policyOf(legacy.orderId())).isEqualTo("LEGACY_V1");
         assertThat(tradeTermsCount(legacy.orderId())).isZero();
 
+        jdbc.update("UPDATE products SET price = 10000 WHERE id = ?", productId);
         UUID contractKey = UUID.randomUUID();
         var contract = service.create(buyerId, request(contractKey, "요구사항"));
         var contractReplay = service.create(buyerId, request(contractKey, "요구사항"));
