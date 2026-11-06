@@ -8,6 +8,8 @@ main `64b3bcf`(#117)에서 `feature/first-contract-signature-notification`을 �
 
 추가 main `a71d636`(#121, 관리자 취소 검토)을 통합했다. 이 문서의 최상단 기록 충돌은 양측 내용을 보존해 해결했다. 계약·첫 서명 코드는 그대로 유지했고 공통 이벤트 발행기와 프런트 알림 문구에는 첫 서명·관리자 거절 유형이 함께 남아 있다. 병합 후 격리 MySQL 8.4에서 계약·알림·관리자 승인/거절·보관 결제/환불·취소 요청·구매 확정·타이머·관리자 금융 조회 등 관련 백엔드 216건 통과(실패·오류·건너뜀 0), 프런트 전체 224건·lint·TypeScript 포함 build 통과. 백엔드 전체 재실행·실서버·브라우저 검증은 하지 않았다. 별도 화면 수정 `b9ac35c`는 기존 브랜치에 보존하며 여기에는 포함하지 않았다.
 
+PR 준비 시 main `f1b0e15`(#122 문서 상태 정리)도 통합했다. 관리자 취소 검토 문서의 상태 표현 충돌은 API·화면 연결이 남아 있음을 명시한 main 문구로 정리했다. 소스·테스트·빌드 설정은 직전 검증 커밋 `56165c8`와 동일하므로 자동 검사를 반복하지 않고 위 216건·프런트 224건 결과를 유지한다.
+
 ## 운영 문의 엔티티·관리자 승인 취소 서비스(K4) — 2026-11-06
 
 main 반영(#121, 정은찬, 작업 브랜치 `feature/admin-cancellation-review`, 분기 main `92fabc3`). [관리자 취소 검토](admin-cancellation-review.md).
@@ -18,7 +20,7 @@ main 반영(#121, 정은찬, 작업 브랜치 `feature/admin-cancellation-review
 - DB·Flyway·HTTP API 변경 없음. 관리자 API·화면은 김창재가 이 서비스로 연결한다.
 - 문서 정리 포함: #120 상태 표기(이 문서 아래 두 절, 메일 인프라 후속, 활성화 게이트 판정 기록)를 main 반영으로 정정.
 
-검증(로컬 `lancerpick_test` 3307): 신규 `AdminCancellationReviewIntegrationTests` 9건(승인·거절·재전송·권한/입력·선처리 충돌·실패 롤백·동시 판매자 승인/구매자 철회/구매 확정, 매 검사 V3 금액 불변식 0행) 포함 백엔드 `clean build` 917건 통과(실패·오류·건너뜀 0). 처음 전체 빌드에서 DB 없는 `DefaultCatalogApiTests` 8건이 새 서비스 Bean 때문에 실패해 mock을 추가한 뒤 재실행했다. 프런트 typecheck·lint·`test:api` 223건·build 통과(알림 문구·이력 실행자 검사 보강). 실행하지 않은 검증: 관리자 API·화면이 없어 실서버·브라우저 확인 없음, 원격 CI.
+검증(병합 전 작업 브랜치, 로컬 `lancerpick_test` 3307): 신규 `AdminCancellationReviewIntegrationTests` 9건(승인·거절·재전송·권한/입력·선처리 충돌·실패 롤백·동시 판매자 승인/구매자 철회/구매 확정, 매 검사 V3 금액 불변식 0행) 포함 백엔드 `clean build` 917건 통과(실패·오류·건너뜀 0). 처음 전체 빌드에서 DB 없는 `DefaultCatalogApiTests` 8건이 새 서비스 Bean 때문에 실패해 mock을 추가한 뒤 재실행했다. 프런트 typecheck·lint·`test:api` 223건·build 통과(알림 문구·이력 실행자 검사 보강). 실행하지 않은 검증: 관리자 API·화면이 없어 실서버·브라우저 확인 없음. 원격 CI는 #121 PR 기록을 따른다.
 
 ## 기록 없는 안내 메일 계약·C3 DB 확인·C4/C5 제외 결정 — 2026-11-06
 
