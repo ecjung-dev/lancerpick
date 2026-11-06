@@ -92,7 +92,7 @@ Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·
 | GET /sellers/{id} | 전체 | SellerProfile |
 | GET /me/seller-profile | 회원 | 본인 SellerProfile, 미등록 404 |
 | PUT /me/seller-profile | 회원; introduction,specialty,portfolioUrl | 생성 201 / 수정 200 |
-| GET /products | 전체; keyword,categoryId,page,size | ProductSummary 목록 |
+| GET /products | 전체; keyword,categoryId,minPrice,maxPrice,maxDurationDays,sort,page,size | ProductSummary 목록 |
 | GET /products/{id} | 전체; 공개·판매 중 상품 | ProductDetail |
 | GET /me/products | 회원; page,size | OwnedProductSummary 목록; 중지·숨김 포함 |
 | GET /me/products/{id} | 소유자 | 본인 ProductDetail |
@@ -102,6 +102,8 @@ Member: id,email,displayName,role,hasSellerProfile. 이메일은 공백 제거·
 | GET /products/{id}/reviews | 전체; 공개·판매 중 상품, page,size | Review 목록 |
 
 SellerProfile: id(회원 ID),displayName,introduction,specialty,portfolioUrl. 이메일·잔액은 공개하지 않는다. ProductInput: categoryId,title,description,scopeDescription,preparationDescription,priceAmount,durationDays. 가격 1~1,000,000원, 기간 1~30일. portfolioUrl은 선택이다.
+
+상품 목록의 선택 조건은 검색어·카테고리와 함께 적용한다. `minPrice`와 `maxPrice`는 각 1~1,000,000원이며 경곗값을 포함한다. `maxDurationDays`는 1~30일이며 해당 일수 이하를 조회한다. 숫자는 1~7자리 십진 정수로 받는다. 빈 값·범위 초과·최저가가 최고가보다 큰 경우·지원하지 않는 정렬은 400 `VALIDATION_FAILED`다. `sort`는 `NEWEST`(기본, 등록 시각 내림차순), `PRICE_ASC`, `PRICE_DESC`를 지원하고 주 정렬 값이 같으면 상품 ID 내림차순이다.
 
 ProductSummary: id,title,priceAmount,durationDays,category,seller. ProductDetail은 description,scopeDescription,preparationDescription,version,saleStatus,createdAt,updatedAt을 추가한다. 본인·관리자 조회는 isHidden 추가. 상품 변경·판매 상태 변경·숨김 변경은 버전 충돌 검사와 일관되게 관리한다. 숨김·중지 상품의 기존 거래는 주문 스냅샷으로 조회한다.
 

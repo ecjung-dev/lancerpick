@@ -1,4 +1,5 @@
 import { useNavigate, useSearchParams } from 'react-router'
+import { useState } from 'react'
 import { useCategories, useProducts } from '../queries'
 import { ProductCard } from '../components/ProductCard'
 import { CategoryIcon } from '../components/CategoryIcon'
@@ -6,6 +7,50 @@ import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { Icon } from '../../../shared/components/Icon'
 import styles from './ProductListPage.module.css'
+
+const filterKeys = ['minPrice', 'maxPrice', 'maxDurationDays', 'sort'] as const
+
+function SearchFilters({ params, apply }: {
+  params: URLSearchParams
+  apply: (values: FormData) => void
+}) {
+  const [error, setError] = useState('')
+  return (
+    <form className={styles.filters} aria-label="상품 검색 조건" onSubmit={(event) => {
+      event.preventDefault()
+      const values = new FormData(event.currentTarget)
+      const min = Number(values.get('minPrice'))
+      const max = Number(values.get('maxPrice'))
+      if (min > 1_000_000 || max > 1_000_000 || Number(values.get('maxDurationDays')) > 30
+        || filterKeys.slice(0, 3).some((key) => values.get(key) !== '' && Number(values.get(key)) < 1)
+        || (max > 0 && min > max)) {
+        setError('가격은 1~1,000,000원, 작업 기간은 1~30일로 입력해 주세요. 최저가는 최고가 이하여야 해요.')
+        return
+      }
+      setError('')
+      apply(values)
+    }}>
+      <label>최저가 (원)
+        <input name="minPrice" inputMode="numeric" pattern="[0-9]{1,7}" defaultValue={params.get('minPrice') ?? ''} />
+      </label>
+      <label>최고가 (원)
+        <input name="maxPrice" inputMode="numeric" pattern="[0-9]{1,7}" defaultValue={params.get('maxPrice') ?? ''} />
+      </label>
+      <label>최대 작업 기간 (일)
+        <input name="maxDurationDays" inputMode="numeric" pattern="[0-9]{1,7}" defaultValue={params.get('maxDurationDays') ?? ''} />
+      </label>
+      <label>정렬
+        <select name="sort" defaultValue={params.get('sort') ?? 'NEWEST'}>
+          <option value="NEWEST">최신순</option>
+          <option value="PRICE_ASC">낮은 가격순</option>
+          <option value="PRICE_DESC">높은 가격순</option>
+        </select>
+      </label>
+      <Button type="submit">적용</Button>
+      {error && <p className={styles.filterError} role="alert">{error}</p>}
+    </form>
+  )
+}
 
 export function ProductListPage() {
   const [params, setParams] = useSearchParams()
@@ -15,7 +60,14 @@ export function ProductListPage() {
   const pageInput = Number(params.get('page') ?? 0)
   const page = Number.isInteger(pageInput) && pageInput >= 0 && pageInput <= 2147483647 ? pageInput : 0
   const categories = useCategories()
-  const products = useProducts({ keyword, categoryId, page, size: 4 })
+  const filters = {
+    minPrice: params.get('minPrice') ?? undefined,
+    maxPrice: params.get('maxPrice') ?? undefined,
+    maxDurationDays: params.get('maxDurationDays') ?? undefined,
+    sort: params.get('sort') ?? undefined,
+  }
+  const hasFilters = filterKeys.some((key) => params.has(key))
+  const products = useProducts({ keyword, categoryId, page, size: 4, ...filters })
   const outOfRange = products.data !== undefined && page > 0 && page >= products.data.totalPages
 
   function changeFilter(key: string, value: string) {
@@ -64,9 +116,19 @@ export function ProductListPage() {
     </section>
     <section className={styles.catalog} id="services" aria-labelledby="services-title" aria-busy={products.isFetching}>
       <div className={styles.sectionHeading}>
-        <div><div className={styles.sectionEyebrow}>FIND YOUR NEXT EXPERT</div><h2 id="services-title">{keyword ? `'${keyword}' 검색 결과` : categoryId ? '카테고리 서비스' : '새로 등록된 서비스'}</h2></div>
+        <div><div className={styles.sectionEyebrow}>FIND YOUR NEXT EXPERT</div><h2 id="services-title">{keyword ? `'${keyword}' 검색 결과` : categoryId ? '카테고리 서비스' : hasFilters ? '서비스 검색 결과' : '새로 등록된 서비스'}</h2></div>
         <span className={styles.total}>{products.data ? `${products.data.totalElements}개의 서비스` : '서비스 탐색'}</span>
       </div>
+      <SearchFilters key={JSON.stringify(filters)} params={params} apply={(values) => {
+        const next = new URLSearchParams(params)
+        for (const key of filterKeys) {
+          const value = String(values.get(key) ?? '')
+          if (value && value !== 'NEWEST') next.set(key, value)
+          else next.delete(key)
+        }
+        next.delete('page')
+        setParams(next, { preventScrollReset: true })
+      }} />
       {products.isPending ? <AsyncState title="서비스를 불러오고 있습니다." description="잠시만 기다려 주세요." />
         : products.isError ? <AsyncState title="서비스를 불러오지 못했습니다." error={products.error} onRetry={() => void products.refetch()} />
         : products.data.items.length === 0 ? <AsyncState title={outOfRange ? '요청한 페이지에 서비스가 없습니다.' : '조건에 맞는 서비스가 없습니다.'} description={outOfRange ? '첫 페이지로 돌아가 서비스를 확인해 보세요.' : '다른 검색어나 카테고리를 선택해 보세요.'} />
@@ -77,7 +139,7 @@ export function ProductListPage() {
         <Button variant="secondary" disabled={page + 1 >= products.data.totalPages || products.isFetching} onClick={() => changeFilter('page', String(page + 1))}>다음</Button>
       </nav>}
       {outOfRange && <Button variant="secondary" onClick={() => changeFilter('page', '')}>첫 페이지로</Button>}
-      {(keyword || categoryId || page > 0) && <button className={styles.reset} onClick={() => setParams({})}>검색 조건 초기화 ↗</button>}
+      {(keyword || categoryId || hasFilters || page > 0) && <button className={styles.reset} onClick={() => setParams({})}>검색 조건 초기화 ↗</button>}
     </section>
     <section className={styles.guide} aria-labelledby="guide-title">
       <div><span className={styles.sectionEyebrow}>HOW IT WORKS</span><h2 id="guide-title">시작부터 완료까지,<br />흐름은 간단하게.</h2></div>

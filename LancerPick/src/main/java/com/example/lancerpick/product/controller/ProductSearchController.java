@@ -2,6 +2,7 @@ package com.example.lancerpick.product.controller;
 
 import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.product.dto.ProductSummaryResponse;
+import com.example.lancerpick.product.dto.ProductSearchOptions;
 import com.example.lancerpick.product.dto.ProductDetailResponse;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.http.CacheControl;
@@ -35,11 +36,15 @@ public class ProductSearchController {
     public PageResponse<ProductSummaryResponse> search(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String categoryId,
+            @RequestParam(required = false) String minPrice,
+            @RequestParam(required = false) String maxPrice,
+            @RequestParam(required = false) String maxDurationDays,
+            @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         return productSearchService.search(
-                keyword, categoryId, page, size
+                keyword, categoryId, page, size, ProductSearchOptions.parse(minPrice, maxPrice, maxDurationDays, sort)
         );
     }
 }

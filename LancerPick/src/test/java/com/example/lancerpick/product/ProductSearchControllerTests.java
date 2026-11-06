@@ -1,5 +1,7 @@
 package com.example.lancerpick.product;
 
+import com.example.lancerpick.product.dto.ProductSearchOptions;
+
 import com.example.lancerpick.common.exception.ApiExceptionHandler;
 import com.example.lancerpick.common.security.SecurityConfig;
 import com.example.lancerpick.common.security.SecurityErrorWriter;
@@ -37,7 +39,7 @@ class ProductSearchControllerTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty())
                 .andExpect(jsonPath("$.page").value(0)).andExpect(jsonPath("$.size").value(20))
                 .andExpect(jsonPath("$.totalElements").value(0)).andExpect(jsonPath("$.totalPages").value(0));
-        verify(queries).count(null, null);
+        verify(queries).count(null, null, ProductSearchOptions.DEFAULT);
         verifyNoMoreInteractions(queries);
     }
 
@@ -78,20 +80,35 @@ class ProductSearchControllerTests {
         String keyword = "😀".repeat(100);
         mvc.perform(get("/api/products").param("keyword", "\u00a0" + keyword + "\u3000"))
                 .andExpect(status().isOk());
-        verify(queries).count(keyword, null);
+        verify(queries).count(keyword, null, ProductSearchOptions.DEFAULT);
         mvc.perform(get("/api/products").param("keyword", keyword + "😀"))
                 .andExpect(status().isBadRequest());
         verifyNoMoreInteractions(queries);
     }
 
     @Test
+    void invalidSearchOptionsFailBeforeQuerying() throws Exception {
+        for (String[] input : new String[][] {
+                {"minPrice", "0"}, {"maxPrice", "1000001"}, {"minPrice", "1.5"},
+                {"maxDurationDays", "31"}, {"maxDurationDays", ""}, {"sort", "unknown"}
+        }) {
+            mvc.perform(get("/api/products").param(input[0], input[1]))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+        }
+        mvc.perform(get("/api/products").param("minPrice", "200").param("maxPrice", "100"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(queries);
+    }
+
+    @Test
     void whitespaceOnlyMeansNoKeywordAndOffsetDoesNotOverflow() throws Exception {
-        when(queries.count(null, 12L)).thenReturn(201L);
+        when(queries.count(null, 12L, ProductSearchOptions.DEFAULT)).thenReturn(201L);
         mvc.perform(get("/api/products").param("keyword", "\u0085 \u3000")
                         .param("categoryId", "12").param("page", "2147483647").param("size", "100"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty())
                 .andExpect(jsonPath("$.totalElements").value(201)).andExpect(jsonPath("$.totalPages").value(3));
-        verify(queries).count(null, 12L);
+        verify(queries).count(null, 12L, ProductSearchOptions.DEFAULT);
         verifyNoMoreInteractions(queries);
     }
 }
