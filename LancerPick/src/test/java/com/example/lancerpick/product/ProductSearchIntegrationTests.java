@@ -1,5 +1,7 @@
 package com.example.lancerpick.product;
 
+import com.example.lancerpick.product.dto.ProductSearchOptions;
+
 import com.example.lancerpick.product.service.ProductSearchService;
 import com.example.lancerpick.support.IntegrationTest;
 import java.sql.Statement;
@@ -52,7 +54,7 @@ class ProductSearchIntegrationTests {
         product("관련 없음", "관련 없음", category, "ON_SALE", false, NOW);
         product(token, token, otherCategory, "ON_SALE", false, NOW);
 
-        var page = service.search(token, Long.toString(category), 0, 20);
+        var page = service.search(token, Long.toString(category), 0, 20, ProductSearchOptions.DEFAULT);
         assertThat(page.totalElements()).isEqualTo(2);
         assertThat(page.items()).extracting(item -> item.id())
                 .containsExactly(Long.toString(description), Long.toString(title));
@@ -71,17 +73,17 @@ class ProductSearchIntegrationTests {
     void sameTimestampUsesDescendingIdAndPagingKeepsFilteredTotals() {
         long first = product(token, "설명", category, "ON_SALE", false, NOW);
         long second = product(token, "설명", category, "ON_SALE", false, NOW);
-        assertThat(service.search(null, Long.toString(category), 0, 1).items().getFirst().id())
+        assertThat(service.search(null, Long.toString(category), 0, 1, ProductSearchOptions.DEFAULT).items().getFirst().id())
                 .isEqualTo(Long.toString(second));
-        var page = service.search(" ", Long.toString(category), 1, 1);
+        var page = service.search(" ", Long.toString(category), 1, 1, ProductSearchOptions.DEFAULT);
         assertThat(page.items().getFirst().id()).isEqualTo(Long.toString(first));
         assertThat(page.totalElements()).isEqualTo(2);
         assertThat(page.totalPages()).isEqualTo(2);
-        var beyond = service.search(null, Long.toString(category), Integer.MAX_VALUE, 100);
+        var beyond = service.search(null, Long.toString(category), Integer.MAX_VALUE, 100, ProductSearchOptions.DEFAULT);
         assertThat(beyond.items()).isEmpty();
         assertThat(beyond.totalElements()).isEqualTo(2);
-        assertThat(service.search(token + "absent", null, 0, 20).items()).isEmpty();
-        assertThat(service.search(null, Long.toString(Long.MAX_VALUE), 0, 20).totalElements()).isZero();
+        assertThat(service.search(token + "absent", null, 0, 20, ProductSearchOptions.DEFAULT).items()).isEmpty();
+        assertThat(service.search(null, Long.toString(Long.MAX_VALUE), 0, 20, ProductSearchOptions.DEFAULT).totalElements()).isZero();
     }
 
     @Test
@@ -123,9 +125,36 @@ class ProductSearchIntegrationTests {
     void wildcardEscapeAndSqlCharactersAreLiteralSearchText(String special) {
         long id = product(token + special, "설명", category, "ON_SALE", false, NOW);
         product(token + "ordinary", "설명", category, "ON_SALE", false, NOW);
-        var page = service.search(token + special, Long.toString(category), 0, 20);
+        var page = service.search(token + special, Long.toString(category), 0, 20, ProductSearchOptions.DEFAULT);
         assertThat(page.totalElements()).isEqualTo(1);
         assertThat(page.items().getFirst().id()).isEqualTo(Long.toString(id));
+    }
+
+    @Test
+    void combinesInclusiveBoundsAndKeepsPriceTiesStableAcrossPages() throws Exception {
+        long cheap = product(token, "저가", category, "ON_SALE", false, NOW);
+        long firstTie = product(token, "동가", category, "ON_SALE", false, NOW);
+        long lastTie = product(token, "동가", category, "ON_SALE", false, NOW);
+        long slow = product(token, "기간 초과", category, "ON_SALE", false, NOW);
+        product(token, "숨김", category, "ON_SALE", true, NOW);
+        product(token, "판매 중지", category, "STOPPED", false, NOW);
+        jdbc.update("UPDATE products SET price=10000 WHERE id=?", cheap);
+        jdbc.update("UPDATE products SET duration_days=4 WHERE id=?", slow);
+
+        mvc.perform(get("/api/products").param("keyword", token).param("categoryId", Long.toString(category))
+                        .param("minPrice", "10000").param("maxPrice", "50000").param("maxDurationDays", "3")
+                        .param("sort", "PRICE_ASC").param("size", "2"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.items[0].id").value(Long.toString(cheap)))
+                .andExpect(jsonPath("$.items[1].id").value(Long.toString(lastTie)));
+        var ascending = ProductSearchOptions.parse("10000", "50000", "3", "PRICE_ASC");
+        assertThat(service.search(token, Long.toString(category), 1, 2, ascending).items())
+                .extracting(item -> item.id()).containsExactly(Long.toString(firstTie));
+        var descending = ProductSearchOptions.parse("10000", "50000", "3", "PRICE_DESC");
+        assertThat(service.search(token, Long.toString(category), 0, 4, descending).items())
+                .extracting(item -> item.id())
+                .containsExactly(Long.toString(lastTie), Long.toString(firstTie), Long.toString(cheap));
     }
 
     private long product(String title, String description, long categoryId, String status, boolean hidden, LocalDateTime at) {

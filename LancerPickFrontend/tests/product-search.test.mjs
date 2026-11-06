@@ -46,13 +46,15 @@ test('categories use the real public API and preserve cancellation', async () =>
 })
 
 test('product search preserves literal keywords, string category IDs and page parameters', async () => {
-  const search = { keyword: '로고 & 100%_! 😀', categoryId: '9007199254740993', page: 2, size: 4 }
+  const search = { keyword: '로고 & 100%_! 😀', categoryId: '9007199254740993', page: 2, size: 4,
+    minPrice: '10000', maxPrice: '50000', maxDurationDays: '3', sort: 'PRICE_ASC' }
   const controller = new AbortController()
   globalThis.fetch = async (url, options) => {
     const request = new URL(url, 'http://localhost')
     assert.equal(request.pathname, '/api/products')
     assert.deepEqual(Object.fromEntries(request.searchParams), {
       keyword: search.keyword, categoryId: search.categoryId, page: '2', size: '4',
+      minPrice: '10000', maxPrice: '50000', maxDurationDays: '3', sort: 'PRICE_ASC',
     })
     assert.equal(options.signal, controller.signal)
     return json({ items: [], page: 2, size: 4, totalElements: 0, totalPages: 0 })

@@ -73,3 +73,4 @@ docker run -d --name lancerpick-mailpit -p 1025:1025 -p 8025:8025 axllent/mailpi
 - 백엔드 `clean build`(로컬 MySQL 8.4 `lancerpick_test`): 771건 통과(2026-11-05, 병합 전 작업 브랜치. 병합 후 main에서 재실행하지 않음).
 - 실제 서버 + Mailpit(2026-11-05, 개발 DB, `MAIL_ENABLED=true`, API 호출로 확인): 가입 → 재설정 요청 202 → Mailpit에 메일 1통 도착(보낸 사람 `LancerPick <no-reply@lancerpick.local>`, 한글 제목·본문, `text/plain; charset=UTF-8`, 링크 `http://localhost:5173/password-reset#token=…` 43자) → 그 토큰으로 재설정 204 → 옛 비밀번호 로그인 401, 새 비밀번호 로그인 200 → 같은 토큰 재사용 400. 서버 로그에 메일 경고·이메일·토큰 없음.
 - 확인하지 않은 것: `account_challenges.delivery_status`가 `SENT`인지 DB에서 직접 조회하지 않았다(로컬에 MySQL 클라이언트 없음, 기록 실패 로그가 없는 것으로만 확인). 브라우저 화면으로 재설정 링크를 연 확인은 하지 않았다. 60초 안에 같은 이메일로 다시 요청하면 메일이 오지 않는 것(요청 제한)은 의도된 동작임을 확인했다.
+- 후속(2026-11-06, 김창재): 위 확인하지 않은 것 중 브라우저 화면 확인을 채웠다. Mailpit 실행 파일 + 내장 브라우저로 요청 → 수신 → 링크 → 새 비밀번호 → 세션 폐기·재로그인·같은 링크 재사용 거부를 확인했다. DB의 `SENT` 직접 조회는 여전히 하지 않았다. [로그인 문서 기록](auth-login.md#브라우저--mailpit-확인--2026-11-06).
