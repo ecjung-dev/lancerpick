@@ -195,7 +195,10 @@ class OrderChatWebSocketIntegrationTests {
     jdbc.update("UPDATE members SET role='ADMIN' WHERE id=?", outsiderId);
     SocketClient admin = connect(login(outsiderEmail), outsiderId);
     admin.send(orderId, UUID.randomUUID().toString(), "참여자 아님");
-    assertThat(admin.await("MESSAGE")).contains("RESOURCE_NOT_FOUND");
+    // REST 오류와 같은 필드(code·message·fieldErrors·traceId)에 HTTP 상태와 같은 의미의 status를 함께 싣는다.
+    assertThat(admin.await("MESSAGE"))
+        .contains("\"code\":\"RESOURCE_NOT_FOUND\"", "\"status\":404", "\"fieldErrors\":[]")
+        .containsPattern("\"traceId\":\"[0-9a-f-]{36}\"");
     assertThat(count()).isZero();
   }
 
@@ -210,7 +213,7 @@ class OrderChatWebSocketIntegrationTests {
             + " updated_at=UTC_TIMESTAMP(6) WHERE id=?",
         orderId);
     socket.send(orderId, UUID.randomUUID().toString(), "새 메시지");
-    assertThat(socket.await("MESSAGE")).contains("CHAT_CLOSED");
+    assertThat(socket.await("MESSAGE")).contains("\"code\":\"CHAT_CLOSED\"", "\"status\":409");
     socket.send(orderId, key, "종료 전 메시지");
     assertMessage(socket, key, "1");
     assertThat(count()).isEqualTo(1);

@@ -18,7 +18,7 @@
 | SUBSCRIBE | `/user/queue/chat`, `/user/queue/chat-errors` | 연결별로 두 종류만, 중복/임의 destination 거부. 회원 ID를 넣는 공개 topic은 제공하지 않음 |
 | SEND | `/app/orders/{orderId}/chat/messages` | JSON `{clientMessageId, content}`. 발신자는 서버 연결에서 결정. HTTP와 같은 저장 서비스의 권한·상태·멱등 검증 |
 | 저장 메시지/재확인 응답 | `/user/queue/chat` | 기존 `ChatMessage` JSON. 문자열 BIGINT ID/순번. 새 메시지는 커밋 이후 양측 회원의 유효한 연결에 전달. 동일 키 재확인은 요청 연결에 응답 |
-| 업무 오류 | `/user/queue/chat-errors` | `{orderId, clientMessageId, code, message}`. `CHAT_CLOSED`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED` 등 저장 서비스 오류. 예상치 못한 실패는 `CHAT_SEND_FAILED`로 원문 숨김 |
+| 업무 오류 | `/user/queue/chat-errors` | `{orderId, clientMessageId, status, code, message, fieldErrors, traceId}`(C1, [공통 계약](event-contract.md#4-채팅-소켓-오류-형식)). `CHAT_CLOSED`, `RESOURCE_NOT_FOUND`, `IDEMPOTENCY_KEY_REUSED` 등 저장 서비스 오류는 그 HTTP 상태, 형식 오류는 400 `INVALID_REQUEST`, 예상치 못한 실패는 503 `CHAT_SEND_FAILED`로 원문 숨김 |
 
 구독·전송은 승인 목록 외 기본 거부한다. STOMP의 login/passcode나 클라이언트 senderId로 인증하지 않는다. 서버 연결별 임의 라우팅 ID를 사용하고 HTTP 세션 ID를 메시지/클라이언트에 노출하지 않는다.
 

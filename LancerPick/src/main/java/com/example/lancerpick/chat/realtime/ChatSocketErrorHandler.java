@@ -1,6 +1,7 @@
 package com.example.lancerpick.chat.realtime;
 
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.simp.stomp.StompCommand;
@@ -25,13 +26,16 @@ public class ChatSocketErrorHandler extends StompSubProtocolErrorHandler {
       if ("AUTHENTICATION_REQUIRED".equals(cause.getMessage())
           || "CHAT_RATE_LIMITED".equals(cause.getMessage())) code = cause.getMessage();
     }
+    // code는 위 고정 목록, traceId는 서버가 만든 UUID라 JSON 이스케이프가 필요 없다.
+    String traceId = UUID.randomUUID().toString();
     var headers = StompHeaderAccessor.create(StompCommand.ERROR);
     headers.setMessage(code);
     headers.setContentType(MimeTypeUtils.APPLICATION_JSON);
     headers.setLeaveMutable(true);
-    log.warn("Chat frame rejected: {}", code);
+    log.warn("Chat frame rejected: {} traceId={}", code, traceId);
     return MessageBuilder.createMessage(
-        ("{\"code\":\"" + code + "\"}").getBytes(StandardCharsets.UTF_8),
+        ("{\"code\":\"" + code + "\",\"traceId\":\"" + traceId + "\"}")
+            .getBytes(StandardCharsets.UTF_8),
         headers.getMessageHeaders());
   }
 }

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createChatRealtime } from '../src/features/order-chat/realtime.ts'
+import {
+  chatErrorStatus,
+  createChatRealtime,
+} from '../src/features/order-chat/realtime.ts'
 import { ApiError } from '../src/shared/api/client.ts'
 
 const key = '581f0401-3684-4992-a541-137179be9f70'
@@ -353,14 +356,21 @@ test('private business failure is definitive, malformed frames do not enter cach
   await tick()
   const result = assert.rejects(
     f.transport.send({ clientMessageId: key, content: '메시지' }),
-    (error) => error instanceof ApiError && error.code === 'CHAT_CLOSED',
+    (error) =>
+      error instanceof ApiError &&
+      error.code === 'CHAT_CLOSED' &&
+      error.status === 409 &&
+      error.traceId === 'trace-1',
   )
   f.clients[0].subscriptions.get('/user/queue/chat-errors')({
     body: JSON.stringify({
       orderId: '11',
       clientMessageId: key,
+      status: 409,
       code: 'CHAT_CLOSED',
       message: '종료된 주문',
+      fieldErrors: [],
+      traceId: 'trace-1',
     }),
   })
   await result
@@ -369,4 +379,14 @@ test('private business failure is definitive, malformed frames do not enter cach
   f.clients[0].receive({ ...message('1'), id: 9007199254740992 })
   assert.equal(f.deliveries.length, count)
   f.transport.stop()
+})
+
+test('socket error status follows the server and falls back for frames without status', () => {
+  assert.equal(chatErrorStatus({ status: 404, code: 'RESOURCE_NOT_FOUND' }), 404)
+  assert.equal(chatErrorStatus({ status: 400, code: 'INVALID_REQUEST' }), 400)
+  // 이전 형식(상태 없음)·범위 밖 값은 기존 판단을 유지한다.
+  assert.equal(chatErrorStatus({ code: 'CHAT_SEND_FAILED' }), 503)
+  assert.equal(chatErrorStatus({ code: 'CHAT_CLOSED' }), 409)
+  assert.equal(chatErrorStatus({ status: 200, code: 'CHAT_CLOSED' }), 409)
+  assert.equal(chatErrorStatus({ status: '404', code: 'CHAT_CLOSED' }), 409)
 })

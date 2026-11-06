@@ -205,7 +205,7 @@ class NotificationIntegrationTests {
     // 수신자 오류는 다시 시도해도 성공할 수 없으므로 첫 실패에서 바로 멈춘다.
     assertThat(eventColumn(id, "status")).isEqualTo("FAILED");
     assertThat(eventColumn(id, "attempt_count")).isEqualTo("1");
-    assertThat(eventColumn(id, "last_error_code")).isEqualTo("UnsupportedEventException");
+    assertThat(eventColumn(id, "last_error_code")).isEqualTo("INVALID_RECIPIENT");
     assertThat(notificationCount(third)).isZero();
     assertThat(notificationCount(buyer)).isZero();
   }
@@ -223,7 +223,65 @@ class NotificationIntegrationTests {
 
     assertThat(eventColumn(id, "status")).isEqualTo("FAILED");
     assertThat(eventColumn(id, "attempt_count")).isEqualTo("1");
-    assertThat(eventColumn(id, "last_error_code")).isEqualTo("UnsupportedEventException");
+    assertThat(eventColumn(id, "last_error_code")).isEqualTo("INVALID_PAYLOAD");
+  }
+
+  @Test
+  void unsupportedSchemaVersionFailsImmediatelyWithFixedCode() {
+    jdbc.update("""
+        INSERT INTO outbox_events(event_id,type,schema_version,aggregate_type,aggregate_id,payload,status,
+            attempt_count,next_attempt_at,created_at)
+        VALUES (?,'ORDER_ACCEPTED',2,'ORDER',?,JSON_OBJECT('recipientIds',JSON_ARRAY(?)),'PENDING',0,?,?)
+        """, UUID.randomUUID().toString(), order, Long.toString(buyer), AT, AT);
+    long id = eventIds().getLast();
+
+    assertThat(dispatcher.dispatch(id)).isFalse();
+
+    assertThat(eventColumn(id, "status")).isEqualTo("FAILED");
+    assertThat(eventColumn(id, "attempt_count")).isEqualTo("1");
+    assertThat(eventColumn(id, "last_error_code")).isEqualTo("UNSUPPORTED_EVENT");
+    assertThat(notificationCount(buyer)).isZero();
+  }
+
+  @Test
+  void missingOrderFailsImmediatelyWithFixedCode() {
+    String eventId = UUID.randomUUID().toString();
+    jdbc.update("""
+        INSERT INTO outbox_events(event_id,type,schema_version,aggregate_type,aggregate_id,payload,status,
+            attempt_count,next_attempt_at,created_at)
+        VALUES (?,'ORDER_ACCEPTED',1,'ORDER',?,JSON_OBJECT('recipientIds',JSON_ARRAY(?)),'PENDING',0,?,?)
+        """, eventId, Long.MAX_VALUE, Long.toString(buyer), AT, AT);
+    long id = jdbc.queryForObject("SELECT id FROM outbox_events WHERE event_id=?", Long.class, eventId);
+
+    // 고정 주문 정리 조건(aggregate_id)에 걸리지 않으므로 이 테스트가 직접 지운다.
+    try {
+      assertThat(dispatcher.dispatch(id)).isFalse();
+      assertThat(eventColumn(id, "status")).isEqualTo("FAILED");
+      assertThat(eventColumn(id, "last_error_code")).isEqualTo("AGGREGATE_NOT_FOUND");
+    } finally {
+      jdbc.update("DELETE FROM outbox_events WHERE id=?", id);
+    }
+  }
+
+  @Test
+  void lockFailureIsRecordedAsRetryableLockCode() {
+    long id = eventIds().getFirst();
+    var delegate = mockingDetails(events).getMockCreationSettings().getDefaultAnswer();
+    var calls = new AtomicInteger();
+    // 처리 잠금만 실패하고 실패 기록은 정상 잠근다.
+    doAnswer(invocation -> {
+          if (calls.getAndIncrement() == 0) throw new CannotAcquireLockException("simulated lock timeout");
+          return delegate.answer(invocation);
+        })
+        .when(events)
+        .lockById(id);
+
+    assertThat(dispatcher.dispatch(id)).isFalse();
+    reset(events);
+
+    assertThat(eventColumn(id, "status")).isEqualTo("PENDING");
+    assertThat(eventColumn(id, "attempt_count")).isEqualTo("1");
+    assertThat(eventColumn(id, "last_error_code")).isEqualTo("LOCK_UNAVAILABLE");
   }
 
   @Test
@@ -286,7 +344,7 @@ class NotificationIntegrationTests {
     assertThat(dispatcher.dispatch(id)).isFalse();
     assertThat(eventColumn(id, "status")).isEqualTo("PENDING");
     assertThat(eventColumn(id, "attempt_count")).isEqualTo("1");
-    assertThat(eventColumn(id, "last_error_code")).isEqualTo("IllegalStateException");
+    assertThat(eventColumn(id, "last_error_code")).isEqualTo("PROCESSING_FAILED");
     assertThat(dispatcher.dispatch(id)).isFalse();
     assertThat(eventColumn(id, "attempt_count")).as("not due before backoff").isEqualTo("1");
 

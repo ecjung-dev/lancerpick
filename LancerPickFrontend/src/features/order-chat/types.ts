@@ -1,3 +1,5 @@
+import type { FieldError } from '../../shared/api/client.ts'
+
 export interface ChatMessage {
   id: string
   orderId: string
@@ -40,9 +42,13 @@ export interface ChatCsrfToken {
   token: string
 }
 
+/** REST 오류와 같은 code·message·fieldErrors·traceId에 HTTP 상태 대신 status를 싣는다. */
 export interface ChatSendError {
   orderId: string | null
   clientMessageId: string | null
+  status: number
   code: string
   message: string
+  fieldErrors: FieldError[]
+  traceId: string
 }

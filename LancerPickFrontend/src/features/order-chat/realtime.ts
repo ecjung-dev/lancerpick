@@ -44,6 +44,14 @@ const defaults: ChatRealtimeDependencies = {
   random: Math.random,
 }
 
+/** 서버가 보낸 오류 상태를 쓴다. 상태가 없는 이전 형식 프레임은 기존처럼 저장 실패만 503, 나머지는 409로 본다. */
+export function chatErrorStatus(error: Pick<ChatSendError, 'status' | 'code'>) {
+  const { status } = error as { status?: unknown }
+  if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599)
+    return status
+  return error.code === 'CHAT_SEND_FAILED' ? 503 : 409
+}
+
 function readMessage(body: string): ChatMessage | undefined {
   try {
     const value = JSON.parse(body) as ChatMessage
@@ -222,12 +230,12 @@ export function createChatRealtime(
         return
       dependencies.cancel(item.timer)
       pending.delete(error.clientMessageId)
-      const status = error.code === 'CHAT_SEND_FAILED' ? 503 : 409
       item.reject(
-        new ApiError(status, {
+        new ApiError(chatErrorStatus(error), {
           code: error.code,
           message: error.message,
-          fieldErrors: [],
+          fieldErrors: Array.isArray(error.fieldErrors) ? error.fieldErrors : [],
+          traceId: typeof error.traceId === 'string' ? error.traceId : undefined,
         }),
       )
     } catch {
