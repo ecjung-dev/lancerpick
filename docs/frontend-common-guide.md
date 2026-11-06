@@ -34,6 +34,7 @@ PowerShell에서 API_PROXY_TARGET 환경변수를 http://127.0.0.1:8081로 지�
 - getCurrentMember는 헤더의 익명 상태를 표현하기 위해 401만 null로 변환한다. 나머지 실패는 호출자에 전달한다.
 - 회원 데이터의 공통 타입은 auth/types.ts의 Member다. 일부 필드만 필요한 기능은 Pick으로 정의한다.
 - 헤더·지갑·주문 작성·판매자 화면의 조회 키와 재확인 조건은 기능에 맞게 유지한다. 기능별 재확인을 없애거나 401을 임의 데이터로 대체하지 않는다.
+- 공통 QueryClient는 조회(query)가 401을 받으면 헤더가 로그인 회원을 보이는 동안에만 `recheckAfterUnauthorized`(`features/auth/session.ts`)로 로그인 상태를 한 번 다시 확인한다. 세션이 끝났으면 헤더를 로그인 안 함으로 바꾸고 개인 캐시를 지운다. 변경 요청(mutation)의 401은 각 화면이 결과를 안내하며 처리한다.
 - 로그인·로그아웃 성공은 resetAccountState, 불명확한 결과는 recheckSession을 사용한다. 진행 중인 이전 회원 조회를 먼저 취소한다.
 - shared/api/accountCache.ts는 auth 이외의 조회 취소·제거 정책을 관리한다. 인증 계층이 회원 상태를 갱신하고 wallet/cache.ts가 충전 진행 정보도 정리한다.
 - 주문·정산의 wallet 하위 키는 기존 로그아웃 계약으로 유지한다. 키를 변경할 때 관련 취소·갱신·제거와 회귀 검사까지 함께 수정한다.

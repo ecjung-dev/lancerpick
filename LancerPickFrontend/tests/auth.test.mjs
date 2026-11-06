@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 import { QueryClient } from '@tanstack/react-query'
 import { getCurrentMember, login, logout, signup } from '../src/features/auth/api.ts'
-import { isUnclearResult, memberQueryKey, recheckSession, resetAccountState, safeNextPath } from '../src/features/auth/session.ts'
+import { isUnclearResult, memberQueryKey, recheckAfterUnauthorized, recheckSession, resetAccountState, safeNextPath } from '../src/features/auth/session.ts'
 import { validateLogin, validateSignup } from '../src/features/auth/validation.ts'
 import { ApiError, apiRequest, clearCsrfToken } from '../src/shared/api/client.ts'
 
@@ -208,4 +208,76 @@ test('if the recheck itself fails, previous personal caches are still removed an
   assert.equal(client.getQueryData(['wallet', member.id, 'balance']), undefined)
   assert.equal(client.getQueryState(memberQueryKey).isInvalidated, true)
   client.clear()
+})
+
+test('a query 401 while the header still shows a member rechecks the session once and signs the header out', async () => {
+  let meCalls = 0
+  globalThis.fetch = async (url) => {
+    if (url === '/api/me') { meCalls++; return error('AUTHENTICATION_REQUIRED', 401) }
+    return json({})
+  }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(memberQueryKey, member)
+  client.setQueryData(['notifications', member.id, 'unread-count'], { count: 3 })
+  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] })
+
+  await Promise.all([recheckAfterUnauthorized(client, expired), recheckAfterUnauthorized(client, expired)])
+  assert.equal(meCalls, 1, '동시에 받은 401은 재확인 한 번으로 묶는다')
+  assert.equal(client.getQueryData(memberQueryKey), null, '헤더가 로그인 안 함으로 바뀐다')
+  assert.equal(client.getQueryData(['notifications', member.id, 'unread-count']), undefined)
+
+  await recheckAfterUnauthorized(client, expired)
+  assert.equal(meCalls, 1, '이미 로그아웃 상태면 다시 묻지 않는다')
+  client.clear()
+})
+
+test('only a 401 rechecks the session after a query failure', async () => {
+  let meCalls = 0
+  globalThis.fetch = async () => { meCalls++; return json(member) }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(memberQueryKey, member)
+  for (const status of [0, 403, 404, 409, 500]) {
+    await recheckAfterUnauthorized(client, new ApiError(status, { code: 'X', message: '실패', fieldErrors: [] }))
+  }
+  await recheckAfterUnauthorized(client, new Error('plain'))
+  assert.equal(meCalls, 0)
+  await recheckAfterUnauthorized(client, new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] }))
+  assert.equal(meCalls, 1)
+  assert.deepEqual(client.getQueryData(memberQueryKey), member, '같은 계정이 그대로면 유지한다')
+  client.clear()
+})
+
+test('when the session recheck itself fails, later 401s do not keep asking with the same login state', async () => {
+  let meCalls = 0
+  globalThis.fetch = async () => { meCalls++; throw new TypeError('network failed') }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(memberQueryKey, member)
+  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] })
+  assert.equal(await recheckAfterUnauthorized(client, expired), 'unknown')
+  assert.equal(await recheckAfterUnauthorized(client, expired), undefined)
+  assert.equal(meCalls, 1, '캐시 정리 뒤 재조회의 401로 /api/me를 반복 호출하지 않는다')
+  client.clear()
+})
+
+test('a late recheck response after another login or logout does not overwrite the newer account state', async () => {
+  const other = { ...member, id: '42', displayName: '다른 회원' }
+  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] })
+  for (const [label, late] of [['로그인 안 함 응답', () => error('AUTHENTICATION_REQUIRED', 401)], ['통신 실패', () => { throw new TypeError('network failed') }]]) {
+    let release
+    const waiting = new Promise((resolve) => { release = resolve })
+    globalThis.fetch = async () => { await waiting; return late() }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(memberQueryKey, member)
+
+    const recheck = recheckAfterUnauthorized(client, expired)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await resetAccountState(client, other) // 재확인 응답을 기다리는 동안 다른 계정으로 로그인 완료
+    client.setQueryData(['wallet', other.id, 'balance'], { balance: 7 })
+    release()
+
+    assert.equal(await recheck, 'superseded', label)
+    assert.deepEqual(client.getQueryData(memberQueryKey), other, `${label}: 새 계정 상태 유지`)
+    assert.deepEqual(client.getQueryData(['wallet', other.id, 'balance']), { balance: 7 }, `${label}: 새 계정 캐시 유지`)
+    client.clear()
+  }
 })
