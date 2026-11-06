@@ -69,3 +69,5 @@
 - 프런트 `tests/review-timer.test.mjs` 5건: 요청 경로·no-store·본문 없는 POST, 상태별 문구, `canStart`만으로 버튼 표시, SYSTEM 이력·새 알림 문구, 상태별 재조회 간격. 프런트 typecheck·lint·test:api 177건·build 통과.
 - 백엔드 전체 `clean build`(로컬 `lancerpick_test`) 796건 통과, 실패·오류·건너뜀 0. DB 없이 뜨는 `DefaultCatalogApiTests` 컨텍스트에는 `ReviewTimerService`·`ReviewTimers` mock과 만료 스케줄러 끄기 설정을 추가했다.
 - 실제 서버 스케줄러 동작과 브라우저 화면 확인은 하지 않았다.
+
+실서버 확인(2026-11-06, main `9f9aa8f`): 개인 개발 DB에서 테스트 주문 한 건의 납품·타이머 시각을 과거로 옮겨 실제 만료 스케줄러의 자동 구매 확정(SYSTEM 완료·`EXPIRED`/`TIMEOUT`·closure `AUTO_CONFIRMED`·양측 알림)과 브라우저 알림·후기 폼을 확인했다. 시각을 직접 옮긴 확인이며 실제 시간 경과 검증은 아니다. 상세는 [V3 알림](v3-notices.md#실서버브라우저-확인--2026-11-06-main-9f9aa8f).
