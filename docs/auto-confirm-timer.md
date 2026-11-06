@@ -1,6 +1,6 @@
 # 검수 무응답 자동 구매 확정 (E7)
 
-2026-11-06, `feature/v3-auto-confirm-timer`(정은찬). main `0f67606` 기준 작업 브랜치이며 main 병합 전이다. 업무 정책은 [결제 금액 보관 정책](full-funding-policy.md) §2, 금액 처리는 [금액 보관 구현](full-funding-payment.md)을 따른다. CONTRACT_V3 주문에만 적용하며 DB 변경(Flyway)은 없다. V6·V7의 `order_response_timers`·`order_closures`·`order_histories`를 그대로 사용한다.
+2026-11-06, `feature/v3-auto-confirm-timer`(정은찬). main `0f67606` 기준 작업 브랜치에서 구현해 #99(`eb6b40e`)로 main에 반영됐다. 업무 정책은 [결제 금액 보관 정책](full-funding-policy.md) §2, 금액 처리는 [금액 보관 구현](full-funding-payment.md)을 따른다. CONTRACT_V3 주문에만 적용하며 DB 변경(Flyway)은 없다. V6·V7의 `order_response_timers`·`order_closures`·`order_histories`를 그대로 사용한다.
 
 ## 흐름
 
