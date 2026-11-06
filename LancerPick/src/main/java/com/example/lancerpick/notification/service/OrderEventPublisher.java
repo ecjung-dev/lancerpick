@@ -125,6 +125,12 @@ public class OrderEventPublisher {
     var action = history.getAction();
     if (action == OrderHistoryAction.COMPLETED && "SYSTEM".equals(history.getActorType()))
       return "ORDER_AUTO_CONFIRMED";
+    // 운영 문의를 검토한 관리자의 거절(K4)은 판매자 거절과 문구가 달라 별도 유형으로 보낸다.
+    if (action == OrderHistoryAction.CANCELLATION_REJECTED
+        && history.getActorId() != null
+        && history.getActorId() != order.getBuyerId().longValue()
+        && history.getActorId() != order.getSellerId().longValue())
+      return "ORDER_CANCELLATION_ADMIN_REJECTED";
     if (action == OrderHistoryAction.DEADLINE_NOTIFIED)
       return history.getToStatus() == OrderStatus.REVISION_IN_PROGRESS
           ? "ORDER_REDELIVERY_DUE_NOTIFIED"

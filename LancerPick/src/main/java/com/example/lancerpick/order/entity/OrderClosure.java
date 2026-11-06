@@ -78,6 +78,23 @@ public class OrderClosure {
         orderId, sellerId, cancellationRequestId, FullFundingPolicy.cancelled(amount), occurredAt);
   }
 
+  /** 운영 문의(취소 검토)에 대한 관리자 승인 취소. 보관금 전액 반환이며 문의 ID가 필수다(DB CHECK). */
+  public static OrderClosure adminCancelled(
+      long orderId,
+      long adminId,
+      long cancellationRequestId,
+      long inquiryId,
+      long amount,
+      LocalDateTime occurredAt) {
+    if (cancellationRequestId < 1 || inquiryId < 1)
+      throw new IllegalArgumentException("Invalid admin cancellation closure");
+    var closure =
+        create(orderId, adminId, cancellationRequestId, FullFundingPolicy.cancelled(amount), occurredAt);
+    closure.reason = "ADMIN_CANCELLATION";
+    closure.inquiryId = inquiryId;
+    return closure;
+  }
+
   /** 검수 무응답 타이머 만료에 따른 시스템 구매 확정. 정상 확정과 같은 10% 수수료로 분배한다. */
   public static OrderClosure autoConfirmed(
       long orderId, long timerId, long amount, LocalDateTime occurredAt) {

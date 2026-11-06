@@ -11,6 +11,7 @@ const messages: Record<string, string> = {
   ORDER_REVISION_REQUESTED: '구매자가 수정을 요청했습니다.',
   ORDER_CANCELLATION_REQUESTED: '구매자가 취소를 요청했습니다.',
   ORDER_CANCELLATION_REJECTED: '판매자가 취소 요청을 거절했습니다.',
+  ORDER_CANCELLATION_ADMIN_REJECTED: '관리자가 운영 문의를 검토해 취소 요청을 거절했습니다.',
   ORDER_CANCELLATION_WITHDRAWN: '구매자가 취소 요청을 철회했습니다.',
   ORDER_CANCELLED: '주문이 취소되었습니다.',
   ORDER_COMPLETED: '구매자가 구매를 확정했습니다.',

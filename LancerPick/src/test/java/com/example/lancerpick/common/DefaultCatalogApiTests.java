@@ -45,6 +45,8 @@ class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
     com.example.lancerpick.order.service.FullFundingService fullFundingService;
     @MockitoBean
+    com.example.lancerpick.order.service.AdminCancellationReviewService adminCancellationReviewService;
+    @MockitoBean
     com.example.lancerpick.order.service.ReviewTimerService reviewTimerService;
     @MockitoBean
     com.example.lancerpick.order.service.DeadlineNotices deadlineNotices;

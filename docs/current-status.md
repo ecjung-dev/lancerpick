@@ -1,8 +1,20 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 운영 문의 엔티티·관리자 승인 취소 서비스(K4) — 2026-11-06
+
+`feature/admin-cancellation-review`(정은찬, 분기 main `92fabc3`, PR 전). [관리자 취소 검토](admin-cancellation-review.md).
+
+- **문의 엔티티**: 김창재 선행 작업이던 `support_inquiries` 엔티티 `inquiry/entity/SupportInquiry`·저장소를 K4 진행을 위해 정은찬이 먼저 만들었다(조장 결정). 취소 검토·일반 문의 생성, 제목 1~150자, 종료(`close`)만 제공한다. 문의 접수·목록·답변 API는 김창재 담당으로 남는다.
+- **관리자 승인/거절**: `AdminCancellationReviewService.approve/reject(adminId, inquiryId, reason)`. 관리자 공유 → 주문 → 문의 → (승인 시) 구매자 지갑 잠금. 승인은 보관금 전액 반환·종료 기록 `ADMIN_CANCELLATION`(문의 ID)·요청 `APPROVED`(`ADMIN`)·문의 종료, 거절은 요청 `REJECTED`(`ADMIN`)·문의 종료·새 검수 기산점. 같은 결정 재전송은 같은 결과, 판매자·구매자가 먼저 처리했으면 409.
+- **알림·화면**: 관리자 거절 알림 유형 `ORDER_CANCELLATION_ADMIN_REJECTED`(양측) 추가, 관리자 승인 반환은 기존 `ORDER_FUNDS_REFUNDED`(양측). 주문 이력의 비당사자 실행자를 "관리자"로 표시. 관리자 승인으로 취소된 주문에 판매자 `/cancel` 재전송은 409 `ORDER_STATE_CONFLICT`.
+- DB·Flyway·HTTP API 변경 없음. 관리자 API·화면은 김창재가 이 서비스로 연결한다.
+- 문서 정리 포함: #120 상태 표기(이 문서 아래 두 절, 메일 인프라 후속, 활성화 게이트 판정 기록)를 main 반영으로 정정.
+
+검증(로컬 `lancerpick_test` 3307): 신규 `AdminCancellationReviewIntegrationTests` 9건(승인·거절·재전송·권한/입력·선처리 충돌·실패 롤백·동시 판매자 승인/구매자 철회/구매 확정, 매 검사 V3 금액 불변식 0행) 포함 백엔드 `clean build` 917건 통과(실패·오류·건너뜀 0). 처음 전체 빌드에서 DB 없는 `DefaultCatalogApiTests` 8건이 새 서비스 Bean 때문에 실패해 mock을 추가한 뒤 재실행했다. 프런트 typecheck·lint·`test:api` 223건·build 통과(알림 문구·이력 실행자 검사 보강). 실행하지 않은 검증: 관리자 API·화면이 없어 실서버·브라우저 확인 없음, 원격 CI.
+
 ## 기록 없는 안내 메일 계약·C3 DB 확인·C4/C5 제외 결정 — 2026-11-06
 
-`test/v3-gate-remaining-check`(정은찬, 아래 V3 게이트 확인과 같은 브랜치).
+main 반영(#120, 정은찬, 작업 브랜치 `test/v3-gate-remaining-check`, 아래 V3 게이트 확인과 같은 PR).
 
 - **아이디 안내 메일 계약(작업표 C3 전달 4번)**: 토큰이 없는 안내 메일은 `account_challenges` 행 없이 `AccountMail.untracked(to, subject, body)`로 보낸다. `challengeId`가 null이면 `AccountMailDispatcher`·`SmtpAccountMailSender`가 `AccountMailDeliveryRecorder`를 부르지 않고 안전한 로그만 남긴다. 기존 재설정·가입 인증 메일은 그대로 기록한다. DB·API 변경 없음. 아이디 안내 화면·API는 김창재가 이 계약으로 구현한다(남음).
 - **C3 메일 확인**: 실제 서버(`MAIL_ENABLED=true`)+Mailpit+브라우저로 재설정 요청 → 수신 → 링크 → 새 비밀번호 화면까지 확인하고, 그동안 남아 있던 DB `delivery_status`=`SENT` 직접 조회를 채웠다([메일 인프라 검증](mail-infrastructure.md#검증)).
@@ -13,7 +25,7 @@
 
 ## V3 게이트 남은 화면 확인(G2 타이머 진행 중·G4 좁은 화면)·C2 후속 브라우저 확인 — 2026-11-06
 
-`test/v3-gate-remaining-check`(정은찬, 확인 기준 main `7329be1`): 운영 코드 변경 없이 실서버·브라우저 확인과 문서만 정리했다. 환경은 백엔드 `bootRun`(개인 개발 DB, 실행 인자로만 `--lancerpick.order.full-funding-creation-enabled=true`) + Vite 개발 서버 + Playwright(Chromium) 격리 컨텍스트(구매자 14·판매자 15).
+main 반영(#120, 정은찬, 작업 브랜치 `test/v3-gate-remaining-check`, 확인 기준 main `7329be1`): 운영 코드 변경 없이 실서버·브라우저 확인과 문서만 정리했다. 환경은 백엔드 `bootRun`(개인 개발 DB, 실행 인자로만 `--lancerpick.order.full-funding-creation-enabled=true`) + Vite 개발 서버 + Playwright(Chromium) 격리 컨텍스트(구매자 14·판매자 15).
 
 - **G2 타이머 진행 중 패널**: 주문 23(V3, 특약 없음)을 API 호출로 납품(검수 대기)까지 진행했다(이 구간은 화면 버튼이 아님. 화면 버튼 전체 거래는 게이트 7절 주문 21·22). 개인 DB에서 이 주문의 `deliveries.submitted_at` 한 행만 49시간 앞당겼다(조장 승인). 판매자 화면 패널이 "자동 구매 확정 타이머 시작 가능"과 시작 버튼을 보였고, 버튼을 누르자 "자동 구매 확정 타이머 진행 중 · 2026. 11. 13. 오후 4:55까지 구매자 응답이 없으면 자동으로 구매가 확정됩니다"로 바뀌었다. 구매자 화면에도 같은 진행 중 안내가 나오고 버튼은 없다. DB `order_response_timers` ACTIVE 1행(시작+7일 만료), `order_funds` HELD 50,000원, 게이트 4절 불변식 조회 0행.
 - **G4 좁은 화면(320px)**: 구매자로 주문 23(타이머 진행 중)·21(구매 확정·지급)·22(취소 반환)·17(계약 대기)을 열어 문서 가로 넘침이 없음을 확인했다(`scrollWidth`=`clientWidth`, 화면 밖으로 나간 요소 0). 대금·타이머 패널 문구 줄바꿈과 겹침 없음은 스크린샷으로 확인했다.

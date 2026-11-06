@@ -76,6 +76,8 @@ LEGACY_V1의 수익 기록과 구매 지갑 분리 정책은 유지한다. CONTR
 
 2026-11-06 E7(`feature/v3-auto-confirm-timer`, main 병합 전)에서 타이머를 연결했다. 수동 구매 확정은 활성 타이머를 `ORDER_CLOSED`로 끝내고 진행하며, 결제·승인 환불 시점의 활성 타이머는 앞 단계(취소 요청)에서 끝났어야 하므로 500 `DATA_INTEGRITY_ERROR`다. 이전의 409 `TIMER_INTEGRATION_NOT_READY` 차단은 없앴다. 자동 확정은 `FullFundingService.autoConfirm`이 같은 금액 경로로 처리한다. 상세는 [자동 구매 확정](auto-confirm-timer.md).
 
+관리자 승인 취소(K4, 2026-11-06 `feature/admin-cancellation-review`)는 `FullFundingService.adminRefund`로 같은 반환 경로를 쓰고 종료 기록을 `ADMIN_CANCELLATION`(문의 ID 포함)으로 남긴다. 관리자 승인으로 취소된 주문에 판매자가 `/cancel`을 다시 보내면 409 `ORDER_STATE_CONFLICT`다. 상세는 [관리자 취소 검토](admin-cancellation-review.md).
+
 ## 검증 기록
 
 최신 main `1053da6`(#88 문서 갱신·#89 비밀번호 재설정)을 통합하고 문서 충돌을 해결했다. 컨벤션 보완에서는 축약 변수/메서드명을 업무 의미에 맞게 변경하고 명시 import·조건문 블록·어노테이션 표기를 정리했다. 프런트는 기존 타입/API/조회 훅 분리와 함께 공통 `AsyncState`·`Button`을 사용한다. 결제 금액·잠금 순서·트랜잭션 경계는 유지했다. 아래 752/159건은 통합 전 실행 기록이며, 최종 통합 검사는 별도 후속 기록한다.
