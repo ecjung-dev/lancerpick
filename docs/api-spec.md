@@ -277,9 +277,11 @@ Notification: id,type,orderId,productTitle,read,createdAt. type은 `ORDER_` + �
 | GET /me/wallet/topups/{id} | 본인; 양수 충전 ID | 충전 신청/현재 상태, 타인·없음은 404 |
 | POST /me/wallet/topups/{id}/confirm | 본인+CSRF; paymentKey,orderId,amount | 충전 승인·지급 결과; 완료/종료 200, 확인 중 202 |
 | POST /me/wallet/topups/{id}/reconcile | 본인+CSRF; 본문 없음 | 저장된 결제 키 외부 조회·지급 복구; 확인 중 202 |
-| GET /me/settlements | 본인 판매 수익; page,size | Settlement 목록 |
-| GET /me/settlements/summary | 본인 판매 수익 | completedCount,grossAmount,feeAmount,sellerAmount |
+| GET /me/settlements | 본인 판매 수익; page,size,from,to,sort | Settlement 목록 |
+| GET /me/settlements/summary | 본인 판매 수익; from,to | completedCount,grossAmount,feeAmount,sellerAmount |
 | POST /orders/{id}/review | 완료 주문 구매자; rating,content | 201 Review |
+
+2026-11-09 로컬 후속: [판매 수익 기간 조회 계약](settlement-period-query.md). from/to는 정산 기록일의 한국 날짜(`yyyy-MM-dd`, 1000~9999년, 종료일 당일 포함), sort는 목록의 latest(기본)/oldest다. 조건 생략 시 기존 전체 기간 조회다. 목록·합계 모두 principal 판매자와 같은 기간을 적용한다. 잘못된 날짜·역순 기간·목록 정렬은 400 `VALIDATION_FAILED`, 인증·no-store·응답 필드는 유지한다. 정산 생성/금액 정책은 변경하지 않는다.
 
 WalletEntry: id,type,amountDelta,balanceAfter,orderId,createdAt. 초기 지급과 V2 TOPUP 내역의 orderId는 null이다. [충전 신청·조회 계약](wallet-topup-api.md)과 [승인·지급·재확인 계약](wallet-topup-approval.md)을 따른다. 실제 키 결제창 연동은 검증 전이다. WalletTopupResponse: id,tossOrderId,amount,currency,isTest,status,createdAt. 신청 POST는 호출마다 별도 READY 건을 만들며 멱등 재요청은 아직 제공하지 않는다. 승인 POST는 같은 신청·같은 조건이면 기존 처리 상태를 반환하며 중복 승인/지급하지 않는다. 외부 결과 불명확·진행 중은 202, 불일치는 502 TOPUP_PAYMENT_MISMATCH, 조건/결제 키 충돌은 409다. 제공자 기본 비활성화 시 새 승인은 503이다. 내부 승인 멱등키와 paymentKey는 응답하지 않는다. Settlement: id,orderId,grossAmount,feeRateBps,feeAmount,sellerAmount,createdAt. Review: id,orderId,authorDisplayName,rating,content,createdAt. 공개 리뷰 조회에는 orderId를 제외한다. 별점 1~5 필수, 본문 선택, 주문당 1개.
 

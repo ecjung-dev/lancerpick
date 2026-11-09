@@ -1,4 +1,5 @@
 import { orderStatuses } from './status.ts'
+import { isCalendarDate as isOrderListDate } from '../../shared/lib/dateRange.ts'
 
 export type OrderSide = 'BUYER' | 'SELLER'
 export type OrderSort = 'latest' | 'oldest'
@@ -15,18 +16,8 @@ export interface OrderListFilters {
 }
 
 export const MAX_ORDER_KEYWORD_LENGTH = 100
-const DATE = /^\d{4}-\d{2}-\d{2}$/
-
-export function isOrderListDate(value: string) {
-  if (!DATE.test(value)) return false
-  const [year, month, day] = value.split('-').map(Number)
-  const date = new Date(Date.UTC(year, month - 1, day))
-  return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
-  )
-}
+export { koreanToday, recentMonths } from '../../shared/lib/dateRange.ts'
+export { isOrderListDate }
 
 export function keywordLength(value: string) {
   return [...value].length
@@ -65,26 +56,4 @@ export function orderListSearch(filters: OrderListFilters): Record<string, strin
   if (filters.sort === 'oldest') result.sort = 'oldest'
   if (filters.page > 0) result.page = String(filters.page)
   return result
-}
-
-/** 한국 날짜 기준 오늘. */
-export function koreanToday(now: number = Date.now()) {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(now))
-}
-
-/** 최근 n개월: 오늘(한국 날짜)부터 n개월 전 같은 날까지. 없는 날짜는 그 달 말일로 맞춘다. */
-export function recentMonths(months: number, now: number = Date.now()) {
-  const to = koreanToday(now)
-  const [year, month, day] = to.split('-').map(Number)
-  const target = new Date(Date.UTC(year, month - 1 - months, 1))
-  const lastDay = new Date(
-    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
-  ).getUTCDate()
-  target.setUTCDate(Math.min(day, lastDay))
-  return { from: target.toISOString().slice(0, 10), to }
 }
