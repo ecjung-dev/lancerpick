@@ -1,11 +1,10 @@
-import type { MouseEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { formatDateTime } from '../../../shared/lib/format'
-import { markAllNotificationsRead } from '../api'
-import { notificationMessage, notificationTarget, waitsForReadBeforeNavigation } from '../messages'
-import { notificationKeys, notificationReadOptions, useNotifications } from '../queries'
+import { captureAccountScope } from '../../auth/session'
+import { notificationMessage, notificationTarget } from '../messages'
+import { notificationReadOptions, useNotifications } from '../queries'
 import type { NotificationItem } from '../types'
 import styles from './Notifications.module.css'
 
@@ -23,11 +22,7 @@ export function NotificationsPage() {
   }
   const client = useQueryClient()
   // 변경 요청은 자동 재시도하지 않는다. 결과와 무관하게 서버 상태를 다시 조회한다.
-  const readAll = useMutation({
-    retry: false,
-    mutationFn: markAllNotificationsRead,
-    onSettled: () => client.invalidateQueries({ queryKey: notificationKeys.all }),
-  })
+  const readAll = useMutation(notificationReadOptions(client))
   return (
     <section className={styles.notifications}>
       <Link to="/mypage">← 마이페이지</Link>
@@ -37,10 +32,10 @@ export function NotificationsPage() {
           <button type="button" aria-pressed={!unreadOnly} onClick={() => showPage(0, false)}>전체</button>
           <button type="button" aria-pressed={unreadOnly} onClick={() => showPage(0, true)}>읽지 않음</button>
         </div>
-        <button type="button" disabled={readAll.isPending} onClick={() => readAll.mutate()}>
+        <button type="button" disabled={readAll.isPending} onClick={() => readAll.mutate(captureAccountScope(client))}>
           {readAll.isPending ? '처리 중…' : '모두 읽음'}
         </button>
-        {readAll.isError && <span role="alert">읽음 처리하지 못했어요. 목록을 다시 확인해 주세요.</span>}
+        {readAll.isError && readAll.variables?.() && <span role="alert">읽음 처리 결과를 확인하지 못했어요. 목록을 다시 확인해 주세요.</span>}
       </div>
       <NotificationList page={page} unreadOnly={unreadOnly} onPageChange={(next) => showPage(next)} />
     </section>
@@ -104,7 +99,7 @@ function NotificationList({
 export function NotificationReadError({ target }: { target: string | null }) {
   return (
     <p role="alert" className={styles.error}>
-      읽음 처리하지 못했어요. 다시 눌러 주세요.
+      읽음 처리 결과를 확인하지 못했어요. 목록을 다시 확인하거나 다시 눌러 주세요.
       {target && <> <Link to={target}>읽음 처리 없이 주문 보기</Link></>}
     </p>
   )
@@ -112,17 +107,10 @@ export function NotificationReadError({ target }: { target: string | null }) {
 
 function NotificationRow({ item }: { item: NotificationItem }) {
   const client = useQueryClient()
-  const navigate = useNavigate()
   const read = useMutation(notificationReadOptions(client, item.id))
   const target = notificationTarget(item)
   const markRead = () => {
-    if (!item.read && !read.isPending) read.mutate()
-  }
-  // 같은 탭 이동은 읽음 처리 성공 후에 한다. 실패하면 이 화면에 남아 안내를 보여 준다.
-  const openTarget = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (item.read || !target || !waitsForReadBeforeNavigation(event)) return markRead()
-    event.preventDefault()
-    if (!read.isPending) read.mutate(undefined, { onSuccess: () => navigate(target) })
+    if (!item.read && !read.isPending) read.mutate(captureAccountScope(client))
   }
   const body = (
     <>
@@ -135,13 +123,13 @@ function NotificationRow({ item }: { item: NotificationItem }) {
     <li className={item.read ? styles.read : styles.unread}>
       {!item.read && <span className={styles.srOnly}>읽지 않음</span>}
       {target ? (
-        <Link to={target} onClick={openTarget} aria-busy={read.isPending}>{body}</Link>
+        <Link to={target} onClick={markRead} onAuxClick={(event) => { if (event.button === 1) markRead() }} aria-busy={read.isPending}>{body}</Link>
       ) : (
         <button type="button" className={styles.plain} onClick={markRead} disabled={item.read || read.isPending}>
           {body}
         </button>
       )}
-      {read.isError && <NotificationReadError target={target} />}
+      {read.isError && read.variables?.() && <NotificationReadError target={target} />}
     </li>
   )
 }

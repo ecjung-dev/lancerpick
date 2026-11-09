@@ -1,7 +1,5 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query'
-import type { PageResponse } from '../../shared/api/types'
-import { getNotifications, getUnreadNotificationCount, markNotificationRead } from './api.ts'
-import type { NotificationItem } from './types.ts'
+import { getNotifications, getUnreadNotificationCount, markAllNotificationsRead, markNotificationRead } from './api.ts'
 
 // 계정 전환 시 shared/api/accountCache.ts가 auth 외 모든 조회를 지우므로 별도 정리 목록이 필요 없다.
 export const notificationKeys = {
@@ -32,23 +30,15 @@ export function useUnreadNotificationCount() {
   })
 }
 
-/**
- * 알림 하나의 읽음 요청 옵션. 성공하면 목록을 다시 불러오지 않고 화면의 그 항목만 읽음으로 바꾸며,
- * 읽지 않은 수만 다시 조회한다. 읽지 않음 보기에서도 클릭한 행이 응답 직후 사라지지 않아,
- * mutate()에 넘긴 이동 콜백(행이 화면에 있을 때만 실행)이 그대로 동작한다. 목록은 필터·페이지 이동이나
- * 다시 들어올 때 새로 조회된다. 실패하면 결과가 불명확하므로 알림 조회 전체를 다시 불러온다.
- * 변경 요청은 자동 재시도하지 않는다.
- */
-export function notificationReadOptions(client: QueryClient, id: string) {
+/** 이동과 독립적으로 읽음 처리한다. 클릭 당시 계정만 전송·후속 재조회를 허용한다. */
+export function notificationReadOptions(client: QueryClient, id?: string) {
   return {
     retry: false as const,
-    mutationFn: () => markNotificationRead(id),
-    onSuccess: () => {
-      client.setQueriesData<PageResponse<NotificationItem>>({ queryKey: notificationKeys.lists }, (page) =>
-        page && { ...page, items: page.items.map((item) => (item.id === id ? { ...item, read: true } : item)) },
-      )
+    mutationFn: (isCurrentAccount: () => boolean) => id === undefined
+      ? markAllNotificationsRead(isCurrentAccount)
+      : markNotificationRead(id, isCurrentAccount),
+    onSettled: (_data: unknown, _error: Error | null, isCurrentAccount: () => boolean) => {
+      if (isCurrentAccount()) return client.invalidateQueries({ queryKey: notificationKeys.all })
     },
-    onSettled: (_data: unknown, error: Error | null) =>
-      client.invalidateQueries({ queryKey: error ? notificationKeys.all : notificationKeys.unread }),
   }
 }

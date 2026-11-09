@@ -3,17 +3,19 @@ import { after, test } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router'
-import { MutationObserver, QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query'
+import { MutationObserver, QueryClient, QueryClientProvider, QueryObserver, onlineManager } from '@tanstack/react-query'
 import { createServer } from 'vite'
-import { notificationMessage, notificationTarget, unreadBadge, waitsForReadBeforeNavigation } from '../src/features/notifications/messages.ts'
+import { notificationMessage, notificationTarget, unreadBadge } from '../src/features/notifications/messages.ts'
 
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-notifications',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
 const { NotificationsPage, NotificationReadError } = await server.ssrLoadModule('/src/features/notifications/pages/NotificationsPage.tsx')
 const { NotificationNavLink } = await server.ssrLoadModule('/src/features/notifications/components/NotificationNavLink.tsx')
-const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
+const { ApiError, clearCsrfToken } = await server.ssrLoadModule('/src/shared/api/client.ts')
 const { getNotifications } = await server.ssrLoadModule('/src/features/notifications/api.ts')
 const { notificationReadOptions } = await server.ssrLoadModule('/src/features/notifications/queries.ts')
+const { captureAccountScope, resetAccountState } = await server.ssrLoadModule('/src/features/auth/session.ts')
+
 after(async () => { await server.close() })
 
 test('every order event type has its own Korean message and unknown types fall back', () => {
@@ -135,12 +137,14 @@ test('list request adds unreadOnly only for the unread filter', async () => {
   assert.deepEqual(urls, ['/api/notifications?page=2&size=20', '/api/notifications?page=0&size=20&unreadOnly=true'])
 })
 
-// 읽지 않음 보기에서 알림을 눌러 읽음 처리할 때, 목록이 다시 조회돼 행이 사라지면 행의 이동 콜백이 생략된다.
+// SPA 이동으로 행 observer가 없어져도 목록·배지 재조회가 완료되는지 검사한다. 실제 링크 클릭 검사는 아니다.
 async function readFromUnreadView(status) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const original = globalThis.fetch
+  clearCsrfToken()
   const calls = { list: 0, count: 0 }
   globalThis.fetch = async (url, options) => {
+    if (url === '/api/auth/csrf') return new Response(JSON.stringify({ token: 'test', headerName: 'X-CSRF-TOKEN' }))
     if (options?.method === 'POST') return new Response(status === 204 ? null : JSON.stringify({ code: 'INTERNAL_ERROR', message: '오류', fieldErrors: [] }),
       { status, headers: status === 204 ? {} : { 'Content-Type': 'application/json' } })
     calls.count++
@@ -156,46 +160,35 @@ async function readFromUnreadView(status) {
   const stopCounter = counter.subscribe(() => {})
   try {
     await client.getQueryCache().find({ queryKey: key }).promise
-    // 행: 화면에 남아 있는 동안만 호출별 이동 콜백이 실행된다(기존 동작).
+    // 완료 콜백에 이동을 넣지 않고 읽음 처리와 후속 재조회만 검사한다.
     const row = new MutationObserver(client, notificationReadOptions(client, '108'))
     const stopRow = row.subscribe(() => {})
-    const moves = []
-    await row.mutate(undefined, { onSuccess: () => moves.push('/orders/30') }).catch(() => {})
-    stopRow()
-    return { moves, calls, items: client.getQueryData(key).items }
+    const pending = row.mutate(captureAccountScope(client)).catch(() => {})
+    stopRow() // 주문으로 즉시 이동해 행 observer가 사라져도 옵션 onSettled는 실행된다.
+    await pending
+    return { calls, page: client.getQueryData(key) }
   } finally {
     stopList(); stopCounter(); globalThis.fetch = original; client.clear()
   }
 }
 
-test('reading from the unread view keeps the row, marks it read and still opens the order', async () => {
-  const done = await readFromUnreadView(204)
-  assert.deepEqual(done.moves, ['/orders/30'])
-  assert.equal(done.calls.list, 1)
-  assert.ok(done.calls.count >= 2)
-  assert.deepEqual(done.items.map((item) => [item.id, item.read]), [['108', true]])
-
-  // 실패하면 이동하지 않고, 결과가 불명확하므로 목록도 다시 조회한다.
-  const failed = await readFromUnreadView(500)
-  assert.deepEqual(failed.moves, [])
-  assert.equal(failed.calls.list, 2)
-})
-
-test('only plain left clicks wait for the read request before navigating', () => {
-  const plain = { button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false }
-  assert.equal(waitsForReadBeforeNavigation(plain), true)
-  assert.equal(waitsForReadBeforeNavigation({ ...plain, button: 1 }), false)
-  for (const key of ['metaKey', 'ctrlKey', 'shiftKey', 'altKey'])
-    assert.equal(waitsForReadBeforeNavigation({ ...plain, [key]: true }), false)
+test('read completion refreshes list, totals and badge even after the row unmounts', async () => {
+  for (const status of [204, 500]) {
+    const done = await readFromUnreadView(status)
+    assert.equal(done.calls.list, 2)
+    assert.ok(done.calls.count >= 2)
+    assert.deepEqual(done.page.items, [])
+    assert.equal(done.page.totalElements, 0)
+  }
 })
 
 test('read failure notice is an alert and offers the order without marking it read', () => {
   const withOrder = render(createElement(NotificationReadError, { target: '/orders/7' }), () => {})
   assert.match(withOrder, /role="alert"/)
-  assert.match(withOrder, /읽음 처리하지 못했어요/)
+  assert.match(withOrder, /읽음 처리 결과를 확인하지 못했어요/)
   assert.match(withOrder, /href="\/orders\/7"/)
   const withoutOrder = render(createElement(NotificationReadError, { target: null }), () => {})
-  assert.match(withoutOrder, /읽음 처리하지 못했어요/)
+  assert.match(withoutOrder, /읽음 처리 결과를 확인하지 못했어요/)
   assert.doesNotMatch(withoutOrder, /href=/)
 })
 
@@ -205,4 +198,97 @@ test('header link shows the unread count only when there is one', () => {
   assert.match(withCount, /\(99\+\)/)
   const none = render(createElement(NotificationNavLink), (client) => client.setQueryData(['notifications', 'unread'], { count: 0 }), '/')
   assert.doesNotMatch(none, /\(/)
+})
+
+function deferred() {
+  let resolve
+  const promise = new Promise((done) => { resolve = done })
+  return { promise, resolve }
+}
+
+test('click scope blocks delayed individual and read-all requests after an account switch', async () => {
+  const original = globalThis.fetch
+  for (const id of ['108', undefined]) {
+    const client = new QueryClient()
+    const csrfStarted = deferred()
+    const csrfResult = deferred()
+    let writes = 0
+    clearCsrfToken()
+    globalThis.fetch = async (url) => {
+      if (url === '/api/auth/csrf') {
+        csrfStarted.resolve()
+        await csrfResult.promise
+        return new Response(JSON.stringify({ token: 'csrf', headerName: 'X-CSRF-TOKEN' }))
+      }
+      writes++
+      return new Response(null, { status: 204 })
+    }
+    try {
+      const row = new MutationObserver(client, notificationReadOptions(client, id))
+      const pending = row.mutate(captureAccountScope(client))
+      const rejection = assert.rejects(pending, (error) => error.name === 'AbortError')
+      await csrfStarted.promise
+      await resetAccountState(client, null)
+      csrfResult.resolve()
+      await rejection
+      assert.equal(writes, 0)
+    } finally { client.clear(); globalThis.fetch = original; clearCsrfToken() }
+  }
+})
+
+test('scope captured at click cannot be replaced by a later account before mutation execution', async () => {
+  const original = globalThis.fetch
+  const client = new QueryClient()
+  try {
+    const scope = captureAccountScope(client)
+    await resetAccountState(client, null)
+    globalThis.fetch = async () => { assert.fail('stale click must not fetch') }
+    const row = new MutationObserver(client, notificationReadOptions(client, '108'))
+    await assert.rejects(row.mutate(scope), (error) => error.name === 'AbortError')
+  } finally { client.clear(); globalThis.fetch = original; clearCsrfToken() }
+})
+
+test('late read success or failure does not invalidate the next account notifications', async () => {
+  const original = globalThis.fetch
+  for (const status of [204, 401]) {
+    const client = new QueryClient()
+    const sent = deferred()
+    const response = deferred()
+    clearCsrfToken()
+    globalThis.fetch = async (url) => {
+      if (url === '/api/auth/csrf') return new Response(JSON.stringify({ token: 'csrf', headerName: 'X-CSRF-TOKEN' }))
+      sent.resolve()
+      await response.promise
+      return new Response(status === 204 ? null : '{}', { status })
+    }
+    try {
+      const row = new MutationObserver(client, notificationReadOptions(client, '108'))
+      const pending = row.mutate(captureAccountScope(client)).catch(() => {})
+      await sent.promise
+      await resetAccountState(client, null)
+      client.setQueryData(['notifications', 'unread'], { count: 7 })
+      response.resolve()
+      await pending
+      assert.equal(client.getQueryState(['notifications', 'unread']).isInvalidated, false)
+      assert.deepEqual(client.getQueryData(['notifications', 'unread']), { count: 7 })
+    } finally { client.clear(); globalThis.fetch = original; clearCsrfToken() }
+  }
+})
+
+test('offline read-all resumed after account change never starts a request', async () => {
+  const original = globalThis.fetch
+  const client = new QueryClient()
+  onlineManager.setOnline(false)
+  try {
+    globalThis.fetch = async () => { assert.fail('old offline intent must not fetch') }
+    const row = new MutationObserver(client, notificationReadOptions(client))
+    const pending = row.mutate(captureAccountScope(client))
+    const rejected = assert.rejects(pending, (error) => error.name === 'AbortError')
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.equal(row.getCurrentResult().isPaused, true)
+    await resetAccountState(client, null)
+    onlineManager.setOnline(true)
+    await client.resumePausedMutations()
+    await rejected
+  } finally { onlineManager.setOnline(true); client.clear(); globalThis.fetch = original; clearCsrfToken() }
 })
