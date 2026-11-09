@@ -6,5 +6,6 @@ export function AdminNav() {
   return <nav className={styles.tabs} aria-label="관리자 메뉴">
     <NavLink to="/admin/products">상품 운영</NavLink>
     <NavLink to="/admin/inquiries?status=OPEN">운영 문의</NavLink>
+    <NavLink to="/admin/review-timers">자동 확정 타이머</NavLink>
   </nav>
 }

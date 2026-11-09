@@ -57,6 +57,11 @@ class DefaultCatalogApiTests extends CommonApiTests {
     com.example.lancerpick.admin.service.AdminInquiryService adminInquiryService;
     @MockitoBean
     com.example.lancerpick.admin.repository.AdminInquiryQueries adminInquiryQueries;
+    // 관리자 타이머 해제(K5) 목록도 DB를 사용하므로 대체한다. 실제 처리는 CancellationReviewInquiryIntegrationTests(MySQL).
+    @MockitoBean
+    com.example.lancerpick.admin.service.AdminReviewTimerService adminReviewTimerService;
+    @MockitoBean
+    com.example.lancerpick.admin.repository.AdminReviewTimerQueries adminReviewTimerQueries;
     @MockitoBean
     com.example.lancerpick.order.service.ReviewTimerService reviewTimerService;
     @MockitoBean

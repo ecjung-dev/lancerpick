@@ -9,6 +9,7 @@ import { getMyInquiries, requestCancellationReview } from '../src/features/inqui
 import { canAskForReview, validateSubject } from '../src/features/inquiries/validation.ts'
 import { closeInquiry, decideInquiry, getAdminInquiries, getAdminInquiry } from '../src/features/admin/inquiryApi.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
+import { getActiveReviewTimers, stopReviewTimer } from '../src/features/admin/timerApi.ts'
 
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-inquiry',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
@@ -16,6 +17,7 @@ const { AdminInquiryListPage } = await server.ssrLoadModule('/src/features/admin
 const { AdminInquiryDetailPage } = await server.ssrLoadModule('/src/features/admin/pages/AdminInquiryDetailPage.tsx')
 const { CancellationReviewRequest } = await server.ssrLoadModule('/src/features/inquiries/components/CancellationReviewRequest.tsx')
 const { readInquiryFilter } = await server.ssrLoadModule('/src/features/admin/inquiryQueries.ts')
+const { AdminReviewTimerPage } = await server.ssrLoadModule('/src/features/admin/pages/AdminReviewTimerPage.tsx')
 after(async () => { await server.close() })
 
 const original = globalThis.fetch
@@ -206,5 +208,42 @@ test('admin list restores filters from the URL and links to the detail', () => {
     assert.match(html, new RegExp(`href="/admin/inquiries/${inquiryId}"`))
     assert.match(html, /주문 #9007199254740993/)
     assert.match(html, /총 1건/)
+  } finally { client.clear() }
+})
+
+// ---------- K5 타이머 해제 ----------
+
+test('timer stop is a single POST with CSRF and the reason only; invalid order IDs never reach the network', async () => {
+  const sent = []
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/auth/csrf') return csrf()
+    sent.push({ url, method: options?.method, body: options?.body, token: options?.headers?.get?.('X-CSRF-TOKEN') })
+    if (url.startsWith('/api/admin/review-timers')) return json({ items: [], page: 1, size: 20, totalElements: 0, totalPages: 0 })
+    return json({ code: 'AUTO_CONFIRM_DUE', message: '만료 우선', fieldErrors: [], traceId: 't' }, 409)
+  }
+  await getActiveReviewTimers(1)
+  await assert.rejects(stopReviewTimer(orderId, '운영 확인'), (e) => e.code === 'AUTO_CONFIRM_DUE')
+  for (const bad of ['', '0', 'abc', '9223372036854775808']) await assert.rejects(stopReviewTimer(bad, '사유'))
+  assert.deepEqual(sent, [
+    { url: '/api/admin/review-timers?page=1&size=20', method: 'GET', body: undefined, token: null },
+    { url: `/api/admin/orders/${orderId}/review-timer/stop`, method: 'POST', body: JSON.stringify({ reason: '운영 확인' }), token: 'csrf' },
+  ])
+})
+
+test('timer page lists active timers with parties and expiry, and opens no stop form until chosen', () => {
+  const client = newClient()
+  try {
+    client.setQueryData(['admin', 'review-timers', 0], page([{
+      timerId: '3', orderId, cycleNo: 2, startedAt: '2026-11-08T00:00:00Z', expiresAt: '2026-11-15T00:00:00Z',
+      buyer: { id: '5', displayName: '<i>구매자</i>' }, seller: { id: '6', displayName: null },
+    }]))
+    const html = render('/admin/review-timers', '/admin/review-timers', createElement(AdminReviewTimerPage), client)
+    assert.match(html, /진행 중 1건/)
+    assert.match(html, /주문 #9007199254740993/)
+    assert.match(html, /&lt;i&gt;구매자&lt;\/i&gt;/)
+    assert.match(html, /판매자 회원 #6/)
+    assert.match(html, /2회차/)
+    assert.match(html, />해제하기</)
+    assert.doesNotMatch(html, /<textarea/, '해제할 주문을 고르기 전에는 사유 입력 칸을 보이지 않는다')
   } finally { client.clear() }
 })

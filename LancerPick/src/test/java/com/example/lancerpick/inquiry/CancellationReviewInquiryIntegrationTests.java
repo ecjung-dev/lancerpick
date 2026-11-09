@@ -94,6 +94,7 @@ class CancellationReviewInquiryIntegrationTests {
   @Autowired OrderDeliveryService deliveries;
   @Autowired OrderCancellationRequestService requests;
   @Autowired InquiryService inquiryService;
+  @Autowired com.example.lancerpick.order.service.ReviewTimerService reviewTimers;
   @Autowired JdbcTemplate jdbc;
   @Autowired PlatformTransactionManager manager;
   @Autowired MockMvc mvc;
@@ -245,6 +246,21 @@ class CancellationReviewInquiryIntegrationTests {
   long submitAsBuyer() {
     return Long.parseLong(
         inquiryService.requestCancellationReview(buyer, id, requestId, "판매자 무응답 검토 요청").inquiry().id());
+  }
+
+  /**
+   * K5 검사용 활성 타이머: 대기 취소 요청을 구매자가 철회하고(새 기산점), 납품·철회 시각을 49시간 전으로 옮긴 뒤 판매자가 시작한다
+   * (ReviewTimerIntegrationTests와 같은 방식, DB CHECK의 시각 관계는 유지된다).
+   */
+  void startTimer() {
+    requests.resolve(
+        buyer, str(), Long.toString(requestId), OrderCancellationRequestService.Resolution.WITHDRAWN, null);
+    jdbc.update("UPDATE deliveries SET submitted_at=submitted_at - INTERVAL 49 HOUR WHERE order_id=?", id);
+    jdbc.update(
+        "UPDATE cancellation_requests SET requested_at=requested_at - INTERVAL 49 HOUR,"
+            + " resolved_at=resolved_at - INTERVAL 49 HOUR WHERE order_id=? AND resolved_at IS NOT NULL",
+        id);
+    assertThat(reviewTimers.start(seller, id).status()).isEqualTo("ACTIVE");
   }
 
   // ---------- tests ----------
@@ -534,6 +550,92 @@ class CancellationReviewInquiryIntegrationTests {
     assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?", String.class, id)).isEqualTo(orderStatus);
     assertThat(jdbc.queryForObject("SELECT resolved_at FROM support_inquiries WHERE id=?", LocalDateTime.class, inquiryId))
         .isNotNull();
+  }
+
+  @Test
+  void adminSeesActiveTimersAndStopsOneThroughTheApi() throws Exception {
+    startTimer();
+    String mine = "$.items[?(@.orderId=='" + id + "')]";
+    mvc.perform(get("/api/admin/review-timers").param("size", "100").with(authentication(auth(admin, "ADMIN"))))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "no-store"))
+        .andExpect(jsonPath(mine + ".buyer.id").value(Long.toString(buyer)))
+        .andExpect(jsonPath(mine + ".seller.id").value(Long.toString(seller)))
+        .andExpect(jsonPath(mine + ".cycleNo").value(1));
+    // 세션은 ADMIN이지만 DB 역할이 USER(강등)면 조회도 해제도 403.
+    mvc.perform(get("/api/admin/review-timers").with(authentication(auth(other, "ADMIN"))))
+        .andExpect(status().isForbidden());
+    String stop = "/api/admin/orders/" + id + "/review-timer/stop";
+    mvc.perform(
+            post(stop)
+                .with(authentication(auth(other, "ADMIN")))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json("reason", "해제")))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    // 일반 회원 세션은 Security가 막는다. CSRF 없음도 403.
+    mvc.perform(
+            post(stop)
+                .with(authentication(auth(buyer, "USER")))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json("reason", "해제")))
+        .andExpect(status().isForbidden());
+    mvc.perform(
+            post(stop)
+                .with(authentication(auth(admin, "ADMIN")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json("reason", "해제")))
+        .andExpect(status().isForbidden());
+    mvc.perform(
+            post(stop)
+                .with(authentication(auth(admin, "ADMIN")))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json("reason", "   ")))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+    assertThat(jdbc.queryForObject(
+            "SELECT status FROM order_response_timers WHERE order_id=? ORDER BY id DESC LIMIT 1", String.class, id))
+        .isEqualTo("ACTIVE");
+
+    mvc.perform(
+            post(stop)
+                .with(authentication(auth(admin, "ADMIN")))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json("reason", "운영 문의 확인 중")))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "no-store"))
+        .andExpect(jsonPath("$.status").value("ADMIN_STOPPED"));
+    var timer =
+        jdbc.queryForMap(
+            "SELECT status,end_reason,ended_by,admin_stop_reason FROM order_response_timers WHERE order_id=?"
+                + " ORDER BY id DESC LIMIT 1",
+            id);
+    assertThat(timer.get("status")).isEqualTo("CANCELLED");
+    assertThat(timer.get("end_reason")).isEqualTo("ADMIN_STOP");
+    assertThat(timer.get("ended_by")).isEqualTo(admin);
+    assertThat(timer.get("admin_stop_reason")).isEqualTo("운영 문의 확인 중");
+    mvc.perform(get("/api/admin/review-timers").param("size", "100").with(authentication(auth(admin, "ADMIN"))))
+        .andExpect(jsonPath(mine).isEmpty());
+    // 이미 해제된 주문·없는 주문
+    mvc.perform(
+            post(stop)
+                .with(authentication(auth(admin, "ADMIN")))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json("reason", "다시")))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("TIMER_NOT_ACTIVE"));
+    mvc.perform(
+            post("/api/admin/orders/999999999/review-timer/stop")
+                .with(authentication(auth(admin, "ADMIN")))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json("reason", "해제")))
+        .andExpect(status().isNotFound());
   }
 
   @Test

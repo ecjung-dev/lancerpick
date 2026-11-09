@@ -87,7 +87,7 @@ J5 실제 제공자 확인 후속(2026-11-09): [실제 토스 테스트 조회 �
 | K2 | 인증 버전 기반 세션 무효화 계약 제공 | K1 | 완료(#84) | HTTP 세션 폐기 필터·`AuthVersionLookup` 계약. 소켓 종료(C2)는 이 계약 사용. 브라우저 2개 동시 확인은 자동 테스트로 대체 |
 | K3 | 관리자 운영 현황·충전/금액 처리 조회 | E4, J4 | 내부 금융 조회 main 반영(#117) | 황준범이 [금융 조회 서비스·DTO](admin-finance-support.md) 제공. 전체 백엔드 894건 통과(신규 19 포함). 김창재의 관리자 API·화면 연결은 남음 |
 | K4 | 구매자 운영 문의, 판매자 무응답 취소의 관리자 승인/거절 | E6 | 서비스·문의 엔티티 main 반영(#121, 정은찬). API·화면 연결 구현(`feature/admin-cancellation-inquiries`, 김창재) | 문의 엔티티 `SupportInquiry`·저장소와 주문 쪽 승인/거절 서비스를 정은찬이 먼저 구현(2026-11-06 조장 결정). 김창재가 구매자 검토 요청·내 문의·관리자 문의 목록/상세·승인/거절·처리 불가 문의 종료 API·화면을 연결([연결 기록](admin-cancellation-review.md#api화면-연결--2026-11-09-김창재-featureadmin-cancellation-inquiries)). 문의 메시지·담당 지정·일반 문의 접수와 B4 실서버·브라우저 확인은 남음 |
-| K5 | 관리자 타이머 해제 화면·API | E7 | 시작 전 | 서비스 `ReviewTimerService.adminStop(adminId, orderId, reason)` 사용([자동 구매 확정](auto-confirm-timer.md)) |
+| K5 | 관리자 타이머 해제 화면·API | E7 | API·화면 연결 구현(`feature/admin-cancellation-inquiries`, 김창재) | 서비스 `ReviewTimerService.adminStop(adminId, orderId, reason)` 사용([자동 구매 확정](auto-confirm-timer.md)). 진행 중 타이머 목록·해제 API([API 9-2절](api-spec.md#9-2-관리자-자동-구매-확정-타이머-해제-김창재))와 `/admin/review-timers` 화면. B4 실서버·브라우저 확인 남음 |
 | K6 | 실패 작업 조회·재처리(알림 `FAILED`·PDF·충전), 관리자 작업 이력 | E1, J3 | 충전/Batch 조회·조건 main 반영(#117) | [충전·Batch 후보 판단](admin-finance-support.md) 제공. 실제 관리자 실행·사유·감사 이력·API/화면은 미연결. 알림/PDF 재처리는 각 담당 서비스와 별도 연결 |
 
 #### K4·K5 연결 안내 (정은찬 → 김창재, 2026-11-06)
