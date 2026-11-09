@@ -151,7 +151,7 @@ WHERE (
 | 2026-11-06 | `test/v3-activation-gate` 작업 트리 | 로컬 `lancerpick_test` 백엔드 `clean build` 835건 통과(실패·오류·건너뜀 0). 프런트 변경 없음 | API 실서버·일부 브라우저([V3 알림](v3-notices.md#실서버브라우저-확인--2026-11-06-main-9f9aa8f)), 화면 버튼 전체 거래 아직 | 실서버 3건 0행, 자동 테스트 정리 단계 판정 | 보류(K4 미연결) |
 | 2026-11-06 | main `f82c49d` + `test/v3-gate-browser-check` 작업 트리(main 반영 #116) | 백엔드 재실행 안 함(운영 코드 변경 없음). 프런트 typecheck·lint·`test:api` 219건·build 통과 | [화면 버튼 전체 거래](#7-화면-버튼-전체-거래-확인--2026-11-06): G1(A1·B2)·G5 확인, A2는 앞선 API 실서버 기록 | 주문 18~22 전체 0행 | 보류(K4 미연결, G2 타이머 진행 중 패널·G4 미확인) |
 | 2026-11-06 | main `7329be1` + `test/v3-gate-remaining-check` 작업 트리(main 반영 #120) | 재실행 안 함(운영 코드 변경 없음) | [남은 화면 확인](#8-남은-화면-확인--2026-11-06): G2 타이머 시작 가능→진행 중 패널(판매자·구매자), G4 320px(주문 17·21·22·23) | 주문 18~23 전체 0행 | 보류(K4 미연결, B4·C8) |
-| 2026-11-09 | main `f3c56be`(#140) | 로컬 `lancerpick_test` 백엔드 `clean build` 1002건 통과(실패·오류·건너뜀 0). 프런트 typecheck·lint·`test:api` 272건·build 통과 | 같은 커밋에서 [B4·F4](#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09)(주문 34~36)와 [G1 전체 화면 거래·스케줄러](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09)(주문 37~39: G1 A1·A2·B2, G2 자동 확정·사전 안내, G3, G5·E4, E1, G4 320px). 이전 커밋 결과는 합산하지 않음 | 결제된 V3 주문 12건 전체 0행 | 필수(●) 항목 충족, 열린 결함 없음. 정은찬·황준범 공동 검토(5절 2단계) 대기. 권장 E5(계정 전환 캐시 브라우저)는 미확인 |
+| 2026-11-09 | main `f3c56be`(#140) | 로컬 `lancerpick_test` 백엔드 `clean build` 1002건 통과(실패·오류·건너뜀 0). 프런트 typecheck·lint·`test:api` 272건·build 통과 | 같은 커밋에서 [B4·F4](#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09)(주문 34~36)와 [G1 전체 화면 거래·스케줄러](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09)(주문 37~39: G1 A1·A2·B2, G2 자동 확정·사전 안내, G3, G5·E4, E1, G4 320px). 이전 커밋 결과는 합산하지 않음 | 결제된 V3 주문 12건 전체 0행 | 필수(●) 항목 전체 같은 커밋 근거 확인([11절 대조표](#11-필수-항목-같은-커밋-근거-대조--2026-11-09)), 열린 결함 없음. 정은찬·황준범 공동 검토(5절 2단계) 대기. 권장 E5(계정 전환 캐시 브라우저)는 미확인 |
 
 ## 7. 화면 버튼 전체 거래 확인 — 2026-11-06
 
@@ -214,9 +214,43 @@ WHERE (
 - **G1 B2 결제 후 합의 취소(주문 38)**: 같은 계약 절차(특약 없음)·결제 → 구매자 "취소 요청 제출" → 판매자 환불 동의 체크(체크 전 승인 비활성) → "승인 및 환불". 대금 "구매자 전액 반환 완료 · 반환 50,000원 · 수수료 0원".
 - **G2·A3·A4 실서버 스케줄러(주문 39)**: 같은 화면 절차로 결제·1차 납품. 개인 DB에서 이 주문의 납품 시각만 49시간 앞당긴 뒤 판매자 "7일 자동 구매 확정 타이머 시작"(양측 진행 중 패널). 이어 타이머의 `basis_at`·`eligible_at`·`started_at`·`expires_at`과 납품 시각을 함께 145시간 앞당겨(만료 23시간 전, `ck_timer_window` 유지) 스케줄러가 구매자에게만 `ORDER_AUTO_CONFIRM_SOON` 1건 생성("24시간 안에 구매가 자동으로 확정됩니다…"). 다시 24시간 앞당겨 만료가 지나자 다음 주기에 타이머 `EXPIRED`/`TIMEOUT`, 주문 구매 확정, closure `AUTO_CONFIRMED` 수수료 5,000원, `SELLER_PAYOUT` 45,000원, 양측 `ORDER_AUTO_CONFIRMED`("검수 응답 기한이 지나 구매가 자동으로 확정되었습니다…"). 양측 패널 "자동 구매 확정 완료", 이력 "자동 구매 확정 · 시스템". 구매자 "후기 등록"이 동작해 후기 1건 저장(폼을 채우지 않고 눌러 기본 별점 5점·내용 없음으로 저장됨).
 - **G3**: 세 주문 이력에 "납기 통지 · 시스템", 알림 문구(보관·지급·반환·자동 확정·사전 안내·수정 기한) 확인.
-- **G5·E4 PDF**: 세 주문 모두 양측이 화면에서 받은 PDF의 SHA-256이 서로 같고 `order_contracts.file_hash`와 일치, 양측 `contract_signatures`의 서명 시점 파일·본문 해시도 현재 계약과 일치(6/6). PDFBox 텍스트 추출로 주문 37 PDF 3쪽, `CONTRACT_V3`·총액 50000·"G1 특약"·수수료·구매자·판매자 포함 확인(글꼴 렌더링 눈 확인은 안 함).
+- **G5·E4 PDF**: 세 주문 모두 양측이 화면에서 받은 PDF의 SHA-256이 서로 같고 `order_contracts.file_hash`와 일치, 양측 `contract_signatures`의 서명 시점 파일·본문 해시도 현재 계약과 일치(6/6). PDFBox 텍스트 추출로 주문 37 PDF 3쪽, `CONTRACT_V3`·총액 50000·"G1 특약"·수수료·구매자·판매자 포함 확인. 표시 확인은 11절.
 - **지갑·판매 수익 화면**: 구매자 잔액 650,000 → 550,000원(결제 3건·#38 결제 환불), 판매자 1,225,000 → 1,315,000원("판매대금 지급" #37·#39 각 45,000원), 판매 수익 화면에 #37·#39 결제액·수수료·수익.
 - **E1 권한**: 제3자(계정 12, USER) 주문 화면 "주문을 찾을 수 없습니다.", `GET /api/orders/37`·`/contract`·`/contract/file`·`/funds`·`/api/orders/39/review-timer` 모두 404.
 - **DB·화면 공통**: 4절 불변식 0행(결제된 V3 주문 12건 전체), 아웃박스 160건 모두 `COMPLETED`. 주문 37·38·39·지갑·판매 수익 화면 1280px·320px 가로 넘침 없음, 콘솔 오류는 제3자 화면의 예상 404만.
 
 확인하지 않은 것: 권장(○) E5 계정 전환 캐시 정리 브라우저 확인, 실제 48시간·7일 경과(DB 시각 조정으로 대신함). 개인 DB 잔여: 주문 37·39 구매 확정(39 후기 1건), 38 취소 반환.
+
+## 11. 필수 항목 같은 커밋 근거 대조 — 2026-11-09
+
+판정 근거가 리뷰 지적마다 하나씩 보완되지 않도록, 2절의 필수(●) 항목 전체를 후보 커밋 main `f3c56be` 근거와 한 번에 대조했다. 자동 테스트 근거는 같은 커밋의 백엔드 `clean build`(1002건, 2026-11-09 15:25~15:28 KST)에서 아래 클래스가 실제 실행된 결과(`build/test-results`)로 확인했다: `V3ActivationGateIntegrationTests` 7·`FullFundingTradeIntegrationTests` 14·`ReviewTimerIntegrationTests` 22·`ContractV3FulfillmentApiIntegrationTests` 4·`OrderContractIntegrationTests` 20·`ContractDocumentIntegrationTests` 16·`AdminCancellationReviewIntegrationTests` 9·`LegacyPaymentCompatibilityTests` 1·`OrderCreationIntegrationTests` 32건, 모두 실패·오류·건너뜀 0.
+
+**G5 PDF 표시**: 같은 커밋에서 화면으로 받은 주문 37·38·39 PDF를 PDFBox `PDFRenderer`(100 DPI)로 쪽마다 이미지로 만들어 눈으로 확인했다. 세 PDF 모두 3쪽, 글꼴은 NanumGothic 부분 집합 **내장**. 주문 37 전 쪽에서 제목·항목명·당사자 이름·서비스명 등 한글이 깨짐·`[U+코드]` 대체·잘림 없이 표시되고, 총금액 `50000`, 소요일 `3`, 구매자 요구사항, 표준 본문, `[특약]` "G1 특약: 결과물은 PNG와 원본 파일로 함께 제공합니다.", 정상 수수료 `1000`(10%), 대금 처리 "전액 보관", `CONTRACT_V3`가 보인다. 특약 없는 주문 38은 `[특약]` 제목 아래가 빈 줄로 표시된다(결함 아님, 관찰).
+
+| 항목 | 같은 커밋 근거 | 종류 |
+| --- | --- | --- |
+| A1 | `V3ActivationGateIntegrationTests` + 10절 주문 37 | 자동·브라우저 |
+| A2 | `ContractV3FulfillmentApiIntegrationTests`·`ReviewTimerIntegrationTests` + 10절 주문 37 | 자동·브라우저 |
+| A3 | `ReviewTimerIntegrationTests` + 10절 주문 39(실서버 스케줄러, DB 시각 조정) | 자동·실서버·브라우저 |
+| A5 | `ReviewTimerIntegrationTests` + 10절 이력 "납기 통지 · 시스템" | 자동·브라우저 |
+| B1 | `V3ActivationGateIntegrationTests`(수락 전·계약 대기·서명 후) | 자동 |
+| B2 | `FullFundingTradeIntegrationTests` + 10절 주문 38 | 자동·브라우저 |
+| B3 | `ReviewTimerIntegrationTests` + 9절 거절 후 기산점 표시(주문 35) | 자동·브라우저 |
+| B4 | `AdminCancellationReviewIntegrationTests` + 9절 주문 34·35 | 자동·실서버·브라우저 |
+| B5 | `FullFundingTradeIntegrationTests` | 자동 |
+| C1~C7 | `FullFundingTradeIntegrationTests`·`ReviewTimerIntegrationTests`·`V3ActivationGateIntegrationTests`(실제 커밋·동시 스레드) | 자동 |
+| D1~D5 | `FullFundingTradeIntegrationTests`·`ReviewTimerIntegrationTests`(실패 주입·롤백) | 자동 |
+| E1 | `FullFundingTradeIntegrationTests`·`ReviewTimerIntegrationTests` + 10절 제3자 화면·API 404 | 자동·브라우저 |
+| E2·E3 | `FullFundingTradeIntegrationTests`·`OrderContractIntegrationTests` | 자동 |
+| E4 | `ContractDocumentIntegrationTests` + 10절 다운로드 해시 6/6 | 자동·브라우저 |
+| F1 | `OrderCreationIntegrationTests`·`LegacyPaymentCompatibilityTests` | 자동 |
+| F2 | `ContractV3FulfillmentApiIntegrationTests`·`OrderContractIntegrationTests`·`OrderCreationIntegrationTests` | 자동 |
+| F3 | `OrderCreationIntegrationTests` | 자동 |
+| F4 | 9절 스위치 off 재시작 후 V3 확정(35)·신규 LEGACY_V1(36) | 실서버·브라우저 |
+| G1 | 10절 주문 37·38(지갑 원장·판매 수익 화면 포함) | 실서버·브라우저 |
+| G2 | 10절 주문 39(사전 안내·자동 확정·아웃박스 → 알림) | 실서버·브라우저 |
+| G3 | 10절 이력·알림 문구 | 브라우저 |
+| G5 | 10절 해시 + 이 절 렌더링 확인 | 브라우저·파일 |
+| 4절 불변식 | 결제된 V3 주문 12건 전체 0행 | 실서버 DB |
+
+권장(○) 항목: A4·G4 확인(10절), C8 자동(`AdminCancellationReviewIntegrationTests`), E5 계정 전환 캐시 브라우저는 미확인(프런트 `test:api` 자동 근거만). 실제 48시간·7일 경과는 DB 시각 조정으로 대신했다.
