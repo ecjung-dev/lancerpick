@@ -120,6 +120,11 @@ public class MemberService {
                 .orElseThrow(MemberService::authenticationRequired);
         if (!displayName.equals(member.getDisplayName())) {
             LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+            if (member.getDisplayNameChangedAt() != null
+                    && now.isBefore(MemberChangePolicy.sixMonthsAfter(member.getDisplayNameChangedAt()))) {
+                throw new BusinessException(HttpStatus.CONFLICT, "DISPLAY_NAME_CHANGE_NOT_ALLOWED",
+                        "표시 이름은 변경 후 6개월이 지나면 다시 바꿀 수 있습니다. 내 정보를 새로고침해 변경 가능일을 확인해 주세요.");
+            }
             member.changeDisplayName(displayName, now);   // 트랜잭션 종료 시 변경 감지로 UPDATE
         }
         return MemberResponse.from(member, hasSellerProfile(memberId));

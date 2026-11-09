@@ -3,12 +3,23 @@ package com.example.lancerpick.member.repository;
 import com.example.lancerpick.member.entity.Member;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
+import java.time.LocalDateTime;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
+
+    interface PasswordTiming {
+        LocalDateTime getPasswordChangedAt();
+        LocalDateTime getPasswordRecommendationBaseAt();
+    }
+
+    /** Notification integration: timing only, without credentials, email, or a write lock. */
+    @Query("select m.passwordChangedAt as passwordChangedAt,"
+            + " m.passwordRecommendationBaseAt as passwordRecommendationBaseAt from Member m where m.id=:memberId")
+    Optional<PasswordTiming> findPasswordTimingById(@Param("memberId") Long memberId);
 
     /** 회원가입 시 이메일 중복 확인 */
     boolean existsByEmail(String email);

@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
@@ -6,11 +12,13 @@ import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { Input } from '../../../shared/components/Input'
 import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { formatDateTime } from '../../../shared/lib/format'
 import { saveDisplayName } from '../profile'
 import { useCurrentMember } from '../queries'
 import { isUnclearResult, memberQueryKey, resetAccountState } from '../session'
 import type { Member } from '../types'
 import { DISPLAY_NAME_MAX, validateDisplayName } from '../validation'
+import { useDisplayNameCooldown } from '../useDisplayNameCooldown'
 import styles from './MyProfilePage.module.css'
 import { PasswordChangeForm } from './PasswordChangeForm'
 
@@ -22,7 +30,11 @@ export function MyProfilePage() {
   const [accountChanged, setAccountChanged] = useState(false)
 
   if (member.isPending) {
-    return <Layout><AsyncState title="로그인 상태를 확인하고 있어요" /></Layout>
+    return (
+      <Layout>
+        <AsyncState title="로그인 상태를 확인하고 있어요" />
+      </Layout>
+    )
   }
   if (member.isError && !member.data) {
     return (
@@ -30,19 +42,26 @@ export function MyProfilePage() {
         <AsyncState
           title="로그인 상태를 확인하지 못했어요"
           error={member.error}
-          onRetry={() => { void member.refetch() }}
+          onRetry={() => {
+            void member.refetch()
+          }}
         />
       </Layout>
     )
   }
   if (!member.data) {
-    return <Layout><LoginNotice /></Layout>
+    return (
+      <Layout>
+        <LoginNotice />
+      </Layout>
+    )
   }
   return (
     <Layout>
       {accountChanged && (
         <p className={styles.notice} role="alert">
-          로그인 계정이 바뀌어 저장하지 않았어요. 지금 로그인한 계정의 정보를 보여드려요.
+          로그인 계정이 바뀌어 저장하지 않았어요. 지금 로그인한 계정의 정보를
+          보여드려요.
         </p>
       )}
       {/* 계정이 바뀌면 key가 바뀌어 입력 상태도 새로 시작한다(이전 계정 입력이 남지 않게). */}
@@ -68,22 +87,40 @@ export function MyProfilePage() {
  * - 통신 오류·5xx: 서버가 저장했을 수 있으므로 실패로 단정하지 않고 내 정보를 다시 조회한다. 입력값은 남긴다.
  * - 응답이 화면을 떠난 뒤 도착하면 화면 상태는 바꾸지 않는다(캐시 갱신은 saveDisplayName이 한다).
  */
-function ProfileForm({ member, onAccountChanged }: { member: Member; onAccountChanged: () => void }) {
+function ProfileForm({
+  member,
+  onAccountChanged,
+}: {
+  member: Member
+  onAccountChanged: () => void
+}) {
   const client = useQueryClient()
   const active = useRef(true)
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+    }
+  }, [])
   const [name, setName] = useState(member.displayName)
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const [saved, setSaved] = useState(false)
+  const nameLocked = useDisplayNameCooldown(member.displayNameChangeAvailableAt)
 
   const save = useMutation({
     retry: false,
-    mutationFn: (displayName: string) => saveDisplayName(client, member.id, displayName),
-    onSettled: () => { sending.current = false },
+    mutationFn: (displayName: string) =>
+      saveDisplayName(client, member.id, displayName),
+    onSettled: () => {
+      sending.current = false
+    },
     onSuccess: (outcome) => {
-      if (outcome.kind === 'accountChanged') { onAccountChanged(); return }
+      if (outcome.kind === 'accountChanged') {
+        onAccountChanged()
+        return
+      }
       if (outcome.kind !== 'saved' || !active.current) return
       setName(outcome.member.displayName)
       setSaved(true)
@@ -95,16 +132,30 @@ function ProfileForm({ member, onAccountChanged }: { member: Member; onAccountCh
       }
       if (isUnclearResult(failure)) {
         await client.invalidateQueries({ queryKey: memberQueryKey })
-        if (active.current) setNotice('저장 결과를 확인하지 못해 내 정보를 다시 불러왔어요. 현재 표시 이름을 확인한 뒤 필요하면 다시 저장해 주세요.')
+        if (active.current)
+          setNotice(
+            '저장 결과를 확인하지 못해 내 정보를 다시 불러왔어요. 현재 표시 이름을 확인한 뒤 필요하면 다시 저장해 주세요.',
+          )
         return
       }
-      if (active.current) setError(failure instanceof ApiError ? failure.message : '저장하지 못했어요. 다시 시도해 주세요.')
+      if (
+        failure instanceof ApiError &&
+        failure.code === 'DISPLAY_NAME_CHANGE_NOT_ALLOWED'
+      ) {
+        await client.invalidateQueries({ queryKey: memberQueryKey })
+      }
+      if (active.current)
+        setError(
+          failure instanceof ApiError
+            ? failure.message
+            : '저장하지 못했어요. 다시 시도해 주세요.',
+        )
     },
   })
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (save.isPending || sending.current) return
+    if (save.isPending || sending.current || nameLocked) return
     const result = validateDisplayName(name)
     setError(result.error)
     setNotice(undefined)
@@ -130,16 +181,27 @@ function ProfileForm({ member, onAccountChanged }: { member: Member; onAccountCh
           <dd>{member.displayName}</dd>
         </div>
       </dl>
-      {saved && <p className={styles.success} role="status">표시 이름을 저장했어요.</p>}
-      {notice && <p className={styles.notice} role="status">{notice}</p>}
+      {saved && (
+        <p className={styles.success} role="status">
+          표시 이름을 저장했어요.
+        </p>
+      )}
+      {notice && (
+        <p className={styles.notice} role="status">
+          {notice}
+        </p>
+      )}
       <fieldset disabled={save.isPending}>
-        <label htmlFor="profile-display-name">표시 이름 <span>필수</span></label>
+        <label htmlFor="profile-display-name">
+          표시 이름 <span>필수</span>
+        </label>
         <Input
           id="profile-display-name"
           value={name}
           autoComplete="nickname"
+          disabled={nameLocked}
           aria-invalid={!!error}
-          aria-describedby="profile-display-name-help profile-display-name-error"
+          aria-describedby="profile-display-name-help profile-display-name-policy profile-display-name-error"
           onChange={(e) => {
             setName(e.target.value)
             setError(undefined)
@@ -147,13 +209,31 @@ function ProfileForm({ member, onAccountChanged }: { member: Member; onAccountCh
           }}
         />
         <p id="profile-display-name-help" className={styles.help}>
-          <span>주문·판매자 프로필에서 다른 회원에게 보여요. 다른 회원과 같아도 괜찮아요.</span>
-          <span>{codePointLength(normalizeText(name))} / {DISPLAY_NAME_MAX}자</span>
+          <span>
+            주문·판매자 프로필에서 다른 회원에게 보여요. 다른 회원과 같아도
+            괜찮아요.
+          </span>
+          <span>
+            {codePointLength(normalizeText(name))} / {DISPLAY_NAME_MAX}자
+          </span>
         </p>
-        <p id="profile-display-name-error" className={styles.fieldError}>{error}</p>
+        <p id="profile-display-name-error" className={styles.fieldError}>
+          {error}
+        </p>
+        <p
+          id="profile-display-name-policy"
+          className={styles.help}
+          role="status"
+        >
+          {member.displayNameChangeAvailableAt && nameLocked
+            ? `다음 변경 가능일: ${formatDateTime(member.displayNameChangeAvailableAt)} (한국 시간)`
+            : '표시 이름은 지금 변경할 수 있어요. 변경 후에는 6개월이 지나야 다시 바꿀 수 있어요.'}
+        </p>
         <div className={styles.actions}>
           <p>이메일(로그인 아이디)은 바꿀 수 없어요.</p>
-          <Button type="submit">{save.isPending ? '저장 중…' : '표시 이름 저장'}</Button>
+          <Button type="submit" disabled={nameLocked}>
+            {save.isPending ? '저장 중…' : '표시 이름 저장'}
+          </Button>
         </div>
       </fieldset>
     </form>
@@ -163,8 +243,14 @@ function ProfileForm({ member, onAccountChanged }: { member: Member; onAccountCh
 function LoginNotice() {
   return (
     <>
-      <AsyncState title="로그인 후 내 정보를 볼 수 있어요" description="로그인하면 이 화면으로 돌아와요." />
-      <Link className={styles.link} to={`/login?next=${encodeURIComponent(PROFILE_PATH)}`}>
+      <AsyncState
+        title="로그인 후 내 정보를 볼 수 있어요"
+        description="로그인하면 이 화면으로 돌아와요."
+      />
+      <Link
+        className={styles.link}
+        to={`/login?next=${encodeURIComponent(PROFILE_PATH)}`}
+      >
         로그인으로 이동 →
       </Link>
     </>

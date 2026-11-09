@@ -34,6 +34,18 @@ public class Member {
     @Column(name = "display_name", nullable = false, length = 30)
     private String displayName;
 
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
+    @Column(name = "display_name_changed_at")
+    private LocalDateTime displayNameChangedAt;
+
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
+    @Column(name = "password_changed_at")
+    private LocalDateTime passwordChangedAt;
+
+    @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
+    @Column(name = "password_recommendation_base_at", nullable = false)
+    private LocalDateTime passwordRecommendationBaseAt;
+
     @Enumerated(EnumType.STRING)                          // USER/ADMIN을 글자 그대로 저장 (숫자 0,1로 저장 X)
     @JdbcTypeCode(SqlTypes.VARCHAR)                       // DB 컬럼이 VARCHAR임을 명시 (팀 물리 설계 규칙)
     @Column(name = "role", nullable = false, length = 10)
@@ -64,6 +76,8 @@ public class Member {
         member.role = MemberRole.USER;
         member.createdAt = now;
         member.updatedAt = now;
+        member.passwordChangedAt = now;
+        member.passwordRecommendationBaseAt = now;
         return member;
     }
 
@@ -80,6 +94,7 @@ public class Member {
     /** PATCH /api/me 표시 이름 수정용. */
     public void changeDisplayName(String displayName, LocalDateTime now) {
         this.displayName = displayName;
+        this.displayNameChangedAt = now;
         this.updatedAt = now;
     }
 
@@ -89,6 +104,8 @@ public class Member {
      */
     public void changePassword(String newPasswordHash, LocalDateTime now) {
         this.passwordHash = newPasswordHash;
+        this.passwordChangedAt = now;
+        this.passwordRecommendationBaseAt = now;
         this.authVersion += 1;
         this.updatedAt = now;
     }

@@ -7,6 +7,8 @@ export interface Member {
   displayName: string
   role: MemberRole
   hasSellerProfile: boolean
+  /** null이면 가입 후 아직 표시 이름을 변경하지 않아 즉시 변경할 수 있다. */
+  displayNameChangeAvailableAt: string | null
 }
 
 export interface LoginInput {

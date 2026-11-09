@@ -1,6 +1,20 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { skipToken, useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { getMemberSession } from '../auth/api'
 import { getChatMessages, getChatThreads } from './api'
+import { pendingChatKey, type PendingChatSend } from './pending'
+
+/** Data-only account cache. Invalidations must never resend a command or discard its UUID. */
+export function usePendingChatSend(memberId: string, orderId: string) {
+  return (
+    useQuery<PendingChatSend | null>({
+      queryKey: pendingChatKey(memberId, orderId),
+      queryFn: skipToken,
+      initialData: null,
+      gcTime: Infinity,
+      staleTime: Infinity,
+    }).data ?? null
+  )
+}
 
 // 로그인/계정 전환 시 공통 accountCache가 auth 외 조회를 취소·제거한다.
 export const chatKeys = {
