@@ -32,8 +32,10 @@ public class Payment {
   @Column(name = "fee_rate_bps", nullable = false)
   private int feeRateBps;
 
+  @Enumerated(EnumType.STRING)
+  @JdbcTypeCode(SqlTypes.VARCHAR)
   @Column(name = "status", nullable = false, length = 10)
-  private String status;
+  private PaymentStatus status;
 
   @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
   @Column(name = "paid_at", nullable = false)
@@ -52,15 +54,15 @@ public class Payment {
     p.orderId = orderId;
     p.amount = amount;
     p.feeRateBps = 1000;
-    p.status = "PAID";
+    p.status = PaymentStatus.PAID;
     p.paidAt = at;
     return p;
   }
 
   public void refund(LocalDateTime at) {
-    if (!"PAID".equals(status) || at == null || at.isBefore(paidAt))
+    if (status != PaymentStatus.PAID || at == null || at.isBefore(paidAt))
       throw new IllegalStateException("Invalid refund");
-    status = "REFUNDED";
+    status = PaymentStatus.REFUNDED;
     refundedAt = at;
     refundedAmount = amount;
   }
@@ -73,7 +75,7 @@ public class Payment {
     return amount;
   }
 
-  public String status() {
+  public PaymentStatus status() {
     return status;
   }
 

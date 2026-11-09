@@ -1,5 +1,7 @@
 # 랜서픽 MVP API 명세서
 
+2026-11-09 로컬 R2: [결제·보관금 내부 enum](payment-status-enums.md)을 적용해도 주문 상세·V3 대금·관리자 금융 JSON의 상태 필드는 기존 문자열을 유지한다. PAID/REFUNDED, HELD/RELEASED/REFUNDED 및 미결제 조회의 NOT_PAID, 관리자 입력 오류 계약을 변경하지 않는다. 신규 API·Flyway는 없다.
+
 2026-11-09 로컬 B1/B2 후속: 보안 잠금 계정은 `POST /api/auth/login`의 올바른 비밀번호 확인 후 403 `MEMBER_LOCKED`를 반환한다. 잘못된 자격 증명의 기존 401은 유지한다. 일반 이용 제한은 로그인 가능하며, 보안 잠금 시 기존 HTTP 세션은 인증 버전 재검사에서 401이 된다. [제재 공통 기반](member-sanction-foundation.md)의 변경 명령은 내부 서비스로만 제공한다(409 `SANCTION_REQUEST_CONFLICT` 포함). 신규 관리자 HTTP 경로·요청/응답은 아직 없다.
 
 채팅 후속 로컬: 당사자 GET/POST `/api/orders/{orderId}/chat/messages`의 UUID 멱등·순번 커서를 유지하고 `/ws` WebSocket/STOMP를 연결했다. `/app/orders/{orderId}/chat/messages` SEND, `/user/queue/chat`·`/user/queue/chat-errors` SUBSCRIBE만 허용한다. 종료 후 조회 전용. [HTTP 요청·응답](order-chat-storage.md), [소켓 계약·CSRF·세션 폐기·복구](order-chat-realtime.md). 원격 병합·배포 활성화 여부와 구분한다.

@@ -23,8 +23,10 @@ public class OrderFunds {
   @Column(name = "remaining_amount", nullable = false)
   private long remainingAmount;
 
+  @Enumerated(EnumType.STRING)
+  @JdbcTypeCode(SqlTypes.VARCHAR)
   @Column(nullable = false, length = 16)
-  private String status;
+  private OrderFundsStatus status;
 
   @JdbcTypeCode(SqlTypes.LOCAL_DATE_TIME)
   @Column(name = "held_at", nullable = false, updatable = false)
@@ -45,21 +47,21 @@ public class OrderFunds {
     f.paymentId = payment;
     f.amount = amount;
     f.remainingAmount = amount;
-    f.status = "HELD";
+    f.status = OrderFundsStatus.HELD;
     f.heldAt = at;
     return f;
   }
 
   public void release(LocalDateTime at) {
-    resolve("RELEASED", at);
+    resolve(OrderFundsStatus.RELEASED, at);
   }
 
   public void refund(LocalDateTime at) {
-    resolve("REFUNDED", at);
+    resolve(OrderFundsStatus.REFUNDED, at);
   }
 
-  private void resolve(String target, LocalDateTime at) {
-    if (!"HELD".equals(status) || at == null || at.isBefore(heldAt))
+  private void resolve(OrderFundsStatus target, LocalDateTime at) {
+    if (status != OrderFundsStatus.HELD || at == null || at.isBefore(heldAt))
       throw new IllegalStateException("Funds already resolved or invalid clock");
     remainingAmount = 0;
     status = target;

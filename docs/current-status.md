@@ -1,5 +1,11 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 결제·보관금 상태 enum(R2) — 2026-11-09, 로컬 구현
+
+`refactor/payment-funds-status`(황준범, main `6cf5667` 기준)에서 PaymentStatus·OrderFundsStatus를 적용했다. 기존/V3 명령·보관금 조회·관리자 금융 조건과 String DTO 조립을 함께 맞추며 DB VARCHAR·기존 문자열·금액/잠금 정책은 유지한다. [이전 데이터 호환·검증 기록](payment-status-enums.md). main 반영 전이며 R1 계약/채팅 잠금 공통화는 별도다.
+
+검증: 격리 MySQL 8.4 `clean build` 989건 통과(실패·오류·건너뜀 0). 기존 VARCHAR 값의 JPA 읽기·환불 쓰기, 컬럼 타입·validate 기동, 금융/관리자 JSON 계약 회귀를 포함한다. 프런트 변경·검사, 실제 브라우저·외부 결제·원격 CI 실행은 없다.
+
 ## 헤더 알림 패널(U4 화면) — 2026-11-09, 로컬 구현
 
 `feature/header-notification-panel`(황준범, main `ed98643`에서 분기)에서 종 버튼의 패널, 전체/읽지 않음·모두 읽음·페이지·전체 보기와 알림 행 공통화를 진행했다. API·DB 변경 없음. [구현·검증·남은 연결](header-notification-panel.md). 회원 제재 PR #134와 별도이며 push·병합 전이다.
