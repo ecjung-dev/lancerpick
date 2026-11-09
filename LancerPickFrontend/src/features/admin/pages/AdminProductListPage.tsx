@@ -9,6 +9,7 @@ import type { AdminProductFilter } from '../types'
 import { keywordError, readFilter, saleStatusLabel } from '../validation'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
+import { AdminNav } from './AdminNav'
 import styles from './Admin.module.css'
 
 /** /admin/products. 필터·페이지를 URL에 두어 새로고침·뒤로가기·상세에서 돌아오기 때 그대로 복원한다. */
@@ -29,6 +30,7 @@ export function AdminProductListPage() {
 
   return <section className={styles.page}>
     <p className={styles.eyebrow}>ADMIN</p>
+    <AdminNav />
     <h1>상품 운영</h1>
     <p className={styles.lead}>숨김은 판매 상태와 별개예요. 숨긴 상품은 공개 목록과 신규 주문에서 빠지고, 기존 거래는 그대로 유지돼요.</p>
     <FilterForm key={params.toString()} filter={filter} onApply={applyFilter} />

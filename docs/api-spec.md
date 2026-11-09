@@ -336,6 +336,40 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 
 위 값은 응답 형식 설명용이며 실제 회원·상품·카테고리 데이터가 아니다.
 
+## 9-1 운영 문의·관리자 취소 검토 김창재
+
+2026-11-09 `feature/admin-cancellation-inquiries`(K4 API·화면). 승인/거절 처리 자체는 주문 영역 `AdminCancellationReviewService`(#121, [계약](admin-cancellation-review.md))가 한다. DB 변경 없음.
+
+| 메서드·경로 | 입력 | 출력 |
+| --- | --- | --- |
+| POST /orders/{orderId}/cancellation-requests/{requestId}/review-inquiries | subject | 201 새 문의, 200 같은 요청의 열린 문의(재전송) |
+| GET /me/inquiries | orderId(선택),page,size | 내 문의 목록 |
+| GET /admin/inquiries | status,type,page,size | 관리자 문의 목록(신청자 이름 포함) |
+| GET /admin/inquiries/{id} | 없음 | 문의 상세 + 주문 요약 + 취소 요청 + allowedActions |
+| POST /admin/inquiries/{id}/approve | reason | AdminCancellationReviewResponse |
+| POST /admin/inquiries/{id}/reject | reason | AdminCancellationReviewResponse |
+| POST /admin/inquiries/{id}/close | 없음 | 문의 상세 |
+
+- 모든 명령은 CSRF 필수, 응답은 `Cache-Control: no-store`. 관리자 경로는 세션 역할(ROLE_ADMIN)과 현재 DB 역할을 모두 확인한다(강등된 세션 403 `FORBIDDEN`).
+- 검토 요청: subject는 앞뒤 공백 정리 후 1~150 코드 포인트(빈 값·초과·문자열 아닌 값 400 `VALIDATION_FAILED`). 주문 당사자가 아니면 404, 판매자는 403 `FORBIDDEN`, 그 주문의 취소 요청이 없으면 404. 요청이 대기(PENDING)가 아니면 409 `REQUEST_ALREADY_RESOLVED`, V3가 아니면 409 `ORDER_POLICY_NOT_READY`, 결제 후 진행 중(IN_PROGRESS·AWAITING_CONFIRMATION·REVISION_IN_PROGRESS)이 아니면 409 `ORDER_STATE_CONFLICT`. 판매자 무응답 시간 조건은 정책에 없어 두지 않았다(관리자가 판단).
+- 중복 방지: DB UNIQUE가 없으므로 회원 공유 잠금 → 주문 배타 잠금 아래에서 같은 요청의 열린 문의를 확인하고 저장한다(관리자 승인/거절과 같은 순서). 같은 요청에 열린 문의가 있으면 새로 만들지 않고 200으로 돌려준다.
+- 관리자 목록: status는 OPEN·IN_REVIEW·CLOSED, type은 CANCELLATION_REVIEW·GENERAL만 허용(다른 값 400). createdAt 내림차순, 같은 시각은 id 내림차순.
+- allowedActions: 열린 취소 검토 문의이고 연결된 요청이 대기 중이면 `APPROVE`·`REJECT`, 열린 문의인데 승인·거절할 대기 요청이 없으면 `CLOSE`, 닫힌 문의는 빈 배열. 화면 표시용이며 서버가 처리할 때 다시 검사한다.
+- 종료(close): 관리자 공유 잠금 → 주문 배타 잠금 → 문의 배타 잠금. 연결된 요청이 아직 대기 중이면 409 `REQUEST_STILL_PENDING`(승인·거절로 처리). 이미 닫힌 문의는 현재 상세 200(재전송). 주문·대금·취소 요청은 바꾸지 않는다. 종료 사유 칸은 DB에 없어 받지 않는다(메시지 기능에서 후속).
+- 승인/거절 오류는 [K4 계약](admin-cancellation-review.md#서비스-계약) 표를 따른다.
+
+## 9-2 관리자 자동 구매 확정 타이머 해제 김창재
+
+2026-11-09 같은 브랜치(K5). 해제 처리는 `ReviewTimerService.adminStop`(#99, [자동 구매 확정](auto-confirm-timer.md))이 한다. DB 변경 없음.
+
+| 메서드·경로 | 입력 | 출력 |
+| --- | --- | --- |
+| GET /admin/review-timers | page,size | 진행 중(ACTIVE) 타이머 목록: timerId,orderId,cycleNo,startedAt,expiresAt,buyer,seller |
+| POST /admin/orders/{orderId}/review-timer/stop | reason | ReviewTimerResponse(해제 후 status `ADMIN_STOPPED`) |
+
+- 목록은 만료 시각 오름차순(먼저 자동 확정될 주문부터), 같은 시각은 timerId 오름차순. 현재 DB 역할이 ADMIN이 아니면 403.
+- 해제는 CSRF 필수·no-store. 오류는 서비스 그대로: 사유 공백 정리 후 1~1000자 아님 400 `VALIDATION_FAILED`, 관리자 아님 403 `FORBIDDEN`, V3 주문이 아니거나 없음 404, 활성 타이머 없음 409 `TIMER_NOT_ACTIVE`, 만료 시각이 지남 409 `AUTO_CONFIRM_DUE`(자동 확정 우선). 해제된 기산점으로는 판매자가 다시 시작할 수 없다.
+
 ## 10 오류와 입력 기준
 
 | HTTP | 주요 코드 |

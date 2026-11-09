@@ -82,7 +82,23 @@ DB CHECK(`ck_inquiry_type`·`ck_inquiry_status`·`ck_inquiry_time`)와 같은 �
 
 실행하지 않은 검증: 관리자 API·화면이 없어 실서버·브라우저 확인 없음, 원격 CI.
 
+## API·화면 연결 — 2026-11-09 (김창재, `feature/admin-cancellation-inquiries`)
+
+이 서비스와 문의 엔티티를 그대로 사용해 구매자 접수·관리자 처리 경로를 연결했다. 경로·오류는 [API 9-1절](api-spec.md#9-1-운영-문의관리자-취소-검토-김창재). DB·Flyway 변경 없음.
+
+| 구분 | 백엔드 | 화면 |
+| --- | --- | --- |
+| 구매자 검토 요청 | `inquiry/service/InquiryService`·`InquiryController`. 회원 공유 잠금 → 주문 배타 잠금(`OrderCommandLocks`) 아래에서 구매자·대기 요청·V3 결제 후를 확인하고, 같은 요청의 열린 문의가 있으면 그 문의를 돌려준다(UNIQUE 없이 중복 방지) | 주문 상세 취소 요청 아래 `CancellationReviewRequest`(V3 주문에서 내 문의 상태 표시, 구매자 대기 요청이고 열린 문의가 없을 때만 입력 칸) |
+| 내 문의 | `GET /api/me/inquiries`(`SupportInquiryQueries`, QueryDSL) | 위 컴포넌트가 주문별로 조회(`['wallet', 'order-inquiries', id]`, 주문 명령 뒤 함께 갱신) |
+| 관리자 목록·상세 | `admin/service/AdminInquiryService`·`AdminInquiryQueries`. 현재 DB 역할 재확인, 상세에 주문 요약·취소 요청·allowedActions | `/admin/inquiries`(상태·유형 필터 URL 보존), `/admin/inquiries/:id`, 관리자 탭(`AdminNav`) |
+| 승인/거절 | `AdminInquiryController`가 이 서비스(`approve`·`reject`)를 그대로 호출 | 처리 사유 1~1000자, 승인은 되돌릴 수 없음 확인 체크 후에만 버튼 활성 |
+| 처리 불가 문의 종료 | `AdminInquiryService.close`: 관리자 공유 → 주문 배타 → 문의 배타 잠금(이 서비스와 같은 순서), 요청이 대기 중이면 409 `REQUEST_STILL_PENDING`, 닫힌 문의는 200 재전송 | 상세의 "문의 닫기"(allowedActions에 CLOSE일 때만) |
+
+화면 명령은 처리 중 버튼 차단·ref 이중 클릭 차단·자동 재전송 없음이다. 409는 서버 안내를 보여 주고 최신 상태를 다시 불러오며, 통신 오류·5xx는 서버가 처리했을 수 있어 실패로 단정하지 않고 다시 조회한다.
+
+결정(2026-11-09 사용자 확정): 판매자 무응답 대기 시간 조건 없음(정책에 없음, 관리자가 판단), 구매자 입력은 제목 1~150자만(문의 본문 칸 없음), 같은 요청 재접수는 기존 문의 200, 종료 사유 없이 닫기(DB 칸 없음, 메시지 기능에서 후속).
+
 ## 남은 일
 
-- 김창재: 구매자 취소 검토 문의 접수·본인 목록/상세, 관리자 문의 목록·승인/거절 API·화면(이 서비스 호출), 문의 메시지, 처리할 수 없게 된 문의(판매자가 먼저 처리 등)의 종료.
-- G1: 관리자 API 연결 후 실서버·브라우저로 B4 확인, 활성화 판정.
+- 김창재: 문의 메시지(`support_messages`)·담당 지정(`IN_REVIEW`), 일반 문의(GENERAL) 접수 화면. 문의 상태를 바꾸는 새 경로도 주문 → 문의 잠금 순서를 지킨다.
+- G1: 실서버·브라우저로 B4 확인(정은찬과 함께), 활성화 판정.

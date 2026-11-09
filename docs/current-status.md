@@ -1,5 +1,12 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 운영 문의·관리자 취소 검토(K4)·타이머 해제(K5) 연결 — 2026-11-09
+
+K5: 같은 브랜치에서 `ReviewTimerService.adminStop`에 관리자 API(`GET /api/admin/review-timers` 진행 중 타이머 목록, `POST /api/admin/orders/{orderId}/review-timer/stop`)와 `/admin/review-timers` 화면을 연결했다. 관리자 경로는 현재 DB 역할을 다시 확인한다. [API 9-2절](api-spec.md#9-2-관리자-자동-구매-확정-타이머-해제-김창재). 이로써 B4(V3 활성화 전 실서버·브라우저 확인)에 필요한 관리자 API가 모두 연결됐다(B4 확인은 정은찬과 함께, 아직).
+
+
+`feature/admin-cancellation-inquiries`(김창재, PR 전, main `2162b2a`에서 분기): 정은찬의 문의 엔티티·승인/거절 서비스(#121)에 API·화면을 연결했다. 구매자는 V3 결제 후 주문의 대기 중 취소 요청에 대해 주문 상세에서 관리자 검토를 요청하고(제목 1~150자, 같은 요청 재접수는 기존 문의 반환), 관리자는 `/admin/inquiries`에서 목록·상세(주문 요약·취소 요청)를 보고 승인(전액 반환)·거절하거나, 판매자가 먼저 처리해 승인·거절할 수 없게 된 문의를 닫는다. 중복 접수와 종료는 주문 → 문의 잠금 순서로 직렬화한다. DB·Flyway 변경 없음. [연결 기록](admin-cancellation-review.md#api화면-연결--2026-11-09-김창재-featureadmin-cancellation-inquiries) · [API 9-1절](api-spec.md#9-1-운영-문의관리자-취소-검토-김창재). 문의 메시지·담당 지정·일반 문의 접수, 실서버·브라우저(B4) 확인은 남음. 검증 결과는 PR에 기록한다.
+
 ## 알림 목록 읽지 않음 조건(U4) — 2026-11-09 로컬
 
 정은찬, 브랜치 `feature/notification-unread-filter`(main `4430cd0`(#130)에서 분기). [개편 결정 §16.1](ui-renewal-member-policy.md#161-정은찬-구현)의 U4 계약대로 기존 알림 API는 그대로 두고 `GET /api/notifications`에 `unreadOnly`(기본 false)만 추가했다. true면 읽지 않은 본인 알림만 최신순으로 보여 주고 건수·페이지 수도 같은 조건으로 센다. `/notifications`에 전체/읽지 않음 보기(URL `?filter=unread`, 바꾸면 첫 페이지)를 붙였다. DB·Flyway 변경 없음(기존 `ix_notification_unread` 사용). 헤더 알림 패널 화면은 포함하지 않았다. [계약·화면 동작](notifications.md#읽지-않은-알림만-보기-u4--2026-11-09).
