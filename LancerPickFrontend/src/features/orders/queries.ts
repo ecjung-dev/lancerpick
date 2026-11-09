@@ -1,16 +1,18 @@
 import { getMemberSession } from '../auth/api'
 import { getOrder, getOrders, getOrderFunds, getReviewTimer } from './api'
 import { reviewTimerRefetchInterval } from './reviewTimer'
+import type { OrderListFilters } from './listFilters'
 import { useQuery } from '@tanstack/react-query'
 
-export function useOrders(
-  side: 'BUYER' | 'SELLER',
-  status: string,
-  page: number,
-) {
+export function orderListKey(filters: OrderListFilters) {
+  const { side, status, page, q, from, to, sort } = filters
+  return ['wallet', 'orders', side, status, page, q, from, to, sort] as const
+}
+
+export function useOrders(filters: OrderListFilters) {
   return useQuery({
-    queryKey: ['wallet', 'orders', side, status, page],
-    queryFn: ({ signal }) => getOrders(side, page, signal, status),
+    queryKey: orderListKey(filters),
+    queryFn: ({ signal }) => getOrders(filters, signal),
     retry: false,
     gcTime: 0,
   })

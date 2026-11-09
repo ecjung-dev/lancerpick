@@ -81,10 +81,12 @@ public class OrderController {
     @GetMapping
     public ResponseEntity<PageResponse<OrderSummaryResponse>> list(Authentication authentication,
             @RequestParam OrderSide side, @RequestParam(required = false) String status,
+            @RequestParam(required = false) String q, @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to, @RequestParam(required = false) String sort,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(queries.list(currentMember.require(authentication), side, status, page, size));
+                .body(queries.list(currentMember.require(authentication), side, status, q, from, to, sort, page, size));
     }
 
     @GetMapping("/{id}")

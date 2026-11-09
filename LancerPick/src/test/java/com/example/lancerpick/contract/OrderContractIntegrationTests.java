@@ -171,7 +171,7 @@ class OrderContractIntegrationTests {
     assertThat(detail.allowedActions()).containsExactly("CANCEL");
     assertThat(
             queries
-                .list(buyer, com.example.lancerpick.order.dto.OrderSide.BUYER, null, 0, 20)
+                .list(buyer, com.example.lancerpick.order.dto.OrderSide.BUYER, null, null, null, null, null, 0, 20)
                 .items())
         .allSatisfy(row -> assertThat(row.policyVersion()).isEqualTo("CONTRACT_V2"));
     assertThatThrownBy(() -> confirmations.confirm(buyer, Long.toString(orderId)))
