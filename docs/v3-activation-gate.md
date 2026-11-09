@@ -21,17 +21,17 @@
 | ID | 시나리오 | 기대 결과 | 현재 근거 | 남은 확인 |
 | --- | --- | --- | --- | --- |
 | A1 ● | 스위치 on 상태에서 HTTP 주문 생성 → 수락 → 초안 → PDF → 양측 서명 → 결제 → 납품 → 구매 확정 | 정책 V3 고정, 결제액만 차감·HELD, 확정 시 판매자 +90%·수수료 10%·완료, 이력·알림 순서 | `V3ActivationGateIntegrationTests`.switchOnHttpTradeRuns…(실제 설정 on, 전 단계 HTTP·이력·아웃박스 순서·대금 조회). 실서버 API 실행 기록: [V3 알림](v3-notices.md#실서버브라우저-확인--2026-11-06-main-9f9aa8f) | 화면 버튼으로 하는 전체 거래(G1 행) |
-| A2 ● | 수정 요청 1회 → 재납품 → 확정 | 재납품 기한=요청 시각+소요일, 두 번째 수정 요청 거절 | `ContractV3FulfillmentApiIntegrationTests.v3DeliveryRevisionAndRedelivery…`, `ReviewTimerIntegrationTests.revisionNotifiesRedeliveryDeadline…` | 브라우저 |
-| A3 ● | 납품 후 48시간 → 판매자 타이머 시작 → 7일 만료 → 자동 확정 | SYSTEM 완료·AUTO_CONFIRMED closure·수수료 동일·양측 알림·후기 가능 | `ReviewTimerIntegrationTests.sellerStartsAfter48Hours…`, `concurrentExpiryRunsPaySellerOnlyOnce` | 실서버 스케줄러 실제 실행(시간 단축 설정은 개인 DB에서만), 후기 작성 브라우저 |
-| A4 ○ | 만료 24시간 전 구매자 사전 안내 | 구매자에게 1회, 판매자 없음 | `autoConfirmNoticeIsSentOnceToBuyer…`, `…NotSentForEndedOrExpiredTimers` | 실서버 알림 목록 |
-| A5 ● | 결제 시 납기 통지 | `DEADLINE_NOTIFIED` 1건·`orders.due_at`과 일치 | `paymentNotifiesDeliveryDeadlineOnce…` | 거래 이력 화면 표시 |
+| A2 ● | 수정 요청 1회 → 재납품 → 확정 | 재납품 기한=요청 시각+소요일, 두 번째 수정 요청 거절 | `ContractV3FulfillmentApiIntegrationTests.v3DeliveryRevisionAndRedelivery…`, `ReviewTimerIntegrationTests.revisionNotifiesRedeliveryDeadline…`. 브라우저 [10절](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09)(주문 37) | — |
+| A3 ● | 납품 후 48시간 → 판매자 타이머 시작 → 7일 만료 → 자동 확정 | SYSTEM 완료·AUTO_CONFIRMED closure·수수료 동일·양측 알림·후기 가능 | `ReviewTimerIntegrationTests.sellerStartsAfter48Hours…`, `concurrentExpiryRunsPaySellerOnlyOnce`. 실서버 스케줄러·후기 등록 [10절](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09)(주문 39) | — |
+| A4 ○ | 만료 24시간 전 구매자 사전 안내 | 구매자에게 1회, 판매자 없음 | `autoConfirmNoticeIsSentOnceToBuyer…`, `…NotSentForEndedOrExpiredTimers`. 실서버 알림 목록 [10절](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09)(주문 39) | — |
+| A5 ● | 결제 시 납기 통지 | `DEADLINE_NOTIFIED` 1건·`orders.due_at`과 일치 | `paymentNotifiesDeliveryDeadlineOnce…`. 거래 이력 화면 [10절](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09) | — |
 
 ### B. 취소·반환
 
 | ID | 시나리오 | 기대 결과 | 현재 근거 | 남은 확인 |
 | --- | --- | --- | --- | --- |
 | B1 ● | 결제 전 취소(수락 전·계약 대기·서명 후) | 금액 이동 없음, `ORDER_CANCELLED` | `V3ActivationGateIntegrationTests`.cancellationBeforePaymentMovesNoMoney…(V3 수락 전·계약 대기·서명 후 구매자/판매자), V2 기준 `OrderContractIntegrationTests` | — |
-| B2 ● | 결제 후 구매자 취소 요청 → 판매자 승인 | 보관금 전액 반환·REFUNDED·수익/수수료 0·`ORDER_FUNDS_REFUNDED` | `FullFundingTradeIntegrationTests.approvedCancellationRefundsOnce…`, `manualConfirmationAndApprovedRefundUseV3FundsWording` | 브라우저 |
+| B2 ● | 결제 후 구매자 취소 요청 → 판매자 승인 | 보관금 전액 반환·REFUNDED·수익/수수료 0·`ORDER_FUNDS_REFUNDED` | `FullFundingTradeIntegrationTests.approvedCancellationRefundsOnce…`, `manualConfirmationAndApprovedRefundUseV3FundsWording`. 브라우저 [10절](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09)(주문 38) | — |
 | B3 ● | 취소 요청 거절·철회 후 재개 | 타이머 종료, 해결 시각이 새 기산점 | `cancellationRequestCancelsTimerAndRejectionRestartsReviewWindow` | — |
 | B4 ● | 판매자 무응답 → 운영 문의 → 관리자 승인 취소(K4) | 전액 반환·`ADMIN_CANCELLATION`(`inquiry_id`)·문의 종료 한 트랜잭션 | 서비스 통합 테스트(`AdminCancellationReviewIntegrationTests`, 승인·거절·재전송·실패 롤백, main 반영 #121). 실서버·브라우저 [9절](#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09)(주문 34 승인·35 거절) | — |
 | B5 ● | 결제 후 판매자 단독 취소 시도 | 409 `CANCELLATION_REQUEST_REQUIRED` | `pendingCancellationBlocksConfirmationAndWrongActors…` | — |
@@ -66,7 +66,7 @@
 | E1 ● | 제3자·반대 역할·익명의 결제/확정/승인/대금 조회 | 401/403/404, 금액 불변 | `pendingCancellationBlocksConfirmationAndWrongActors…`, `httpEndpointsCheckParticipantRoleAndCsrf` | — |
 | E2 ● | 클라이언트가 보낸 금액·회원 ID 무시 | 서버 계약 금액으로 차감 | `httpPaymentIgnoresClientMoney…` | — |
 | E3 ● | 서명 누락·해시 불일치 상태에서 결제 | 차감 없음 | `missingSignatureCannotDebit…`, `OrderContractIntegrationTests.fileHashMismatch…` | — |
-| E4 ● | 계약 PDF 다운로드는 당사자만, 변조 파일은 503 | 바이트 노출 없음 | `ContractDocumentIntegrationTests.finishedDocument…OnlyToParties`, `missingAndTamperedFiles…` | V3 계약으로 실제 다운로드·해시 대조(브라우저) |
+| E4 ● | 계약 PDF 다운로드는 당사자만, 변조 파일은 503 | 바이트 노출 없음 | `ContractDocumentIntegrationTests.finishedDocument…OnlyToParties`, `missingAndTamperedFiles…`. 실제 다운로드·해시 대조 [10절](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09)(주문 37~39) | — |
 | E5 ○ | 계정 전환 시 대금·주문 캐시 정리 | 이전 계정 금액 미표시 | 프런트 `test:api`(order-funds queryKey) | 브라우저 두 계정 |
 
 ### F. 호환·회귀
@@ -151,7 +151,7 @@ WHERE (
 | 2026-11-06 | `test/v3-activation-gate` 작업 트리 | 로컬 `lancerpick_test` 백엔드 `clean build` 835건 통과(실패·오류·건너뜀 0). 프런트 변경 없음 | API 실서버·일부 브라우저([V3 알림](v3-notices.md#실서버브라우저-확인--2026-11-06-main-9f9aa8f)), 화면 버튼 전체 거래 아직 | 실서버 3건 0행, 자동 테스트 정리 단계 판정 | 보류(K4 미연결) |
 | 2026-11-06 | main `f82c49d` + `test/v3-gate-browser-check` 작업 트리(main 반영 #116) | 백엔드 재실행 안 함(운영 코드 변경 없음). 프런트 typecheck·lint·`test:api` 219건·build 통과 | [화면 버튼 전체 거래](#7-화면-버튼-전체-거래-확인--2026-11-06): G1(A1·B2)·G5 확인, A2는 앞선 API 실서버 기록 | 주문 18~22 전체 0행 | 보류(K4 미연결, G2 타이머 진행 중 패널·G4 미확인) |
 | 2026-11-06 | main `7329be1` + `test/v3-gate-remaining-check` 작업 트리(main 반영 #120) | 재실행 안 함(운영 코드 변경 없음) | [남은 화면 확인](#8-남은-화면-확인--2026-11-06): G2 타이머 시작 가능→진행 중 패널(판매자·구매자), G4 320px(주문 17·21·22·23) | 주문 18~23 전체 0행 | 보류(K4 미연결, B4·C8) |
-| 2026-11-09 | main `f3c56be`(#140) | 로컬 `lancerpick_test` 백엔드 `clean build` 1002건 통과(실패·오류·건너뜀 0). 프런트 typecheck·lint·`test:api` 272건·build 통과 | [B4·F4 확인](#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09): 관리자 승인(주문 34)·거절(35)·타이머 해제(35), 스위치 off 후 V3 확정(35)·신규 LEGACY_V1(36) | V3 결제 주문 9건 전체 0행 | 필수 항목 충족, 열린 결함 없음. 정은찬·황준범 공동 검토(5절 2단계) 대기 |
+| 2026-11-09 | main `f3c56be`(#140) | 로컬 `lancerpick_test` 백엔드 `clean build` 1002건 통과(실패·오류·건너뜀 0). 프런트 typecheck·lint·`test:api` 272건·build 통과 | 같은 커밋에서 [B4·F4](#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09)(주문 34~36)와 [G1 전체 화면 거래·스케줄러](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09)(주문 37~39: G1 A1·A2·B2, G2 자동 확정·사전 안내, G3, G5·E4, E1, G4 320px). 이전 커밋 결과는 합산하지 않음 | 결제된 V3 주문 12건 전체 0행 | 필수(●) 항목 충족, 열린 결함 없음. 정은찬·황준범 공동 검토(5절 2단계) 대기. 권장 E5(계정 전환 캐시 브라우저)는 미확인 |
 
 ## 7. 화면 버튼 전체 거래 확인 — 2026-11-06
 
@@ -189,7 +189,7 @@ WHERE (
 
 ## 9. B4 관리자 승인·거절·타이머 해제·F4 확인 — 2026-11-09
 
-환경: main `f3c56be`(#140) 백엔드 `bootRun`(개인 개발 DB, 실행 중 V10 적용, 실행 인자로만 `--lancerpick.order.full-funding-creation-enabled=true`) + Vite + Playwright(Chromium) 격리 컨텍스트 3개(구매자 14·판매자 15·관리자 12). 관리자는 [관리자 상품 운영](admin-product-moderation.md)의 로컬 절차대로 개인 DB의 테스트 계정 12를 ADMIN으로 바꿨다. 주문 34·35의 생성→수락→계약 초안·PDF·양측 서명→결제→1차 납품→구매자 취소 요청은 **API 호출**로 준비했고(이 단계는 7절 화면 거래로 확인됨), 아래 단계는 모두 **화면 버튼**으로 진행했다. 명령 버튼은 렌더 후 DOM click 3회로 눌러 POST 수를 셌다.
+환경: main `f3c56be`(#140) 백엔드 `bootRun`(개인 개발 DB, 실행 중 V10 적용, 실행 인자로만 `--lancerpick.order.full-funding-creation-enabled=true`) + Vite + Playwright(Chromium) 격리 컨텍스트 3개(구매자 14·판매자 15·관리자 12). 관리자는 [관리자 상품 운영](admin-product-moderation.md)의 로컬 절차대로 개인 DB의 테스트 계정 12를 ADMIN으로 바꿨다. 주문 34·35의 생성→수락→계약 초안·PDF·양측 서명→결제→1차 납품→구매자 취소 요청은 **API 호출**로 준비했고(이 단계의 화면 확인은 같은 커밋의 [10절](#10-같은-커밋-화면-버튼-전체-거래스케줄러-확인--2026-11-09)), 아래 단계는 모두 **화면 버튼**으로 진행했다. 명령 버튼은 렌더 후 DOM click 3회로 눌러 POST 수를 셌다.
 
 - **구매자 검토 요청**: 주문 상세 취소 요청 아래 "관리자 검토 요청". 빈 내용 제출은 요청 없음, 내용 입력 후 3회 클릭 → POST 1건(`/cancellation-requests/{id}/review-inquiries`), "검토 대기" 표시. 판매자 화면에는 문의 영역이 없다(구매자 문의).
 - **관리자 목록·상세**: `/admin/inquiries`에 문의 2건(검토 대기·취소 검토·주문 번호·신청자). 상세에 주문 요약·대기 중 취소 요청·처리 사유 입력. 사유 없이 거절 → 요청 없음·"사유를 입력해 주세요.", 승인 버튼은 되돌릴 수 없음 확인 체크 전 비활성.
@@ -205,3 +205,18 @@ WHERE (
 2. 계약 PDF 주소에 `Accept: application/json`만 보내면 406이 아니라 500 `INTERNAL_ERROR`로 응답한다(`HttpMediaTypeNotAcceptableException`이 공통 처리기에서 미처리). 브라우저 다운로드에는 영향 없음(공통 오류 처리, 김창재).
 
 개인 DB 잔여: 주문 33(V3 계약 대기 중 취소, 준비 스크립트 중단분)·34(관리자 승인 취소)·35(구매 확정)·36(LEGACY_V1 취소), 회원 12 ADMIN.
+
+## 10. 같은 커밋 화면 버튼 전체 거래·스케줄러 확인 — 2026-11-09
+
+9절 판정 기록이 B4·F4만 같은 커밋에서 확인하고 G1 전체 화면 거래는 7절(2026-11-06, main `f82c49d`)에 기대고 있어, 1절 "같은 소스" 규칙대로 main `f3c56be`(#140)에서 다시 확인했다(코드 리뷰 지적 반영). 환경은 9절과 같고(개인 DB `bootRun`, 실행 인자로만 V3 생성 허용, Vite, Playwright 격리 컨텍스트 구매자 14·판매자 15·제3자 12), **API 호출 없이 모든 단계를 화면 버튼**으로 진행했다(제3자 API 응답 확인만 브라우저 fetch). 확인 전 계정 12는 USER로 되돌렸다.
+
+- **G1 A1·A2 정상 거래(주문 37)**: 상품 상세 → 주문 요청 → 판매자 "주문 수락" → 특약 입력·"특약으로 계약 초안 저장" → "PDF 생성" → 판매자 PDF 다운로드(다운로드 전 동의·서명 비활성)·동의·서명(1/2) → 구매자 PDF 다운로드·서명(2/2, 결제 대기) → 결제 동의·"적립금으로 결제"(3회 클릭 → POST 1건, 보관금 50,000원) → "1차 납품 제출" → 수정 사유 입력·"수정 요청"(수정 진행 중, 수정 기한 표시) → "2차 납품 제출" → 2차 납품 후 구매자 화면에 수정 요청 폼 없음 → 구매 확정. 대금 "판매자 지급 완료 · 수수료 5,000원 · 지급 45,000원".
+- **G1 B2 결제 후 합의 취소(주문 38)**: 같은 계약 절차(특약 없음)·결제 → 구매자 "취소 요청 제출" → 판매자 환불 동의 체크(체크 전 승인 비활성) → "승인 및 환불". 대금 "구매자 전액 반환 완료 · 반환 50,000원 · 수수료 0원".
+- **G2·A3·A4 실서버 스케줄러(주문 39)**: 같은 화면 절차로 결제·1차 납품. 개인 DB에서 이 주문의 납품 시각만 49시간 앞당긴 뒤 판매자 "7일 자동 구매 확정 타이머 시작"(양측 진행 중 패널). 이어 타이머의 `basis_at`·`eligible_at`·`started_at`·`expires_at`과 납품 시각을 함께 145시간 앞당겨(만료 23시간 전, `ck_timer_window` 유지) 스케줄러가 구매자에게만 `ORDER_AUTO_CONFIRM_SOON` 1건 생성("24시간 안에 구매가 자동으로 확정됩니다…"). 다시 24시간 앞당겨 만료가 지나자 다음 주기에 타이머 `EXPIRED`/`TIMEOUT`, 주문 구매 확정, closure `AUTO_CONFIRMED` 수수료 5,000원, `SELLER_PAYOUT` 45,000원, 양측 `ORDER_AUTO_CONFIRMED`("검수 응답 기한이 지나 구매가 자동으로 확정되었습니다…"). 양측 패널 "자동 구매 확정 완료", 이력 "자동 구매 확정 · 시스템". 구매자 "후기 등록"이 동작해 후기 1건 저장(폼을 채우지 않고 눌러 기본 별점 5점·내용 없음으로 저장됨).
+- **G3**: 세 주문 이력에 "납기 통지 · 시스템", 알림 문구(보관·지급·반환·자동 확정·사전 안내·수정 기한) 확인.
+- **G5·E4 PDF**: 세 주문 모두 양측이 화면에서 받은 PDF의 SHA-256이 서로 같고 `order_contracts.file_hash`와 일치, 양측 `contract_signatures`의 서명 시점 파일·본문 해시도 현재 계약과 일치(6/6). PDFBox 텍스트 추출로 주문 37 PDF 3쪽, `CONTRACT_V3`·총액 50000·"G1 특약"·수수료·구매자·판매자 포함 확인(글꼴 렌더링 눈 확인은 안 함).
+- **지갑·판매 수익 화면**: 구매자 잔액 650,000 → 550,000원(결제 3건·#38 결제 환불), 판매자 1,225,000 → 1,315,000원("판매대금 지급" #37·#39 각 45,000원), 판매 수익 화면에 #37·#39 결제액·수수료·수익.
+- **E1 권한**: 제3자(계정 12, USER) 주문 화면 "주문을 찾을 수 없습니다.", `GET /api/orders/37`·`/contract`·`/contract/file`·`/funds`·`/api/orders/39/review-timer` 모두 404.
+- **DB·화면 공통**: 4절 불변식 0행(결제된 V3 주문 12건 전체), 아웃박스 160건 모두 `COMPLETED`. 주문 37·38·39·지갑·판매 수익 화면 1280px·320px 가로 넘침 없음, 콘솔 오류는 제3자 화면의 예상 404만.
+
+확인하지 않은 것: 권장(○) E5 계정 전환 캐시 정리 브라우저 확인, 실제 48시간·7일 경과(DB 시각 조정으로 대신함). 개인 DB 잔여: 주문 37·39 구매 확정(39 후기 1건), 38 취소 반환.
