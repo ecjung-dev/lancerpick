@@ -52,6 +52,7 @@ import static org.mockito.Mockito.reset;
 class OrderCreationIntegrationTests {
     private static final LocalDateTime FIXTURE_TIME = LocalDateTime.parse("2026-11-02T06:00:00.123456");
     @Autowired OrderCreationService service;
+    @Autowired com.example.lancerpick.order.service.OrderDecisionService decisions;
     @Autowired ProductSearchService products;
     @Autowired OrderSnapshotRepository snapshots;
     @MockitoSpyBean OrderHistoryRepository histories;
@@ -97,6 +98,7 @@ class OrderCreationIntegrationTests {
             jdbc.update("DELETE FROM products WHERE id = ?", id);
         }
         if (categoryId != 0) jdbc.update("DELETE FROM categories WHERE id = ?", categoryId);
+        for (long id : members) jdbc.update("DELETE FROM member_sanctions WHERE member_id = ?", id);
         for (long id : members) jdbc.update("DELETE FROM members WHERE id = ?", id);
     }
 
@@ -515,6 +517,60 @@ class OrderCreationIntegrationTests {
             executor.shutdownNow();
             executor.awaitTermination(10, TimeUnit.SECONDS);
         }
+    }
+
+    // ---------- U7 일반 이용 제한·보안 잠금의 새 거래 차단 ----------
+
+    @Test
+    void restrictedBuyerCannotOrderButSameKeyReplayReturnsExistingOrder() {
+        long admin = member();
+        UUID key = UUID.randomUUID();
+        var first = service.create(buyerId, request(key, "text"));
+        sanction(buyerId, admin, "GENERAL_RESTRICTION", FIXTURE_TIME.plusDays(1));
+
+        var replay = service.create(buyerId, request(key, "text"));
+        assertThat(replay.created()).isFalse();
+        assertThat(replay.orderId()).isEqualTo(first.orderId());
+        assertBusiness(() -> service.create(buyerId, request(UUID.randomUUID(), "text")), "MEMBER_RESTRICTED");
+        assertCounts(1);
+
+        // 기간이 끝난 제재(종료 시각 = 현재)는 막지 않는다.
+        jdbc.update("UPDATE member_sanctions SET ends_at = ? WHERE member_id = ?", FIXTURE_TIME, buyerId);
+        assertThat(service.create(buyerId, request(UUID.randomUUID(), "text")).created()).isTrue();
+        assertCounts(2);
+    }
+
+    @Test
+    void restrictedSellerBlocksNewOrdersAndAcceptButNotReject() {
+        long admin = member();
+        var toAccept = service.create(buyerId, request(UUID.randomUUID(), "accept"));
+        var toReject = service.create(buyerId, request(UUID.randomUUID(), "reject"));
+        sanction(sellerId, admin, "SECURITY_LOCK", FIXTURE_TIME.plusDays(1));
+
+        assertBusiness(() -> service.create(buyerId, request(UUID.randomUUID(), "text")), "MEMBER_RESTRICTED");
+        assertBusiness(() -> decisions.accept(sellerId, toAccept.orderId().toString()), "MEMBER_RESTRICTED");
+        assertThat(orderStatus(toAccept.orderId())).isEqualTo("REQUESTED");
+        decisions.reject(sellerId, toReject.orderId().toString(), "제한 중 거절");
+        assertThat(orderStatus(toReject.orderId())).isEqualTo("REJECTED");
+        // 거절 이력이 더해지므로 주문 수만 확인한다.
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM orders WHERE product_id = ?", Long.class, productId))
+                .isEqualTo(2L);
+
+        // 관리자 해제(철회) 후에는 수락할 수 있다.
+        jdbc.update("UPDATE member_sanctions SET revoked_at = ?, revoked_by = ?, revoke_reason = '해제'"
+                + " WHERE member_id = ?", FIXTURE_TIME, admin, sellerId);
+        decisions.accept(sellerId, toAccept.orderId().toString());
+        assertThat(orderStatus(toAccept.orderId())).isEqualTo("AWAITING_PAYMENT");
+    }
+
+    private void sanction(long memberId, long adminId, String kind, LocalDateTime endsAt) {
+        jdbc.update("INSERT INTO member_sanctions(member_id, kind, reason, applied_by, request_key, starts_at, ends_at)"
+                        + " VALUES (?, ?, '테스트 제재', ?, ?, ?, ?)",
+                memberId, kind, adminId, UUID.randomUUID().toString(), FIXTURE_TIME.minusDays(1), endsAt);
+    }
+
+    private String orderStatus(long orderId) {
+        return jdbc.queryForObject("SELECT status FROM orders WHERE id = ?", String.class, orderId);
     }
 
     private void assertCounts(long expected) {

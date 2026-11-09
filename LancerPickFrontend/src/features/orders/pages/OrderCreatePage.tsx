@@ -19,6 +19,7 @@ import {
   readOrderAttempt,
   saveOrderAttempt,
   clearOrderAttempt,
+  isDefinitiveOrderRejection,
 } from '../attempt'
 import styles from './OrderCreatePage.module.css'
 
@@ -166,7 +167,7 @@ function OrderForm({
         [400, 401, 403, 404, 409].includes(cause.status)
       ) {
         setBlocked(true)
-        setRejected([400, 404, 409].includes(cause.status))
+        setRejected(isDefinitiveOrderRejection(cause.status, cause.code))
         setError(`${cause.message} 상품과 주문 내역을 다시 확인해 주세요.`)
       } else
         setError(

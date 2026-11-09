@@ -6,7 +6,7 @@
 
 | 항목 | 이번 구현 | 후속 연결 |
 | --- | --- | --- |
-| B1 제재 조회 | `MemberSanctionQuery.restriction(long memberId)` | 정은찬: 주문·타이머 검사, 박소현: 신규 상품 활동 검사 |
+| B1 제재 조회 | `MemberSanctionQuery.restriction(long memberId)` | 정은찬: 주문·타이머 검사(주문 생성·판매자 수락 차단 U7 연결 2026-11-09, `order/service/NewTradeRestrictions`), 박소현: 신규 상품 활동 검사 |
 | B2 제재 명령 | `MemberSanctionCommandService.apply` / `revoke`, 관리자 DB 권한·회원 잠금·이력·중복 방지 | 황준범: 회원 관리 API·화면 |
 | 보안 잠금 인증 | 로그인 거절, 인증 버전 증가, 기존 HTTP/소켓 인증 재검사 경로 연결 | 실제 브라우저·소켓 폐기 확인은 별도 |
 | 타이머 중단 전달 | 커밋 후 호출, 실패/연결 전 미처리 기록, 내부 재시도 | 정은찬: `SecurityLockTimerStopper` 구현체·타이머 재검사 |

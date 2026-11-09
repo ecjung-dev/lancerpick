@@ -1,5 +1,14 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 일반 이용 제한의 새 거래 차단(U7) — 2026-11-09, 로컬 구현
+
+정은찬, 브랜치 `feature/member-restriction-trade-block`(main `381d4cd`(#137)에서 분기). [개편 결정 §16](ui-renewal-member-policy.md) U7대로 [제재 조회](member-sanction-foundation.md)를 주문 영역에 연결했다. 새 주문 생성은 구매자·판매자 중 하나라도, 판매자 수락은 판매자가 일반 이용 제한 또는 보안 잠금이면 403 `MEMBER_RESTRICTED`로 거절한다. 기존 회원 잠금(생성은 회원 ID 오름차순, 수락은 `lockParticipantOrder`) 뒤에 검사해 제재 적용과 직렬화한다. 같은 요청 키 재전송(기존 주문 반환)과 거절, 이미 성립한 거래의 처리 명령은 막지 않는다. 주문 신청 화면은 이 403을 확정 거절로 보고 저장된 요청 정리 버튼을 보여 준다. 공통 검사는 `order/service/NewTradeRestrictions`. DB·Flyway·응답 필드 변경 없음. [생성 처리 순서 4-1](order-creation.md#처리-순서와-재전송).
+
+- 영향 범위: 주문 생성·수락 서비스 생성자에 의존성 하나 추가. 상품 목록·상세에서 제한 판매자 상품을 숨기거나 상품 등록을 막는 일은 상품 영역(박소현)이다.
+- 남은 것: 관리자 제재 API·화면(황준범) 연결 후 실제 브라우저 확인. 주문 상세 `allowedActions`는 제재를 반영하지 않아 제한 판매자에게도 수락 버튼이 보이고 서버가 403으로 막는다.
+
+검증(로컬, `lancerpick_test` 3307): 주문 생성·결제·계약·공통 관련 107건 통과(`OrderCreationIntegrationTests` 신규 2건: 제한 구매자의 새 주문 403·같은 키 재전송은 기존 주문·기간 끝난 제재는 허용, 판매자 보안 잠금 시 새 주문·수락 403·거절 허용·철회 후 수락). 프런트 `tests/order-attempt.test.mjs` 3건(신규 1건), typecheck·lint·`test:api` 271건·build 통과(기존 번들 크기 경고 유지). 백엔드 전체 `clean build` 995건 통과(실패·오류·건너뜀 0). 실제 서버·브라우저 확인은 하지 않았다.
+
 ## 결제·보관금 상태 enum(R2) — 2026-11-09, 로컬 구현
 
 `refactor/payment-funds-status`(황준범, main `6cf5667` 기준)에서 PaymentStatus·OrderFundsStatus를 적용했다. 기존/V3 명령·보관금 조회·관리자 금융 조건과 String DTO 조립을 함께 맞추며 DB VARCHAR·기존 문자열·금액/잠금 정책은 유지한다. [이전 데이터 호환·검증 기록](payment-status-enums.md). main 반영 전이며 R1 계약/채팅 잠금 공통화는 별도다.

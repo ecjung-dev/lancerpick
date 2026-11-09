@@ -163,7 +163,7 @@ ProductPatch는 ProductInput의 7개 필드 중 바꿀 필드만 보내는 JSON 
 | 메서드·경로 | 입력·권한 | 출력 |
 | --- | --- | --- |
 | GET /orders | 회원; side=BUYER 또는 SELLER 필수, status·q·from·to·sort 선택, page,size | OrderSummary 목록 |
-| POST /orders | 구매자; productId,expectedProductVersion,requirements,requestKey | 201 OrderDetail / 중복 200 |
+| POST /orders | 구매자; productId,expectedProductVersion,requirements,requestKey | 201 OrderDetail / 중복 200. 구매자·판매자 중 하나라도 일반 이용 제한·보안 잠금이면 신규 요청은 403 MEMBER_RESTRICTED(같은 키 재전송은 기존 주문 200) |
 | GET /orders/{id} | 주문 참여자 | OrderDetail |
 
 목록 검색 조건(U3): `q`는 앞뒤 공백을 지운 뒤 비면 무시하고 최대 100자(코드 포인트)다. ASCII 숫자만이면 주문번호 정확 일치, 그 밖에는 저장된 상품명·상대방 현재 표시 이름 부분 일치(`%`·`_`는 글자 그대로)다. `from`·`to`는 한국 날짜 `yyyy-MM-dd`이고 주문 시각을 [from 00:00 KST, to+1일 00:00 KST)로 거른다. `sort`는 `latest`(기본, 최신 주문 먼저)·`oldest`. 형식 오류·없는 날짜·from>to·다른 sort 값은 400 VALIDATION_FAILED. 건수와 항목에 같은 조건을 적용한다. 상세는 [주문 조회](order-query.md#목록-검색기간정렬-조건-u3--2026-11-09).
@@ -194,7 +194,7 @@ payment: id,amount,feeRateBps,status,paidAt,refundedAt. review는 8절의 Review
 
 | POST 경로 | 실행자·입력 | 조건·결과 |
 | --- | --- | --- |
-| /orders/{id}/accept | 판매자; 없음 | REQUESTED → AWAITING_PAYMENT(LEGACY_V1) / AWAITING_CONTRACT(계약 주문) |
+| /orders/{id}/accept | 판매자; 없음 | REQUESTED → AWAITING_PAYMENT(LEGACY_V1) / AWAITING_CONTRACT(계약 주문). 판매자 일반 이용 제한·보안 잠금이면 403 MEMBER_RESTRICTED(거절은 허용) |
 | /orders/{id}/reject | 판매자; reason | REQUESTED → REJECTED |
 | /orders/{id}/cancel | 구매자·판매자; reason | 구매자 결제 전; 판매자 수락 후 미완료. 유료 취소 전액 환불 |
 | /orders/{id}/payment | 구매자; agreedToTerms=true | 결제 대기·잔액 확인 → IN_PROGRESS |
@@ -399,7 +399,7 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 | --- | --- |
 | 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED, PASSWORD_RESET_TOKEN_INVALID, SIGNUP_EMAIL_TOKEN_INVALID, EMAIL_VERIFICATION_INVALID |
 | 401 | AUTHENTICATION_REQUIRED, INVALID_CREDENTIALS |
-| 403 / 404 | FORBIDDEN, CSRF_INVALID / RESOURCE_NOT_FOUND |
+| 403 / 404 | FORBIDDEN, CSRF_INVALID, MEMBER_RESTRICTED(주문 생성·판매자 수락, U7) / RESOURCE_NOT_FOUND |
 | 409 | EMAIL_ALREADY_EXISTS, PRODUCT_VERSION_CONFLICT, PRODUCT_NOT_ORDERABLE, SELF_PURCHASE_NOT_ALLOWED, CONTRACT_MINIMUM_AMOUNT_NOT_MET(V2 생성 활성화 후에만) |
 | 409 | ORDER_STATE_CONFLICT, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED |
 | 409 | CANCELLATION_PENDING, REQUEST_ALREADY_RESOLVED, REVISION_ALREADY_USED, REVIEW_ALREADY_EXISTS, PAYMENT_ALREADY_REFUNDED, DELIVERY_ALREADY_SUBMITTED, DELIVERY_SEQUENCE_CONFLICT |
