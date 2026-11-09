@@ -395,6 +395,19 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 - 충전 status는 READY·PROCESSING·UNKNOWN·COMPLETED·FAILED, 결제 status는 PAID·REFUNDED, policyVersion은 LEGACY_V1·CONTRACT_V2·CONTRACT_V3만(대소문자 그대로). ID 필터는 양수. 잘못된 값 400 `VALIDATION_FAILED`, 없는 대상 404 `RESOURCE_NOT_FOUND`.
 - 결제 키·처리권·파일 경로/해시·회원 이메일은 응답에 없다. 후보 판단(eligible·reason)은 조회 순간의 조건일 뿐 실행 권한이 아니며, 재확인·재시작·재생성 실행 API는 없다(관리자 감사 이력 설계 후 별도).
 
+## 9-4 관리자 알림 처리 실패 조회 김창재
+
+2026-11-09 `feature/admin-outbox-failures`(K6 알림 `FAILED` 조회). 조회만 하며 재처리(다시 보내기) API는 없다([관리자 작업 감사 이력 설계안](admin-action-audit-design.md) 확정 뒤 별도). GET·`Cache-Control: no-store`·관리자 전용, 현재 DB 역할 재확인(강등 세션 403). DB 변경 없음.
+
+| 메서드·경로 | 입력 | 출력 |
+| --- | --- | --- |
+| GET /admin/outbox-events | status(`FAILED` 기본·`RETRYING`), orderId(선택), page, size(1~100, 기본 20) | OutboxIssue 목록, 이벤트 ID 내림차순(최근 먼저) |
+
+- OutboxIssue: id, eventId, type, aggregateType, aggregateId, status, attemptCount, lastErrorCode, nextAttemptAt, createdAt. ID는 문자열, 시각은 UTC.
+- `FAILED`: 자동 재시도를 멈춘 이벤트(`outbox_events.status='FAILED'`), nextAttemptAt은 null. `RETRYING`: 실패 후 다음 시도를 기다리는 이벤트(`PENDING`이며 attempt_count ≥ 1). 처음 대기 중(시도 0회)·완료 이벤트는 나오지 않는다.
+- orderId는 `aggregate_type='ORDER'`인 이벤트만 거른다. lastErrorCode는 [공통 이벤트 계약](event-contract.md)의 고정 코드다.
+- 페이로드(수신자 등)는 응답하지 않는다. status는 대소문자 그대로 두 값만, orderId는 양수, page 0 이상. 그 밖의 값은 400 `VALIDATION_FAILED`.
+
 ## 10 오류와 입력 기준
 
 | HTTP | 주요 코드 |
