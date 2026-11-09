@@ -29,6 +29,8 @@ E4(#85, main `a7057d6`)부터 수락/거절과 직접 취소는 findForDecision�
 
 E6 앞부분(#93)부터 납품·재납품·수정 요청은 `findForFulfillment`(LEGACY_V1·CONTRACT_V3 허용)를 사용한다. V3는 주문 잠금 아래에서 결제 금액 보관(`order_funds` HELD, 금액=주문 총액)을 확인하고, 없으면 `DATA_INTEGRITY_ERROR`(500)로 아무것도 바꾸지 않는다. 후속 금융 브랜치에서는 이 검증을 유지하면서 V3 결제·수동 확정·취소 요청/승인 환불을 열었다([금융 구현](full-funding-payment.md)). CONTRACT_V2의 결제 후 명령 차단은 유지한다.
 
+구조 정리(`refactor/order-service-cleanup`) 이후 위 잠금은 `OrderCommandLocks`의 `lockParticipantOrder`(findForDecision)·`lockFulfillmentOrder`(findForFulfillment)로 얻는다. 정책 판단은 바뀌지 않았고, V3 여부는 `Order.isFullFunding()`으로 확인한다.
+
 OrderDetailResponse.withAllowedActions도 policyVersion을 보존한다. 새 필드는 기존 JSON에 추가되는 필드이며 기존 경로·입력은 유지한다. 프런트는 서버 allowedActions를 그대로 사용하고 임의로 V2의 PAY/CONFIRM을 복원하지 않는다.
 
 ## 아직 남은 활성화 조건

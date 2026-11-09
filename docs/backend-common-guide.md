@@ -18,7 +18,7 @@ Entity 저장·변경은 JPA, 검색·조인·집계는 QueryDSL을 사용한다
 
 J5의 Spring Batch JDBC 저장소는 프레임워크 실행 메타데이터(`BATCH_*`) 전용이다. 업무 Repository는 JPA/QueryDSL을 유지하며 시스템 테이블을 업무 엔티티로 재구현하지 않는다. [충전 복구 경계](wallet-topup-recovery-batch.md)를 따른다. `wallet/config`는 Job·설정 값·전용 스케줄러 구성, `wallet/batch`는 Tasklet, `wallet/service`는 복구 조율·짧은 지급 트랜잭션을 담당한다.
 
-기존에 적용한 Flyway 마이그레이션을 수정하지 않고 후속 버전을 추가한다. 서버 시작과 검사에서 ddl-auto=validate로 매핑을 확인한다. ID는 JSON 문자열, 금액은 정수 원, API 시각은 UTC ISO 8601 기준이다. MySQL DATETIME과 LocalDateTime의 UTC 보관 규칙을 유지한다.
+기존에 적용한 Flyway 마이그레이션을 수정하지 않고 후속 버전을 추가한다. 서버 시작과 검사에서 ddl-auto=validate로 매핑을 확인한다. ID는 JSON 문자열, 금액은 정수 원, API 시각은 UTC ISO 8601 기준이다. MySQL DATETIME과 LocalDateTime의 UTC 보관 규칙을 유지한다. 저장용 현재 시각은 `common/time/UtcTimes.nowMicros(clock)`(UTC, 마이크로초 절삭)으로 구하며, 잠금 뒤 시각이 필요한 곳은 잠금 뒤에 호출한다.
 
 ## 인증·입력·오류
 
@@ -28,7 +28,7 @@ DTO는 형식, 서비스는 범위·정규화·소유권·상태를 검증한다
 
 ## 거래와 트랜잭션
 
-업무를 시작하는 서비스가 전체 DB 트랜잭션을 관리한다. 주문·지갑·결제·환불·정산·원장·이력의 함께 성공해야 하는 변경은 같은 트랜잭션에 참여한다. 현재 주문 명령은 실행 회원 공유 잠금, 주문 잠금, 필요 시 구매자 지갑 잠금 순서로 처리한다. 주문 생성은 관련 회원 ID 오름차순 잠금과 상품 버전을 확인한다. 변경 시 [주문 생성](order-creation.md) 및 금융 문서의 순서를 대조한다.
+업무를 시작하는 서비스가 전체 DB 트랜잭션을 관리한다. 주문·지갑·결제·환불·정산·원장·이력의 함께 성공해야 하는 변경은 같은 트랜잭션에 참여한다. 현재 주문 명령은 실행 회원 공유 잠금, 주문 잠금, 필요 시 지갑 잠금(결제·환불은 구매자, V3 구매 확정·자동 확정은 판매자) 순서로 처리한다. 주문 패키지의 회원·주문 잠금과 401/404는 `order/service/OrderCommandLocks`(기존 트랜잭션 필수)로 얻고, 정책 검사는 각 서비스에서 명시적으로 한다. 주문 생성은 관련 회원 ID 오름차순 잠금과 상품 버전을 확인한다. 변경 시 [주문 생성](order-creation.md) 및 금융 문서의 순서를 대조한다.
 
 외부 토스 승인 조율은 WalletTopupApprovalService의 NEVER 경계와 TopupApprovalTransactions를 사용한다. 외부 네트워크 호출을 DB 잠금 안에 넣지 않는다. 승인 결과 불명확 상태의 재확인은 같은 승인 요청을 무조건 반복하는 방식으로 바꾸지 않는다.
 
