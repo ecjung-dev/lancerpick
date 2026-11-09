@@ -1,5 +1,18 @@
 import type { FieldError } from '../../shared/api/client.ts'
 
+export interface ChatThread {
+  orderId: string
+  productTitle: string
+  counterparty: { id: string; displayName: string }
+  side: 'BUYER' | 'SELLER'
+  orderStatus: string
+  canSend: boolean
+  lastMessagePreview: string | null
+  lastSenderId: string | null
+  lastMessageAt: string | null
+  activityAt: string
+}
+
 export interface ChatMessage {
   id: string
   orderId: string

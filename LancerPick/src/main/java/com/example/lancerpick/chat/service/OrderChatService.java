@@ -83,7 +83,7 @@ public class OrderChatService {
         nextCursor,
         hasMore,
         Long.toString(order.getChatSequence()),
-        WRITABLE_STATUSES.contains(order.getStatus()));
+        canSend(order.getStatus()));
   }
 
   /** 회원 공유 잠금 → 주문 배타 잠금. 순번 증가와 메시지를 한 트랜잭션에 저장하며 외부 전달은 하지 않는다. */
@@ -121,7 +121,7 @@ public class OrderChatService {
       }
       return new Sent(ChatMessageResponse.from(existing.get()), false);
     }
-    if (!WRITABLE_STATUSES.contains(order.getStatus())) {
+    if (!canSend(order.getStatus())) {
       throw new BusinessException(HttpStatus.CONFLICT, "CHAT_CLOSED", "종료된 주문의 대화는 조회만 할 수 있습니다.");
     }
     var occurredAt =
@@ -144,6 +144,10 @@ public class OrderChatService {
 
   private static boolean isParticipant(Order order, long memberId) {
     return order.getBuyerId() == memberId || order.getSellerId() == memberId;
+  }
+
+  static boolean canSend(OrderStatus status) {
+    return WRITABLE_STATUSES.contains(status);
   }
 
   private static BusinessException notFound() {

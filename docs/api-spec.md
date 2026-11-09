@@ -1,5 +1,7 @@
 # 랜서픽 MVP API 명세서
 
+2026-11-09 로컬 U5 후속: `GET /api/me/order-chats?q=&page=0&size=20` 본인 주문 대화 목록을 추가했다. principal 기준·no-store·페이지 크기 1~100·검색어 100 코드 포인트 이하. 숫자 검색은 주문번호 정확 일치, 나머지는 보관 상품명/현재 상대방 이름 부분 일치이며 최근 메시지(없으면 주문 생성)순이다. 종료/메시지 없는 주문도 포함한다. [필드·오류·검색·계정 경계](order-chat-workspace.md#대화-목록-api). 기존 메시지 GET/POST·소켓 계약과 DB는 유지한다. 로컬 구현이며 push·PR·병합 전이다.
+
 2026-11-09 로컬 B1/B2 후속: 보안 잠금 계정은 `POST /api/auth/login`의 올바른 비밀번호 확인 후 403 `MEMBER_LOCKED`를 반환한다. 잘못된 자격 증명의 기존 401은 유지한다. 일반 이용 제한은 로그인 가능하며, 보안 잠금 시 기존 HTTP 세션은 인증 버전 재검사에서 401이 된다. [제재 공통 기반](member-sanction-foundation.md)의 변경 명령은 내부 서비스로만 제공한다(409 `SANCTION_REQUEST_CONFLICT` 포함). 신규 관리자 HTTP 경로·요청/응답은 아직 없다.
 
 채팅 후속 로컬: 당사자 GET/POST `/api/orders/{orderId}/chat/messages`의 UUID 멱등·순번 커서를 유지하고 `/ws` WebSocket/STOMP를 연결했다. `/app/orders/{orderId}/chat/messages` SEND, `/user/queue/chat`·`/user/queue/chat-errors` SUBSCRIBE만 허용한다. 종료 후 조회 전용. [HTTP 요청·응답](order-chat-storage.md), [소켓 계약·CSRF·세션 폐기·복구](order-chat-realtime.md). 원격 병합·배포 활성화 여부와 구분한다.
