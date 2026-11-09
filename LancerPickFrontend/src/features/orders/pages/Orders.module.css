@@ -82,3 +82,29 @@
     padding: 16px;
   }
 }
+.list-search {
+  display: grid;
+  gap: 8px;
+  margin: 24px 0;
+}
+.list-search input[type='search'] {
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+}
+.list-period,
+.list-options,
+.list-search-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+}
+.list-period label,
+.list-options label {
+  margin-bottom: 0;
+}
+.list-period input[type='date'] {
+  max-width: 100%;
+  box-sizing: border-box;
+}

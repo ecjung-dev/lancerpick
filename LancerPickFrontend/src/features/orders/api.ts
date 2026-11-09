@@ -1,5 +1,6 @@
 import { prepareCancellationReason, prepareOrderInput } from './validation.ts'
 import type { CreateOrderInput } from './types.ts'
+import type { OrderListFilters } from './listFilters.ts'
 // 이 기능의 서버 요청 함수를 구현합니다. 공통 요청 처리는 shared/api/client.ts에 둡니다.
 import { apiRequest } from '../../shared/api/client.ts'
 import type { PageResponse } from '../../shared/api/types'
@@ -20,16 +21,17 @@ function orderPath(id: string) {
     throw new Error('주문 ID를 확인해 주세요.')
   return `/orders/${id}`
 }
-export const getOrders = (
-  side: 'BUYER' | 'SELLER',
-  page: number,
-  signal?: AbortSignal,
-  status?: string,
-) =>
-  apiRequest<PageResponse<OrderSummary>>(
-    `/orders?side=${side}${status ? `&status=${encodeURIComponent(status)}` : ''}&page=${page}&size=20`,
-    { signal },
-  )
+export const getOrders = (filters: OrderListFilters, signal?: AbortSignal) => {
+  const params = new URLSearchParams({ side: filters.side })
+  if (filters.status) params.set('status', filters.status)
+  if (filters.q) params.set('q', filters.q)
+  if (filters.from) params.set('from', filters.from)
+  if (filters.to) params.set('to', filters.to)
+  if (filters.sort === 'oldest') params.set('sort', 'oldest')
+  params.set('page', String(filters.page))
+  params.set('size', '20')
+  return apiRequest<PageResponse<OrderSummary>>(`/orders?${params}`, { signal })
+}
 export const getOrder = (id: string, signal?: AbortSignal) =>
   apiRequest<OrderDetail>(orderPath(id), { signal })
 export const payOrder = (id: string) =>

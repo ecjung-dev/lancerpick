@@ -23,9 +23,9 @@ test('mypage exposes buyer, seller and settlement destinations as real links', (
   assert.doesNotMatch(html, /구매 내역 <small>준비 중/)
 })
 
-function renderOrders(url, side, page, status = '') {
+function renderOrders(url, side, page, status = '', { q = '', from = '', to = '', sort = 'latest' } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  client.setQueryData(['wallet', 'orders', side, status, page], {
+  client.setQueryData(['wallet', 'orders', side, status, page, q, from, to, sort], {
     items: [{ id: '9007199254740993', productTitle: `${side} saved page ${page}`, priceAmount: 999,
       status: 'COMPLETED', counterparty: { id: '2', displayName: 'counterparty' }, createdAt: '2026-11-03T00:00:00Z', currentDueAt: null }],
     page, size: 20, totalElements: 60, totalPages: 3,
@@ -42,6 +42,27 @@ test('direct seller URL restores selected tab and page without converting order 
   assert.match(html, /SELLER saved page 2/)
   assert.match(html, /3페이지/)
   assert.match(html, /href="\/orders\/9007199254740993\?side=SELLER&amp;page=2"/)
+})
+
+test('direct search URL restores keyword, dates and sort and keeps them on detail links', () => {
+  const url = '/orders?side=SELLER&q=%EB%A1%9C%EA%B3%A0&from=2026-10-01&to=2026-10-31&sort=oldest&page=1'
+  const html = renderOrders(url, 'SELLER', 1, '', { q: '로고', from: '2026-10-01', to: '2026-10-31', sort: 'oldest' })
+  assert.match(html, /SELLER saved page 1/)
+  assert.match(html, /type="search"[^>]*value="로고"/)
+  assert.match(html, /type="date" value="2026-10-01"/)
+  assert.match(html, /type="date" value="2026-10-31"/)
+  assert.match(html, /value="oldest" selected=""/)
+  assert.match(html, /총 60건/)
+  assert.match(html, /주문번호 9007199254740993/)
+  assert.match(html, /href="\/orders\/9007199254740993\?side=SELLER&amp;q=%EB%A1%9C%EA%B3%A0&amp;from=2026-10-01&amp;to=2026-10-31&amp;sort=oldest&amp;page=1"/)
+})
+
+test('invalid search URL values fall back to no condition instead of an API error', () => {
+  const html = renderOrders(`/orders?side=BUYER&q=${'a'.repeat(101)}&from=2026-02-30&to=2026-1-01&sort=price`, 'BUYER', 0)
+  assert.match(html, /BUYER saved page 0/)
+  assert.match(html, /value="latest" selected=""/)
+  const reversed = renderOrders('/orders?side=BUYER&from=2026-11-02&to=2026-11-01', 'BUYER', 0)
+  assert.match(reversed, /BUYER saved page 0/)
 })
 
 test('invalid side or page uses the buyer first page rather than an invalid API query', () => {
@@ -175,7 +196,7 @@ test('preview order numbers never lead to real orders', () => {
 })
 test('empty filtered order list explains that no orders match', () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  client.setQueryData(['wallet', 'orders', 'BUYER', 'COMPLETED', 0], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })
+  client.setQueryData(['wallet', 'orders', 'BUYER', 'COMPLETED', 0, '', '', '', 'latest'], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })
   try {
     const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders?side=BUYER&status=COMPLETED'] },
       createElement(QueryClientProvider, { client }, createElement(OrderListPage))))
@@ -206,7 +227,7 @@ test('order list separates expired login from server failure while keeping filte
     [502, '요청을 처리하지 못했습니다. 다시 시도해 주세요.', /요청을 처리하지 못했습니다/],
   ]) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
-    const query = client.getQueryCache().build(client, { queryKey: ['wallet', 'orders', 'BUYER', 'COMPLETED', 0], queryFn: async () => undefined })
+    const query = client.getQueryCache().build(client, { queryKey: ['wallet', 'orders', 'BUYER', 'COMPLETED', 0, '', '', '', 'latest'], queryFn: async () => undefined })
     query.setState({ status: 'error', fetchStatus: 'idle', error: new ApiError(status, { code: 'HTTP_ERROR', message, fieldErrors: [] }) })
     try {
       const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders?side=BUYER&status=COMPLETED'] },

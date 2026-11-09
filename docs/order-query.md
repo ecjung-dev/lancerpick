@@ -25,6 +25,22 @@ GET /api/orders?side=SELLER&status=REQUESTED
 - 큰 page는 long offset으로 계산하며 범위를 벗어나면 빈 items와 정확한 전체 건수를 반환한다. 목록이 없으면 totalPages는 0이다.
 - 스냅샷이 누락된 주문을 목록에서 조용히 제외하지 않는다. 해당 항목을 읽으면 500 DATA_INTEGRITY_ERROR다.
 
+## 목록 검색·기간·정렬 조건 (U3) — 2026-11-09
+
+[화면 개편 결정 §16.1](ui-renewal-member-policy.md#161-정은찬-구현)의 U3 계약을 구현했다(정은찬, 브랜치 `feature/order-list-search`). DB·Flyway 변경은 없고 기존 `ix_orders_buyer_created`·`ix_orders_seller_created` 인덱스 범위에서 조회한다.
+
+```text
+GET /api/orders?side=BUYER&q=로고&from=2026-10-01&to=2026-10-31&sort=oldest
+GET /api/orders?side=SELLER&q=123
+```
+
+- `q`: 앞뒤 공백을 지우고 비면 조건 없음. 100자(코드 포인트) 초과는 400. ASCII 숫자만이면 주문번호 정확 일치만 본다(숫자로 된 상품명은 이 경우 찾지 않음, 0·long 범위 초과는 결과 없음). 그 밖에는 `order_snapshots.product_title_snapshot` 또는 상대방(BUYER 조회는 판매자, SELLER 조회는 구매자)의 현재 `display_name` 부분 일치이며 `%`·`_`는 `!` 이스케이프로 글자 그대로 찾는다. 대소문자 구분은 DB 콜레이션을 따른다.
+- `from`/`to`: 네 자리 연도 `yyyy-MM-dd`만 받고 없는 날짜는 400. 서버가 [from 00:00 KST, to+1일 00:00 KST)를 UTC로 바꿔 `orders.created_at`과 비교한다(종료일 당일 포함). 둘 중 하나만 줄 수 있고 from>to는 400. 기간 상한은 없다.
+- `sort`: `latest`(기본, created_at·id 내림차순)·`oldest`(오름차순). 그 외 값은 400.
+- 건수 조회도 목록과 같은 스냅샷·상대방 조인과 조건을 쓴다.
+
+화면(`/orders`): 검색어·시작일·종료일 입력과 조회·초기화, 최근 1개월/3개월/전체 기간 버튼(한국 날짜 오늘 기준, 없는 날짜는 그 달 말일), 정렬 선택, 결과 건수, 항목의 주문번호를 추가했다. 조건은 URL(`q`·`from`·`to`·`sort`)에 두고 기본값은 생략하며, 조건을 바꾸면 첫 페이지로 간다. 주소에 잘못된 값이 있으면 그 조건만 빼고 조회한다(from>to면 둘 다). 상세로 갈 때와 상세의 "거래 내역" 복귀 링크는 기존처럼 현재 쿼리를 그대로 넘긴다. 목록 queryKey는 `['wallet', 'orders', side, status, page, q, from, to, sort]`이며 `['wallet']` 무효화·계정 전환 정리는 그대로 적용된다.
+
 ## 상세
 
 ```text

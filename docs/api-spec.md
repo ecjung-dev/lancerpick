@@ -158,9 +158,11 @@ ProductPatch는 ProductInput의 7개 필드 중 바꿀 필드만 보내는 JSON 
 
 | 메서드·경로 | 입력·권한 | 출력 |
 | --- | --- | --- |
-| GET /orders | 회원; side=BUYER 또는 SELLER 필수, status 선택, page,size | OrderSummary 목록 |
+| GET /orders | 회원; side=BUYER 또는 SELLER 필수, status·q·from·to·sort 선택, page,size | OrderSummary 목록 |
 | POST /orders | 구매자; productId,expectedProductVersion,requirements,requestKey | 201 OrderDetail / 중복 200 |
 | GET /orders/{id} | 주문 참여자 | OrderDetail |
+
+목록 검색 조건(U3): `q`는 앞뒤 공백을 지운 뒤 비면 무시하고 최대 100자(코드 포인트)다. ASCII 숫자만이면 주문번호 정확 일치, 그 밖에는 저장된 상품명·상대방 현재 표시 이름 부분 일치(`%`·`_`는 글자 그대로)다. `from`·`to`는 한국 날짜 `yyyy-MM-dd`이고 주문 시각을 [from 00:00 KST, to+1일 00:00 KST)로 거른다. `sort`는 `latest`(기본, 최신 주문 먼저)·`oldest`. 형식 오류·없는 날짜·from>to·다른 sort 값은 400 VALIDATION_FAILED. 건수와 항목에 같은 조건을 적용한다. 상세는 [주문 조회](order-query.md#목록-검색기간정렬-조건-u3--2026-11-09).
 
 생성 시 상품 상태·버전·자기 상품 구매 금지를 검증한다. 가격·판매자·거래 조건은 서버에서 복사한다. 같은 구매자·요청 키·입력은 기존 주문 반환, 같은 키·다른 입력은 409 IDEMPOTENCY_KEY_REUSED. 기존 키 확인을 현재 상품 조건 검사보다 먼저 수행하여 성공한 주문의 재전송을 새 주문으로 처리하지 않는다.
 
