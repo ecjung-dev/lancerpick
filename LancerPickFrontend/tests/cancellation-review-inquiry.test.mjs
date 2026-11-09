@@ -207,6 +207,8 @@ test('admin detail shows the cancellation context and keeps approval behind a co
     client.setQueryData(['admin', 'inquiry', inquiryId], detail)
     const html = render(`/admin/inquiries/${inquiryId}`, '/admin/inquiries/:id', createElement(AdminInquiryDetailPage), client)
     assert.match(html, /600,001원/)
+    assert.match(html, /<dd>납품 확인 대기<\/dd>/, '주문 상태는 코드가 아니라 주문 화면과 같은 한글 라벨로 보여 준다')
+    assert.doesNotMatch(html, /AWAITING_CONFIRMATION/)
     assert.match(html, /&lt;script&gt;x&lt;\/script&gt;/)
     assert.match(html, /<button type="button" disabled="">승인 및 전액 반환<\/button>/, '확인 전에는 승인 버튼을 막는다')
     assert.match(html, />거절</)

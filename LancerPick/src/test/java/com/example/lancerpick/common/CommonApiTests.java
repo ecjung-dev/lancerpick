@@ -97,10 +97,42 @@ class CommonApiTests {
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
     }
 
+    @Test
+    @WithMockUser
+    void clientFormatMistakesAreNotServerErrors() throws Exception {
+        // PDF만 제공하는 주소에 JSON만 받겠다고 요청: 500이 아니라 406 + 공통 오류 형식.
+        mvc.perform(get("/api/probe/pdf").accept(org.springframework.http.MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotAcceptable()).andExpect(jsonPath("$.code").value("NOT_ACCEPTABLE"))
+                .andExpect(jsonPath("$.traceId").isNotEmpty());
+        // JSON도 받지 않으면 본문 없이 406(500 아님).
+        mvc.perform(get("/api/probe/pdf").accept(org.springframework.http.MediaType.IMAGE_PNG))
+                .andExpect(status().isNotAcceptable());
+        // 같은 주소를 PDF로 요청하면 정상.
+        mvc.perform(get("/api/probe/pdf").accept(org.springframework.http.MediaType.APPLICATION_PDF))
+                .andExpect(status().isOk());
+        // POST 전용 주소에 GET: 405 + 허용 메서드 안내.
+        mvc.perform(get("/api/probe/write"))
+                .andExpect(status().isMethodNotAllowed()).andExpect(jsonPath("$.code").value("METHOD_NOT_ALLOWED"))
+                .andExpect(header().string("Allow", org.hamcrest.Matchers.containsString("POST")));
+        // JSON 본문만 받는 주소에 다른 형식: 415.
+        mvc.perform(post("/api/probe/json").with(csrf()).contentType(org.springframework.http.MediaType.TEXT_PLAIN).content("x"))
+                .andExpect(status().isUnsupportedMediaType()).andExpect(jsonPath("$.code").value("UNSUPPORTED_MEDIA_TYPE"));
+    }
+
     @RestController
     public static class ProbeController {
         @PostMapping("/api/probe/write")
         public org.springframework.http.ResponseEntity<Void> write() {
+            return org.springframework.http.ResponseEntity.noContent().build();
+        }
+
+        @org.springframework.web.bind.annotation.GetMapping(value = "/api/probe/pdf", produces = "application/pdf")
+        public org.springframework.http.ResponseEntity<byte[]> pdf() {
+            return org.springframework.http.ResponseEntity.ok(new byte[] {'%', 'P', 'D', 'F'});
+        }
+
+        @PostMapping(value = "/api/probe/json", consumes = "application/json")
+        public org.springframework.http.ResponseEntity<Void> json(@org.springframework.web.bind.annotation.RequestBody java.util.Map<String, Object> body) {
             return org.springframework.http.ResponseEntity.noContent().build();
         }
     }

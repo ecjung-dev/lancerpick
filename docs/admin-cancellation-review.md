@@ -1,6 +1,6 @@
 # 운영 문의 취소 검토와 관리자 승인 취소(K4)
 
-작성: 2026-11-06, 정은찬, 작업 브랜치 `feature/admin-cancellation-review`(분기 main `92fabc3`, #120). 상태: **main 반영(#121)**, 자동 테스트 통과. 관리자 API·화면 연결과 실서버·브라우저 확인은 남음. 정책 경계는 [전액 보관 정책](full-funding-policy.md) §1, 금액 처리는 [전액 보관 구현](full-funding-payment.md)을 따른다.
+작성: 2026-11-06, 정은찬, 작업 브랜치 `feature/admin-cancellation-review`(분기 main `92fabc3`, #120). 상태: **main 반영(#121)**, 자동 테스트 통과. 관리자 API·화면 연결 main 반영(#132), 실서버·브라우저 확인 완료(2026-11-09, [활성화 게이트 9절](v3-activation-gate.md#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09)). 정책 경계는 [전액 보관 정책](full-funding-policy.md) §1, 금액 처리는 [전액 보관 구현](full-funding-payment.md)을 따른다.
 
 ## 결론
 
@@ -101,4 +101,4 @@ DB CHECK(`ck_inquiry_type`·`ck_inquiry_status`·`ck_inquiry_time`)와 같은 �
 ## 남은 일
 
 - 김창재: 문의 메시지(`support_messages`)·담당 지정(`IN_REVIEW`), 일반 문의(GENERAL) 접수 화면. 문의 상태를 바꾸는 새 경로도 주문 → 문의 잠금 순서를 지킨다.
-- G1: 실서버·브라우저로 B4 확인(정은찬과 함께), 활성화 판정.
+- G1: B4 실서버·브라우저 확인 완료(2026-11-09, [활성화 게이트 9절](v3-activation-gate.md#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09)). 활성화 판정은 정은찬·황준범 공동 검토 대기.
