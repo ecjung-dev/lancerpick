@@ -2,6 +2,7 @@ package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.web.PageResponse;
+import com.example.lancerpick.member.service.MemberSanctionQuery;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.dto.OrderSide;
 import com.example.lancerpick.order.dto.OrderSummaryResponse;
@@ -32,10 +33,13 @@ public class OrderQueryService {
   private static final Pattern DATE = Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2}");
   private final OrderDetailQueries details;
   private final OrderListQueries lists;
+  private final MemberSanctionQuery sanctions;
 
-  public OrderQueryService(OrderDetailQueries details, OrderListQueries lists) {
+  public OrderQueryService(
+      OrderDetailQueries details, OrderListQueries lists, MemberSanctionQuery sanctions) {
     this.details = details;
     this.lists = lists;
+    this.sanctions = sanctions;
   }
 
   /**
@@ -85,13 +89,19 @@ public class OrderQueryService {
   public OrderDetailResponse detail(long memberId, String id) {
     long orderId = OrderIds.positive(id).orElseThrow(OrderQueryService::invalidInput);
     var detail = details.forParticipant(orderId, memberId);
-    return detail.withAllowedActions(
+    var actions =
         OrderAllowedActions.actions(
-            detail.policyVersion(), detail.status(),
+            detail.policyVersion(),
+            detail.status(),
             detail.buyer().id().equals(Long.toString(memberId)),
             detail.revisionRequest(),
             detail.cancellationRequests(),
-            detail.review()));
+            detail.review());
+    // 표시만 보완한다. 제재 사유는 응답에 노출하지 않고 명령의 회원 잠금·권한 검사는 유지한다.
+    if (actions.contains("ACCEPT") && sanctions.restriction(memberId).blocksNewActivity()) {
+      actions = actions.stream().filter(action -> !"ACCEPT".equals(action)).toList();
+    }
+    return detail.withAllowedActions(actions);
   }
 
   // 네 자리 연도만 받아 날짜 경계 계산이 범위를 벗어나지 않게 한다. 존재하지 않는 날짜는 STRICT 파싱이 거부한다.

@@ -67,6 +67,7 @@ class OrderQueryApiIntegrationTests {
             jdbc.update("DELETE FROM products WHERE id=?", product);
         }
         jdbc.update("DELETE FROM categories WHERE id=?", category);
+        for (long id : members) jdbc.update("DELETE FROM member_sanctions WHERE member_id=?", id);
         for (long id : members) jdbc.update("DELETE FROM members WHERE id=?", id);
     }
 
@@ -89,6 +90,51 @@ class OrderQueryApiIntegrationTests {
                 .andExpect(jsonPath("$.items[0].id").value(Long.toString(first)));
         read("?side=BUYER&status=CANCELLED", buyer).andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1)).andExpect(jsonPath("$.items[0].id").value(Long.toString(first)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"LEGACY_V1", "CONTRACT_V2", "CONTRACT_V3"})
+    void restrictedSellerCannotSeeAcceptButCanRejectAndRegainsAcceptAfterExpiryOrRevocation(
+            String policy) throws Exception {
+        jdbc.update("UPDATE orders SET policy_version=? WHERE id=?", policy, second);
+        read("/" + second, seller).andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").value(org.hamcrest.Matchers.contains("ACCEPT", "REJECT")));
+
+        long sanction = restrictSeller();
+        read("/" + second, seller).andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").value(org.hamcrest.Matchers.contains("REJECT")))
+                .andExpect(jsonPath("$.sanction").doesNotExist());
+        // 제한된 판매자의 기존 주문도 구매자는 계속 조회·취소할 수 있다.
+        read("/" + second, buyer).andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").value(org.hamcrest.Matchers.contains("CANCEL")));
+
+        jdbc.update("UPDATE member_sanctions SET ends_at=? WHERE id=?", AT, sanction);
+        read("/" + second, seller).andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").value(org.hamcrest.Matchers.contains("ACCEPT", "REJECT")));
+
+        long renewed = restrictSeller();
+        jdbc.update("UPDATE member_sanctions SET revoked_at=?,revoked_by=?,revoke_reason='해제' WHERE id=?",
+                AT, third, renewed);
+        read("/" + second, seller).andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").value(org.hamcrest.Matchers.contains("ACCEPT", "REJECT")));
+    }
+
+    @Test
+    void restrictionDoesNotRemoveExistingTradeFulfillmentActions() throws Exception {
+        restrictSeller();
+        jdbc.update("UPDATE orders SET status='IN_PROGRESS',accepted_at=created_at,"
+                + "buyer_confirmed_terms_at=created_at,paid_at=created_at,"
+                + "due_at=DATE_ADD(created_at,INTERVAL 3 DAY) WHERE id=?", second);
+        read("/" + second, seller).andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").value(org.hamcrest.Matchers.contains("CANCEL", "DELIVER")));
+        read("/" + second, buyer).andExpect(status().isOk())
+                .andExpect(jsonPath("$.allowedActions").value(org.hamcrest.Matchers.contains("REQUEST_CANCELLATION")));
+    }
+
+    private long restrictSeller() {
+        return insert("INSERT INTO member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at)"
+                + " VALUES (?,'GENERAL_RESTRICTION','비공개 사유',?,?,?,?)",
+                seller, third, UUID.randomUUID().toString(), AT.minusDays(1), AT.plusDays(1));
     }
 
     @Test

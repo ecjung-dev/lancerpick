@@ -7,6 +7,7 @@ import {
   decisionLabel, readPaymentFilter, readTopupFilter, usePayments, useRecoveryJobs, useTopups,
   type PaymentFilter, type TopupFilter,
 } from '../financeApi'
+import { orderStatusLabel } from '../../orders/status'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
@@ -80,7 +81,7 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
               {list.data.items.map((item) => <li key={item.id}>
                 <Link to={`/admin/finance/orders/${item.orderId}`} state={{ from: `/admin/finance?${search}` }}>주문 #{item.orderId}</Link>
                 <p><span className={styles.badge}>{item.status === 'PAID' ? '결제' : item.status === 'REFUNDED' ? '환불' : item.status}</span>
-                  {formatWon(item.amount)}{item.refundedAmount > 0 && <> · 환불 {formatWon(item.refundedAmount)}</>} · {item.policyVersion} · 주문 {item.orderStatus}</p>
+                  {formatWon(item.amount)}{item.refundedAmount > 0 && <> · 환불 {formatWon(item.refundedAmount)}</>} · {item.policyVersion} · 주문 {orderStatusLabel(item.orderStatus)}</p>
                 <small>구매자 #{item.buyerId} · 판매자 #{item.sellerId} · 결제 {time(item.paidAt)}{item.refundedAt && <> · 환불 {time(item.refundedAt)}</>}</small>
               </li>)}
             </ul>}

@@ -93,6 +93,7 @@ test('order finance shows missing records as "기록 없음", not 0원, and PDF 
     })
     const html = render(`/admin/finance/orders/${orderId}`, '/admin/finance/orders/:id', createElement(AdminOrderFinancePage), client)
     assert.match(html, /주문 #9007199254740993/)
+    assert.match(html, /CONTRACT_V3 · 주문 진행 중/, '주문 상태는 한글 라벨')
     assert.match(html, /600,001원/)
     assert.equal(html.match(/기록 없음/g)?.length, 2, '정산·종료 분배가 없으면 0원 대신 기록 없음')
     assert.match(html, /HELD/)
@@ -115,6 +116,8 @@ test('finance page defaults to payments, restores filters from the URL and links
     assert.match(html, /value="PAID" selected=""/)
     assert.match(html, new RegExp(`href="/admin/finance/orders/${orderId}"`))
     assert.match(html, /총 1건/)
+    assert.match(html, /주문 진행 중/)
+    assert.doesNotMatch(html, /주문 IN_PROGRESS/)
   } finally { client.clear() }
 })
 

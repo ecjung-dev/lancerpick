@@ -2,6 +2,7 @@ import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
+import { orderStatusLabel } from '../../orders/status'
 import { decisionLabel, useContractPdf, useOrderFinance, type ContractPdf, type OrderFinance } from '../financeApi'
 import { isValidProductId as isValidId } from '../validation'
 import { accessProblem } from '../access'
@@ -40,7 +41,7 @@ function FinanceSummary({ data }: { data: OrderFinance }) {
   const { payment, funds, settlement, closure } = data
   return <>
     <header className={styles.heading}>
-      <p>{data.policyVersion} · 주문 {data.orderStatus}</p>
+      <p>{data.policyVersion} · 주문 {orderStatusLabel(data.orderStatus)}</p>
       <h1>주문 #{data.orderId}</h1>
       <p>주문 금액 {formatWon(data.orderAmount)} · 구매자 #{data.buyerId} · 판매자 #{data.sellerId}</p>
     </header>
