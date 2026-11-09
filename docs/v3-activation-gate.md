@@ -219,6 +219,8 @@ WHERE (
 1. 관리자 문의 상세의 주문 상태가 `AWAITING_CONFIRMATION`·`CANCELLED` 코드 그대로 보인다(관리자 화면, 김창재).
 2. 계약 PDF 주소에 `Accept: application/json`만 보내면 406이 아니라 500 `INTERNAL_ERROR`로 응답한다(`HttpMediaTypeNotAcceptableException`이 공통 처리기에서 미처리). 브라우저 다운로드에는 영향 없음(공통 오류 처리, 김창재).
 
+후속(2026-11-09, 김창재, `fix/b4-admin-findings`): 1은 관리자 문의 상세·금융 조회의 주문 상태를 `orderStatusLabel`로 표시해 보완했다. 2는 `ApiExceptionHandler`가 406 `NOT_ACCEPTABLE`(및 같은 원인의 405·415)을 공통 오류로 응답하도록 보완했다([API 10절](api-spec.md#10-오류와-입력-기준)). 판정 필수 항목이 아니며, 최종 후보 SHA 재확인 범위는 위 재판정 준비 절을 따른다.
+
 개인 DB 잔여: 주문 33(V3 계약 대기 중 취소, 준비 스크립트 중단분)·34(관리자 승인 취소)·35(구매 확정)·36(LEGACY_V1 취소), 회원 12 ADMIN.
 
 ## 10. 같은 커밋 화면 버튼 전체 거래·스케줄러 확인 — 2026-11-09

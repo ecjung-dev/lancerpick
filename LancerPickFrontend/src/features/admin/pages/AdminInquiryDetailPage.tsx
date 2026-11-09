@@ -7,6 +7,7 @@ import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import { codePointLength, normalizeText } from '../../../shared/lib/text'
 import { captureAccountScope, isUnclearResult } from '../../auth/session'
 import { inquiryStatusLabel } from '../../inquiries/validation'
+import { orderStatusLabel } from '../../orders/status'
 import { closeInquiry, decideInquiry } from '../inquiryApi'
 import { adminInquiryKeys, inquiryTypeLabel, useAdminInquiry } from '../inquiryQueries'
 import type { AdminInquiryDetail, Party } from '../inquiryTypes'
@@ -72,7 +73,7 @@ function InquirySummary({ inquiry, refreshing }: { inquiry: AdminInquiryDetail; 
       <h2>주문</h2>
       <dl className={styles.facts}>
         <dt>주문 번호</dt><dd>#{order.id}</dd>
-        <dt>상태</dt><dd>{order.status}</dd>
+        <dt>상태</dt><dd>{orderStatusLabel(order.status)}</dd>
         <dt>결제 금액</dt><dd>{formatWon(order.priceAmount)}{order.paidAt && <> · 결제 {formatDateTime(order.paidAt)}</>}</dd>
         <dt>구매자</dt><dd>{name(order.buyer)}</dd>
         <dt>판매자</dt><dd>{name(order.seller)}</dd>
