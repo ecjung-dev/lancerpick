@@ -113,16 +113,16 @@ export function NotificationReadError({ target }: { target: string | null }) {
 function NotificationRow({ item }: { item: NotificationItem }) {
   const client = useQueryClient()
   const navigate = useNavigate()
+  const read = useMutation(notificationReadOptions(client, item.id))
   const target = notificationTarget(item)
-  const read = useMutation(notificationReadOptions(client, item.id, target, navigate))
   const markRead = () => {
-    if (!item.read && !read.isPending) read.mutate({ navigate: false })
+    if (!item.read && !read.isPending) read.mutate()
   }
   // 같은 탭 이동은 읽음 처리 성공 후에 한다. 실패하면 이 화면에 남아 안내를 보여 준다.
   const openTarget = (event: MouseEvent<HTMLAnchorElement>) => {
     if (item.read || !target || !waitsForReadBeforeNavigation(event)) return markRead()
     event.preventDefault()
-    if (!read.isPending) read.mutate({ navigate: true })
+    if (!read.isPending) read.mutate(undefined, { onSuccess: () => navigate(target) })
   }
   const body = (
     <>

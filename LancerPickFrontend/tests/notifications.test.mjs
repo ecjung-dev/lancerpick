@@ -135,38 +135,50 @@ test('list request adds unreadOnly only for the unread filter', async () => {
   assert.deepEqual(urls, ['/api/notifications?page=2&size=20', '/api/notifications?page=0&size=20&unreadOnly=true'])
 })
 
-// 읽지 않음 보기에서는 읽음 뒤 재조회 결과에서 클릭한 행이 빠져 행(구독)이 사라진다. 그래도 주문으로 이동해야 한다.
-async function readWhileRowDisappears(status, navigateFlag) {
+// 읽지 않음 보기에서 알림을 눌러 읽음 처리할 때, 목록이 다시 조회돼 행이 사라지면 행의 이동 콜백이 생략된다.
+async function readFromUnreadView(status) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const original = globalThis.fetch
-  const moves = []
-  let row
+  const calls = { list: 0, count: 0 }
   globalThis.fetch = async (url, options) => {
-    if (options?.method === 'POST') return new Response(null, { status, headers: status === 204 ? {} : { 'Content-Type': 'application/json' } })
+    if (options?.method === 'POST') return new Response(status === 204 ? null : JSON.stringify({ code: 'INTERNAL_ERROR', message: '오류', fieldErrors: [] }),
+      { status, headers: status === 204 ? {} : { 'Content-Type': 'application/json' } })
+    calls.count++
     return new Response(JSON.stringify({ count: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
   }
-  const list = new QueryObserver(client, { queryKey: ['notifications', 'list', 'unread', 0],
-    queryFn: async () => { row?.unsubscribe(); return { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 } } })
+  const key = ['notifications', 'list', 'unread', 0]
+  const item = { id: '108', type: 'ORDER_DELIVERED', orderId: '30', productTitle: null, read: false, createdAt: '2026-11-05T01:00:00Z' }
+  const list = new QueryObserver(client, { queryKey: key,
+    queryFn: async () => { calls.list++; return { items: calls.list === 1 ? [item] : [], page: 0, size: 20, totalElements: calls.list === 1 ? 1 : 0, totalPages: 1 } } })
   const stopList = list.subscribe(() => {})
+  const counter = new QueryObserver(client, { queryKey: ['notifications', 'unread'],
+    queryFn: async () => { calls.count++; return { count: 1 } } })
+  const stopCounter = counter.subscribe(() => {})
   try {
-    await client.getQueryCache().find({ queryKey: ['notifications', 'list', 'unread', 0] }).promise
-    const observer = new MutationObserver(client, notificationReadOptions(client, '108', '/orders/30', (to) => moves.push(to)))
-    row = { unsubscribe: observer.subscribe(() => {}) }
-    let perCall = 0
-    await observer.mutate({ navigate: navigateFlag }, { onSuccess: () => { perCall++ } }).catch(() => {})
-    return { moves, perCall }
+    await client.getQueryCache().find({ queryKey: key }).promise
+    // 행: 화면에 남아 있는 동안만 호출별 이동 콜백이 실행된다(기존 동작).
+    const row = new MutationObserver(client, notificationReadOptions(client, '108'))
+    const stopRow = row.subscribe(() => {})
+    const moves = []
+    await row.mutate(undefined, { onSuccess: () => moves.push('/orders/30') }).catch(() => {})
+    stopRow()
+    return { moves, calls, items: client.getQueryData(key).items }
   } finally {
-    stopList(); globalThis.fetch = original; client.clear()
+    stopList(); stopCounter(); globalThis.fetch = original; client.clear()
   }
 }
 
-test('reading from the unread view still opens the order after the refetch removes the row', async () => {
-  const done = await readWhileRowDisappears(204, true)
+test('reading from the unread view keeps the row, marks it read and still opens the order', async () => {
+  const done = await readFromUnreadView(204)
   assert.deepEqual(done.moves, ['/orders/30'])
-  // 호출별 콜백은 행이 사라진 뒤라 실행되지 않는다(이동을 여기에 두면 안 되는 이유).
-  assert.equal(done.perCall, 0)
-  assert.deepEqual((await readWhileRowDisappears(204, false)).moves, [])
-  assert.deepEqual((await readWhileRowDisappears(500, true)).moves, [])
+  assert.equal(done.calls.list, 1)
+  assert.ok(done.calls.count >= 2)
+  assert.deepEqual(done.items.map((item) => [item.id, item.read]), [['108', true]])
+
+  // 실패하면 이동하지 않고, 결과가 불명확하므로 목록도 다시 조회한다.
+  const failed = await readFromUnreadView(500)
+  assert.deepEqual(failed.moves, [])
+  assert.equal(failed.calls.list, 2)
 })
 
 test('only plain left clicks wait for the read request before navigating', () => {
