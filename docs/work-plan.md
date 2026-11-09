@@ -82,6 +82,8 @@ C3 메일 발송기(#90)가 main에 들어왔다. K1 남은 작업(이메일 인
 
 #### K4·K5 연결 안내 (정은찬 → 김창재, 2026-11-06)
 
+K6 PDF 조회 후속(2026-11-09, 황준범, 로컬): [관리자 계약 PDF 운영 조회](admin-contract-pdf-inspection.md)의 `inspect(adminId, orderId, version)`·DTO·생성/재시도 후보 판단을 제공했다. 단위·기본 공개 메인 20건 통과, Docker 비활성으로 실제 MySQL 검사는 미실행이다. 실제 관리자 재처리·감사 이력·API·화면 연결은 기존 담당 계약을 기다리며 실행 권한을 후보 판단으로 대체하지 않는다.
+
 **K5 타이머 해제** — main #99에 서비스가 있다. 관리자 API는 아래 서비스를 그대로 호출한다.
 
 - `ReviewTimerService.adminStop(long adminId, long orderId, String reason)` → `ReviewTimerResponse`

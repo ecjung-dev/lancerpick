@@ -16,6 +16,10 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     /** 로그인 시 이메일로 회원 찾기 */
     Optional<Member> findByEmail(String email);
 
+    /** 관리자 내부 조회에서 현재 DB 권한만 확인한다. */
+    @Query("select m.role from Member m where m.id = :memberId")
+    Optional<com.example.lancerpick.member.entity.MemberRole> findRoleById(@Param("memberId") Long memberId);
+
     /**
      * Member 응답의 hasSellerProfile 계산용. seller_profiles는 판매자 담당(박소현) 테이블이라
      * 엔티티를 중복 정의하지 않고 개수만 읽는다. 판매자 Repository가 생기면 그쪽 조회로 바꿀 수 있다.
