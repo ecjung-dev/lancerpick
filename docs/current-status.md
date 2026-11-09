@@ -1,5 +1,9 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 헤더 알림 패널(U4 화면) — 2026-11-09, 로컬 구현
+
+`feature/header-notification-panel`(황준범, main `ed98643`에서 분기)에서 종 버튼의 패널, 전체/읽지 않음·모두 읽음·페이지·전체 보기와 알림 행 공통화를 진행했다. API·DB 변경 없음. [구현·검증·남은 연결](header-notification-panel.md). 회원 제재 PR #134와 별도이며 push·병합 전이다.
+
 ## 관리자 금융·계약 PDF 운영 조회 연결(K3·K6 조회) — 2026-11-09
 
 `feature/admin-finance-views`(김창재, PR 전, main `6f59f7b`(#132)에서 분기): 황준범의 금융 조회(#117)·PDF 운영 조회(#125) 서비스에 조회 전용 관리자 API 7개와 화면(`/admin/finance` 결제·충전·복구 작업 탭, `/admin/finance/orders/:id` 주문 금액·계약 PDF)을 연결했다. 후보 판단은 "재처리 후보 / 후보 아님(사유)"으로만 표시하며 실행 버튼은 없다(관리자 감사 이력 설계가 선행). 없는 정산·종료 기록은 "기록 없음"으로 표시한다. DB·Flyway 변경 없음. [API 9-3절](api-spec.md#9-3-관리자-금융계약-pdf-운영-조회-김창재) · [연결 기록](admin-finance-support.md#api화면-연결--2026-11-09-김창재-featureadmin-finance-views). 검증 결과는 PR에 기록한다.

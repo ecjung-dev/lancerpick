@@ -1,0 +1,16 @@
+.heading { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px 12px; }
+.heading h2 { font-size: 19px; margin: 0; letter-spacing: -.04em; }
+.close { font-size: 26px; line-height: 1; }
+.heading button, .toolbar button, .content button { border: 0; background: none; color: var(--ink); cursor: pointer; border-radius: 6px; padding: 7px 10px; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 14px 12px; border-bottom: 1px solid var(--line); }
+.toolbar button, .pager { font-size: 12px; }
+.filters { display: flex; gap: 4px; }
+.filters button[aria-pressed='true'] { background: var(--ink); color: white; }
+.toolbar button:disabled, .content button:disabled { opacity: .45; cursor: default; }
+.content { min-height: 0; flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding: 12px; font-size: 13px; line-height: 1.6; }
+.heading, .toolbar, .all { flex-shrink: 0; }
+.list { display: grid; gap: 7px; margin: 0; padding: 0; }
+.empty { text-align: center; padding: 42px 8px; color: var(--muted); }
+.pager { display: flex; justify-content: center; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 12px; }
+.all { padding: 15px 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--ink); text-decoration: none; }
+.all:hover { background: var(--surface); }
