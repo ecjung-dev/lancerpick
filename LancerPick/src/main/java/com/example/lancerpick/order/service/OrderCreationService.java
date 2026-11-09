@@ -36,6 +36,7 @@ public class OrderCreationService {
   private final OrderTradeTermsRepository tradeTerms;
   private final NewOrderPolicy newOrderPolicy;
   private final Clock clock;
+  private final NewTradeRestrictions restrictions;
 
   public OrderCreationService(
       OrderCreationQueries source,
@@ -46,7 +47,8 @@ public class OrderCreationService {
       OrderTerms terms,
       OrderTradeTermsRepository tradeTerms,
       NewOrderPolicy newOrderPolicy,
-      Clock clock) {
+      Clock clock,
+      NewTradeRestrictions restrictions) {
     this.source = source;
     this.orders = orders;
     this.snapshots = snapshots;
@@ -56,6 +58,7 @@ public class OrderCreationService {
     this.tradeTerms = tradeTerms;
     this.newOrderPolicy = newOrderPolicy;
     this.clock = clock;
+    this.restrictions = restrictions;
   }
 
   /** buyerId는 인증 정보에서만 제공한다. 이 반환값은 HTTP OrderDetail DTO가 아니다. */
@@ -99,6 +102,9 @@ public class OrderCreationService {
       }
       return new Result(order.getId(), false);
     }
+    // U7: 같은 요청 키 재전송은 이미 만든 주문을 돌려준다(위). 새 주문만 회원 잠금 뒤 제재를 검사한다.
+    restrictions.requireBuyerCanOrder(buyerId);
+    if (sellerIdForLock != null) restrictions.requireSellerCanReceiveOrder(sellerIdForLock);
 
     var product = source.lockProduct(productId).orElseThrow(OrderCreationService::productNotFound);
     if (product.hidden()) throw productNotFound();

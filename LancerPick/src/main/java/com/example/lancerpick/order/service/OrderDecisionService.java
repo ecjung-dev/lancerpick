@@ -23,18 +23,21 @@ public class OrderDecisionService {
   private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final Clock clock;
+  private final NewTradeRestrictions restrictions;
 
   public OrderDecisionService(
       OrderCommandLocks locks,
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderDetailQueries details,
-      Clock clock) {
+      Clock clock,
+      NewTradeRestrictions restrictions) {
     this.locks = locks;
     this.histories = histories;
     this.events = events;
     this.details = details;
     this.clock = clock;
+    this.restrictions = restrictions;
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -57,6 +60,8 @@ public class OrderDecisionService {
     if (!order.getSellerId().equals(memberId)) {
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 수락·거절할 수 있습니다.");
     }
+    // U7: 수락만 새 거래 시작이다. 거절은 제한 중에도 허용한다. 판매자 회원 잠금(lockParticipantOrder) 뒤에 검사한다.
+    if (accept) restrictions.requireSellerCanAccept(memberId);
     LocalDateTime at = UtcTimes.nowMicros(clock);
     OrderHistory history;
     if (accept) {

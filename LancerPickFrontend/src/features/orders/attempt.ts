@@ -19,3 +19,11 @@ export function saveOrderAttempt(storage: Storage, memberId: string, input: Crea
 export function clearOrderAttempt(storage: Storage, memberId: string, productId: string) {
   storage.removeItem(key(memberId, productId))
 }
+
+/**
+ * 서버가 주문을 만들지 않았다고 확정한 응답인지. 저장한 요청을 정리하고 상품을 다시 확인하도록 안내한다.
+ * 403은 권한·CSRF 오류일 수도 있어 이용 제한(MEMBER_RESTRICTED)만 확정 거절로 본다.
+ */
+export function isDefinitiveOrderRejection(status: number, code: string) {
+  return [400, 404, 409].includes(status) || (status === 403 && code === 'MEMBER_RESTRICTED')
+}
