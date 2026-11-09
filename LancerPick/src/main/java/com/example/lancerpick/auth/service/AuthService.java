@@ -7,6 +7,7 @@ import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.member.dto.MemberResponse;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.repository.MemberRepository;
+import com.example.lancerpick.member.service.MemberSanctionQuery;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
@@ -37,15 +38,20 @@ public class AuthService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final MemberSanctionQuery sanctions;
     private final SecurityContextHolderStrategy contextHolder = SecurityContextHolder.getContextHolderStrategy();
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
     private final CsrfTokenRepository csrfTokenRepository = new HttpSessionCsrfTokenRepository();
     /** 없는 이메일일 때도 비밀번호 비교 시간을 비슷하게 맞추기 위한 값. 실제 회원 비밀번호가 아니다. */
     private final String dummyHash;
 
-    public AuthService(MemberRepository memberRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(
+            MemberRepository memberRepository,
+            PasswordEncoder passwordEncoder,
+            MemberSanctionQuery sanctions) {
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
+        this.sanctions = sanctions;
         this.dummyHash = passwordEncoder.encode("lancerpick-timing-dummy-not-a-password");
     }
 
@@ -63,6 +69,10 @@ public class AuthService {
         // 비밀번호 원문은 정규화하지 않고 그대로 비교한다(API 10절).
         if (!passwordEncoder.matches(loginRequest.password(), member.getPasswordHash())) {
             throw invalidCredentials();
+        }
+
+        if (sanctions.restriction(member.getId()).securityLocked()) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "MEMBER_LOCKED", "보안 잠금 중인 계정입니다.");
         }
 
         // 응답에 필요한 DB 조회는 세션을 바꾸기 전에 끝낸다.

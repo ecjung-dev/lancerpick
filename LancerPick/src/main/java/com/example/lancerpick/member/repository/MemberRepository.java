@@ -38,4 +38,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select m from Member m where m.id = :memberId")
     Optional<Member> findByIdForUpdate(@Param("memberId") Long memberId);
+
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select m from Member m where m.id = :memberId")
+    Optional<Member> findByIdForShare(@Param("memberId") Long memberId);
 }

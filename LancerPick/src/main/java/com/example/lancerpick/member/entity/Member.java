@@ -92,4 +92,13 @@ public class Member {
         this.authVersion += 1;
         this.updatedAt = now;
     }
+
+    /** 보안 잠금으로 기존 인증을 폐기한다. 잠금 만료 시 버전을 되돌리지 않는다. */
+    public void invalidateSessions(LocalDateTime now) {
+        if (now == null || now.isBefore(updatedAt)) {
+            throw new IllegalArgumentException("Invalid member time");
+        }
+        authVersion = Math.addExact(authVersion, 1L);
+        updatedAt = now;
+    }
 }
