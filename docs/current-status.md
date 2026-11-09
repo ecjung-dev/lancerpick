@@ -4,10 +4,10 @@
 
 정은찬, 브랜치 `feature/security-lock-timer-stop`(main `e33982f`(#134)에서 분기). [제재 기반](member-sanction-foundation.md)의 `SecurityLockTimerStopper` 구현체 `order/service/SecurityLockTimerStops`를 추가해, 구매자 보안 잠금이 커밋되면 잠금 시각까지 시작된 진행 중 타이머를 주문마다 `CANCELLED`/`ADMIN_STOP`(실행자 = 잠금 관리자, 고정 사유)으로 중단한다. 판매자 타이머 시작은 구매자 회원 공유 잠금 뒤 재검사해 409 `BUYER_SECURITY_LOCKED`, 만료 처리는 타이머 시작 이후의 보안 잠금 기록이 있으면(현재 해제·만료됐어도) 자동 확정 대신 중단한다. 해제 후 자동 재개하지 않는다. 판매자 화면은 시작 불가일 때 "시작 보류"로 안내한다. DB·Flyway·응답 필드 변경 없음. [처리 규칙](auto-confirm-timer.md#구매자-보안-잠금-연결u8--2026-11-09-featuresecurity-lock-timer-stop정은찬).
 
-- 영향 범위: `ReviewTimerService`의 시작·만료 잠금 순서에 구매자 회원 공유 잠금이 추가됐다. `MemberSanctionIntegrationTests`(황준범 영역)의 대역 Bean에 `@Primary`만 추가했다(실제 구현체와 둘 다 등록돼 전달 대상이 모호해지지 않도록).
+- 영향 범위: `ReviewTimerService`의 시작·만료 잠금 순서에 구매자 회원 공유 잠금이 추가됐다. `MemberSanctionIntegrationTests`(황준범 영역)의 대역 Bean에 `@Primary`만 추가했다(실제 구현체와 둘 다 등록돼 전달 대상이 모호해지지 않도록). DB 없이 뜨는 `common/DefaultCatalogApiTests` 컨텍스트에 `SecurityLockTimerStops` mock을 추가했다.
 - 남은 것: 미처리 전달 재시도(`retryPending`) 스케줄러, 관리자 제재 API·화면(황준범) 연결 후 실제 브라우저 확인.
 
-검증(로컬, `lancerpick_test` 3307): 타이머·회원·문의·관리자 테스트 142건 통과(`ReviewTimerIntegrationTests` 신규 7건: 잠금 시 1회 중단·중복 전달 무변화·해제 후 재개 없음과 무지급, 잠금 중 시작 409·`canStart` false·해제 후 시작, 만료 지났지만 미처리 타이머 중단, 전달 없이 잠금이 끝난 뒤 만료 재검사로 중단, 사전 안내 생략, 해제 후 시작된 타이머는 늦은 전달로 중단 안 됨·판매자 잠금 무영향, 시작·잠금 동시 실행 후 활성 타이머 없음). 프런트 `tests/review-timer.test.mjs` 7건, typecheck·lint·`test:api` 264건·build 통과(기존 번들 크기 경고 유지). 실제 서버·브라우저 확인은 하지 않았다.
+검증(로컬, `lancerpick_test` 3307): 타이머·회원·문의·관리자 테스트 142건 통과(`ReviewTimerIntegrationTests` 신규 7건: 잠금 시 1회 중단·중복 전달 무변화·해제 후 재개 없음과 무지급, 잠금 중 시작 409·`canStart` false·해제 후 시작, 만료 지났지만 미처리 타이머 중단, 전달 없이 잠금이 끝난 뒤 만료 재검사로 중단, 사전 안내 생략, 해제 후 시작된 타이머는 늦은 전달로 중단 안 됨·판매자 잠금 무영향, 시작·잠금 동시 실행 후 활성 타이머 없음). 프런트 `tests/review-timer.test.mjs` 7건, typecheck·lint·`test:api` 264건·build 통과(기존 번들 크기 경고 유지). main `381d4cd`(#135~#137) 병합 후 백엔드 `clean build` 1000건 통과(실패·오류·건너뜀 0), 프런트 typecheck·lint·`test:api` 270건·build 통과. 실제 서버·브라우저 확인은 하지 않았다.
 
 ## 결제·보관금 상태 enum(R2) — 2026-11-09, main 반영(#137)
 
