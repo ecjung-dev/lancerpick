@@ -9,28 +9,38 @@
 
 검증(로컬, `lancerpick_test` 3307): 주문 생성·결제·계약·공통 관련 107건 통과(`OrderCreationIntegrationTests` 신규 2건: 제한 구매자의 새 주문 403·같은 키 재전송은 기존 주문·기간 끝난 제재는 허용, 판매자 보안 잠금 시 새 주문·수락 403·거절 허용·철회 후 수락). 프런트 `tests/order-attempt.test.mjs` 3건(신규 1건), typecheck·lint·`test:api` 271건·build 통과(기존 번들 크기 경고 유지). 백엔드 전체 `clean build` 995건 통과(실패·오류·건너뜀 0). 실제 서버·브라우저 확인은 하지 않았다.
 
-## 결제·보관금 상태 enum(R2) — 2026-11-09, 로컬 구현
+## 구매자 보안 잠금 → 자동 구매 확정 타이머 연결(U8) — 2026-11-09, main 반영(#139)
 
-`refactor/payment-funds-status`(황준범, main `6cf5667` 기준)에서 PaymentStatus·OrderFundsStatus를 적용했다. 기존/V3 명령·보관금 조회·관리자 금융 조건과 String DTO 조립을 함께 맞추며 DB VARCHAR·기존 문자열·금액/잠금 정책은 유지한다. [이전 데이터 호환·검증 기록](payment-status-enums.md). main 반영 전이며 R1 계약/채팅 잠금 공통화는 별도다.
+정은찬, 브랜치 `feature/security-lock-timer-stop`(main `e33982f`(#134)에서 분기). [제재 기반](member-sanction-foundation.md)의 `SecurityLockTimerStopper` 구현체 `order/service/SecurityLockTimerStops`를 추가해, 구매자 보안 잠금이 커밋되면 잠금 시각까지 시작된 진행 중 타이머를 주문마다 `CANCELLED`/`ADMIN_STOP`(실행자 = 잠금 관리자, 고정 사유)으로 중단한다. 판매자 타이머 시작은 구매자 회원 공유 잠금 뒤 재검사해 409 `BUYER_SECURITY_LOCKED`, 만료 처리는 타이머 시작 이후의 보안 잠금 기록이 있으면(현재 해제·만료됐어도) 자동 확정 대신 중단한다. 해제 후 자동 재개하지 않는다. 판매자 화면은 시작 불가일 때 "시작 보류"로 안내한다. DB·Flyway·응답 필드 변경 없음. [처리 규칙](auto-confirm-timer.md#구매자-보안-잠금-연결u8--2026-11-09-featuresecurity-lock-timer-stop정은찬).
+
+- 영향 범위: `ReviewTimerService`의 시작·만료 잠금 순서에 구매자 회원 공유 잠금이 추가됐다. `MemberSanctionIntegrationTests`(황준범 영역)의 대역 Bean에 `@Primary`만 추가했다(실제 구현체와 둘 다 등록돼 전달 대상이 모호해지지 않도록). DB 없이 뜨는 `common/DefaultCatalogApiTests` 컨텍스트에 `SecurityLockTimerStops` mock을 추가했다.
+- 남은 것: 미처리 전달 재시도(`retryPending`) 스케줄러, 관리자 제재 API·화면(황준범) 연결 후 실제 브라우저 확인.
+
+검증(로컬, `lancerpick_test` 3307): 타이머·회원·문의·관리자 테스트 142건 통과(`ReviewTimerIntegrationTests` 신규 7건: 잠금 시 1회 중단·중복 전달 무변화·해제 후 재개 없음과 무지급, 잠금 중 시작 409·`canStart` false·해제 후 시작, 만료 지났지만 미처리 타이머 중단, 전달 없이 잠금이 끝난 뒤 만료 재검사로 중단, 사전 안내 생략, 해제 후 시작된 타이머는 늦은 전달로 중단 안 됨·판매자 잠금 무영향, 시작·잠금 동시 실행 후 활성 타이머 없음). 프런트 `tests/review-timer.test.mjs` 7건, typecheck·lint·`test:api` 264건·build 통과(기존 번들 크기 경고 유지). main `381d4cd`(#135~#137) 병합 후 백엔드 `clean build` 1000건 통과(실패·오류·건너뜀 0), 프런트 typecheck·lint·`test:api` 270건·build 통과. 실제 서버·브라우저 확인은 하지 않았다.
+
+## 결제·보관금 상태 enum(R2) — 2026-11-09, main 반영(#137)
+
+`refactor/payment-funds-status`(황준범, main `6cf5667` 기준)에서 PaymentStatus·OrderFundsStatus를 적용했다. 기존/V3 명령·보관금 조회·관리자 금융 조건과 String DTO 조립을 함께 맞추며 DB VARCHAR·기존 문자열·금액/잠금 정책은 유지한다. [이전 데이터 호환·검증 기록](payment-status-enums.md). main 반영(#137)이며 R1 계약/채팅 잠금 공통화는 별도다.
 
 검증: 격리 MySQL 8.4 `clean build` 989건 통과(실패·오류·건너뜀 0). 기존 VARCHAR 값의 JPA 읽기·환불 쓰기, 컬럼 타입·validate 기동, 금융/관리자 JSON 계약 회귀를 포함한다. 프런트 변경·검사, 실제 브라우저·외부 결제·원격 CI 실행은 없다.
 
-## 판매 수익 기간 조회 — 2026-11-09, 로컬 구현
+## 판매 수익 기간 조회 — 2026-11-09, main 반영(#136)
 
-황준범의 `feature/settlement-date-filters`(main `e33982f` 기준): 목록·합계의 한국 날짜 기간 조건, 안정 정렬·화면 프리셋·조건 합계·URL/캐시 보존을 구현했다. DB·금액 생성/변경 로직은 유지한다. [검증·남은 §8 범위](settlement-period-query.md). 이전 알림 패널은 별도 브랜치에 보존했고 이번 작업도 push·main 병합 전이다.
-## 헤더 알림 패널(U4 화면) — 2026-11-09, 로컬 구현
+황준범의 `feature/settlement-date-filters`(main `e33982f` 기준): 목록·합계의 한국 날짜 기간 조건, 안정 정렬·화면 프리셋·조건 합계·URL/캐시 보존을 구현했다. DB·금액 생성/변경 로직은 유지한다. [검증·남은 §8 범위](settlement-period-query.md). 이전 알림 패널은 별도 브랜치에 보존했고 main 반영(#136).
 
-`feature/header-notification-panel`(황준범, main `ed98643`에서 분기)에서 종 버튼의 패널, 전체/읽지 않음·모두 읽음·페이지·전체 보기와 알림 행 공통화를 진행했다. API·DB 변경 없음. [구현·검증·남은 연결](header-notification-panel.md). 회원 제재 PR #134와 별도이며 push·병합 전이다.
+## 헤더 알림 패널(U4 화면) — 2026-11-09, main 반영(#135)
 
-## 회원 제재 B1/B2 후속 — 2026-11-09, 로컬 구현
+`feature/header-notification-panel`(황준범, main `ed98643`에서 분기)에서 종 버튼의 패널, 전체/읽지 않음·모두 읽음·페이지·전체 보기와 알림 행 공통화를 진행했다. API·DB 변경 없음. [구현·검증·남은 연결](header-notification-panel.md). 회원 제재 PR #134와 별도이며 main 반영(#135).
 
-[제재 공통 기반·연결 계약](member-sanction-foundation.md): V10 `member_sanctions`, 잠금 없는 제재 조회, 관리자 내부 명령, 보안 잠금의 인증 버전 증가·로그인 차단·커밋 후 타이머 전달을 제공한다. main 반영 전이며 신규 관리자 HTTP API/화면은 없다. 주문·상품의 신규 활동 차단, 실제 타이머 중단/만료 보호는 담당자 연결 전이다. 과거의 전체 미구현 표기보다 이 후속 기록을 우선하며, U7/U8 전체 완료를 뜻하지 않는다.
+## 회원 제재 B1/B2 후속 — 2026-11-09, main 반영(#134)
+
+[제재 공통 기반·연결 계약](member-sanction-foundation.md): V10 `member_sanctions`, 잠금 없는 제재 조회, 관리자 내부 명령, 보안 잠금의 인증 버전 증가·로그인 차단·커밋 후 타이머 전달을 제공한다. main 반영(#134)이며 신규 관리자 HTTP API/화면은 없다. 주문·상품의 신규 활동 차단은 담당자 연결 전이고, 실제 타이머 중단/만료 보호는 위 U8 절에서 연결했다. 과거의 전체 미구현 표기보다 이 후속 기록을 우선하며, U7/U8 전체 완료를 뜻하지 않는다.
 
 검증: main `4064d08` 기반 전체 백엔드 962건 통과. 이어 main `4430cd0`(#129·#130) 통합 후 관련 백엔드 85건·프런트 236건 통과(모두 실패·오류·건너뜀 0). 범위별 결과이며 합산하지 않는다. 실제 관리자 제재 화면·타이머 연결·브라우저 검증은 별도다.
 
-## 관리자 금융·계약 PDF 운영 조회 연결(K3·K6 조회) — 2026-11-09
+## 관리자 금융·계약 PDF 운영 조회 연결(K3·K6 조회) — 2026-11-09, main 반영(#133)
 
-`feature/admin-finance-views`(김창재, PR 전, main `6f59f7b`(#132)에서 분기): 황준범의 금융 조회(#117)·PDF 운영 조회(#125) 서비스에 조회 전용 관리자 API 7개와 화면(`/admin/finance` 결제·충전·복구 작업 탭, `/admin/finance/orders/:id` 주문 금액·계약 PDF)을 연결했다. 후보 판단은 "재처리 후보 / 후보 아님(사유)"으로만 표시하며 실행 버튼은 없다(관리자 감사 이력 설계가 선행). 없는 정산·종료 기록은 "기록 없음"으로 표시한다. DB·Flyway 변경 없음. [API 9-3절](api-spec.md#9-3-관리자-금융계약-pdf-운영-조회-김창재) · [연결 기록](admin-finance-support.md#api화면-연결--2026-11-09-김창재-featureadmin-finance-views). 검증 결과는 PR에 기록한다.
+`feature/admin-finance-views`(김창재, main 반영 #133, 분기 기준 `6f59f7b`(#132)): 황준범의 금융 조회(#117)·PDF 운영 조회(#125) 서비스에 조회 전용 관리자 API 7개와 화면(`/admin/finance` 결제·충전·복구 작업 탭, `/admin/finance/orders/:id` 주문 금액·계약 PDF)을 연결했다. 후보 판단은 "재처리 후보 / 후보 아님(사유)"으로만 표시하며 실행 버튼은 없다(관리자 감사 이력 설계가 선행). 없는 정산·종료 기록은 "기록 없음"으로 표시한다. DB·Flyway 변경 없음. [API 9-3절](api-spec.md#9-3-관리자-금융계약-pdf-운영-조회-김창재) · [연결 기록](admin-finance-support.md#api화면-연결--2026-11-09-김창재-featureadmin-finance-views). 검증 결과는 PR에 기록한다.
 
 ## 운영 문의·관리자 취소 검토(K4)·타이머 해제(K5) 연결 — 2026-11-09
 
@@ -39,9 +49,9 @@ K5: 같은 브랜치에서 `ReviewTimerService.adminStop`에 관리자 API(`GET 
 
 `feature/admin-cancellation-inquiries`(김창재, main 반영 #132·`6f59f7b`, 분기 기준 `2162b2a`): 정은찬의 문의 엔티티·승인/거절 서비스(#121)에 API·화면을 연결했다. 구매자는 V3 결제 후 주문의 대기 중 취소 요청에 대해 주문 상세에서 관리자 검토를 요청하고(제목 1~150자, 같은 요청 재접수는 기존 문의 반환), 관리자는 `/admin/inquiries`에서 목록·상세(주문 요약·취소 요청)를 보고 승인(전액 반환)·거절하거나, 판매자가 먼저 처리해 승인·거절할 수 없게 된 문의를 닫는다. 중복 접수와 종료는 주문 → 문의 잠금 순서로 직렬화한다. DB·Flyway 변경 없음. [연결 기록](admin-cancellation-review.md#api화면-연결--2026-11-09-김창재-featureadmin-cancellation-inquiries) · [API 9-1절](api-spec.md#9-1-운영-문의관리자-취소-검토-김창재). 문의 메시지·담당 지정·일반 문의 접수, 실서버·브라우저(B4) 확인은 남음. 검증 결과는 PR에 기록한다.
 
-## 알림 목록 읽지 않음 조건(U4) — 2026-11-09 로컬
+## 알림 목록 읽지 않음 조건(U4) — 2026-11-09, main 반영(#131)
 
-정은찬, 브랜치 `feature/notification-unread-filter`(main `4430cd0`(#130)에서 분기). [개편 결정 §16.1](ui-renewal-member-policy.md#161-정은찬-구현)의 U4 계약대로 기존 알림 API는 그대로 두고 `GET /api/notifications`에 `unreadOnly`(기본 false)만 추가했다. true면 읽지 않은 본인 알림만 최신순으로 보여 주고 건수·페이지 수도 같은 조건으로 센다. `/notifications`에 전체/읽지 않음 보기(URL `?filter=unread`, 바꾸면 첫 페이지)를 붙였다. DB·Flyway 변경 없음(기존 `ix_notification_unread` 사용). 헤더 알림 패널 화면은 포함하지 않았다. [계약·화면 동작](notifications.md#읽지-않은-알림만-보기-u4--2026-11-09).
+정은찬, 작업 브랜치 `feature/notification-unread-filter`(main `4430cd0`(#130)에서 분기, 병합 후 원격 삭제). [개편 결정 §16.1](ui-renewal-member-policy.md#161-정은찬-구현)의 U4 계약대로 기존 알림 API는 그대로 두고 `GET /api/notifications`에 `unreadOnly`(기본 false)만 추가했다. true면 읽지 않은 본인 알림만 최신순으로 보여 주고 건수·페이지 수도 같은 조건으로 센다. `/notifications`에 전체/읽지 않음 보기(URL `?filter=unread`, 바꾸면 첫 페이지)를 붙였다. DB·Flyway 변경 없음(기존 `ix_notification_unread` 사용). 헤더 알림 패널 화면은 포함하지 않았다. [계약·화면 동작](notifications.md#읽지-않은-알림만-보기-u4--2026-11-09).
 
 - 영향 범위: 프런트 알림 목록 queryKey가 `['notifications', 'list', 'all'|'unread', page]`로 바뀌었다. 계정 전환 정리는 `accountCache.ts`가 auth 외 조회를 모두 지우므로 그대로다.
 

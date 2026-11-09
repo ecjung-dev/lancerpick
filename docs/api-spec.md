@@ -6,7 +6,7 @@
 
 채팅 후속 로컬: 당사자 GET/POST `/api/orders/{orderId}/chat/messages`의 UUID 멱등·순번 커서를 유지하고 `/ws` WebSocket/STOMP를 연결했다. `/app/orders/{orderId}/chat/messages` SEND, `/user/queue/chat`·`/user/queue/chat-errors` SUBSCRIBE만 허용한다. 종료 후 조회 전용. [HTTP 요청·응답](order-chat-storage.md), [소켓 계약·CSRF·세션 폐기·복구](order-chat-realtime.md). 원격 병합·배포 활성화 여부와 구분한다.
 
-2026-11-06 main 반영(#99, `eb6b40e`, `feature/v3-auto-confirm-timer`): V3 당사자 `GET /api/orders/{id}/review-timer`(no-store)와 판매자 `POST /api/orders/{id}/review-timer`(본문 없음, 7일 자동 구매 확정 타이머 시작)를 추가했다. 만료 후 구매자 응답은 409 `AUTO_CONFIRM_DUE`, 금액 명령의 `TIMER_INTEGRATION_NOT_READY`는 제거. [상태·오류·처리](auto-confirm-timer.md).
+2026-11-06 main 반영(#99, `eb6b40e`, `feature/v3-auto-confirm-timer`): V3 당사자 `GET /api/orders/{id}/review-timer`(no-store)와 판매자 `POST /api/orders/{id}/review-timer`(본문 없음, 7일 자동 구매 확정 타이머 시작)를 추가했다. 만료 후 구매자 응답은 409 `AUTO_CONFIRM_DUE`, 금액 명령의 `TIMER_INTEGRATION_NOT_READY`는 제거. [상태·오류·처리](auto-confirm-timer.md). 2026-11-09(U8, `feature/security-lock-timer-stop`): 구매자 보안 잠금 중 시작은 409 `BUYER_SECURITY_LOCKED`, 조회의 `canStart`는 false. 응답 필드·상태 값은 그대로다.
 
 2026-11-05 후속 로컬 `feature/full-funding-payments`: V3는 기존 payment/confirm/취소 요청 승인 API로 결제 금액 보관·수동 확정 지급·전액 반환을 처리한다. 당사자 `GET /api/orders/{id}/funds`를 추가했다. [요청·응답·오류·트랜잭션](full-funding-payment.md). 기존 V1 동작·V2 금융 차단 유지, 자동 확정/관리자 승인 후속, 생성 플래그 기본 false. 아래 과거 정책 경계와 구분한다.
 

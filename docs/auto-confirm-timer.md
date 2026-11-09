@@ -1,6 +1,14 @@
 # 검수 무응답 자동 구매 확정 (E7)
 
-회원 보안 잠금 후속(2026-11-09, 미구현): [개편 정책](ui-renewal-member-policy.md) §11.3에 따라 일반 이용 제한은 기존 타이머를 유지하고, 구매자 보안 잠금은 새 타이머 시작 차단·진행 타이머 중단·관리자 확인 대상으로 한다. 잠금 해제 후 자동 재개하지 않으며 이미 완료된 자동 확정/지급은 유지한다. 잠금·시작·만료 경합과 해제 후 관리자 처리 수단은 정은찬·황준범이 상세 설계한다. 아래 기존 내부 서비스가 이 계정 상태를 이미 처리한다고 해석하지 않는다.
+## 구매자 보안 잠금 연결(U8) — 2026-11-09, `feature/security-lock-timer-stop`(정은찬)
+
+[개편 정책](ui-renewal-member-policy.md) §11.3·§16 U8 결정과 [제재 기반](member-sanction-foundation.md)(#134)의 `SecurityLockTimerStopper` 계약을 연결했다. 일반 이용 제한은 기존 타이머를 그대로 둔다. 판매자 보안 잠금도 영향이 없다. DB·Flyway 변경 없음.
+
+- **중단**: `order/service/SecurityLockTimerStops`가 제재 커밋 후 호출된다. 그 구매자의 주문 중 **잠금 적용 시각까지 시작된** `ACTIVE` 타이머만 대상으로, 타이머마다 별도 READ_COMMITTED 트랜잭션(`ReviewTimerService.stopForSecurityLock`)에서 구매자 회원 공유 잠금 → 주문 배타 잠금 후 다시 확인해 `CANCELLED`/`ADMIN_STOP`으로 끝낸다. `ended_by`는 잠금을 적용한 관리자, 사유는 고정 문구 "보안 잠금: 구매자 계정 보호 조치로 자동 구매 확정 타이머를 중단했습니다."다(이력이 판매자에게도 보이므로 제재 사유 원문은 싣지 않는다). 이력 `TIMER_ADMIN_STOPPED`·양측 알림은 관리자 해제와 같다. 만료 시각이 지났지만 아직 처리 전인 타이머도 중단한다(관리자 해제와 다른 점). 이미 끝난 타이머·잠금 이후 시작된 타이머는 건너뛰어 중복 전달에 멱등이다. 하나라도 실패하면 예외로 알려 제재의 전달 기록이 미처리로 남는다.
+- **시작 차단**: 판매자 시작은 실행 회원 → 구매자 회원 공유 잠금 → 주문 잠금 순서로 얻고, 구매자가 현재 보안 잠금이면 409 `BUYER_SECURITY_LOCKED`. 잠금 적용(구매자 회원 배타 잠금)과 직렬화돼 "잠금 직전 시작된 타이머는 중단, 잠금 뒤 시작은 거절" 둘 중 하나가 된다. 조회의 `canStart`도 false이고 화면은 "시작 보류"로 안내한다.
+- **만료 재검사**: 만료 처리도 구매자 회원 공유 잠금 → 주문 잠금 후, 타이머 시작 이후(같은 시각 포함)에 적용된 구매자의 가장 최근 보안 잠금이 있으면 **현재 해제·만료됐더라도** 자동 확정 대신 위와 같이 중단한다. 커밋 후 전달이 실패하거나 서버가 멈춘 사이 잠금이 끝나도 옛 타이머가 자동 확정되지 않는다. 만료 24시간 전 사전 안내도 같은 조건이면 보내지 않는다.
+- **해제 후**: 같은 기산점 재시작 금지(`TIMER_ADMIN_STOPPED`)가 그대로 적용돼 자동 재개되지 않는다. 구매자 응답 또는 기존 문의·관리자 처리로 건별 해결한다. 잠금 중 타이머가 없었던 주문은 해제 후 정상 시작할 수 있다. 이미 끝난 자동 확정·지급은 되돌리지 않는다.
+- **남은 것**: 미처리 전달 재시도(`SecurityLockDelivery.retryPending`)의 스케줄러 연결은 하지 않았다. 실패분도 만료 재검사로 자동 확정은 막히지만 타이머는 만료 시각까지 `ACTIVE`로 보인다. 관리자 제재 API·화면(황준범)이 없어 실제 브라우저 확인은 아직이다.
 
 2026-11-06, `feature/v3-auto-confirm-timer`(정은찬). main `0f67606` 기준 작업 브랜치에서 구현해 #99(`eb6b40e`)로 main에 반영됐다. 업무 정책은 [결제 금액 보관 정책](full-funding-policy.md) §2, 금액 처리는 [금액 보관 구현](full-funding-payment.md)을 따른다. CONTRACT_V3 주문에만 적용하며 DB 변경(Flyway)은 없다. V6·V7의 `order_response_timers`·`order_closures`·`order_histories`를 그대로 사용한다.
 
@@ -27,7 +35,7 @@
 | `GET /api/orders/{id}/review-timer` | 구매자·판매자. `Cache-Control: no-store`. 타인·없는 주문·V3가 아닌 주문은 404 |
 | `POST /api/orders/{id}/review-timer` | 판매자, 본문 없음·CSRF 필요. 이미 활성 타이머가 있으면 새로 만들지 않고 현재 상태를 돌려준다 |
 
-응답 필드: `status`, `basisAt`, `eligibleAt`, `startedAt`, `expiresAt`(UTC ISO 8601, 해당 없으면 null), `canStart`(판매자이고 `STARTABLE`일 때만 true).
+응답 필드: `status`, `basisAt`, `eligibleAt`, `startedAt`, `expiresAt`(UTC ISO 8601, 해당 없으면 null), `canStart`(판매자이고 `STARTABLE`이며 구매자가 보안 잠금 중이 아닐 때만 true).
 
 | status | 의미 |
 | --- | --- |
@@ -45,7 +53,8 @@
 | 409 `TIMER_NOT_ELIGIBLE` | 기산점 + 48시간 전 |
 | 409 `CANCELLATION_PENDING` | 취소 요청 대기 중 시작 |
 | 409 `ORDER_STATE_CONFLICT` | 검수 대기가 아닌 주문 |
-| 409 `TIMER_ADMIN_STOPPED` | 관리자가 해제한 같은 기산점으로 재시작 |
+| 409 `TIMER_ADMIN_STOPPED` | 관리자가 해제한(보안 잠금 중단 포함) 같은 기산점으로 재시작 |
+| 409 `BUYER_SECURITY_LOCKED` | 구매자 보안 잠금 중 시작 |
 | 409 `TIMER_NOT_ACTIVE` | 활성 타이머 없이 관리자 해제 |
 | 409 `AUTO_CONFIRM_DUE` | 만료 시각이 지난 타이머가 있는 주문의 구매 확정·수정 요청·취소 요청·관리자 해제 |
 | 409 `ORDER_POLICY_NOT_READY` | V3가 아닌 주문의 시작 요청 |
@@ -55,7 +64,7 @@
 ## 스케줄러·트랜잭션
 
 - `ReviewTimerExpiryScheduler`가 `lancerpick.order.review-timer.expiry-delay-ms`(기본 30초) 간격으로 실행 시작 시각까지 만료된 타이머를 50건씩 (만료 시각, ID) 커서로 끝까지 순회한다. 계속 실패하는 타이머가 앞쪽에 쌓여도 같은 실행에서 뒤의 정상 타이머를 처리한다(Codex 리뷰 반영). `lancerpick.order.review-timer.expiry-enabled=false`로 끌 수 있으며 test 프로필은 끄고 `ReviewTimerService.expireDue`를 직접 호출한다.
-- 타이머마다 별도 READ_COMMITTED 트랜잭션: 주문 배타 잠금 → 타이머 재확인(ACTIVE·만료) → 판매자 지갑 배타 잠금. 회원 실행자가 없으므로 회원 공유 잠금은 없다. 한 건의 실패(예: 아웃박스 저장 실패)는 그 주문 전체를 롤백하고 타이머를 ACTIVE로 남겨 다음 실행에서 다시 시도한다. 실패는 타이머 ID와 오류 코드만 로그에 남긴다.
+- 타이머마다 별도 READ_COMMITTED 트랜잭션: 구매자 회원 공유 잠금(U8, 보안 잠금 재검사용) → 주문 배타 잠금 → 타이머 재확인(ACTIVE·만료) → 구매자 보안 잠금 재검사 → 판매자 지갑 배타 잠금. 한 건의 실패(예: 아웃박스 저장 실패)는 그 주문 전체를 롤백하고 타이머를 ACTIVE로 남겨 다음 실행에서 다시 시도한다. 실패는 타이머 ID와 오류 코드만 로그에 남긴다.
 - 여러 서버가 동시에 실행해도 주문 잠금 후 재확인하므로 한 번만 지급한다.
 
 ## 알림·화면

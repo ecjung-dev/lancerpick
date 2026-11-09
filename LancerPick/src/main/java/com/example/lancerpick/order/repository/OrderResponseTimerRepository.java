@@ -58,6 +58,16 @@ public interface OrderResponseTimerRepository extends JpaRepository<OrderRespons
       @Param("afterId") long afterId,
       Pageable page);
 
+  /**
+   * 구매자 보안 잠금 적용 시각까지 시작된 활성 타이머(U8 중단 후보). 잠금 해제 후 새로 시작한 타이머는 포함하지 않는다. 처리는 타이머마다
+   * 구매자·주문 잠금 후 다시 확인한다.
+   */
+  @Query(
+      "select t.id from OrderResponseTimer t, Order o where o.id=t.orderId and o.buyerId=:buyerId"
+          + " and t.status='ACTIVE' and t.startedAt<=:appliedAt order by t.id")
+  List<Long> activeTimerIdsOfBuyerStartedBy(
+      @Param("buyerId") long buyerId, @Param("appliedAt") LocalDateTime appliedAt);
+
   @Query("select t.orderId from OrderResponseTimer t where t.id=:id")
   Optional<Long> orderIdOf(@Param("id") long id);
 }

@@ -62,6 +62,8 @@ void stop(SecurityLockApplied lock);
 4. 성공 후 `timer_stop_delivered_at`을 별도 트랜잭션으로 기록한다. 실패·구현체 부재·프로세스 중단은 미처리 상태로 보존한다. 제재 커밋 성공을 되돌리거나 성공 전달로 가장하지 않는다.
 5. `SecurityLockDelivery.retryPending(int limit)`는 1~100건 내부 재시도 진입점이다. 자동 스케줄러·관리자 API는 아직 연결하지 않았다. 재시도와 별개로 타이머 시작/만료 처리 자체의 제재·과거 잠금 재검사가 필수다.
 
+연결(2026-11-09, 정은찬, `feature/security-lock-timer-stop`): 구현체 `order/service/SecurityLockTimerStops`와 타이머 시작 차단·만료 재검사를 추가했다. 처리 규칙은 [자동 구매 확정 U8 절](auto-confirm-timer.md#구매자-보안-잠금-연결u8--2026-11-09-featuresecurity-lock-timer-stop정은찬). 실제 구현체가 생겨 `MemberSanctionIntegrationTests`의 대역 Bean에 `@Primary`를 붙였다(전달 대상이 하나로 정해지도록). `retryPending` 스케줄러는 아직 연결하지 않았다.
+
 전달 로그에는 제재 ID·예외 종류만 남긴다. 비밀번호·세션·제재 사유를 로그에 쓰지 않는다.
 
 ## V10 DB

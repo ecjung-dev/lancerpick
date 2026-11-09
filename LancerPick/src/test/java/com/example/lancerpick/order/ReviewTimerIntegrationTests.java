@@ -12,8 +12,11 @@ import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.common.security.AuthenticatedMember;
 import com.example.lancerpick.contract.service.ContractDocumentService;
 import com.example.lancerpick.contract.service.OrderContractService;
+import com.example.lancerpick.member.dto.SecurityLockApplied;
 import com.example.lancerpick.member.entity.Member;
+import com.example.lancerpick.member.entity.SanctionKind;
 import com.example.lancerpick.member.repository.MemberRepository;
+import com.example.lancerpick.member.service.MemberSanctionCommandService;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.notification.service.OutboxDispatcher;
 import com.example.lancerpick.order.dto.CreateCancellationRequest;
@@ -33,6 +36,7 @@ import com.example.lancerpick.order.service.OrderDeliveryService;
 import com.example.lancerpick.order.service.OrderPaymentService;
 import com.example.lancerpick.order.service.OrderRevisionService;
 import com.example.lancerpick.order.service.ReviewTimerService;
+import com.example.lancerpick.order.service.SecurityLockTimerStops;
 import com.example.lancerpick.support.IntegrationTest;
 import com.example.lancerpick.support.V3FundsInvariant;
 import com.example.lancerpick.wallet.entity.Wallet;
@@ -109,6 +113,8 @@ class ReviewTimerIntegrationTests {
   @Autowired MockMvc mvc;
   @Autowired OutboxDispatcher dispatcher;
   @Autowired DeadlineNotices deadlineNotices;
+  @Autowired MemberSanctionCommandService sanctionCommands;
+  @Autowired SecurityLockTimerStops timerStops;
   @MockitoSpyBean OrderEventPublisher events;
   long buyer, seller, other, admin, product, category, id;
   final List<Long> ids = new ArrayList<>();
@@ -220,6 +226,8 @@ class ReviewTimerIntegrationTests {
       jdbc.update("DELETE FROM orders WHERE id=?", order);
       for (String key : keys) Files.deleteIfExists(directory.resolve(key));
     }
+    jdbc.update(
+        "DELETE FROM member_sanctions WHERE member_id IN (?,?,?,?)", buyer, seller, other, admin);
     jdbc.update("DELETE FROM products WHERE id=?", product);
     jdbc.update("DELETE FROM categories WHERE id=?", category);
     jdbc.update(
@@ -797,5 +805,193 @@ class ReviewTimerIntegrationTests {
     // 이미 만료 시각이 지난 타이머에는 사전 안내 대신 자동 확정 결과만 보낸다.
     timers.noticeDue(10);
     assertThat(outbox(OrderEventPublisher.AUTO_CONFIRM_SOON)).isZero();
+  }
+
+  // ---------- U8 구매자 보안 잠금 ----------
+
+  long lock(long member) {
+    return sanctionCommands.apply(
+        admin,
+        member,
+        SanctionKind.SECURITY_LOCK,
+        "계정 도용 의심",
+        LocalDateTime.now(ZoneOffset.UTC).plusDays(1),
+        UUID.randomUUID());
+  }
+
+  void unlock(long member, long sanctionId) {
+    sanctionCommands.revoke(admin, member, sanctionId, "본인 확인 완료");
+  }
+
+  long securityStops() {
+    return jdbc.queryForObject(
+        "SELECT COUNT(*) FROM order_histories WHERE order_id=? AND action='TIMER_ADMIN_STOPPED'"
+            + " AND reason=?",
+        Long.class,
+        id,
+        ReviewTimerService.SECURITY_LOCK_STOP_REASON);
+  }
+
+  long activeTimers() {
+    return jdbc.queryForObject(
+        "SELECT COUNT(*) FROM order_response_timers WHERE order_id=? AND status='ACTIVE'",
+        Long.class,
+        id);
+  }
+
+  @Test
+  void buyerSecurityLockStopsActiveTimerOnceAndNeverResumesAfterUnlock() {
+    paidAndDelivered();
+    startTimer();
+    long sanction = lock(buyer);
+
+    assertThat(timerColumn("status")).isEqualTo("CANCELLED");
+    assertThat(timerColumn("end_reason")).isEqualTo("ADMIN_STOP");
+    assertThat(timerColumn("ended_by")).isEqualTo(Long.toString(admin));
+    assertThat(timerColumn("admin_stop_reason")).isEqualTo(ReviewTimerService.SECURITY_LOCK_STOP_REASON);
+    assertThat(timerColumn("admin_stop_reason")).doesNotContain("계정 도용 의심");
+    assertThat(securityStops()).isEqualTo(1);
+    assertThat(outbox("ORDER_TIMER_ADMIN_STOPPED")).isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT timer_stop_delivered_at IS NOT NULL FROM member_sanctions WHERE id=?",
+                Boolean.class,
+                sanction))
+        .isTrue();
+    assertThat(timers.status(seller, id).status()).isEqualTo("ADMIN_STOPPED");
+    error(() -> timers.start(seller, id), "BUYER_SECURITY_LOCKED");
+
+    // 중복 전달은 아무것도 바꾸지 않는다.
+    var appliedAt =
+        jdbc.queryForObject(
+            "SELECT starts_at FROM member_sanctions WHERE id=?", LocalDateTime.class, sanction);
+    timerStops.stop(new SecurityLockApplied(sanction, admin, buyer, "계정 도용 의심", appliedAt));
+    assertThat(securityStops()).isEqualTo(1);
+
+    // 해제 후에도 같은 기산점으로 자동 재개하지 않고, 자동 확정·지급도 없다.
+    unlock(buyer, sanction);
+    error(() -> timers.start(seller, id), "TIMER_ADMIN_STOPPED");
+    assertThat(timers.expireDue(10)).isZero();
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+    assertThat(balance(seller)).isEqualTo(1000000);
+    assertThat(funding.summary(seller, id).status()).isEqualTo("HELD");
+  }
+
+  @Test
+  void lockedBuyerBlocksTimerStartUntilUnlocked() {
+    paidAndDelivered();
+    reviewWindowPassed();
+    long sanction = lock(buyer);
+    assertThat(timers.status(seller, id).status()).isEqualTo("STARTABLE");
+    assertThat(timers.status(seller, id).canStart()).isFalse();
+    error(() -> timers.start(seller, id), "BUYER_SECURITY_LOCKED");
+    assertThat(count("order_response_timers")).isZero();
+
+    // 잠금 중 타이머가 없었다면 해제 후 정상 시작할 수 있다.
+    unlock(buyer, sanction);
+    assertThat(timers.status(seller, id).canStart()).isTrue();
+    assertThat(timers.start(seller, id).status()).isEqualTo("ACTIVE");
+  }
+
+  @Test
+  void lockOnAlreadyDueButUnprocessedTimerStopsInsteadOfAutoConfirm() {
+    paidAndDelivered();
+    startTimer();
+    timerExpired();
+    lock(buyer);
+    assertThat(timerColumn("end_reason")).isEqualTo("ADMIN_STOP");
+    assertThat(timers.expireDue(10)).isZero();
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+    assertThat(balance(seller)).isEqualTo(1000000);
+  }
+
+  @Test
+  void expiryRechecksPastLockEvenWhenDeliveryNeverRanAndLockAlreadyEnded() {
+    paidAndDelivered();
+    startTimer();
+    timerExpired();
+    // 커밋 후 전달이 실패한 채 잠금 기간이 끝난 상태: 전달 기록 없음, 현재 제한 없음.
+    var now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    jdbc.update(
+        "INSERT INTO member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at)"
+            + " VALUES (?,'SECURITY_LOCK','계정 도용 의심',?,?,?,?)",
+        buyer,
+        admin,
+        UUID.randomUUID().toString(),
+        now.minusHours(2),
+        now.minusHours(1));
+
+    assertThat(timers.expireDue(10)).isZero();
+    assertThat(timerColumn("status")).isEqualTo("CANCELLED");
+    assertThat(timerColumn("end_reason")).isEqualTo("ADMIN_STOP");
+    assertThat(timerColumn("ended_by")).isEqualTo(Long.toString(admin));
+    assertThat(securityStops()).isEqualTo(1);
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+    assertThat(balance(seller)).isEqualTo(1000000);
+    assertThat(count("settlements")).isZero();
+  }
+
+  @Test
+  void noticeSkipsTimerCoveredByUndeliveredLock() {
+    paidAndDelivered();
+    startTimer();
+    timerInNoticeWindow();
+    var now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    jdbc.update(
+        "INSERT INTO member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at)"
+            + " VALUES (?,'SECURITY_LOCK','계정 도용 의심',?,?,?,?)",
+        buyer,
+        admin,
+        UUID.randomUUID().toString(),
+        now,
+        now.plusDays(1));
+    timers.noticeDue(10);
+    assertThat(outbox(OrderEventPublisher.AUTO_CONFIRM_SOON)).isZero();
+  }
+
+  @Test
+  void lateDeliveryDoesNotStopTimerStartedAfterUnlockAndSellerLockIsIgnored() {
+    paidAndDelivered();
+    reviewWindowPassed();
+    long sanction = lock(buyer);
+    var appliedAt =
+        jdbc.queryForObject(
+            "SELECT starts_at FROM member_sanctions WHERE id=?", LocalDateTime.class, sanction);
+    unlock(buyer, sanction);
+    timers.start(seller, id);
+
+    timerStops.stop(new SecurityLockApplied(sanction, admin, buyer, "계정 도용 의심", appliedAt));
+    assertThat(activeTimers()).isEqualTo(1);
+
+    // 판매자 보안 잠금은 구매자 검수 타이머에 영향을 주지 않는다.
+    lock(seller);
+    assertThat(activeTimers()).isEqualTo(1);
+    // 타이머 시각을 169시간 당기므로 구매자 잠금 기록도 그보다 더 당겨 "해제 후 시작" 관계를 유지한다.
+    jdbc.update(
+        "UPDATE member_sanctions SET starts_at=starts_at - INTERVAL 170 HOUR,"
+            + " ends_at=ends_at - INTERVAL 170 HOUR, revoked_at=revoked_at - INTERVAL 170 HOUR,"
+            + " timer_stop_delivered_at=timer_stop_delivered_at - INTERVAL 170 HOUR WHERE"
+            + " member_id=?",
+        buyer);
+    timerExpired();
+    assertThat(timers.expireDue(10)).isEqualTo(1);
+    assertThat(orderStatus()).isEqualTo("COMPLETED");
+  }
+
+  @Test
+  void concurrentTimerStartAndBuyerLockNeverLeaveActiveTimer() throws Exception {
+    paidAndDelivered();
+    reviewWindowPassed();
+    var results =
+        parallel(
+            () -> result(() -> timers.start(seller, id)),
+            () -> {
+              lock(buyer);
+              return "LOCKED";
+            });
+    assertThat(results.getFirst()).isIn("OK", "BUYER_SECURITY_LOCKED");
+    assertThat(activeTimers()).isZero();
+    if ("OK".equals(results.getFirst())) assertThat(securityStops()).isEqualTo(1);
+    else assertThat(count("order_response_timers")).isZero();
   }
 }
