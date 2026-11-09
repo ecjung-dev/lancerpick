@@ -23,6 +23,12 @@ export function reviewTimerView(timer: ReviewTimer, isSeller: boolean) {
           : `${at(timer.eligibleAt)}까지 검수 결과(구매 확정·수정 요청)를 알려 주세요. 이후 판매자가 자동 구매 확정 타이머를 시작할 수 있습니다.`,
       }
     case 'STARTABLE':
+      // 판매자인데 canStart가 false면 서버가 시작을 막은 상태다(구매자 계정 보호 조치 중).
+      if (isSeller && !timer.canStart)
+        return {
+          title: '자동 구매 확정 타이머 시작 보류',
+          detail: '구매자 계정 확인이 끝날 때까지 지금은 타이머를 시작할 수 없습니다.',
+        }
       return {
         title: '자동 구매 확정 타이머 시작 가능',
         detail: isSeller

@@ -5,6 +5,7 @@ import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.entity.MemberRole;
 import com.example.lancerpick.member.repository.MemberRepository;
+import com.example.lancerpick.member.service.MemberSanctionQuery;
 import com.example.lancerpick.notification.repository.OutboxEventRepository;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.ReviewTimerResponse;
@@ -47,6 +48,9 @@ public class ReviewTimerService {
   private static final Logger log = LoggerFactory.getLogger(ReviewTimerService.class);
   // DATETIME 범위의 최소값. 첫 조회의 커서로 쓴다.
   private static final LocalDateTime CURSOR_START = LocalDateTime.of(1000, 1, 1, 0, 0);
+  // 주문 이력·타이머에 남아 판매자에게도 보이므로 제재 사유 원문을 싣지 않는다.
+  public static final String SECURITY_LOCK_STOP_REASON =
+      "보안 잠금: 구매자 계정 보호 조치로 자동 구매 확정 타이머를 중단했습니다.";
 
   private final OrderRepository orders;
   private final OrderResponseTimerRepository timers;
@@ -62,6 +66,7 @@ public class ReviewTimerService {
   private final TransactionTemplate expiryTransaction;
   private final Clock clock;
   private final OrderCommandLocks locks;
+  private final MemberSanctionQuery sanctions;
 
   public ReviewTimerService(
       OrderRepository orders,
@@ -77,7 +82,8 @@ public class ReviewTimerService {
       OutboxEventRepository outbox,
       PlatformTransactionManager transactionManager,
       Clock clock,
-      OrderCommandLocks locks) {
+      OrderCommandLocks locks,
+      MemberSanctionQuery sanctions) {
     this.orders = orders;
     this.timers = timers;
     this.deliveries = deliveries;
@@ -93,6 +99,7 @@ public class ReviewTimerService {
     this.expiryTransaction.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     this.clock = clock;
     this.locks = locks;
+    this.sanctions = sanctions;
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -109,7 +116,10 @@ public class ReviewTimerService {
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public ReviewTimerResponse start(long memberId, long orderId) {
-    var order = locks.lockParticipantOrder(memberId, orderId);
+    // U8: 구매자 보안 잠금(구매자 회원 배타 잠금)과 직렬화하도록 실행 회원 → 구매자 회원 공유 잠금 → 주문 잠금 순서로 얻는다.
+    locks.lockActor(memberId);
+    orders.buyerIdOf(orderId).filter(buyerId -> buyerId != memberId).ifPresent(orders::lockDecisionActor);
+    var order = orders.findForDecision(orderId, memberId).orElseThrow(ReviewTimerService::notFound);
     if (!order.isFullFunding())
       throw conflict("ORDER_POLICY_NOT_READY", "결제 금액 보관 정책 주문이 아닙니다.");
     if (order.getSellerId() != memberId)
@@ -122,6 +132,9 @@ public class ReviewTimerService {
       throw conflict("ORDER_STATE_CONFLICT", "검수 대기 주문에서만 자동 구매 확정 타이머를 시작할 수 있습니다.");
     if (!cancellations.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING).isEmpty())
       throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
+    if (sanctions.restriction(order.getBuyerId()).securityLocked())
+      throw conflict(
+          "BUYER_SECURITY_LOCKED", "구매자 계정 보호 조치 중에는 자동 구매 확정 타이머를 시작할 수 없습니다.");
     funding.requireHeldForWork(order);
     var delivery = currentDelivery(order);
     var basis = basisAt(order, delivery);
@@ -242,6 +255,19 @@ public class ReviewTimerService {
     }
   }
 
+  /**
+   * 구매자 보안 잠금에 따른 타이머 중단(U8). {@link SecurityLockTimerStops}가 타이머마다 별도 트랜잭션으로 호출한다. 구매자 회원
+   * 공유 잠금 → 주문 잠금 후 다시 확인하며, 이미 끝났거나 잠금 이후 시작된 타이머는 건너뛴다(멱등).
+   */
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+  public boolean stopForSecurityLock(long timerId) {
+    var orderId = timers.orderIdOf(timerId);
+    if (orderId.isEmpty()) return false;
+    var order = lockBuyerThenOrder(orderId.get());
+    var timer = timers.findById(timerId).orElseThrow(ReviewTimerService::integrity);
+    return securityStop(order, timer, now());
+  }
+
   private boolean notice(long timerId) {
     var orderId = timers.orderIdOf(timerId);
     if (orderId.isEmpty()) return false;
@@ -251,19 +277,56 @@ public class ReviewTimerService {
     var at = now();
     if (!timer.isInNoticeWindow(at) || order.getStatus() != OrderStatus.AWAITING_CONFIRMATION)
       return false;
+    // 보안 잠금으로 중단될 타이머에 자동 확정 예정 안내를 보내지 않는다(중단 전달이 늦은 경우).
+    if (securityLockAfterStart(order, timer) != null) return false;
     return events.publishAutoConfirmNotice(order, timer, at);
   }
 
   private boolean expire(long timerId) {
-    // 타이머 엔티티를 잠금 전에 읽지 않는다. 주문 잠금 후 최신 상태로 다시 확인한다.
+    // 타이머 엔티티를 잠금 전에 읽지 않는다. 구매자·주문 잠금 후 최신 상태로 다시 확인한다.
     var orderId = timers.orderIdOf(timerId);
     if (orderId.isEmpty()) return false;
-    var order =
-        orders.findForSystemUpdate(orderId.get()).orElseThrow(ReviewTimerService::integrity);
+    var order = lockBuyerThenOrder(orderId.get());
     var timer = timers.findById(timerId).orElseThrow(ReviewTimerService::integrity);
     var at = now();
     if (!timer.isDue(at)) return false;
+    // 시작 후 구매자 보안 잠금이 있었다면 현재 해제·만료됐더라도 자동 확정하지 않고 중단한다.
+    if (securityStop(order, timer, at)) {
+      log.info("Auto confirmation stopped by security lock: timerId={}", timerId);
+      return false;
+    }
     fullFunding.autoConfirm(order, timer, at);
+    return true;
+  }
+
+  /** 구매자 보안 잠금과 직렬화: 구매자 회원 공유 잠금 → 주문 배타 잠금. */
+  private Order lockBuyerThenOrder(long orderId) {
+    long buyerId = orders.buyerIdOf(orderId).orElseThrow(ReviewTimerService::integrity);
+    orders.lockDecisionActor(buyerId).orElseThrow(ReviewTimerService::integrity);
+    return orders.findForSystemUpdate(orderId).orElseThrow(ReviewTimerService::integrity);
+  }
+
+  /**
+   * 타이머 시작 시각 이후(같은 시각 포함)에 적용된 구매자의 가장 최근 보안 잠금. 현재 유효 여부와 관계없이 본다. 잠금이 해제·만료돼도
+   * 그 이전에 시작된 타이머는 자동 확정하지 않는다.
+   */
+  private MemberSanctionQuery.SecurityLock securityLockAfterStart(
+      Order order, OrderResponseTimer timer) {
+    var lock = sanctions.restriction(order.getBuyerId()).latestSecurityLock();
+    return lock != null && !timer.getStartedAt().isAfter(lock.appliedAt()) ? lock : null;
+  }
+
+  private boolean securityStop(Order order, OrderResponseTimer timer, LocalDateTime at) {
+    if (!timer.isActive()) return false;
+    var lock = securityLockAfterStart(order, timer);
+    if (lock == null) return false;
+    timer.adminStop(lock.adminId(), SECURITY_LOCK_STOP_REASON, at);
+    timers.flush();
+    events.publish(
+        order,
+        histories.saveAndFlush(
+            OrderHistory.timerAdminStopped(
+                order.getId(), lock.adminId(), at, timer.getId(), SECURITY_LOCK_STOP_REASON)));
     return true;
   }
 
@@ -291,8 +354,10 @@ public class ReviewTimerService {
       return new ReviewTimerResponse("ADMIN_STOPPED", utc(basis), utc(eligible), null, null, false);
     if (now.isBefore(eligible))
       return new ReviewTimerResponse("WAITING", utc(basis), utc(eligible), null, null, false);
-    return new ReviewTimerResponse(
-        "STARTABLE", utc(basis), utc(eligible), null, null, order.getSellerId() == memberId);
+    boolean canStart =
+        order.getSellerId() == memberId
+            && !sanctions.restriction(order.getBuyerId()).securityLocked();
+    return new ReviewTimerResponse("STARTABLE", utc(basis), utc(eligible), null, null, canStart);
   }
 
   private Delivery currentDelivery(Order order) {
