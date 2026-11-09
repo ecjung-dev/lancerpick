@@ -8,12 +8,12 @@ import { NotificationPanel } from './NotificationPanel'
 import styles from './NotificationNavLink.module.css'
 
 /** 화면 이동 시 패널 상태를 버린다. 개인 목록은 패널이 열린 동안에만 조회한다. */
-export function NotificationNavLink() {
+export function NotificationNavLink({ onOpen }: { onOpen?: () => void }) {
   const location = useLocation()
-  return <NotificationMenu key={location.key} />
+  return <NotificationMenu key={location.key} onOpen={onOpen} />
 }
 
-function NotificationMenu() {
+function NotificationMenu({ onOpen }: { onOpen?: () => void }) {
   const unread = useUnreadNotificationCount()
   const badge = unreadBadge(unread.isError ? undefined : unread.data?.count)
   const [position, setPosition] = useState<{ left: number; top: number; maxHeight: number } | null>(null)
@@ -59,6 +59,7 @@ function NotificationMenu() {
     if (position) { close(false); return }
     const rect = trigger.current?.getBoundingClientRect()
     if (!rect) return
+    onOpen?.()
     const width = Math.min(420, window.innerWidth - 32)
     const top = Math.max(16, Math.min(rect.bottom + 12, window.innerHeight - 360))
     setPosition({

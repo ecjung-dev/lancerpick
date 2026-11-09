@@ -7,7 +7,11 @@ import { Button } from '../../../shared/components/Button'
 import { formatDateTime } from '../../../shared/lib/format'
 import { codePointLength, normalizeText } from '../../../shared/lib/text'
 import { getMemberSession } from '../../auth/api'
-import { isUnclearResult } from '../../auth/session'
+import {
+  captureAccountScope,
+  isUnclearResult,
+  recheckSession,
+} from '../../auth/session'
 import { sendChatMessage } from '../api'
 import { mergeChatMessages } from '../messages'
 import { chatKeys, useChatMember, useChatMessages } from '../queries'
@@ -19,16 +23,33 @@ import styles from './OrderChatPanel.module.css'
 interface OrderChatPanelProps {
   orderId: string
   orderStatus: string
+  floating?: boolean
+  active?: boolean
+  expectedMemberId?: string
 }
 
-export function OrderChatPanel({ orderId, orderStatus }: OrderChatPanelProps) {
+export function OrderChatPanel({
+  orderId,
+  orderStatus,
+  floating = false,
+  active = true,
+  expectedMemberId,
+}: OrderChatPanelProps) {
   const member = useChatMember()
+  const client = useQueryClient()
+  const changed =
+    !!expectedMemberId && !!member.data && expectedMemberId !== member.data.id
+  useEffect(() => {
+    if (changed) void recheckSession(client)
+  }, [changed, client])
+  if (changed)
+    return <AsyncState title="현재 계정으로 대화를 다시 확인하고 있습니다." />
   // 배경 재확인으로 같은 계정의 입력을 지우지 않는다. 계정 변경은 아래 key로 입력·조회 모두 초기화한다.
   if (member.isPending)
     return <AsyncState title="대화의 로그인 상태를 확인하고 있습니다." />
   if (member.isError)
     return (
-      <section className={styles.panel}>
+      <section className={`${styles.panel} ${floating ? styles.floating : ''}`}>
         <h2>주문 대화</h2>
         <AsyncState
           title="대화를 확인할 수 없습니다."
@@ -52,6 +73,8 @@ export function OrderChatPanel({ orderId, orderStatus }: OrderChatPanelProps) {
       orderId={orderId}
       orderStatus={orderStatus}
       memberId={member.data.id}
+      floating={floating}
+      active={active}
     />
   )
 }
@@ -64,6 +87,8 @@ function ChatConversation({
   orderId,
   orderStatus,
   memberId,
+  floating = false,
+  active = true,
 }: ChatConversationProps) {
   const client = useQueryClient()
   const query = useChatMessages(orderId, memberId)
@@ -92,6 +117,7 @@ function ChatConversation({
 
   async function checkMember() {
     if ((await getMemberSession()).id !== memberId) {
+      await recheckSession(client)
       await client.invalidateQueries({ queryKey: chatKeys.member })
       throw new Error(
         '계정이 변경되었습니다. 현재 계정으로 대화를 다시 확인해 주세요.',
@@ -140,22 +166,24 @@ function ChatConversation({
     )
       return
     sending.current = true
+    const isCurrentAccount = captureAccountScope(client)
     setBusy(true)
     setFailure(null)
     try {
       await checkMember()
-      if (!mounted.current) return
+      if (!mounted.current || !isCurrentAccount()) return
       pending.current ??= {
         clientMessageId: crypto.randomUUID(),
         content: normalizeText(content),
       }
       if (realtime.connection.current?.isConnected())
         await realtime.connection.current.send(pending.current)
-      else await sendChatMessage(orderId, pending.current)
+      else await sendChatMessage(orderId, pending.current, isCurrentAccount)
       await checkMember()
       if (!mounted.current) return
       completed()
       await query.refetch()
+      await client.invalidateQueries({ queryKey: chatKeys.threads })
     } catch (error) {
       if (!mounted.current) return
       if (isUnclearResult(error)) {
@@ -181,7 +209,7 @@ function ChatConversation({
 
   if (realtime.state === 'auth-required')
     return (
-      <section className={styles.panel}>
+      <section className={`${styles.panel} ${floating ? styles.floating : ''}`}>
         <h2>주문 대화</h2>
         <p role="alert">
           로그인 상태가 변경되었거나 연결 권한을 확인하지 못했습니다. 다시
@@ -194,7 +222,7 @@ function ChatConversation({
     )
   if (query.isError)
     return (
-      <section className={styles.panel}>
+      <section className={`${styles.panel} ${floating ? styles.floating : ''}`}>
         <h2>주문 대화</h2>
         <AsyncState
           title="대화를 조회하지 못했습니다."
@@ -208,12 +236,17 @@ function ChatConversation({
     )
   if (!query.data) return <AsyncState title="대화를 불러오고 있습니다." />
   return (
-    <section className={styles.panel} aria-label="주문 대화">
-      <h2>주문 대화</h2>
-      <p>
-        구매자와 판매자가 대화할 수 있습니다. 대화로 주문 조건이나 납기가 자동
-        변경되지는 않습니다.
-      </p>
+    <section
+      className={`${styles.panel} ${floating ? styles.floating : ''}`}
+      aria-label="주문 대화"
+    >
+      {!floating && <h2>주문 대화</h2>}
+      {!floating && (
+        <p>
+          구매자와 판매자가 대화할 수 있습니다. 대화로 주문 조건이나 납기가 자동
+          변경되지는 않습니다.
+        </p>
+      )}
       <div className={styles.toolbar}>
         <span role="status">
           {realtime.state === 'connected'
@@ -248,7 +281,11 @@ function ChatConversation({
           </Button>
         )}
       </div>
-      <ChatMessages messages={messages} memberId={memberId} />
+      <ChatMessages
+        messages={messages}
+        memberId={memberId}
+        followLatest={floating && active}
+      />
       {!canSend && <p>종료된 주문의 대화는 조회만 할 수 있습니다.</p>}
       {failure && (
         <p className={styles.error} role="alert">
@@ -293,13 +330,40 @@ function ChatConversation({
 export function ChatMessages({
   messages,
   memberId,
+  followLatest = false,
 }: {
   messages: ChatMessage[]
   memberId: string
+  followLatest?: boolean
 }) {
+  const list = useRef<HTMLOListElement>(null)
+  const following = useRef(true)
+  const lastId = messages.at(-1)?.id
+  const lastSender = messages.at(-1)?.senderId
+  useEffect(() => {
+    if (
+      followLatest &&
+      (following.current || lastSender === memberId) &&
+      list.current
+    ) {
+      list.current.scrollTop = list.current.scrollHeight
+    }
+  }, [followLatest, lastId, lastSender, memberId])
   if (!messages.length) return <p>아직 대화가 없습니다.</p>
   return (
-    <ol className={styles.messages} aria-label="메시지 내역">
+    <ol
+      ref={list}
+      className={styles.messages}
+      aria-label="메시지 내역"
+      onScroll={() => {
+        if (followLatest && list.current)
+          following.current =
+            list.current.scrollHeight -
+              list.current.clientHeight -
+              list.current.scrollTop <
+            48
+      }}
+    >
       {messages.map((message) => (
         <li
           className={`${styles.message} ${message.senderId === memberId ? styles.mine : ''}`}

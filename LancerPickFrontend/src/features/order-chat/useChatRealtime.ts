@@ -37,6 +37,7 @@ export function useChatRealtime(
           void client.invalidateQueries({ queryKey: chatKeys.member })
       },
       onMessages(messages, recovered) {
+        if (messages.length) void client.invalidateQueries({ queryKey: chatKeys.threads })
         client.setQueryData<InfiniteData<ChatMessagesPage>>(
           chatKeys.messages(orderId, memberId),
           (data) => {
