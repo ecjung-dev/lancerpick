@@ -178,7 +178,13 @@ public class AdminFinanceQueryService {
   public AdminFinanceResponses.RecoveryJob recoveryJob(long adminId, long executionId) {
     requireAdmin(adminId);
     positive(executionId);
-    var execution = jobs.getJobExecution(executionId);
+    org.springframework.batch.core.job.JobExecution execution;
+    try {
+      execution = jobs.getJobExecution(executionId);
+    } catch (org.springframework.dao.EmptyResultDataAccessException missing) {
+      // Spring Batch 6.0.6은 없는 실행 ID에 null 대신 이 예외를 던진다(실행의 인스턴스 ID를 먼저 조회하는 단계). 계약대로 404로 바꾼다.
+      throw notFound();
+    }
     if (execution == null
         || !TopupRecoveryBatchConfiguration.JOB_NAME.equals(
             execution.getJobInstance().getJobName())) {

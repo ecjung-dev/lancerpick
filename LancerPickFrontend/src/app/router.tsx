@@ -24,6 +24,8 @@ import { AdminProductDetailPage } from '../features/admin/pages/AdminProductDeta
 import { AdminInquiryListPage } from '../features/admin/pages/AdminInquiryListPage'
 import { AdminInquiryDetailPage } from '../features/admin/pages/AdminInquiryDetailPage'
 import { AdminReviewTimerPage } from '../features/admin/pages/AdminReviewTimerPage'
+import { AdminFinancePage } from '../features/admin/pages/AdminFinancePage'
+import { AdminOrderFinancePage } from '../features/admin/pages/AdminOrderFinancePage'
 import { WalletPage, WalletPreviewPage } from '../features/wallet/pages/WalletPage'
 import { WalletTopupPage, WalletTopupPreviewPage } from '../features/wallet/pages/WalletTopupPage'
 import { WalletTopupResultPage } from '../features/wallet/pages/WalletTopupResultPage'
@@ -66,6 +68,8 @@ export const router = createBrowserRouter([
       { path: 'admin/inquiries', element: <AdminInquiryListPage /> },
       { path: 'admin/inquiries/:id', element: <AdminInquiryDetailPage /> },
       { path: 'admin/review-timers', element: <AdminReviewTimerPage /> },
+      { path: 'admin/finance', element: <AdminFinancePage /> },
+      { path: 'admin/finance/orders/:id', element: <AdminOrderFinancePage /> },
       { path: '*', element: <h1>페이지를 찾을 수 없습니다.</h1> },
     ],
   },

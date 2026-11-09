@@ -1,5 +1,9 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 관리자 금융·계약 PDF 운영 조회 연결(K3·K6 조회) — 2026-11-09
+
+`feature/admin-finance-views`(김창재, PR 전, main `6f59f7b`(#132)에서 분기): 황준범의 금융 조회(#117)·PDF 운영 조회(#125) 서비스에 조회 전용 관리자 API 7개와 화면(`/admin/finance` 결제·충전·복구 작업 탭, `/admin/finance/orders/:id` 주문 금액·계약 PDF)을 연결했다. 후보 판단은 "재처리 후보 / 후보 아님(사유)"으로만 표시하며 실행 버튼은 없다(관리자 감사 이력 설계가 선행). 없는 정산·종료 기록은 "기록 없음"으로 표시한다. DB·Flyway 변경 없음. [API 9-3절](api-spec.md#9-3-관리자-금융계약-pdf-운영-조회-김창재) · [연결 기록](admin-finance-support.md#api화면-연결--2026-11-09-김창재-featureadmin-finance-views). 검증 결과는 PR에 기록한다.
+
 ## 운영 문의·관리자 취소 검토(K4)·타이머 해제(K5) 연결 — 2026-11-09
 
 K5: 같은 브랜치에서 `ReviewTimerService.adminStop`에 관리자 API(`GET /api/admin/review-timers` 진행 중 타이머 목록, `POST /api/admin/orders/{orderId}/review-timer/stop`)와 `/admin/review-timers` 화면을 연결했다. 관리자 경로는 현재 DB 역할을 다시 확인한다. [API 9-2절](api-spec.md#9-2-관리자-자동-구매-확정-타이머-해제-김창재). 이로써 B4(V3 활성화 전 실서버·브라우저 확인)에 필요한 관리자 API가 모두 연결됐다(B4 확인은 정은찬과 함께, 아직).

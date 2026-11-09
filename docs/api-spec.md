@@ -370,6 +370,23 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 - 목록은 만료 시각 오름차순(먼저 자동 확정될 주문부터), 같은 시각은 timerId 오름차순. 현재 DB 역할이 ADMIN이 아니면 403.
 - 해제는 CSRF 필수·no-store. 오류는 서비스 그대로: 사유 공백 정리 후 1~1000자 아님 400 `VALIDATION_FAILED`, 관리자 아님 403 `FORBIDDEN`, V3 주문이 아니거나 없음 404, 활성 타이머 없음 409 `TIMER_NOT_ACTIVE`, 만료 시각이 지남 409 `AUTO_CONFIRM_DUE`(자동 확정 우선). 해제된 기산점으로는 판매자가 다시 시작할 수 없다.
 
+## 9-3 관리자 금융·계약 PDF 운영 조회 김창재
+
+2026-11-09 `feature/admin-finance-views`(K3·K6 조회). 조회·권한·후보 판단은 황준범의 `AdminFinanceQueryService`(#117, [계약](admin-finance-support.md))·`AdminContractPdfQueryService`(#125, [계약](admin-contract-pdf-inspection.md))가 한다. 모두 GET·`Cache-Control: no-store`·관리자 전용이며 현재 DB 역할을 다시 확인한다(강등 세션 403). DB 변경 없음.
+
+| 메서드·경로 | 입력 | 출력 |
+| --- | --- | --- |
+| GET /admin/finance/topups | memberId,status,page,size | 충전 목록(자동 복구·관리자 재확인 후보 판단 포함) |
+| GET /admin/finance/topups/{id} | 없음 | 충전 상세 |
+| GET /admin/finance/payments | orderId,buyerId,sellerId,status,policyVersion,page,size | 결제·환불 목록 |
+| GET /admin/finance/orders/{orderId} | 없음 | 주문 금액·결제·보관금·정산·종료 분배(없는 기록은 null) |
+| GET /admin/finance/recovery-jobs | page,size | 충전 복구 Job 인스턴스별 최신 실행·재시작 후보 판단 |
+| GET /admin/finance/recovery-jobs/{executionId} | 없음 | 실행 상세 |
+| GET /admin/orders/{orderId}/contract-pdf | version(선택) | 계약 PDF 메타데이터·생성 후보 판단 |
+
+- 충전 status는 READY·PROCESSING·UNKNOWN·COMPLETED·FAILED, 결제 status는 PAID·REFUNDED, policyVersion은 LEGACY_V1·CONTRACT_V2·CONTRACT_V3만(대소문자 그대로). ID 필터는 양수. 잘못된 값 400 `VALIDATION_FAILED`, 없는 대상 404 `RESOURCE_NOT_FOUND`.
+- 결제 키·처리권·파일 경로/해시·회원 이메일은 응답에 없다. 후보 판단(eligible·reason)은 조회 순간의 조건일 뿐 실행 권한이 아니며, 재확인·재시작·재생성 실행 API는 없다(관리자 감사 이력 설계 후 별도).
+
 ## 10 오류와 입력 기준
 
 | HTTP | 주요 코드 |

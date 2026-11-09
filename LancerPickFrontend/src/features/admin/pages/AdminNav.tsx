@@ -7,5 +7,6 @@ export function AdminNav() {
     <NavLink to="/admin/products">상품 운영</NavLink>
     <NavLink to="/admin/inquiries?status=OPEN">운영 문의</NavLink>
     <NavLink to="/admin/review-timers">자동 확정 타이머</NavLink>
+    <NavLink to="/admin/finance">금융 조회</NavLink>
   </nav>
 }
