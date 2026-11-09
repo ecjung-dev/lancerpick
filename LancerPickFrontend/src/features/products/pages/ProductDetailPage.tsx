@@ -12,10 +12,11 @@ export function ProductDetailPage() {
   const { id = '' } = useParams()
   const location = useLocation()
   const from: unknown = location.state?.from
+  const fromCatalog = typeof from === 'string' && /^\/products(\?[^#]*)?$/.test(from)
   const fromSeller = typeof from === 'string' && /^\/sellers\/[0-9]{1,19}(\?[^#]*)?$/.test(from)
   const fromFavorites = typeof from === 'string' && /^\/mypage\/favorites(\?[^#]*)?$/.test(from)
   const back =
-    typeof from === 'string' && (from === '/' || from.startsWith('/?') || fromSeller || fromFavorites)
+    typeof from === 'string' && (from === '/' || from.startsWith('/?') || fromSeller || fromFavorites || fromCatalog)
       ? from
       : '/'
   const product = useProductDetail(id)

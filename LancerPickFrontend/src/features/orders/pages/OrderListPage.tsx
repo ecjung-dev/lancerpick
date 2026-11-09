@@ -26,21 +26,7 @@ export function OrderListPage() {
   return (
     <section className={styles.orders}>
       <Link to="/mypage">← 마이페이지</Link>
-      <h1>거래 내역</h1>
-      <nav aria-label="거래 구분">
-        <button
-          aria-pressed={filters.side === 'BUYER'}
-          onClick={() => apply({ side: 'BUYER' })}
-        >
-          구매 내역
-        </button>
-        <button
-          aria-pressed={filters.side === 'SELLER'}
-          onClick={() => apply({ side: 'SELLER' })}
-        >
-          판매 내역
-        </button>
-      </nav>
+      <h1>{filters.side === 'SELLER' ? '판매 내역' : '구매 내역'}</h1>
       <SearchForm
         key={`${filters.q}|${filters.from}|${filters.to}`}
         filters={filters}
@@ -113,6 +99,15 @@ function SearchForm({
     submit({ q, from, to })
   }
 
+  // 적용된 조건이 이미 비어 있으면 key가 그대로라 다시 마운트되지 않으므로 입력·오류를 직접 비운다.
+  function reset() {
+    setQ('')
+    setFrom('')
+    setTo('')
+    setError('')
+    onApply({ q: '', from: '', to: '', status: '', sort: 'latest' })
+  }
+
   function period(months: number | null) {
     const range = months === null ? { from: '', to: '' } : recentMonths(months)
     setFrom(range.from)
@@ -153,10 +148,7 @@ function SearchForm({
       {error && <p role="alert">{error}</p>}
       <div className={styles['list-search-actions']}>
         <button type="submit">조회</button>
-        <button
-          type="button"
-          onClick={() => onApply({ q: '', from: '', to: '', status: '', sort: 'latest' })}
-        >
+        <button type="button" onClick={reset}>
           초기화
         </button>
       </div>

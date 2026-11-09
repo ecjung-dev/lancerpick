@@ -46,7 +46,7 @@ test('invalid order IDs never reach the server', () => {
     assert.throws(() => getOrderFunds(id))
 })
 
-function render(status, denied = false) {
+function render(status, denied = false, orderStatus = 'AWAITING_PAYMENT') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryOnMount: false } },
   })
@@ -71,7 +71,7 @@ function render(status, denied = false) {
       createElement(
         QueryClientProvider,
         { client },
-        createElement(OrderFundsPanel, { orderId: '11' }),
+        createElement(OrderFundsPanel, { orderId: '11', orderStatus }),
       ),
     )
   } finally {
@@ -93,4 +93,17 @@ test('failed permission recheck hides previously cached financial data', () => {
   const html = render('RELEASED', true)
   assert.match(html, /다시 로그인/)
   assert.doesNotMatch(html, /600,001|540,001|판매자 지급 완료/)
+})
+
+test('unpaid terminal orders show closure while paid refunds retain their money status', () => {
+  for (const state of ['CANCELLED', 'REJECTED']) {
+    const html = render('NOT_PAID', false, state)
+    assert.match(html, /결제 없이 종료된 거래/)
+    assert.match(html, /현재 보관금.*0원/)
+    assert.doesNotMatch(html, /전액 결제 대기|구매자 전액 반환 완료/)
+  }
+  assert.match(render('NOT_PAID', false, 'AWAITING_CONTRACT'), /전액 결제 대기/)
+  const refunded = render('REFUNDED', false, 'CANCELLED')
+  assert.match(refunded, /구매자 전액 반환 완료/)
+  assert.doesNotMatch(refunded, /결제 없이 종료된 거래/)
 })
