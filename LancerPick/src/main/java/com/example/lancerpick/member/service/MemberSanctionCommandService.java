@@ -26,7 +26,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
-/** Own short member transaction; no order/wallet work here. No HTTP endpoint yet. */
+/** Own short member transaction; called by admin HTTP without an enclosing order/wallet transaction. */
 @Service
 @Profile("!demo")
 @Transactional(propagation = Propagation.NEVER)

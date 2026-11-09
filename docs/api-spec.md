@@ -1,5 +1,7 @@
 # 랜서픽 MVP API 명세서
 
+2026-11-09 관리자 회원 관리 로컬 후속: [요청·응답·권한·중복 처리](admin-member-management.md#api-계약). GET `/api/admin/members`(q/restriction/page/size), GET `/{memberId}`, GET `/{memberId}/sanctions`, POST `/{memberId}/sanctions`, POST `/{memberId}/sanctions/{sanctionId}/revoke`를 추가했다. 하위 경로의 공통 prefix는 `/api/admin/members`다. 적용은 200 `{memberId,sanctionId}`, 해제는 204, no-store·현재 DB ADMIN·CSRF·기존 잠금/멱등을 유지한다. 상품 등록도 제한 시 403 `MEMBER_RESTRICTED`다. 새 DDL 없음. 아래 B1/B2의 내부 서비스 전용 설명은 당시 기록이다.
+
 2026-11-09 로컬 U6: Member 응답에 `displayNameChangeAvailableAt`(첫 변경 null, 이후 UTC 오프셋 시각)을 추가했다. PATCH `/api/me`는 다른 이름으로 바꾸려는 요청이 마지막 변경 후 한국 달력 6개월 전이면 409 `DISPLAY_NAME_CHANGE_NOT_ALLOWED`다. 같은 이름 저장은 기준일을 바꾸지 않는다. 비밀번호 변경/권고 시각은 회원 응답에 노출하지 않는다. [정책·원자성·연결 계약](member-change-policy.md). V11 포함·main 반영 전이다.
 
 2026-11-09 로컬 U5 후속: `GET /api/me/order-chats?q=&page=0&size=20` 본인 주문 대화 목록을 추가했다. principal 기준·no-store·페이지 크기 1~100·검색어 100 코드 포인트 이하. 숫자 검색은 주문번호 정확 일치, 나머지는 보관 상품명/현재 상대방 이름 부분 일치이며 최근 메시지(없으면 주문 생성)순이다. 종료/메시지 없는 주문도 포함한다. [필드·오류·검색·계정 경계](order-chat-workspace.md#대화-목록-api). 기존 메시지 GET/POST·소켓 계약과 DB는 유지한다. 로컬 구현이며 push·PR·병합 전이다.

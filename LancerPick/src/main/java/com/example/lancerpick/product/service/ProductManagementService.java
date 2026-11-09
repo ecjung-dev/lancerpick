@@ -2,6 +2,7 @@ package com.example.lancerpick.product.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.member.entity.Member;
+import com.example.lancerpick.member.service.MemberSanctionQuery;
 import com.example.lancerpick.product.dto.*;
 import com.example.lancerpick.product.entity.Category;
 import com.example.lancerpick.product.entity.Product;
@@ -25,7 +26,10 @@ import tools.jackson.databind.JsonNode;
 public class ProductManagementService {
     private final EntityManager em;
     private final Clock clock;
-    public ProductManagementService(EntityManager em, Clock clock) { this.em = em; this.clock = clock; }
+    private final MemberSanctionQuery sanctions;
+    public ProductManagementService(EntityManager em, Clock clock, MemberSanctionQuery sanctions) {
+        this.em = em; this.clock = clock; this.sanctions = sanctions;
+    }
 
     public OwnedProductResponse getMine(long memberId, String id) { return response(owned(memberId, id, false)); }
 
@@ -35,6 +39,8 @@ public class ProductManagementService {
         // 등록은 회원→상품 순서를 지키며 프로필과 회원 존재를 재확인한다.
         if (em.find(Member.class, memberId, LockModeType.PESSIMISTIC_WRITE) == null)
             throw new BusinessException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
+        if (sanctions.restriction(memberId).blocksNewActivity())
+            throw new BusinessException(HttpStatus.FORBIDDEN, "MEMBER_RESTRICTED", "이용 제한 중에는 새 상품을 등록할 수 없습니다.");
         if (em.find(SellerProfile.class, memberId) == null)
             throw new BusinessException(HttpStatus.FORBIDDEN, "SELLER_PROFILE_REQUIRED", "판매자 프로필을 먼저 등록해 주세요.");
         category(input.categoryId());

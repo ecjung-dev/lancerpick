@@ -25,6 +25,8 @@ import { AdminInquiryListPage } from '../features/admin/pages/AdminInquiryListPa
 import { AdminInquiryDetailPage } from '../features/admin/pages/AdminInquiryDetailPage'
 import { AdminReviewTimerPage } from '../features/admin/pages/AdminReviewTimerPage'
 import { AdminFinancePage } from '../features/admin/pages/AdminFinancePage'
+import { AdminMemberListPage } from '../features/admin/pages/AdminMemberListPage'
+import { AdminMemberDetailPage } from '../features/admin/pages/AdminMemberDetailPage'
 import { AdminOrderFinancePage } from '../features/admin/pages/AdminOrderFinancePage'
 import { WalletPage, WalletPreviewPage } from '../features/wallet/pages/WalletPage'
 import { WalletTopupPage, WalletTopupPreviewPage } from '../features/wallet/pages/WalletTopupPage'
@@ -64,6 +66,8 @@ export const router = createBrowserRouter([
       { path: 'mypage/wallet/topup/:id/fail', element: <WalletTopupResultPage outcome="fail" /> },
       { path: 'mypage/wallet/topup/:id/status', element: <WalletTopupResultPage outcome="status" /> },
       { path: 'admin/products', element: <AdminProductListPage /> },
+      { path: 'admin/members', element: <AdminMemberListPage /> },
+      { path: 'admin/members/:id', element: <AdminMemberDetailPage /> },
       { path: 'admin/products/:id', element: <AdminProductDetailPage /> },
       { path: 'admin/inquiries', element: <AdminInquiryListPage /> },
       { path: 'admin/inquiries/:id', element: <AdminInquiryDetailPage /> },
