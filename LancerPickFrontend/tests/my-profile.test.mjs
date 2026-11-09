@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createServer } from 'vite'
 import { updateMe } from '../src/features/auth/api.ts'
 import { saveDisplayName } from '../src/features/auth/profile.ts'
+import { isDisplayNameChangeLocked } from '../src/features/auth/nameChangePolicy.ts'
 import { memberQueryKey } from '../src/features/auth/session.ts'
 import { validateDisplayName, validateSignup } from '../src/features/auth/validation.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
@@ -22,7 +23,7 @@ const original = globalThis.fetch
 afterEach(() => { globalThis.fetch = original; clearCsrfToken() })
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 const failure = (code, status) => json({ code, message: '실패', fieldErrors: [], traceId: 't' }, status)
-const member = { id: '9007199254740993', email: 'a@example.com', displayName: '예전 이름', role: 'USER', hasSellerProfile: false }
+const member = { id: '9007199254740993', email: 'a@example.com', displayName: '예전 이름', role: 'USER', hasSellerProfile: false, displayNameChangeAvailableAt: null }
 const renamed = { ...member, displayName: '새 이름' }
 const other = { ...member, id: '9007199254740995', email: 'b@example.com', displayName: '다른 계정' }
 
@@ -117,6 +118,26 @@ test('a response for another member is not shown as saved, and failures propagat
 })
 
 // ---------- 화면 ----------
+
+test('name cooldown allows the exact server deadline and never guesses calendar months in the browser', () => {
+  const at = Date.parse('2027-05-09T06:00:00.123Z')
+  assert.equal(isDisplayNameChangeLocked(null, at), false)
+  assert.equal(isDisplayNameChangeLocked('2027-05-09T06:00:00.123Z', at - 1), true)
+  assert.equal(isDisplayNameChangeLocked('2027-05-09T06:00:00.123Z', at), false)
+  assert.equal(isDisplayNameChangeLocked('2027-05-09T06:00:00.123Z', at + 1), false)
+  assert.equal(isDisplayNameChangeLocked('invalid', at), true)
+})
+
+test('name cooldown shows the next date and disables only rename, leaving password change available', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
+  client.setQueryData(memberQueryKey, { ...member, displayNameChangeAvailableAt: '2999-05-09T06:00:00Z' })
+  try {
+    const html = render(client)
+    assert.match(html, /다음 변경 가능일/)
+    assert.match(html, /<button[^>]*disabled=""[^>]*>표시 이름 저장<\/button>/)
+    assert.doesNotMatch(html, /<button[^>]*disabled=""[^>]*>비밀번호 변경<\/button>/)
+  } finally { client.clear() }
+})
 
 function render(client) {
   return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/mypage/profile'] },

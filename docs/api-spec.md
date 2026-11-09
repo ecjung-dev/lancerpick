@@ -1,5 +1,7 @@
 # 랜서픽 MVP API 명세서
 
+2026-11-09 로컬 U6: Member 응답에 `displayNameChangeAvailableAt`(첫 변경 null, 이후 UTC 오프셋 시각)을 추가했다. PATCH `/api/me`는 다른 이름으로 바꾸려는 요청이 마지막 변경 후 한국 달력 6개월 전이면 409 `DISPLAY_NAME_CHANGE_NOT_ALLOWED`다. 같은 이름 저장은 기준일을 바꾸지 않는다. 비밀번호 변경/권고 시각은 회원 응답에 노출하지 않는다. [정책·원자성·연결 계약](member-change-policy.md). V11 포함·main 반영 전이다.
+
 2026-11-09 로컬 U5 후속: `GET /api/me/order-chats?q=&page=0&size=20` 본인 주문 대화 목록을 추가했다. principal 기준·no-store·페이지 크기 1~100·검색어 100 코드 포인트 이하. 숫자 검색은 주문번호 정확 일치, 나머지는 보관 상품명/현재 상대방 이름 부분 일치이며 최근 메시지(없으면 주문 생성)순이다. 종료/메시지 없는 주문도 포함한다. [필드·오류·검색·계정 경계](order-chat-workspace.md#대화-목록-api). 기존 메시지 GET/POST·소켓 계약과 DB는 유지한다. 로컬 구현이며 push·PR·병합 전이다.
 
 2026-11-09 로컬 R2: [결제·보관금 내부 enum](payment-status-enums.md)을 적용해도 주문 상세·V3 대금·관리자 금융 JSON의 상태 필드는 기존 문자열을 유지한다. PAID/REFUNDED, HELD/RELEASED/REFUNDED 및 미결제 조회의 NOT_PAID, 관리자 입력 오류 계약을 변경하지 않는다. 신규 API·Flyway는 없다.
