@@ -141,8 +141,8 @@ function renderFinance(kind, url, page, empty = false) {
     client.setQueryData(['wallet', 'member', 'balance'], { balance: 1050000, currency: 'KRW', isTest: true })
     client.setQueryData(['wallet', 'member', 'entries', { page, size: 20 }], data)
   } else {
-    client.setQueryData(['wallet', 'settlements', page], data)
-    client.setQueryData(['wallet', 'settlement-summary'], { completedCount: 60, grossAmount: 59940, feeAmount: 5940, sellerAmount: 54000 })
+    client.setQueryData(['wallet', 'settlements', page, '', '', 'latest'], data)
+    client.setQueryData(['wallet', 'settlement-summary', '', ''], { completedCount: 60, grossAmount: 59940, feeAmount: 5940, sellerAmount: 54000 })
   }
   try {
     return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [url] },

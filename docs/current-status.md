@@ -6,6 +6,9 @@
 
 검증: 격리 MySQL 8.4 `clean build` 989건 통과(실패·오류·건너뜀 0). 기존 VARCHAR 값의 JPA 읽기·환불 쓰기, 컬럼 타입·validate 기동, 금융/관리자 JSON 계약 회귀를 포함한다. 프런트 변경·검사, 실제 브라우저·외부 결제·원격 CI 실행은 없다.
 
+## 판매 수익 기간 조회 — 2026-11-09, 로컬 구현
+
+황준범의 `feature/settlement-date-filters`(main `e33982f` 기준): 목록·합계의 한국 날짜 기간 조건, 안정 정렬·화면 프리셋·조건 합계·URL/캐시 보존을 구현했다. DB·금액 생성/변경 로직은 유지한다. [검증·남은 §8 범위](settlement-period-query.md). 이전 알림 패널은 별도 브랜치에 보존했고 이번 작업도 push·main 병합 전이다.
 ## 헤더 알림 패널(U4 화면) — 2026-11-09, 로컬 구현
 
 `feature/header-notification-panel`(황준범, main `ed98643`에서 분기)에서 종 버튼의 패널, 전체/읽지 않음·모두 읽음·페이지·전체 보기와 알림 행 공통화를 진행했다. API·DB 변경 없음. [구현·검증·남은 연결](header-notification-panel.md). 회원 제재 PR #134와 별도이며 push·병합 전이다.
