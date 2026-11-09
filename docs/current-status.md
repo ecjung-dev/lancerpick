@@ -17,7 +17,7 @@ main 반영(#126, 정은찬, 작업 브랜치 `refactor/order-service-cleanup`, 
 - **주문 ID 파싱**: `order/service/OrderIds.positive`(ASCII 숫자·long 범위·1 이상). 호출자별 400 문구와 잠금 전 검사 순서를 유지한다.
 - **주문 상세 화면**: 납품·수정 요청·수락·거절·결제·직접 취소·구매 확정 폼을 `OrderCommandForms.tsx`로 분리했다. 잠금 ref·busy·실패·재조회는 페이지의 `run`이 계속 소유하고(`CancellationActions`와 같은 방식), 입력 초기화는 기존 시점(성공 시 전체, 실패 시 납품 입력, 재조회 성공 시 동의 체크)에 key를 바꿔 다시 마운트한다. 명령 요청 경로는 기존과 같이 화면 주소의 주문 ID를 쓴다. 다시 마운트하는 방식이라 입력란이 새로 그려지며 포커스가 풀린다(예: 납품 제출 실패 후 비워진 입력란). 입력값·요청에는 차이가 없다. 컴포넌트가 작아지며 React 순수성 lint가 렌더 중 `Date.now()`를 잡아, `orderDeadlineView`의 `now` 기본값으로 옮겼다(계산 시점 동일).
 
-검증(로컬): 백엔드 `clean build`(`lancerpick_test` 3307) 936건 통과(실패·오류·건너뜀 0, 신규 `OrderIdsTests` 포함, enum 매핑의 `ddl-auto=validate` 기동 포함). 프런트 typecheck·lint·`test:api` 227건·build 통과(기존 번들 크기 경고 유지). 실행하지 않은 검증(병합 전): 실제 브라우저 확인, 원격 CI(#126 PR 기록을 따른다).
+검증(로컬): 백엔드 `clean build`(`lancerpick_test` 3307) 936건 통과(실패·오류·건너뜀 0, 신규 `OrderIdsTests` 포함, enum 매핑의 `ddl-auto=validate` 기동 포함). 프런트 typecheck·lint·`test:api` 227건·build 통과(기존 번들 크기 경고 유지). 실행하지 않은 검증(병합 전): 실제 브라우저 확인(아래 병합 후 확인으로 대신함). 원격 CI는 #126 PR에서 통과했다.
 
 **병합 후 실제 브라우저 확인(2026-11-09, main `5910ccd`)**: 개인 개발 DB `bootRun` + Vite 개발 서버 + Playwright(Chromium), 판매자·구매자 테스트 계정을 로그아웃·로그인으로 전환했다. V3는 실행 인자로만 `--lancerpick.order.full-funding-creation-enabled=true`를 켰다(커밋하지 않음). V3 계약 초안·PDF·양측 서명과 상대 당사자의 선행 명령은 API로 처리했다(폼 대상이 아님).
 
