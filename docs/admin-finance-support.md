@@ -59,6 +59,16 @@ Batch `scanRequestedAt`은 허용된 `requestedAtMillis` 파라미터를 UTC로 
 
 관리자 단건 재확인은 인증된 구매자용 API에 타인의 ID를 넣어 호출하는 방식으로 연결하지 않는다. 관리자 권한·사유·감사 기록을 갖춘 명령 경계가 준비된 후 기존 지급 트랜잭션과 처리권 검증을 재사용한다. 이번에는 읽기 후보와 실제 실행을 구분해 제공한다.
 
+## API·화면 연결 — 2026-11-09 (김창재, `feature/admin-finance-views`)
+
+이 서비스와 `AdminContractPdfQueryService`를 그대로 호출하는 **조회 전용** 관리자 API·화면을 연결했다. 경로는 [API 9-3절](api-spec.md#9-3-관리자-금융계약-pdf-운영-조회-김창재). `admin/controller/AdminFinanceController`는 세션의 관리자 ID만 넘기고 필터 값을 그대로 전달한다(enum은 대소문자 그대로 변환, 틀리면 400). DB·Flyway 변경 없음.
+
+- 화면 `/admin/finance`: 결제·환불(기본)·충전·충전 복구 작업 탭, 필터·페이지 URL 보존. `/admin/finance/orders/:id`: 결제·보관금·정산·종료 분배와 계약 PDF 상태. 관리자 탭에 "금융 조회".
+- 후보 판단은 "재처리 후보 · 실행은 아직 지원하지 않아요" / "후보 아님: 한국어 설명 (원래 코드)"로 표시한다. **실행 버튼은 두지 않았다**(위 "K6 실제 실행을 연결할 때"의 감사 이력 선행 조건 때문).
+- 정산·종료 등 없는 기록은 0원이 아니라 "기록 없음"으로 표시한다. PDF 파일 정보는 "DB에 파일 정보 있음(실제 파일 확인은 아님)"으로 표시한다.
+- 연결 중 발견·수정: 없는 실행 ID의 `recoveryJob`이 404가 아니라 500이었다. Spring Batch 6.0.6의 `getJobExecution(long)`은 실행의 인스턴스 ID를 먼저 `queryForObject`로 조회해 없으면 null 대신 `EmptyResultDataAccessException`을 던진다(라이브러리 바이트코드로 확인). 이 예외를 위 계약대로 404 `RESOURCE_NOT_FOUND`로 바꿨다(`AdminFinanceApiIntegrationTests`가 검증, 황준범에게 공유).
+- 남은 일: 관리자 작업 감사 이력 설계(김창재, DDL은 황준범과)와 실제 충전 재확인·Batch 재시작·PDF 재생성 명령, 화면의 충전 상세·Job 실행 이력 상세 보기.
+
 ## 검증
 
 PR #117 충돌 해결 후속(2026-11-06): main `7329be1`(#118 세션 만료 헤더·캐시 정리)을 통합했다. `current-status.md` 상단의 금융 준비 절과 세션 정리 절을 모두 보존했다. 백엔드 소스는 직전 `3869391`과 동일하며 해당 커밋의 원격 CI 성공을 확인했다. 병합 후 프런트 전체 223건·lint·TypeScript 포함 build 통과. 최신 커밋의 원격 CI는 별도다. 화면 안내 수정 `b9ac35c`는 별도 브랜치에 보존하고 이 PR에 포함하지 않는다.

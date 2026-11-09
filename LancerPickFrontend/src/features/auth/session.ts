@@ -15,6 +15,14 @@ export const memberQueryKey = ['auth', 'me'] as const
  */
 let accountGeneration = 0
 
+/** 클릭 시 캡처해 지연된 명령의 전송·캐시 갱신을 같은 탭의 계정 경계 안으로 제한한다. */
+export function captureAccountScope(queryClient: QueryClient): () => boolean {
+  const generation = accountGeneration
+  const memberId = queryClient.getQueryData<Member | null>(memberQueryKey)?.id
+  return () => generation === accountGeneration
+    && memberId === queryClient.getQueryData<Member | null>(memberQueryKey)?.id
+}
+
 /**
  * 로그인·로그아웃·계정 전환 직후 호출한다(개발 규칙 4절, 프런트 공통 가이드).
  * 1) 서버가 바꾼 CSRF 토큰을 다시 받도록 기존 토큰을 버린다.

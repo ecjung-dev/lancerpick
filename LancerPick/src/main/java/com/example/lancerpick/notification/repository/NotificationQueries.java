@@ -20,7 +20,7 @@ public class NotificationQueries {
   }
 
   /** 본인 알림만 최신순으로 조회한다. 상품명은 현재 상품이 아닌 주문 시점 스냅샷을 사용한다. */
-  public List<NotificationResponse> find(long recipientId, int size, long offset) {
+  public List<NotificationResponse> find(long recipientId, boolean unreadOnly, int size, long offset) {
     var n = QNotification.notification;
     var s = QOrderSnapshot.orderSnapshot;
     return query
@@ -28,7 +28,7 @@ public class NotificationQueries {
         .from(n)
         .leftJoin(s)
         .on(s.orderId.eq(n.orderId))
-        .where(n.recipientId.eq(recipientId))
+        .where(n.recipientId.eq(recipientId), unreadOnly ? n.readAt.isNull() : null)
         .orderBy(n.createdAt.desc(), n.id.desc())
         .limit(size)
         .offset(offset)

@@ -27,7 +27,7 @@ GET /api/orders?side=SELLER&status=REQUESTED
 
 ## 목록 검색·기간·정렬 조건 (U3) — 2026-11-09
 
-[화면 개편 결정 §16.1](ui-renewal-member-policy.md#161-정은찬-구현)의 U3 계약을 구현했다(정은찬, 브랜치 `feature/order-list-search`). DB·Flyway 변경은 없고 기존 `ix_orders_buyer_created`·`ix_orders_seller_created` 인덱스 범위에서 조회한다.
+[화면 개편 결정 §16.1](ui-renewal-member-policy.md#161-정은찬-구현)의 U3 계약을 구현했다(정은찬, main 반영 #130). DB·Flyway 변경은 없고 기존 `ix_orders_buyer_created`·`ix_orders_seller_created` 인덱스 범위에서 조회한다.
 
 ```text
 GET /api/orders?side=BUYER&q=로고&from=2026-10-01&to=2026-10-31&sort=oldest

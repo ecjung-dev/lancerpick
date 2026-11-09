@@ -34,10 +34,11 @@ public class NotificationController {
   public ResponseEntity<PageResponse<NotificationResponse>> list(
       Authentication authentication,
       @RequestParam(defaultValue = "0") @Min(0) int page,
-      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+      @RequestParam(defaultValue = "false") boolean unreadOnly) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(notifications.list(currentMember.require(authentication), page, size));
+        .body(notifications.list(currentMember.require(authentication), page, size, unreadOnly));
   }
 
   @GetMapping("/unread-count")
