@@ -12,6 +12,7 @@ const server = await createServer({ configFile: false, cacheDir: 'node_modules/.
 const { NotificationsPage, NotificationReadError } = await server.ssrLoadModule('/src/features/notifications/pages/NotificationsPage.tsx')
 const { NotificationNavLink } = await server.ssrLoadModule('/src/features/notifications/components/NotificationNavLink.tsx')
 const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
+const { getNotifications } = await server.ssrLoadModule('/src/features/notifications/api.ts')
 after(async () => { await server.close() })
 
 test('every order event type has its own Korean message and unknown types fall back', () => {
@@ -62,7 +63,7 @@ function render(element, setup, url = '/notifications') {
 }
 
 test('notification list distinguishes unread items and links to the order detail', () => {
-  const html = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 1], {
+  const html = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 1], {
     items: [
       { id: '2', type: 'ORDER_DELIVERED', orderId: '9007199254740993', productTitle: '로고 디자인', read: false, createdAt: '2026-11-05T01:00:00Z' },
       { id: '1', type: 'ORDER_ACCEPTED', orderId: '7', productTitle: null, read: true, createdAt: '2026-11-04T01:00:00Z' },
@@ -73,30 +74,64 @@ test('notification list distinguishes unread items and links to the order detail
   assert.match(html, /로고 디자인/)
   assert.match(html, /href="\/orders\/9007199254740993"/)
   assert.match(html, /href="\/orders\/7"/)
-  assert.equal(html.match(/읽지 않음/g)?.length, 1)
+  assert.equal(html.match(/<span[^>]*>읽지 않음<\/span>/g)?.length, 1)
   assert.match(html, /2페이지/)
   assert.match(html, /disabled="">다음/)
 })
 
 test('empty list, login requirement and server errors are shown differently', () => {
-  const empty = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 0],
+  const empty = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 0],
     { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }))
   assert.match(empty, /받은 알림이 없습니다/)
 
   const unauthorized = render(createElement(NotificationsPage), (client) => {
-    client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 0], queryFn: async () => undefined }).setState({
+    client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 'all', 0], queryFn: async () => undefined }).setState({
       status: 'error', fetchStatus: 'idle', error: new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] }) })
   })
   assert.match(unauthorized, /로그인 후 알림을 확인할 수 있습니다/)
   assert.match(unauthorized, /href="\/login\?next=%2Fnotifications"/)
 
   const failed = render(createElement(NotificationsPage), (client) => {
-    client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 0], queryFn: async () => undefined }).setState({
+    client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 'all', 0], queryFn: async () => undefined }).setState({
       status: 'error', fetchStatus: 'idle', error: new ApiError(500, { code: 'INTERNAL_ERROR', message: '잠시 후 다시 시도해 주세요.', fieldErrors: [] }) })
   })
   assert.match(failed, /role="alert"/)
   assert.match(failed, /잠시 후 다시 시도해 주세요/)
   assert.doesNotMatch(failed, /받은 알림이 없습니다/)
+})
+
+test('unread filter comes from the URL, keeps its own cache entry and empty message', () => {
+  const unread = render(createElement(NotificationsPage), (client) => {
+    client.setQueryData(['notifications', 'list', 'all', 0],
+      { items: [{ id: '1', type: 'ORDER_ACCEPTED', orderId: '7', productTitle: null, read: true, createdAt: '2026-11-04T01:00:00Z' }],
+        page: 0, size: 20, totalElements: 1, totalPages: 1 })
+    client.setQueryData(['notifications', 'list', 'unread', 0], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })
+  }, '/notifications?filter=unread')
+  assert.match(unread, /aria-pressed="true">읽지 않음/)
+  assert.match(unread, /aria-pressed="false">전체/)
+  assert.match(unread, /읽지 않은 알림이 없습니다/)
+  assert.doesNotMatch(unread, /href="\/orders\/7"/)
+
+  // 알 수 없는 필터 값은 전체 목록으로 본다.
+  const unknown = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 0],
+    { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }), '/notifications?filter=READ')
+  assert.match(unknown, /aria-pressed="true">전체/)
+  assert.match(unknown, /받은 알림이 없습니다/)
+})
+
+test('list request adds unreadOnly only for the unread filter', async () => {
+  const original = globalThis.fetch
+  const urls = []
+  globalThis.fetch = async (url) => {
+    urls.push(url)
+    return new Response(JSON.stringify({ items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+  try {
+    await getNotifications(2, false)
+    await getNotifications(0, true)
+  } finally { globalThis.fetch = original }
+  assert.deepEqual(urls, ['/api/notifications?page=2&size=20', '/api/notifications?page=0&size=20&unreadOnly=true'])
 })
 
 test('only plain left clicks wait for the read request before navigating', () => {

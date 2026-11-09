@@ -179,6 +179,57 @@ class NotificationIntegrationTests {
   }
 
   @Test
+  void unreadOnlyListsOnlyOwnUnreadNotificationsNewestFirstWithMatchingTotal() throws Exception {
+    dispatchAll();
+    String eventId = jdbc.queryForObject(
+        "SELECT event_id FROM notifications WHERE recipient_id=?", String.class, seller);
+    var later = AT.plusMinutes(1);
+    var latest = AT.plusMinutes(2);
+    long read = insert(
+        "INSERT INTO notifications(recipient_id,event_id,type,order_id,read_at,created_at) VALUES (?,?,?,?,?,?)",
+        seller, eventId, "ORDER_PAID", order, latest, later);
+    long newest = insert(
+        "INSERT INTO notifications(recipient_id,event_id,type,order_id,read_at,created_at) VALUES (?,?,?,?,NULL,?)",
+        seller, eventId, "ORDER_CANCELLED", order, latest);
+    long first = jdbc.queryForObject(
+        "SELECT id FROM notifications WHERE recipient_id=? AND type='ORDER_CREATED'", Long.class, seller);
+
+    mvc.perform(get("/api/notifications?unreadOnly=true&size=1").with(authentication(auth(seller))))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "no-store"))
+        .andExpect(jsonPath("$.totalElements").value(2))
+        .andExpect(jsonPath("$.totalPages").value(2))
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].id").value(Long.toString(newest)))
+        .andExpect(jsonPath("$.items[0].read").value(false));
+    mvc.perform(get("/api/notifications?unreadOnly=true&page=1&size=1").with(authentication(auth(seller))))
+        .andExpect(jsonPath("$.items[0].id").value(Long.toString(first)));
+    mvc.perform(get("/api/notifications?unreadOnly=true&page=2&size=1").with(authentication(auth(seller))))
+        .andExpect(jsonPath("$.totalElements").value(2))
+        .andExpect(jsonPath("$.items").isEmpty());
+    // 생략·false는 기존처럼 읽은 알림까지 모두 보여 준다.
+    mvc.perform(get("/api/notifications").with(authentication(auth(seller))))
+        .andExpect(jsonPath("$.totalElements").value(3))
+        .andExpect(jsonPath("$.items[1].id").value(Long.toString(read)))
+        .andExpect(jsonPath("$.items[1].read").value(true));
+    mvc.perform(get("/api/notifications?unreadOnly=false").with(authentication(auth(seller))))
+        .andExpect(jsonPath("$.totalElements").value(3));
+    // 다른 회원의 읽지 않은 알림은 섞이지 않는다.
+    mvc.perform(get("/api/notifications?unreadOnly=true").with(authentication(auth(buyer))))
+        .andExpect(jsonPath("$.totalElements").value(0));
+    mvc.perform(get("/api/notifications?unreadOnly=maybe").with(authentication(auth(seller))))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+
+    clock.advance(Duration.ofMinutes(3));
+    command("/api/notifications/read-all", seller).andExpect(status().isNoContent());
+    mvc.perform(get("/api/notifications?unreadOnly=true").with(authentication(auth(seller))))
+        .andExpect(jsonPath("$.totalElements").value(0))
+        .andExpect(jsonPath("$.totalPages").value(0))
+        .andExpect(jsonPath("$.items").isEmpty());
+  }
+
+  @Test
   void readAllAndSingleReadKeepTheFirstRecordedReadTime() throws Exception {
     dispatchAll();
     long id = jdbc.queryForObject("SELECT id FROM notifications WHERE recipient_id=?", Long.class, seller);

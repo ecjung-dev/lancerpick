@@ -8,8 +8,11 @@ function notificationPath(id: string) {
   return `/notifications/${id}`
 }
 
-export const getNotifications = (page: number, signal?: AbortSignal) =>
-  apiRequest<PageResponse<NotificationItem>>(`/notifications?page=${page}&size=20`, { signal })
+export const getNotifications = (page: number, unreadOnly: boolean, signal?: AbortSignal) =>
+  apiRequest<PageResponse<NotificationItem>>(
+    `/notifications?page=${page}&size=20${unreadOnly ? '&unreadOnly=true' : ''}`,
+    { signal },
+  )
 
 export const getUnreadNotificationCount = (signal?: AbortSignal) =>
   apiRequest<UnreadCount>('/notifications/unread-count', { signal })

@@ -1,5 +1,16 @@
 # 주문 알림·아웃박스
 
+## 읽지 않은 알림만 보기 (U4) — 2026-11-09
+
+[화면 개편 결정 §16.1](ui-renewal-member-policy.md#161-정은찬-구현)의 U4 계약(로컬 구현). 기존 목록·읽지 않은 수·읽음·모두 읽음 API는 그대로 두고 목록에 `unreadOnly`만 추가했다(정은찬, 브랜치 `feature/notification-unread-filter`). DB·Flyway 변경 없음.
+
+- `GET /api/notifications?unreadOnly=true`: `read_at`이 없는 본인 알림만 기존과 같은 순서(생성 시각·ID 내림차순)로 반환한다. `totalElements`·`totalPages`도 같은 조건으로 센다(읽지 않은 수 API와 같은 값). 생략·`false`는 기존 전체 목록이고, 불리언이 아닌 값은 400 `VALIDATION_FAILED`. 읽음 처리로 항목이 빠지면 뒤 페이지가 당겨지므로 화면은 결과를 다시 조회한다.
+- `/notifications`: "전체"/"읽지 않음" 버튼(`aria-pressed`)으로 보기를 바꾸고 URL `?filter=unread`에 둔다. 바꾸면 첫 페이지로 간다. 알 수 없는 `filter` 값은 전체로 본다. 읽지 않음 보기의 빈 결과는 "읽지 않은 알림이 없습니다."로 구분한다. 읽음·모두 읽음 뒤에는 기존처럼 알림 조회 전체를 다시 불러온다.
+- 프런트 queryKey `['notifications', 'list', 'all'|'unread', page]`. 계정 전환 시 기존과 같이 `accountCache.ts`가 정리한다.
+- 범위 밖: 헤더 알림 패널 화면(§3의 위치·키보드·바깥 클릭 처리)은 이 변경에 넣지 않았다.
+
+검증은 [현재 현황](current-status.md#알림-목록-읽지-않음-조건u4--2026-11-09-로컬)에 적는다.
+
 ## 첫 계약 서명 알림 — 2026-11-06 로컬 후속
 
 사용자 확정에 따라 `feature/first-contract-signature-notification`에서 첫 서명도 알리도록 추가했다. 기존 아웃박스·알림 저장 구조를 재사용하며 새 테이블·컬럼·API·주문 이력 행동은 추가하지 않는다.
