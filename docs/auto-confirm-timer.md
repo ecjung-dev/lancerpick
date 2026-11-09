@@ -1,5 +1,7 @@
 # 검수 무응답 자동 구매 확정 (E7)
 
+회원 보안 잠금 후속(2026-11-09, 미구현): [개편 정책](ui-renewal-member-policy.md) §11.3에 따라 일반 이용 제한은 기존 타이머를 유지하고, 구매자 보안 잠금은 새 타이머 시작 차단·진행 타이머 중단·관리자 확인 대상으로 한다. 잠금 해제 후 자동 재개하지 않으며 이미 완료된 자동 확정/지급은 유지한다. 잠금·시작·만료 경합과 해제 후 관리자 처리 수단은 정은찬·황준범이 상세 설계한다. 아래 기존 내부 서비스가 이 계정 상태를 이미 처리한다고 해석하지 않는다.
+
 2026-11-06, `feature/v3-auto-confirm-timer`(정은찬). main `0f67606` 기준 작업 브랜치에서 구현해 #99(`eb6b40e`)로 main에 반영됐다. 업무 정책은 [결제 금액 보관 정책](full-funding-policy.md) §2, 금액 처리는 [금액 보관 구현](full-funding-payment.md)을 따른다. CONTRACT_V3 주문에만 적용하며 DB 변경(Flyway)은 없다. V6·V7의 `order_response_timers`·`order_closures`·`order_histories`를 그대로 사용한다.
 
 ## 흐름
