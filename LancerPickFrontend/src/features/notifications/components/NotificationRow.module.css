@@ -1,0 +1,13 @@
+.row { position: relative; list-style: none; overflow-wrap: anywhere; }
+.row > a, .row .plain { display: grid; gap: 6px; width: 100%; padding: 16px 18px; border: 0; border-radius: 8px; color: var(--ink); text-align: left; text-decoration: none; font: inherit; white-space: normal; line-height: 1.5; cursor: pointer; }
+.unread > a, .unread .plain { background: #f2f2f1; border-left: 3px solid var(--ink); }
+.read > a, .read .plain { background: #fafafa; border-left: 3px solid transparent; }
+.row > a:hover, .row .plain:hover { background: #eaeae8; }
+.row strong { font-size: 13px; font-weight: 650; }
+.read strong { color: #626262; font-weight: 450; }
+.title { color: #555; font-size: 12px; }
+.row small { color: #737373; font-size: 11px; }
+.row .plain:disabled { cursor: default; opacity: 1; }
+.error { margin: 6px 4px 0; font-size: 12px; line-height: 1.6; color: var(--ink); }
+.error a { text-decoration: underline; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

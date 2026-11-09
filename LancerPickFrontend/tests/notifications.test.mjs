@@ -11,6 +11,7 @@ const server = await createServer({ configFile: false, cacheDir: 'node_modules/.
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
 const { NotificationsPage, NotificationReadError } = await server.ssrLoadModule('/src/features/notifications/pages/NotificationsPage.tsx')
 const { NotificationNavLink } = await server.ssrLoadModule('/src/features/notifications/components/NotificationNavLink.tsx')
+const { NotificationPanel } = await server.ssrLoadModule('/src/features/notifications/components/NotificationPanel.tsx')
 const { ApiError, clearCsrfToken } = await server.ssrLoadModule('/src/shared/api/client.ts')
 const { getNotifications } = await server.ssrLoadModule('/src/features/notifications/api.ts')
 const { notificationReadOptions } = await server.ssrLoadModule('/src/features/notifications/queries.ts')
@@ -192,12 +193,45 @@ test('read failure notice is an alert and offers the order without marking it re
   assert.doesNotMatch(withoutOrder, /href=/)
 })
 
-test('header link shows the unread count only when there is one', () => {
+test('header button opens a dialog and shows the unread count only when there is one', () => {
   const withCount = render(createElement(NotificationNavLink), (client) => client.setQueryData(['notifications', 'unread'], { count: 120 }), '/')
-  assert.match(withCount, /href="\/notifications"/)
-  assert.match(withCount, /\(99\+\)/)
+  assert.match(withCount, /aria-haspopup="dialog"/)
+  assert.match(withCount, /aria-expanded="false"/)
+  assert.match(withCount, /읽지 않은 알림 99\+개/)
   const none = render(createElement(NotificationNavLink), (client) => client.setQueryData(['notifications', 'unread'], { count: 0 }), '/')
-  assert.doesNotMatch(none, /\(/)
+  assert.doesNotMatch(none, /읽지 않은 알림 [0-9]/)
+})
+
+test('panel shows server pagination, readable item links and access to the complete list', () => {
+  const html = render(createElement(NotificationPanel, { onClose() {} }), (client) => {
+    client.setQueryData(['notifications', 'list', 'all', 0], {
+      items: [{ id: '10', type: 'ORDER_DELIVERED', orderId: '9007199254740993', productTitle: '패널 상품', read: false, createdAt: '2026-11-09T01:00:00Z' }],
+      page: 0, size: 20, totalElements: 21, totalPages: 2,
+    })
+  })
+  assert.match(html, /패널 상품/)
+  assert.match(html, /href="\/orders\/9007199254740993"/)
+  assert.match(html, /aria-label="알림 닫기"/)
+  assert.match(html, /aria-label="알림 보기"/)
+  assert.match(html, /1페이지/)
+  assert.match(html, /disabled="">이전/)
+  assert.match(html, /전체 알림 보기/)
+})
+
+test('panel does not confuse a failed lookup with an empty list or leave read-all enabled', () => {
+  const empty = render(createElement(NotificationPanel, { onClose() {} }), (client) => {
+    client.setQueryData(['notifications', 'list', 'all', 0], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })
+  })
+  assert.match(empty, /받은 알림이 없습니다/)
+  const failed = render(createElement(NotificationPanel, { onClose() {} }), (client) => {
+    client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 'all', 0] }).setState({
+      status: 'error', fetchStatus: 'idle', error: new ApiError(500, { code: 'INTERNAL_ERROR', message: '오류', fieldErrors: [] }),
+    })
+  })
+  assert.match(failed, /role="alert"/)
+  assert.match(failed, /다시 조회/)
+  assert.match(failed, /disabled="">모두 읽음/)
+  assert.doesNotMatch(failed, /받은 알림이 없습니다/)
 })
 
 function deferred() {
