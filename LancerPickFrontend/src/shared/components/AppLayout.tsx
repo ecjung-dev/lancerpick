@@ -1,12 +1,15 @@
 import { useState } from 'react'
-import { Link, Outlet, useNavigate, useSearchParams } from 'react-router'
+import { Link, Outlet, useNavigate, useSearchParams, useLocation } from 'react-router'
 import { Icon } from './Icon'
 import { Input } from './Input'
 import { MemberNav } from '../../features/auth/components/MemberNav'
 import { normalizeText } from '../lib/text'
+import { AccountLayout } from '../../features/account/components/AccountLayout'
 import styles from './AppLayout.module.css'
 
 export function AppLayout() {
+  const { pathname } = useLocation()
+  const accountPage = pathname === '/mypage' || pathname.startsWith('/mypage/') || pathname === '/orders'
   const [params] = useSearchParams()
   const keyword = params.get('keyword') ?? ''
   return (
@@ -16,6 +19,7 @@ export function AppLayout() {
         <div className={styles.headerInner}>
           <Link to="/" className={styles.brand} aria-label="랜서픽 홈"><span className={styles.brandMark} aria-hidden="true" />랜서픽</Link>
           <nav className={styles.discovery} aria-label="서비스 탐색">
+            <Link to="/products" className={styles.browse}>서비스 둘러보기</Link>
             <HeaderSearch key={keyword} initialKeyword={keyword} />
           </nav>
           <nav className={styles.nav} aria-label="회원 메뉴">
@@ -24,7 +28,7 @@ export function AppLayout() {
         </div>
       </header>
       <main className={styles.main} id="main-content">
-        <Outlet />
+        {accountPage ? <AccountLayout><Outlet /></AccountLayout> : <Outlet />}
       </main>
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
@@ -45,7 +49,7 @@ function HeaderSearch({ initialKeyword }: { initialKeyword: string }) {
     const next = new URLSearchParams()
     const keyword = normalizeText(input)
     if (keyword) next.set('keyword', keyword)
-    navigate(`/?${next.toString()}#services`)
+    navigate(`/products${next.size ? `?${next.toString()}` : ''}`)
   }}>
     <label className={styles.srOnly} htmlFor="service-search">서비스 검색</label>
     <Input id="service-search" type="search" placeholder="어떤 서비스를 찾으세요?" value={input} onChange={(event) => setInput(event.target.value)} />

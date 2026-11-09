@@ -14,7 +14,7 @@ import { clearCsrfToken } from '../src/shared/api/client.ts'
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-profile',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
 const { MyProfilePage } = await server.ssrLoadModule('/src/features/auth/pages/MyProfilePage.tsx')
-const { WalletPreviewPage } = await server.ssrLoadModule('/src/features/wallet/pages/WalletPage.tsx')
+const { AccountLayout } = await server.ssrLoadModule('/src/features/account/components/AccountLayout.tsx')
 const ssr = await server.ssrLoadModule('/src/shared/api/client.ts')
 after(async () => { await server.close() })
 
@@ -161,7 +161,11 @@ test('a failed session check offers retry instead of a login form or stale data'
 })
 
 test('mypage menu links to the profile screen instead of a coming-soon label', () => {
-  const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(WalletPreviewPage)))
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  client.setQueryData(['auth', 'me'], null)
+  const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/mypage'] },
+    createElement(QueryClientProvider, { client }, createElement(AccountLayout))))
+  client.clear()
   assert.match(html, /href="\/mypage\/profile"/)
   assert.doesNotMatch(html, /내 정보 <small>준비 중/)
 })

@@ -34,3 +34,6 @@
   .discovery { grid-column: 1; grid-row: 3; }
 }
 
+
+.browse { white-space: nowrap; font-size: 13px; }
+@media (max-width: 1000px) { .discovery { flex-wrap: wrap; } }

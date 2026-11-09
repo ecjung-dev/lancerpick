@@ -15,12 +15,10 @@ const { OrderDetailPage } = await server.ssrLoadModule('/src/features/orders/pag
 const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
 after(async () => { await server.close() })
 
-test('mypage exposes buyer, seller and settlement destinations as real links', () => {
+test('wallet content leaves account navigation to the shared layout', () => {
   const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(WalletPreviewPage)))
-  assert.match(html, /href="\/orders\?side=BUYER"/)
-  assert.match(html, /href="\/orders\?side=SELLER"/)
-  assert.match(html, /href="\/mypage\/settlements"/)
-  assert.doesNotMatch(html, /구매 내역 <small>준비 중/)
+  assert.match(html, /적립금 · 이용 내역/)
+  assert.doesNotMatch(html, /aria-label="마이페이지 메뉴"|TEST CREDIT|테스트 적립금/)
 })
 
 function renderOrders(url, side, page, status = '') {
@@ -38,7 +36,7 @@ function renderOrders(url, side, page, status = '') {
 
 test('direct seller URL restores selected tab and page without converting order IDs', () => {
   const html = renderOrders('/orders?side=SELLER&page=2', 'SELLER', 2)
-  assert.match(html, /aria-pressed="true">판매 내역/)
+  assert.match(html, /<h1>판매 내역<\/h1>/)
   assert.match(html, /SELLER saved page 2/)
   assert.match(html, /3페이지/)
   assert.match(html, /href="\/orders\/9007199254740993\?side=SELLER&amp;page=2"/)
@@ -47,7 +45,7 @@ test('direct seller URL restores selected tab and page without converting order 
 test('invalid side or page uses the buyer first page rather than an invalid API query', () => {
   for (const page of ['-1', '1.5', '2147483648', 'abc']) {
     const html = renderOrders(`/orders?side=invalid&page=${page}`, 'BUYER', 0)
-    assert.match(html, /aria-pressed="true">구매 내역/)
+    assert.match(html, /<h1>구매 내역<\/h1>/)
     assert.match(html, /BUYER saved page 0/)
     assert.match(html, /1페이지/)
   }
@@ -138,7 +136,7 @@ test('wallet restores URL page and links only entries associated with orders', (
   assert.equal((html.match(/href="\/orders\/9007199254740993"/g) ?? []).length, 2)
   assert.doesNotMatch(html, /href="\/orders\/(null|undefined)"/)
   assert.match(html, /가입 적립금/)
-  assert.match(html, /테스트 결제 충전/)
+  assert.match(html, /적립금 충전/)
 })
 
 test('settlements restore URL page and preserve large order IDs in detail links', () => {

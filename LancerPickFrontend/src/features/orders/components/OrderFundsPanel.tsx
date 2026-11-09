@@ -6,6 +6,7 @@ import { Button } from '../../../shared/components/Button'
 
 interface OrderFundsPanelProps {
   orderId: string
+  orderStatus: string
 }
 
 const statusLabels: Record<OrderFunds['status'], string> = {
@@ -15,7 +16,7 @@ const statusLabels: Record<OrderFunds['status'], string> = {
   REFUNDED: '구매자 전액 반환 완료',
 }
 
-export function OrderFundsPanel({ orderId }: OrderFundsPanelProps) {
+export function OrderFundsPanel({ orderId, orderStatus }: OrderFundsPanelProps) {
   const query = useOrderFunds(orderId)
 
   if (query.isError) {
@@ -49,7 +50,8 @@ export function OrderFundsPanel({ orderId }: OrderFundsPanelProps) {
   return (
     <section aria-label="거래 대금">
       <h2>거래 대금</h2>
-      <p>{statusLabels[funds.status]}</p>
+      <p>{funds.status === 'NOT_PAID' && ['CANCELLED', 'REJECTED'].includes(orderStatus)
+        ? '결제 없이 종료된 거래입니다.' : statusLabels[funds.status]}</p>
       <p>
         계약 총액 {formatWon(funds.amount)} · 현재 보관금{' '}
         {formatWon(funds.heldAmount)}

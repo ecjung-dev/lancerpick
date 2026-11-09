@@ -18,10 +18,6 @@ export function OrderListPage() {
       ? requestedPage
       : 0
 
-  function changeSide(nextSide: 'BUYER' | 'SELLER') {
-    setParams(status ? { side: nextSide, status } : { side: nextSide })
-  }
-
   function changeStatus(nextStatus: string) {
     setParams(nextStatus ? { side, status: nextStatus } : { side })
   }
@@ -37,21 +33,7 @@ export function OrderListPage() {
   return (
     <section className={styles.orders}>
       <Link to="/mypage">← 마이페이지</Link>
-      <h1>거래 내역</h1>
-      <nav aria-label="거래 구분">
-        <button
-          aria-pressed={side === 'BUYER'}
-          onClick={() => changeSide('BUYER')}
-        >
-          구매 내역
-        </button>
-        <button
-          aria-pressed={side === 'SELLER'}
-          onClick={() => changeSide('SELLER')}
-        >
-          판매 내역
-        </button>
-      </nav>
+      <h1>{side === 'SELLER' ? '판매 내역' : '구매 내역'}</h1>
       <label>
         주문 상태{' '}
         <select

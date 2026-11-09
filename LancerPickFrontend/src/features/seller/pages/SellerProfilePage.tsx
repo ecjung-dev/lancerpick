@@ -13,6 +13,7 @@ import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { Input } from '../../../shared/components/Input'
 import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { memberQueryKey } from '../../auth/session'
 import { getSellerSession, saveSellerProfile } from '../api'
 import type { SellerProfile, SellerProfileInput, SellerSession } from '../types'
 import { validateSellerProfile, type ProfileErrors } from '../validation'
@@ -108,6 +109,7 @@ function ConnectedProfile({
         return
       }
       client.setQueryData(key, response)
+      void client.invalidateQueries({ queryKey: memberQueryKey, exact: true })
       setSaved(true)
     },
     onError: (error) => {
