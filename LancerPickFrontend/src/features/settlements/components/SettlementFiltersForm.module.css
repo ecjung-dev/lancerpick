@@ -1,0 +1,7 @@
+.filters { border: 1px solid #ddd; background: #fafafa; border-radius: 10px; padding: 18px; margin: 24px 0; }
+.filters p { margin: 0 0 14px; font-size: 12px; }
+.fields { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.fields label { display: grid; gap: 7px; font-size: 12px; flex: 1 1 160px; min-width: 0; }
+.fields input, .fields select { width: 100%; min-width: 0; padding: 10px; border: 1px solid #ccc; border-radius: 6px; background: white; font: inherit; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.filters .presets button { color: #171717; background: white; border: 1px solid #ddd; font-size: 12px; padding: 8px 12px; }

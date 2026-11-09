@@ -11,6 +11,7 @@ import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.CancellationRequestRepository;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
+import com.example.lancerpick.payment.entity.PaymentStatus;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.settlement.entity.Settlement;
 import com.example.lancerpick.settlement.repository.SettlementRepository;
@@ -77,7 +78,7 @@ public class OrderConfirmationService {
       throw new BusinessException(
           HttpStatus.CONFLICT, "CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
     var payment = payments.findByOrderId(orderId).orElseThrow(OrderConfirmationService::integrity);
-    if (!"PAID".equals(payment.status())
+    if (payment.status() != PaymentStatus.PAID
         || payment.amount() != order.getPriceAmount()
         || order.getPaidAt() == null) throw integrity();
     long fee = Math.multiplyExact(payment.amount(), payment.rate()) / 10000;

@@ -29,17 +29,23 @@ public class SettlementController {
   @GetMapping
   public ResponseEntity<PageResponse<SettlementResponse>> list(
       Authentication authentication,
+      @RequestParam(required = false) String from,
+      @RequestParam(required = false) String to,
+      @RequestParam(required = false) String sort,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(queries.list(members.require(authentication), page, size));
+        .body(queries.list(members.require(authentication), page, size, from, to, sort));
   }
 
   @GetMapping("/summary")
-  public ResponseEntity<SettlementSummaryResponse> summary(Authentication authentication) {
+  public ResponseEntity<SettlementSummaryResponse> summary(
+      Authentication authentication,
+      @RequestParam(required = false) String from,
+      @RequestParam(required = false) String to) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(queries.summary(members.require(authentication)));
+        .body(queries.summary(members.require(authentication), from, to));
   }
 }

@@ -9,6 +9,7 @@ import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
+import com.example.lancerpick.payment.entity.PaymentStatus;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.entity.WalletEntryType;
@@ -74,10 +75,10 @@ public class OrderPaymentService {
     var existing = payments.findByOrderId(orderId);
     if (existing.isPresent()) {
       var payment = existing.get();
-      if ("REFUNDED".equals(payment.status()))
+      if (payment.status() == PaymentStatus.REFUNDED)
         throw new BusinessException(
             HttpStatus.CONFLICT, "PAYMENT_ALREADY_REFUNDED", "이미 환불된 결제입니다.");
-      if (!"PAID".equals(payment.status())
+      if (payment.status() != PaymentStatus.PAID
           || payment.amount() != order.getPriceAmount()
           || !Set.of(
                   OrderStatus.IN_PROGRESS,

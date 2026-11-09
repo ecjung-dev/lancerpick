@@ -9,6 +9,20 @@
 
 검증(로컬, `lancerpick_test` 3307): 타이머·회원·문의·관리자 테스트 142건 통과(`ReviewTimerIntegrationTests` 신규 7건: 잠금 시 1회 중단·중복 전달 무변화·해제 후 재개 없음과 무지급, 잠금 중 시작 409·`canStart` false·해제 후 시작, 만료 지났지만 미처리 타이머 중단, 전달 없이 잠금이 끝난 뒤 만료 재검사로 중단, 사전 안내 생략, 해제 후 시작된 타이머는 늦은 전달로 중단 안 됨·판매자 잠금 무영향, 시작·잠금 동시 실행 후 활성 타이머 없음). 프런트 `tests/review-timer.test.mjs` 7건, typecheck·lint·`test:api` 264건·build 통과(기존 번들 크기 경고 유지). 실제 서버·브라우저 확인은 하지 않았다.
 
+## 결제·보관금 상태 enum(R2) — 2026-11-09, main 반영(#137)
+
+`refactor/payment-funds-status`(황준범, main `6cf5667` 기준)에서 PaymentStatus·OrderFundsStatus를 적용했다. 기존/V3 명령·보관금 조회·관리자 금융 조건과 String DTO 조립을 함께 맞추며 DB VARCHAR·기존 문자열·금액/잠금 정책은 유지한다. [이전 데이터 호환·검증 기록](payment-status-enums.md). main 반영(#137)이며 R1 계약/채팅 잠금 공통화는 별도다.
+
+검증: 격리 MySQL 8.4 `clean build` 989건 통과(실패·오류·건너뜀 0). 기존 VARCHAR 값의 JPA 읽기·환불 쓰기, 컬럼 타입·validate 기동, 금융/관리자 JSON 계약 회귀를 포함한다. 프런트 변경·검사, 실제 브라우저·외부 결제·원격 CI 실행은 없다.
+
+## 판매 수익 기간 조회 — 2026-11-09, main 반영(#136)
+
+황준범의 `feature/settlement-date-filters`(main `e33982f` 기준): 목록·합계의 한국 날짜 기간 조건, 안정 정렬·화면 프리셋·조건 합계·URL/캐시 보존을 구현했다. DB·금액 생성/변경 로직은 유지한다. [검증·남은 §8 범위](settlement-period-query.md). 이전 알림 패널은 별도 브랜치에 보존했고 main 반영(#136).
+
+## 헤더 알림 패널(U4 화면) — 2026-11-09, main 반영(#135)
+
+`feature/header-notification-panel`(황준범, main `ed98643`에서 분기)에서 종 버튼의 패널, 전체/읽지 않음·모두 읽음·페이지·전체 보기와 알림 행 공통화를 진행했다. API·DB 변경 없음. [구현·검증·남은 연결](header-notification-panel.md). 회원 제재 PR #134와 별도이며 main 반영(#135).
+
 ## 회원 제재 B1/B2 후속 — 2026-11-09, main 반영(#134)
 
 [제재 공통 기반·연결 계약](member-sanction-foundation.md): V10 `member_sanctions`, 잠금 없는 제재 조회, 관리자 내부 명령, 보안 잠금의 인증 버전 증가·로그인 차단·커밋 후 타이머 전달을 제공한다. main 반영(#134)이며 신규 관리자 HTTP API/화면은 없다. 주문·상품의 신규 활동 차단은 담당자 연결 전이고, 실제 타이머 중단/만료 보호는 위 U8 절에서 연결했다. 과거의 전체 미구현 표기보다 이 후속 기록을 우선하며, U7/U8 전체 완료를 뜻하지 않는다.

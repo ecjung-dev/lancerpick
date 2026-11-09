@@ -37,7 +37,7 @@ export function MemberNav({ signupClassName, buttonClassName }: { signupClassNam
     return <>
       {/* 메뉴 표시는 편의일 뿐이다. 실제 관리자 권한은 서버가 /api/admin/** 요청마다 다시 확인한다. */}
       {member.data.role === 'ADMIN' && <NavLink to="/admin/products">관리자</NavLink>}
-      <NotificationNavLink />
+      <NotificationNavLink key={member.data.id} />
       <NavLink to="/mypage">{member.data.displayName}님</NavLink>
       <button type="button" className={buttonClassName} disabled={out.isPending} onClick={() => out.mutate()}>
         {out.isPending ? '로그아웃 중…' : '로그아웃'}
