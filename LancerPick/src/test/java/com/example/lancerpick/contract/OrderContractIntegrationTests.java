@@ -42,6 +42,109 @@ import tools.jackson.databind.json.JsonMapper;
 @IntegrationTest
 @Transactional(isolation = Isolation.READ_COMMITTED)
 class OrderContractIntegrationTests {
+  @Autowired com.example.lancerpick.admin.service.AdminContractPdfQueryService adminPdf;
+  @Autowired CancellationRequestRepository cancellationRecords;
+
+  @Test
+  void adminPdfInspectionReadsDatabaseRolesAndStopsAfterDemotion() {
+    service.prepare(seller, orderId, 0, "");
+    assertThatThrownBy(() -> adminPdf.inspect(other, orderId, null))
+        .isInstanceOfSatisfying(
+            BusinessException.class, e -> assertThat(e.code()).isEqualTo("FORBIDDEN"));
+    jdbc.update("UPDATE members SET role='ADMIN' WHERE id=?", other);
+    em.clear();
+    assertThat(adminPdf.inspect(other, orderId, null).generationCandidate().eligible()).isTrue();
+    // 즉시 DB 권한 조회이므로 같은 회원 ID라도 강등 후 다시 허용하지 않는다.
+    jdbc.update("UPDATE members SET role='USER' WHERE id=?", other);
+    em.clear();
+    assertThatThrownBy(() -> adminPdf.inspect(other, orderId, null))
+        .isInstanceOfSatisfying(
+            BusinessException.class, e -> assertThat(e.code()).isEqualTo("FORBIDDEN"));
+    assertThatThrownBy(() -> adminPdf.inspect(Long.MAX_VALUE, orderId, null))
+        .isInstanceOfSatisfying(
+            BusinessException.class,
+            e -> assertThat(e.code()).isEqualTo("AUTHENTICATION_REQUIRED"));
+  }
+
+  @Test
+  void adminPdfVersionInspectionPreservesDocumentsSignaturesAndEvents() {
+    jdbc.update("UPDATE members SET role='ADMIN' WHERE id=?", other);
+    var first = service.prepare(seller, orderId, 0, "private-special-terms");
+    ready(first.id());
+    service.sign(buyer, orderId, 1, first.contentHash(), fileHash(first.id()));
+    var second = service.prepare(seller, orderId, 1, "replacement-private-terms");
+    em.flush();
+    em.clear();
+    var before =
+        jdbc.queryForList(
+            "SELECT id,status,generation_key,file_storage_key,updated_at FROM order_contracts WHERE"
+                + " order_id=? ORDER BY id",
+            orderId);
+    int eventCount = outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId).size();
+    var historical = adminPdf.inspect(other, orderId, 1);
+    assertThat(historical.currentVersion()).isFalse();
+    assertThat(historical.fileMetadataPresent()).isTrue();
+    assertThat(historical.generationCandidate().reason().name()).isEqualTo("NOT_CURRENT_VERSION");
+    var current = adminPdf.inspect(other, orderId, null);
+    assertThat(current.contractId()).isEqualTo(second.id());
+    assertThat(current.generationCandidate().kind().name()).isEqualTo("INITIAL_GENERATION");
+    assertThat(mapper.writeValueAsString(historical))
+        .doesNotContain(
+            "private-special-terms",
+            "fileStorageKey",
+            "generationKey",
+            "canonicalContent",
+            first.contentHash());
+    assertThatThrownBy(() -> adminPdf.inspect(other, orderId, 99))
+        .isInstanceOf(BusinessException.class);
+    em.flush();
+    assertThat(
+            jdbc.queryForList(
+                "SELECT id,status,generation_key,file_storage_key,updated_at FROM order_contracts"
+                    + " WHERE order_id=? ORDER BY id",
+                orderId))
+        .isEqualTo(before);
+    assertThat(signatures.findByContractIdOrderByIdAsc(Long.parseLong(first.id()))).hasSize(1);
+    assertThat(outbox.findByAggregateTypeAndAggregateIdOrderByIdAsc("ORDER", orderId))
+        .hasSize(eventCount);
+  }
+
+  @Test
+  void adminPdfGenerationTimeoutBoundaryUsesPersistedStateWithoutClaimingIt() {
+    jdbc.update("UPDATE members SET role='ADMIN' WHERE id=?", other);
+    var draft = service.prepare(seller, orderId, 0, "");
+    var contract = contracts.findById(Long.parseLong(draft.id())).orElseThrow();
+    var started = contract.getUpdatedAt();
+    contract.startGeneration(started);
+    contracts.flush();
+    String attempt = contract.getGenerationKey();
+    em.clear();
+    var boundary = started.plusMinutes(2).toInstant(ZoneOffset.UTC);
+    var before =
+        new com.example.lancerpick.admin.service.AdminContractPdfQueryService(
+            members,
+            orders,
+            contracts,
+            cancellationRecords,
+            Clock.fixed(boundary.minusNanos(1000), ZoneOffset.UTC),
+            Duration.ofMinutes(2));
+    var exact =
+        new com.example.lancerpick.admin.service.AdminContractPdfQueryService(
+            members,
+            orders,
+            contracts,
+            cancellationRecords,
+            Clock.fixed(boundary, ZoneOffset.UTC),
+            Duration.ofMinutes(2));
+    assertThat(before.inspect(other, orderId, null).generationCandidate().reason().name())
+        .isEqualTo("GENERATION_ACTIVE");
+    assertThat(exact.inspect(other, orderId, null).generationCandidate().kind().name())
+        .isEqualTo("RETRY_EXPIRED");
+    var stored = contracts.findById(Long.parseLong(draft.id())).orElseThrow();
+    assertThat(stored.getStatus()).isEqualTo("GENERATING");
+    assertThat(stored.getGenerationKey()).isEqualTo(attempt);
+  }
+
   @Autowired OrderContractService service;
   @Autowired OrderContractRepository contracts;
   @Autowired ContractSignatureRepository signatures;
