@@ -24,7 +24,9 @@ import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.order.repository.OrderTradeTermsRepository;
 import com.example.lancerpick.payment.entity.OrderFunds;
+import com.example.lancerpick.payment.entity.OrderFundsStatus;
 import com.example.lancerpick.payment.entity.Payment;
+import com.example.lancerpick.payment.entity.PaymentStatus;
 import com.example.lancerpick.payment.repository.OrderFundsRepository;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.payment.service.FullFundingPolicy;
@@ -97,11 +99,11 @@ public class FullFundingService {
     var payment = requirePayment(order);
     var orderFunds = requireOrderFunds(order, payment);
     var closure = orderClosureRepository.findByOrderId(orderId).orElse(null);
-    if (("HELD".equals(orderFunds.getStatus())) != (closure == null)) {
+    if ((orderFunds.getStatus() == OrderFundsStatus.HELD) != (closure == null)) {
       throw integrityError();
     }
     return new OrderFundsResponse(
-        orderFunds.getStatus(),
+        orderFunds.getStatus().name(),
         orderFunds.getAmount(),
         orderFunds.getRemainingAmount(),
         payment.getRefundedAmount(),
@@ -120,7 +122,7 @@ public class FullFundingService {
       var payment = requirePayment(order);
       var orderFunds = requireOrderFunds(order, payment);
       requirePaymentEntry(order, payment);
-      if ("REFUNDED".equals(payment.status())) {
+      if (payment.status() == PaymentStatus.REFUNDED) {
         throw conflict("PAYMENT_ALREADY_REFUNDED", "이미 반환된 결제입니다.");
       }
       if (!Set.of(
@@ -133,7 +135,7 @@ public class FullFundingService {
       }
       if (order.getStatus() == OrderStatus.COMPLETED) {
         requireCompletedRecords(order, payment, orderFunds);
-      } else if (!"HELD".equals(orderFunds.getStatus())
+      } else if (orderFunds.getStatus() != OrderFundsStatus.HELD
           || orderClosureRepository.findByOrderId(orderId).isPresent()
           || settlementRepository.findByOrderId(orderId).isPresent()) {
         throw integrityError();
@@ -183,8 +185,8 @@ public class FullFundingService {
       return orderResponse(order, memberId);
     }
     if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION
-        || !"PAID".equals(payment.status())
-        || !"HELD".equals(orderFunds.getStatus())) {
+        || payment.status() != PaymentStatus.PAID
+        || orderFunds.getStatus() != OrderFundsStatus.HELD) {
       throw invalidState();
     }
     requireNoPendingCancellation(order);
@@ -241,8 +243,8 @@ public class FullFundingService {
               .orElseThrow(FullFundingService::integrityError);
       // 관리자 승인으로 이미 취소된 주문은 판매자 승인의 재전송이 아니다.
       if ("ADMIN_CANCELLATION".equals(closure.getReason())) throw invalidState();
-      if (!"REFUNDED".equals(payment.status())
-          || !"REFUNDED".equals(orderFunds.getStatus())
+      if (payment.status() != PaymentStatus.REFUNDED
+          || orderFunds.getStatus() != OrderFundsStatus.REFUNDED
           || !"MUTUAL_CANCELLATION".equals(closure.getReason())
           || closure.getBuyerRefundAmount() != payment.amount()
           || settlementRepository.findByOrderId(orderId).isPresent()) {
@@ -257,11 +259,13 @@ public class FullFundingService {
                 OrderStatus.AWAITING_CONFIRMATION,
                 OrderStatus.REVISION_IN_PROGRESS)
             .contains(order.getStatus())
-        || !"PAID".equals(payment.status())
-        || !"HELD".equals(orderFunds.getStatus())) {
+        || payment.status() != PaymentStatus.PAID
+        || orderFunds.getStatus() != OrderFundsStatus.HELD) {
       throw invalidState();
     }
-    var pendingRequests = cancellationRequestRepository.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING);
+    var pendingRequests =
+        cancellationRequestRepository.findByOrderIdAndStatus(
+            orderId, CancellationRequestStatus.PENDING);
     if (pendingRequests.size() != 1) {
       throw conflict("CANCELLATION_REQUEST_REQUIRED", "구매자의 취소 요청을 승인해 주세요.");
     }
@@ -312,9 +316,9 @@ public class FullFundingService {
   }
 
   /**
-   * 운영 문의(취소 검토)에 대한 관리자 승인 취소(K4). 호출자가 관리자 공유 잠금 → 주문 배타 잠금 → 문의 잠금을 얻고 대기 취소
-   * 요청·문의를 확인한 같은 트랜잭션에서 호출한다. 판매자 승인과 같은 전액 반환·원장을 남기고, 취소 요청은 ADMIN 처리로,
-   * 종료 기록은 ADMIN_CANCELLATION(문의 ID 포함)으로 구분한다.
+   * 운영 문의(취소 검토)에 대한 관리자 승인 취소(K4). 호출자가 관리자 공유 잠금 → 주문 배타 잠금 → 문의 잠금을 얻고 대기 취소 요청·문의를 확인한 같은
+   * 트랜잭션에서 호출한다. 판매자 승인과 같은 전액 반환·원장을 남기고, 취소 요청은 ADMIN 처리로, 종료 기록은 ADMIN_CANCELLATION(문의 ID 포함)으로
+   * 구분한다.
    */
   public void adminRefund(
       Order order,
@@ -338,8 +342,8 @@ public class FullFundingService {
                 OrderStatus.AWAITING_CONFIRMATION,
                 OrderStatus.REVISION_IN_PROGRESS)
             .contains(order.getStatus())
-        || !"PAID".equals(payment.status())
-        || !"HELD".equals(orderFunds.getStatus())) {
+        || payment.status() != PaymentStatus.PAID
+        || orderFunds.getStatus() != OrderFundsStatus.HELD) {
       throw invalidState();
     }
     // 취소 요청 접수 시 활성 타이머는 이미 끝났다. 남아 있으면 기록 불일치다.
@@ -385,13 +389,11 @@ public class FullFundingService {
   }
 
   /**
-   * 만료된 자동 구매 확정 타이머로 시스템이 구매를 확정한다. 호출자가 주문 배타 잠금과 타이머 만료를 확인한 같은 트랜잭션에서
-   * 호출한다. 수동 확정과 같은 금액·원장·정산을 남기고 종료 기록은 SYSTEM/AUTO_CONFIRMED로 구분한다.
+   * 만료된 자동 구매 확정 타이머로 시스템이 구매를 확정한다. 호출자가 주문 배타 잠금과 타이머 만료를 확인한 같은 트랜잭션에서 호출한다. 수동 확정과 같은 금액·원장·정산을
+   * 남기고 종료 기록은 SYSTEM/AUTO_CONFIRMED로 구분한다.
    */
   public void autoConfirm(Order order, OrderResponseTimer timer, LocalDateTime occurredAt) {
-    if (!order.isFullFunding()
-        || timer.getOrderId() != order.getId()
-        || !timer.isDue(occurredAt)) {
+    if (!order.isFullFunding() || timer.getOrderId() != order.getId() || !timer.isDue(occurredAt)) {
       throw integrityError();
     }
     long orderId = order.getId();
@@ -399,9 +401,11 @@ public class FullFundingService {
     var orderFunds = requireOrderFunds(order, payment);
     requirePaymentEntry(order, payment);
     if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION
-        || !"PAID".equals(payment.status())
-        || !"HELD".equals(orderFunds.getStatus())
-        || !cancellationRequestRepository.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING).isEmpty()
+        || payment.status() != PaymentStatus.PAID
+        || orderFunds.getStatus() != OrderFundsStatus.HELD
+        || !cancellationRequestRepository
+            .findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING)
+            .isEmpty()
         || deliveryRepository
             .findFirstByOrderIdOrderBySequenceNoDesc(orderId)
             .map(delivery -> delivery.getId() != timer.getDeliveryId())
@@ -506,7 +510,7 @@ public class FullFundingService {
     if (!orderFunds.getHeldAt().equals(payment.getPaidAt())
         || orderFunds.getPaymentId() != payment.id()
         || orderFunds.getAmount() != payment.amount()
-        || ("HELD".equals(orderFunds.getStatus())
+        || (orderFunds.getStatus() == OrderFundsStatus.HELD
             ? orderFunds.getRemainingAmount() != payment.amount()
             : orderFunds.getRemainingAmount() != 0)) {
       throw integrityError();
@@ -544,8 +548,8 @@ public class FullFundingService {
             .findByOrderId(order.getId())
             .orElseThrow(FullFundingService::integrityError);
     var distribution = FullFundingPolicy.completed(payment.amount());
-    if (!"PAID".equals(payment.status())
-        || !"RELEASED".equals(orderFunds.getStatus())
+    if (payment.status() != PaymentStatus.PAID
+        || orderFunds.getStatus() != OrderFundsStatus.RELEASED
         || !isCompletionClosure(order, closure)
         || !"NORMAL".equals(settlement.getSettlementType())
         || closure.getFeeAmount() != distribution.fee()
@@ -577,7 +581,9 @@ public class FullFundingService {
   }
 
   private void requireNoPendingCancellation(Order order) {
-    if (!cancellationRequestRepository.findByOrderIdAndStatus(order.getId(), CancellationRequestStatus.PENDING).isEmpty()) {
+    if (!cancellationRequestRepository
+        .findByOrderIdAndStatus(order.getId(), CancellationRequestStatus.PENDING)
+        .isEmpty()) {
       throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
     }
   }

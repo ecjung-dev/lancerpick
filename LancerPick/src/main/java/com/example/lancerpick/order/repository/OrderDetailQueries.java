@@ -39,7 +39,7 @@ public class OrderDetailQueries {
         var histories=query.selectFrom(h).where(h.orderId.eq(orderId)).orderBy(h.createdAt.asc(),h.id.asc()).fetch().stream()
                 .map(v->new History(id(v.getId()),id(v.getActorId()),v.getAction().name(),v.getFromStatus()==null?null:v.getFromStatus().name(),v.getToStatus().name(),v.getReason(),at(v.getCreatedAt()))).toList();
         var p=QPayment.payment;var payment=query.selectFrom(p).where(p.orderId.eq(orderId)).fetchOne();
-        Payment paymentResponse=payment==null?null:new Payment(id(payment.getId()),payment.getAmount(),payment.getFeeRateBps(),payment.getStatus(),at(payment.getPaidAt()),at(payment.getRefundedAt()));
+        Payment paymentResponse=payment==null?null:new Payment(id(payment.getId()),payment.getAmount(),payment.getFeeRateBps(),payment.getStatus().name(),at(payment.getPaidAt()),at(payment.getRefundedAt()));
         var rev=QReview.review;var review=query.selectFrom(rev).where(rev.orderId.eq(orderId)).fetchOne();
         Review reviewResponse=review==null?null:new Review(id(review.getId()),id(review.getOrderId()),buyer.getDisplayName(),review.getRating(),review.getContent(),at(review.getCreatedAt()));
         var revisionDue=revision==null?null:revision.getDueAt();

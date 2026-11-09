@@ -202,6 +202,8 @@
 
 ### 14.2 결제·보관 상태 enum 전환 (R2)
 
+2026-11-09 로컬 구현: [결제·보관금 enum](payment-status-enums.md). 아래 설계 조건에 따라 엔티티·명령·조회·DTO를 함께 전환했다. 검증·기존 데이터 호환 결과와 main 반영 여부는 해당 문서에서 구분한다.
+
 `Payment.status`와 `OrderFunds.status`의 String 상태를 각각 전용 enum으로 전환하는 방향을 검토한다. 담당은 황준범이다. 상태명·DB 저장 문자열·금융 전이 의미는 바꾸지 않는다. `@Enumerated(EnumType.STRING)`과 `@JdbcTypeCode(SqlTypes.VARCHAR)`를 사용하는 방향이며, 취소 요청 enum 전환에서 검증한 접근을 참고한다.
 
 - 기존 DB의 실제 값·VARCHAR 길이·CHECK 제약·null 허용과 enum의 값이 일치하는지 확인한다. 알 수 없는 값을 임의의 정상 상태로 보정하지 않는다.

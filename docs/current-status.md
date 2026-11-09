@@ -4,6 +4,12 @@
 
 `feature/admin-account-guard`(김창재, main `b7a91e2`에서 분기): #131의 `captureAccountScope`를 관리자 상품 숨김/복구, 문의 승인·거절·닫기, 타이머 해제와 구매자 관리자 검토 요청에 적용했다. 클릭 때 계정을 잡아 두고, CSRF 대기 후 전송 직전에 계정이 바뀌었으면 보내지 않으며, 늦게 도착한 성공·실패는 같은 계정일 때만 화면·캐시에 반영한다. 이미 전송된 명령의 서버 처리를 취소하지 않고 다른 탭·기기의 계정 전환을 즉시 감지하지 않는 한계는 [알림 U4](notifications.md)와 같다. API·DB 변경 없음. 작업표의 K3~K6 상태를 main 반영(#132·#133)으로 맞췄다.
 
+## 결제·보관금 상태 enum(R2) — 2026-11-09, 로컬 구현
+
+`refactor/payment-funds-status`(황준범, main `6cf5667` 기준)에서 PaymentStatus·OrderFundsStatus를 적용했다. 기존/V3 명령·보관금 조회·관리자 금융 조건과 String DTO 조립을 함께 맞추며 DB VARCHAR·기존 문자열·금액/잠금 정책은 유지한다. [이전 데이터 호환·검증 기록](payment-status-enums.md). main 반영 전이며 R1 계약/채팅 잠금 공통화는 별도다.
+
+검증: 격리 MySQL 8.4 `clean build` 989건 통과(실패·오류·건너뜀 0). 기존 VARCHAR 값의 JPA 읽기·환불 쓰기, 컬럼 타입·validate 기동, 금융/관리자 JSON 계약 회귀를 포함한다. 프런트 변경·검사, 실제 브라우저·외부 결제·원격 CI 실행은 없다.
+
 ## 판매 수익 기간 조회 — 2026-11-09, 로컬 구현
 
 황준범의 `feature/settlement-date-filters`(main `e33982f` 기준): 목록·합계의 한국 날짜 기간 조건, 안정 정렬·화면 프리셋·조건 합계·URL/캐시 보존을 구현했다. DB·금액 생성/변경 로직은 유지한다. [검증·남은 §8 범위](settlement-period-query.md). 이전 알림 패널은 별도 브랜치에 보존했고 이번 작업도 push·main 병합 전이다.

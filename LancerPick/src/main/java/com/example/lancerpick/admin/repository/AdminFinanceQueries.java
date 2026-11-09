@@ -8,6 +8,7 @@ import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.QOrder;
 import com.example.lancerpick.order.entity.QOrderClosure;
 import com.example.lancerpick.payment.entity.Payment;
+import com.example.lancerpick.payment.entity.PaymentStatus;
 import com.example.lancerpick.payment.entity.QOrderFunds;
 import com.example.lancerpick.payment.entity.QPayment;
 import com.example.lancerpick.settlement.entity.QSettlement;
@@ -178,7 +179,7 @@ public class AdminFinanceQueries {
                 ? null
                 : new AdminFinanceResponses.Funds(
                     Long.toString(funds.getPaymentId()),
-                    funds.getStatus(),
+                    funds.getStatus().name(),
                     funds.getAmount(),
                     funds.getRemainingAmount(),
                     at(funds.getHeldAt()),
@@ -213,7 +214,7 @@ public class AdminFinanceQueries {
         order.getSellerId().toString(),
         payment.getOrderPolicyVersion(),
         order.getStatus(),
-        payment.status(),
+        payment.status().name(),
         payment.amount(),
         payment.getRefundedAmount(),
         at(payment.getPaidAt()),
@@ -232,7 +233,7 @@ public class AdminFinanceQueries {
     if (filter.orderId() != null) where.and(o.id.eq(filter.orderId()));
     if (filter.buyerId() != null) where.and(o.buyerId.eq(filter.buyerId()));
     if (filter.sellerId() != null) where.and(o.sellerId.eq(filter.sellerId()));
-    if (filter.status() != null) where.and(p.status.eq(filter.status()));
+    if (filter.status() != null) where.and(p.status.eq(PaymentStatus.valueOf(filter.status())));
     if (filter.policyVersion() != null)
       where.and(o.policyVersion.eq(filter.policyVersion().name()));
     return where;

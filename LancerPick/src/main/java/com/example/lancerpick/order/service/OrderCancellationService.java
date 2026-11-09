@@ -13,6 +13,7 @@ import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.CancellationRequestRepository;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
+import com.example.lancerpick.payment.entity.PaymentStatus;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.entity.WalletEntryType;
@@ -85,7 +86,7 @@ public class OrderCancellationService {
     if (order.getStatus() == OrderStatus.CANCELLED) {
       if (paid) {
         var original = payment.orElseThrow(OrderCancellationService::integrity);
-        if (!"REFUNDED".equals(original.status()) || original.amount() != order.getPriceAmount())
+        if (original.status() != PaymentStatus.REFUNDED || original.amount() != order.getPriceAmount())
           throw integrity();
         var refund =
             entries
@@ -113,7 +114,7 @@ public class OrderCancellationService {
     order.cancel(at);
     if (paid) {
       var original = payment.orElseThrow(OrderCancellationService::integrity);
-      if (!"PAID".equals(original.status()) || original.amount() != order.getPriceAmount())
+      if (original.status() != PaymentStatus.PAID || original.amount() != order.getPriceAmount())
         throw integrity();
       var wallet =
           wallets

@@ -22,6 +22,7 @@ import com.example.lancerpick.admin.repository.AdminFinanceQueries.TopupRow;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.member.entity.MemberRole;
+import com.example.lancerpick.payment.entity.PaymentStatus;
 import com.example.lancerpick.wallet.config.TopupRecoveryBatchConfiguration;
 import com.example.lancerpick.wallet.config.TopupRecoveryProperties;
 import com.example.lancerpick.wallet.entity.WalletTopupStatus;
@@ -115,8 +116,12 @@ public class AdminFinanceQueryService {
     positive(selected.orderId());
     positive(selected.buyerId());
     positive(selected.sellerId());
-    if (selected.status() != null && !Set.of("PAID", "REFUNDED").contains(selected.status())) {
-      throw invalid();
+    if (selected.status() != null) {
+      try {
+        PaymentStatus.valueOf(selected.status());
+      } catch (IllegalArgumentException exception) {
+        throw invalid();
+      }
     }
     long total = queries.countPayments(selected);
     return page(page, size, total, offset -> queries.payments(selected, offset, size));

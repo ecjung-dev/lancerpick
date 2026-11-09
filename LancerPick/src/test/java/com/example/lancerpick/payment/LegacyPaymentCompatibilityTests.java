@@ -3,6 +3,7 @@ package com.example.lancerpick.payment;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.example.lancerpick.payment.entity.Payment;
+import com.example.lancerpick.payment.entity.PaymentStatus;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +17,7 @@ class LegacyPaymentCompatibilityTests {
     assertEquals(0, payment.getRefundedAmount());
     payment.refund(paidAt.plusMinutes(1));
     assertEquals(999, payment.getRefundedAmount());
-    assertEquals("REFUNDED", payment.status());
+    assertEquals(PaymentStatus.REFUNDED, payment.status());
     assertThrows(IllegalStateException.class, () -> payment.refund(paidAt.plusMinutes(2)));
     assertEquals(paidAt.plusMinutes(1), payment.getRefundedAt());
   }

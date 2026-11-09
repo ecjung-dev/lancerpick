@@ -1,6 +1,7 @@
 package com.example.lancerpick.payment.repository;
 
 import com.example.lancerpick.payment.entity.Payment;
+import com.example.lancerpick.payment.entity.PaymentStatus;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,7 +16,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
   default int markRefunded(long id, LocalDateTime at) {
     var p = findById(id);
-    if (p.isEmpty() || !"PAID".equals(p.get().status())) return 0;
+    if (p.isEmpty() || p.get().status() != PaymentStatus.PAID) return 0;
     p.get().refund(at);
     flush();
     return 1;
