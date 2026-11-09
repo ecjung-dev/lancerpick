@@ -9,7 +9,7 @@
 - **같은 소스**: 활성화 후보 커밋 하나에서 백엔드 `clean build`, 프런트 `typecheck`·`lint`·`test:api`·`build`, 실서버·브라우저 확인을 모두 한다. 이전 커밋의 결과를 합산하지 않는다.
 - **세 가지 증거를 구분**해 기록한다: 자동 테스트(로컬 `lancerpick_test`/CI), 실서버+실제 DB(개인 DB에서 스위치를 켠 실행), 브라우저(두 계정 실제 로그인).
 - **필수 조건**: 아래 표의 필수(●) 항목이 모두 통과하고, 4절 금액 불변식 조회 결과가 0행이며, 열린 결함이 없을 것.
-- **켜지 않는 사유**: K4 미연결이면 결제 후 판매자 무응답 취소를 처리할 운영 경로가 없으므로 활성화하지 않는다. 주문 쪽 서비스는 #121로 반영됐고, 관리자 API·화면 연결 전까지 G1 보류.
+- **켜지 않는 사유**: K4 미연결이면 결제 후 판매자 무응답 취소를 처리할 운영 경로가 없으므로 활성화하지 않는다. 주문 쪽 서비스는 #121, 관리자 API·화면은 #132로 연결됐고 B4 실서버·브라우저 확인을 마쳤다([9절](#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09)).
 - 판정 기록은 이 문서 6절과 [현재 현황](current-status.md)에 남긴다.
 
 ## 2. 시나리오
@@ -33,7 +33,7 @@
 | B1 ● | 결제 전 취소(수락 전·계약 대기·서명 후) | 금액 이동 없음, `ORDER_CANCELLED` | `V3ActivationGateIntegrationTests`.cancellationBeforePaymentMovesNoMoney…(V3 수락 전·계약 대기·서명 후 구매자/판매자), V2 기준 `OrderContractIntegrationTests` | — |
 | B2 ● | 결제 후 구매자 취소 요청 → 판매자 승인 | 보관금 전액 반환·REFUNDED·수익/수수료 0·`ORDER_FUNDS_REFUNDED` | `FullFundingTradeIntegrationTests.approvedCancellationRefundsOnce…`, `manualConfirmationAndApprovedRefundUseV3FundsWording` | 브라우저 |
 | B3 ● | 취소 요청 거절·철회 후 재개 | 타이머 종료, 해결 시각이 새 기산점 | `cancellationRequestCancelsTimerAndRejectionRestartsReviewWindow` | — |
-| B4 ● | 판매자 무응답 → 운영 문의 → 관리자 승인 취소(K4) | 전액 반환·`ADMIN_CANCELLATION`(`inquiry_id`)·문의 종료 한 트랜잭션 | 서비스 통합 테스트(`AdminCancellationReviewIntegrationTests`, 승인·거절·재전송·실패 롤백, main 반영 #121) | 관리자 API·화면 연결 후 실서버·브라우저 |
+| B4 ● | 판매자 무응답 → 운영 문의 → 관리자 승인 취소(K4) | 전액 반환·`ADMIN_CANCELLATION`(`inquiry_id`)·문의 종료 한 트랜잭션 | 서비스 통합 테스트(`AdminCancellationReviewIntegrationTests`, 승인·거절·재전송·실패 롤백, main 반영 #121). 실서버·브라우저 [9절](#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09)(주문 34 승인·35 거절) | — |
 | B5 ● | 결제 후 판매자 단독 취소 시도 | 409 `CANCELLATION_REQUEST_REQUIRED` | `pendingCancellationBlocksConfirmationAndWrongActors…` | — |
 
 ### C. 경합(실제 커밋·동시 스레드)
@@ -76,7 +76,7 @@
 | F1 ● | 스위치 on 전후 기존 LEGACY_V1 주문 처리 | 정책 값 불변, 기존 결제·환불·정산 그대로 | `replayKeepsPolicyFixedAtCreationEvenAfterSwitch`, `LegacyPaymentCompatibilityTests`, 기존 주문 통합 테스트 |
 | F2 ● | CONTRACT_V2 기존 주문 | 결제 후 명령 계속 차단, 계약 원문·해시 보존 | `v2PaidOrderStaysBlocked`, `OrderContractIntegrationTests.replacementPreservesOldSignature…`, `OrderCreationIntegrationTests.fullFundingOrderFreezesNewTerms…`(기존 V1/V2 원문 보존) |
 | F3 ● | 금액 하한·상한 | 10,000원 미만 생성·확정·결제 거절 | `contractOrderRejectsTotalBelowMinimum…`, `contractOrderAcceptsMinimumBoundary`, DB CHECK |
-| F4 ● | 스위치를 다시 끄면 | 신규만 LEGACY_V1, 이미 만든 V3 주문은 끝까지 처리 | 정책 고정 검사(F1)로 간접 확인 | 실서버에서 on→off 후 V3 주문 확정 1건 |
+| F4 ● | 스위치를 다시 끄면 | 신규만 LEGACY_V1, 이미 만든 V3 주문은 끝까지 처리 | 정책 고정 검사(F1)로 간접 확인. 실서버 on→off 후 V3 주문 35 확정·신규 주문 36 LEGACY_V1([9절](#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09)) |
 
 ### G. 실서버·브라우저(자동 테스트로 대체 불가)
 
@@ -151,6 +151,7 @@ WHERE (
 | 2026-11-06 | `test/v3-activation-gate` 작업 트리 | 로컬 `lancerpick_test` 백엔드 `clean build` 835건 통과(실패·오류·건너뜀 0). 프런트 변경 없음 | API 실서버·일부 브라우저([V3 알림](v3-notices.md#실서버브라우저-확인--2026-11-06-main-9f9aa8f)), 화면 버튼 전체 거래 아직 | 실서버 3건 0행, 자동 테스트 정리 단계 판정 | 보류(K4 미연결) |
 | 2026-11-06 | main `f82c49d` + `test/v3-gate-browser-check` 작업 트리(main 반영 #116) | 백엔드 재실행 안 함(운영 코드 변경 없음). 프런트 typecheck·lint·`test:api` 219건·build 통과 | [화면 버튼 전체 거래](#7-화면-버튼-전체-거래-확인--2026-11-06): G1(A1·B2)·G5 확인, A2는 앞선 API 실서버 기록 | 주문 18~22 전체 0행 | 보류(K4 미연결, G2 타이머 진행 중 패널·G4 미확인) |
 | 2026-11-06 | main `7329be1` + `test/v3-gate-remaining-check` 작업 트리(main 반영 #120) | 재실행 안 함(운영 코드 변경 없음) | [남은 화면 확인](#8-남은-화면-확인--2026-11-06): G2 타이머 시작 가능→진행 중 패널(판매자·구매자), G4 320px(주문 17·21·22·23) | 주문 18~23 전체 0행 | 보류(K4 미연결, B4·C8) |
+| 2026-11-09 | main `f3c56be`(#140) | 로컬 `lancerpick_test` 백엔드 `clean build` 1002건 통과(실패·오류·건너뜀 0). 프런트 typecheck·lint·`test:api` 272건·build 통과 | [B4·F4 확인](#9-b4-관리자-승인거절타이머-해제f4-확인--2026-11-09): 관리자 승인(주문 34)·거절(35)·타이머 해제(35), 스위치 off 후 V3 확정(35)·신규 LEGACY_V1(36) | V3 결제 주문 9건 전체 0행 | 필수 항목 충족, 열린 결함 없음. 정은찬·황준범 공동 검토(5절 2단계) 대기 |
 
 ## 7. 화면 버튼 전체 거래 확인 — 2026-11-06
 
@@ -185,3 +186,22 @@ WHERE (
 - **불변식**: 4절 조회 0행(주문 18~23).
 
 남은 G 항목: K4 관리자 API·화면 연결 후 B4 실서버·브라우저 확인과 활성화 판정(B4·C8 자동 테스트는 #121). 실제 48시간·7일 시간 경과는 확인하지 않았다(시각 조정으로 대신함).
+
+## 9. B4 관리자 승인·거절·타이머 해제·F4 확인 — 2026-11-09
+
+환경: main `f3c56be`(#140) 백엔드 `bootRun`(개인 개발 DB, 실행 중 V10 적용, 실행 인자로만 `--lancerpick.order.full-funding-creation-enabled=true`) + Vite + Playwright(Chromium) 격리 컨텍스트 3개(구매자 14·판매자 15·관리자 12). 관리자는 [관리자 상품 운영](admin-product-moderation.md)의 로컬 절차대로 개인 DB의 테스트 계정 12를 ADMIN으로 바꿨다. 주문 34·35의 생성→수락→계약 초안·PDF·양측 서명→결제→1차 납품→구매자 취소 요청은 **API 호출**로 준비했고(이 단계는 7절 화면 거래로 확인됨), 아래 단계는 모두 **화면 버튼**으로 진행했다. 명령 버튼은 렌더 후 DOM click 3회로 눌러 POST 수를 셌다.
+
+- **구매자 검토 요청**: 주문 상세 취소 요청 아래 "관리자 검토 요청". 빈 내용 제출은 요청 없음, 내용 입력 후 3회 클릭 → POST 1건(`/cancellation-requests/{id}/review-inquiries`), "검토 대기" 표시. 판매자 화면에는 문의 영역이 없다(구매자 문의).
+- **관리자 목록·상세**: `/admin/inquiries`에 문의 2건(검토 대기·취소 검토·주문 번호·신청자). 상세에 주문 요약·대기 중 취소 요청·처리 사유 입력. 사유 없이 거절 → 요청 없음·"사유를 입력해 주세요.", 승인 버튼은 되돌릴 수 없음 확인 체크 전 비활성.
+- **B4 승인(주문 34)**: 3회 클릭 → POST 1건. 문의 "처리 완료(관리자 #12)", 주문 취소됨. 양측 주문 상세 대금 패널 "구매자 전액 반환 완료 · 반환 50,000원 · 수수료 0원", 취소 요청 "승인됨·처리 사유", 이력 "취소 요청 승인 · 관리자", "주문 취소 · 관리자". 양측 알림 "보관된 대금이 구매자에게 전액 반환되었습니다."
+- **B4 거절(주문 35)**: 3회 클릭 → POST 1건. 대금 "주문 대금 보관 중 50,000원" 유지, 취소 요청 "거절됨", 이력 "취소 요청 거절 · 관리자". 타이머 패널 기산점이 거절 시각(15:31)+48시간(11/11 15:31)으로 표시. 양측 알림 "관리자가 운영 문의를 검토해 취소 요청을 거절했습니다."
+- **타이머 해제(주문 35)**: 개인 DB에서 이 주문의 `deliveries.submitted_at`과 취소 요청 8의 `requested_at`·`resolved_at`만 49시간 앞당김 → 판매자 "7일 자동 구매 확정 타이머 시작" 3회 클릭 → POST 1건, 진행 중. `/admin/review-timers`에 진행 중 2건(기존 주문 23 포함). 사유 없이 해제 → 요청 없음, 사유 입력 후 3회 클릭 → POST 1건, 목록에서 사라짐. 양측 패널 "관리자가 타이머를 해제함", 이력 "관리자 타이머 해제 · 관리자", 양측 알림.
+- **F4 스위치 on→off**: 스위치 없이 서버 재시작 후 구매자가 V3 주문 35를 화면에서 구매 확정(3회 클릭 → POST 1건) → "판매자 지급 완료 · 수수료 5,000원 · 지급 45,000원". 같은 상태에서 API로 만든 새 주문 36은 `LEGACY_V1`(바로 취소).
+- **DB 대조**: 34 `REFUNDED`/closure `ADMIN_CANCELLATION`(inquiry 1)·`REFUND` 50,000원, 35 `RELEASED`/`COMPLETED` 수수료 5,000원·`SELLER_PAYOUT` 45,000원, 취소 요청 7 `APPROVED`·8 `REJECTED`(둘 다 `ADMIN`, 처리자 12), 문의 1·2 `CLOSED`(담당 12), 타이머 `CANCELLED`/`ADMIN_STOP`(12). 아웃박스 128건 모두 `COMPLETED`. 4절 불변식 조회 0행(결제된 V3 주문 9건 전체).
+- **화면 공통**: 관리자 목록·상세 2건·타이머 화면과 주문 34·35에서 콘솔 오류 없음, 1280px·320px 가로 넘침 없음. 결제 없이 취소된 V3 주문 31·33의 대금 패널은 "결제 없이 종료된 거래입니다."(#129에서 수정된 표시).
+
+발견(이 확인 범위에서 고치지 않음, 판정 필수 항목 아님):
+1. 관리자 문의 상세의 주문 상태가 `AWAITING_CONFIRMATION`·`CANCELLED` 코드 그대로 보인다(관리자 화면, 김창재).
+2. 계약 PDF 주소에 `Accept: application/json`만 보내면 406이 아니라 500 `INTERNAL_ERROR`로 응답한다(`HttpMediaTypeNotAcceptableException`이 공통 처리기에서 미처리). 브라우저 다운로드에는 영향 없음(공통 오류 처리, 김창재).
+
+개인 DB 잔여: 주문 33(V3 계약 대기 중 취소, 준비 스크립트 중단분)·34(관리자 승인 취소)·35(구매 확정)·36(LEGACY_V1 취소), 회원 12 ADMIN.
