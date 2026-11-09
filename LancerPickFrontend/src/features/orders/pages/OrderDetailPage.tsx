@@ -6,6 +6,7 @@ import { ApiError } from '../../../shared/api/client'
 import { formatWon, formatDateTime } from '../../../shared/lib/format'
 import styles from './Orders.module.css'
 import { CancellationActions } from './CancellationActions'
+import { CancellationReviewRequest } from '../../inquiries/components/CancellationReviewRequest'
 import {
   AcceptForm,
   CancelForm,
@@ -270,6 +271,7 @@ function OrderDetail({ id }: { id: string }) {
         disabled={disabled}
         run={run}
       />
+      <CancellationReviewRequest order={order} disabled={disabled} />
       <OrderHistoryList order={order} />
       <OrderChatPanel orderId={order.id} orderStatus={order.status} />
       <Link to="/mypage/settlements">판매 수익 확인 →</Link>

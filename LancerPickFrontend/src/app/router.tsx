@@ -21,6 +21,8 @@ import { NotificationsPage } from '../features/notifications/pages/Notifications
 import { AppLayout } from '../shared/components/AppLayout'
 import { AdminProductListPage } from '../features/admin/pages/AdminProductListPage'
 import { AdminProductDetailPage } from '../features/admin/pages/AdminProductDetailPage'
+import { AdminInquiryListPage } from '../features/admin/pages/AdminInquiryListPage'
+import { AdminInquiryDetailPage } from '../features/admin/pages/AdminInquiryDetailPage'
 import { WalletPage, WalletPreviewPage } from '../features/wallet/pages/WalletPage'
 import { WalletTopupPage, WalletTopupPreviewPage } from '../features/wallet/pages/WalletTopupPage'
 import { WalletTopupResultPage } from '../features/wallet/pages/WalletTopupResultPage'
@@ -59,6 +61,8 @@ export const router = createBrowserRouter([
       { path: 'mypage/wallet/topup/:id/status', element: <WalletTopupResultPage outcome="status" /> },
       { path: 'admin/products', element: <AdminProductListPage /> },
       { path: 'admin/products/:id', element: <AdminProductDetailPage /> },
+      { path: 'admin/inquiries', element: <AdminInquiryListPage /> },
+      { path: 'admin/inquiries/:id', element: <AdminInquiryDetailPage /> },
       { path: '*', element: <h1>페이지를 찾을 수 없습니다.</h1> },
     ],
   },
