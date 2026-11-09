@@ -55,6 +55,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
   @Query("select o from Order o where o.id=:orderId")
   Optional<Order> findForSystemUpdate(@Param("orderId") long orderId);
 
+  /** 주문 잠금 전에 구매자 회원을 먼저 잠그기 위한 값 조회. buyer_id는 바뀌지 않으므로 잠금 없이 읽는다. */
+  @Query("select o.buyerId from Order o where o.id=:orderId")
+  Optional<Long> buyerIdOf(@Param("orderId") long orderId);
+
   Optional<Order> findByBuyerIdAndRequestKey(Long buyerId, String requestKey);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
