@@ -5,7 +5,7 @@ import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import { codePointLength, normalizeText } from '../../../shared/lib/text'
-import { isUnclearResult } from '../../auth/session'
+import { captureAccountScope, isUnclearResult } from '../../auth/session'
 import { inquiryStatusLabel } from '../../inquiries/validation'
 import { closeInquiry, decideInquiry } from '../inquiryApi'
 import { adminInquiryKeys, inquiryTypeLabel, useAdminInquiry } from '../inquiryQueries'
@@ -93,6 +93,7 @@ function InquirySummary({ inquiry, refreshing }: { inquiry: AdminInquiryDetail; 
  * - 자동으로 다시 보내지 않는다(retry: false). 같은 결정을 다시 보내도 서버가 같은 결과를 돌려준다.
  * - 409(판매자가 먼저 처리·다른 관리자가 다른 결정 등): 서버 안내를 보여 주고 최신 문의를 다시 불러온다.
  * - 통신 오류·5xx: 서버가 처리했을 수 있어 실패로 단정하지 않고 다시 조회한다.
+ * - 계정 경계: 클릭 때 계정을 잡아 두고, 전송 직전·응답 후에 같은 계정일 때만 보내고 반영한다(#131 공통 방식).
  */
 function DecisionForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
   const client = useQueryClient()
@@ -114,13 +115,18 @@ function DecisionForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
 
   const decide = useMutation({
     retry: false,
-    mutationFn: (input: { decision: 'approve' | 'reject'; reason: string }) => decideInquiry(inquiry.id, input.decision, input.reason),
+    mutationFn: (input: { decision: 'approve' | 'reject'; reason: string; scope: () => boolean }) =>
+      decideInquiry(inquiry.id, input.decision, input.reason, input.scope),
     onSettled: () => { sending.current = false },
-    onSuccess: async (result) => {
+    onSuccess: async (result, input) => {
+      // 기다리는 동안 로그아웃·다른 계정 로그인이 끝났으면 이전 계정의 결과를 화면·캐시에 넣지 않는다.
+      if (!input.scope()) return
       if (active.current) setNotice(result.decision === 'APPROVED' ? '승인했어요. 결제 금액이 구매자에게 전액 반환됐어요.' : '거절했어요. 대금은 계속 보관돼요.')
       await refresh()
     },
-    onError: async (failure) => {
+    onError: async (failure, input) => {
+      // 계정이 바뀌어 보내지 않았거나(AbortError) 늦게 도착한 실패는 새 계정 화면에 안내하지 않는다.
+      if (!input.scope()) return
       if (isUnclearResult(failure)) {
         await refresh()
         if (active.current) setNotice('처리 결과를 확인하지 못해 최신 상태를 다시 불러왔어요. 상태를 확인한 뒤 필요하면 다시 시도해 주세요.')
@@ -146,7 +152,7 @@ function DecisionForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
     setNotice(undefined)
     if (result.error) return
     sending.current = true
-    decide.mutate({ decision, reason: result.reason })
+    decide.mutate({ decision, reason: result.reason, scope: captureAccountScope(client) })
   }
 
   return <form className={styles.form} onSubmit={(e: FormEvent) => e.preventDefault()} noValidate>
@@ -177,13 +183,15 @@ function CloseForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
   const [notice, setNotice] = useState<string>()
   const close = useMutation({
     retry: false,
-    mutationFn: () => closeInquiry(inquiry.id),
+    mutationFn: (scope: () => boolean) => closeInquiry(inquiry.id, scope),
     onSettled: () => { sending.current = false },
-    onSuccess: (updated) => {
+    onSuccess: (updated, scope) => {
+      if (!scope()) return
       client.setQueryData(adminInquiryKeys.detail(inquiry.id), updated)
       void client.invalidateQueries({ queryKey: ['admin', 'inquiries'] })
     },
-    onError: async (failure) => {
+    onError: async (failure, scope) => {
+      if (!scope()) return
       await client.invalidateQueries({ queryKey: adminInquiryKeys.detail(inquiry.id) })
       if (active.current) setNotice(isUnclearResult(failure)
         ? '처리 결과를 확인하지 못해 최신 상태를 다시 불러왔어요.'
@@ -197,7 +205,7 @@ function CloseForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
     if (close.isPending || sending.current) return
     sending.current = true
     setNotice(undefined)
-    close.mutate()
+    close.mutate(captureAccountScope(client))
   }}>
     <h2>문의 닫기</h2>
     <p>연결된 취소 요청이 이미 처리돼 승인·거절할 수 없어요. 문의만 처리 완료로 닫고 주문·대금은 바꾸지 않아요.</p>

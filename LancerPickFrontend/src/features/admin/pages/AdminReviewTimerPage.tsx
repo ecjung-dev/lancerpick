@@ -5,7 +5,7 @@ import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime } from '../../../shared/lib/format'
 import { codePointLength, normalizeText } from '../../../shared/lib/text'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
-import { isUnclearResult } from '../../auth/session'
+import { captureAccountScope, isUnclearResult } from '../../auth/session'
 import { stopReviewTimer, useActiveReviewTimers, type ActiveReviewTimer } from '../timerApi'
 import { REASON_MAX, validateReason } from '../validation'
 import { accessProblem } from '../access'
@@ -69,13 +69,16 @@ function StopForm({ timer, onDone }: { timer: ActiveReviewTimer; onDone: () => v
 
   const stop = useMutation({
     retry: false,
-    mutationFn: (value: string) => stopReviewTimer(timer.orderId, value),
+    mutationFn: (input: { reason: string; scope: () => boolean }) => stopReviewTimer(timer.orderId, input.reason, input.scope),
     onSettled: () => { sending.current = false },
-    onSuccess: async () => {
+    onSuccess: async (_status, input) => {
+      // 기다리는 동안 계정이 바뀌었으면 이전 계정의 결과를 화면·캐시에 반영하지 않는다.
+      if (!input.scope()) return
       await client.invalidateQueries({ queryKey: ['admin', 'review-timers'] })
       if (active.current) onDone()
     },
-    onError: async (failure) => {
+    onError: async (failure, input) => {
+      if (!input.scope()) return
       if (isUnclearResult(failure) || (failure instanceof ApiError && failure.status === 409)) {
         await client.invalidateQueries({ queryKey: ['admin', 'review-timers'] })
         if (active.current) setNotice(isUnclearResult(failure)
@@ -97,7 +100,7 @@ function StopForm({ timer, onDone }: { timer: ActiveReviewTimer; onDone: () => v
     setNotice(undefined)
     if (result.error) return
     sending.current = true
-    stop.mutate(result.reason)
+    stop.mutate({ reason: result.reason, scope: captureAccountScope(client) })
   }
 
   const fieldId = `timer-reason-${timer.timerId}`

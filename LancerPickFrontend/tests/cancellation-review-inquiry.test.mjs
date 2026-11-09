@@ -10,6 +10,7 @@ import { canAskForReview, validateSubject } from '../src/features/inquiries/vali
 import { closeInquiry, decideInquiry, getAdminInquiries, getAdminInquiry } from '../src/features/admin/inquiryApi.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
 import { getActiveReviewTimers, stopReviewTimer } from '../src/features/admin/timerApi.ts'
+import { changeVisibility } from '../src/features/admin/api.ts'
 
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-inquiry',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
@@ -44,6 +45,37 @@ test('buyer review request posts only the subject with CSRF and is never retried
   }
   await assert.rejects(requestCancellationReview(orderId, requestId, '판매자 무응답'), (e) => e.code === 'NETWORK_ERROR')
   assert.equal(writes, 1, '통신 오류가 나도 자동으로 다시 보내지 않는다')
+})
+
+test('admin and review commands are not sent when the account changed after the click', async () => {
+  const commands = [
+    (scope) => requestCancellationReview(orderId, requestId, '판매자 무응답', scope),
+    (scope) => decideInquiry(inquiryId, 'approve', '사유', scope),
+    (scope) => decideInquiry(inquiryId, 'reject', '사유', scope),
+    (scope) => closeInquiry(inquiryId, scope),
+    (scope) => stopReviewTimer(orderId, '사유', scope),
+    (scope) => changeVisibility('5', { hidden: true, reason: '사유', expectedVersion: 0 }, scope),
+  ]
+  for (const command of commands) {
+    // 1) 클릭 직후 이미 계정이 바뀐 경우: CSRF도 요청하지 않는다.
+    let calls = 0
+    globalThis.fetch = async () => { calls++; return csrf() }
+    await assert.rejects(command(() => false), (e) => e.name === 'AbortError')
+    assert.equal(calls, 0)
+
+    // 2) CSRF 토큰을 받는 사이에 로그아웃·다른 계정 로그인이 끝난 경우: 명령은 보내지 않는다.
+    clearCsrfToken()
+    let current = true
+    const sent = []
+    globalThis.fetch = async (url) => {
+      sent.push(url)
+      if (url === '/api/auth/csrf') { current = false; return csrf() }
+      return json({})
+    }
+    await assert.rejects(command(() => current), (e) => e.name === 'AbortError')
+    assert.deepEqual(sent, ['/api/auth/csrf'])
+    clearCsrfToken()
+  }
 })
 
 test('invalid IDs never reach the network', async () => {

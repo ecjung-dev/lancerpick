@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../shared/api/client'
 import { formatDateTime } from '../../../shared/lib/format'
 import { codePointLength, normalizeText } from '../../../shared/lib/text'
-import { isUnclearResult } from '../../auth/session'
+import { captureAccountScope, isUnclearResult } from '../../auth/session'
 import type { OrderDetail } from '../../orders/types'
 import { requestCancellationReview } from '../api'
 import { inquiryKeys, useOrderInquiries } from '../queries'
@@ -35,14 +35,17 @@ export function CancellationReviewRequest({ order, disabled }: Props) {
 
   const send = useMutation({
     retry: false,
-    mutationFn: (input: { requestId: string; subject: string }) =>
-      requestCancellationReview(order.id, input.requestId, input.subject),
+    mutationFn: (input: { requestId: string; subject: string; scope: () => boolean }) =>
+      requestCancellationReview(order.id, input.requestId, input.subject, input.scope),
     onSettled: () => { sending.current = false },
-    onSuccess: async () => {
+    onSuccess: async (_inquiry, input) => {
+      // 기다리는 동안 계정이 바뀌었으면 이전 계정의 결과를 화면·캐시에 반영하지 않는다.
+      if (!input.scope()) return
       if (active.current) { setSubject(''); setNotice('관리자 검토를 요청했어요. 처리 결과는 주문 상세와 알림으로 알려 드려요.') }
       await client.invalidateQueries({ queryKey: inquiryKeys.forOrder(order.id) })
     },
-    onError: async (failure) => {
+    onError: async (failure, input) => {
+      if (!input.scope()) return
       if (isUnclearResult(failure)) {
         await client.invalidateQueries({ queryKey: ['wallet'] })
         if (active.current) setNotice('요청 결과를 확인하지 못해 최신 상태를 다시 불러왔어요. 요청이 보이지 않으면 다시 시도해 주세요.')
@@ -71,7 +74,7 @@ export function CancellationReviewRequest({ order, disabled }: Props) {
     setNotice(undefined)
     if (result.error) return
     sending.current = true
-    send.mutate({ requestId: request.id, subject: result.subject })
+    send.mutate({ requestId: request.id, subject: result.subject, scope: captureAccountScope(client) })
   }
 
   return (

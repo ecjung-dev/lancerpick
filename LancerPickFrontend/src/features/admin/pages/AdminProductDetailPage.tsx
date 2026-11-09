@@ -6,7 +6,7 @@ import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import { codePointLength, normalizeText } from '../../../shared/lib/text'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
-import { isUnclearResult } from '../../auth/session'
+import { captureAccountScope, isUnclearResult } from '../../auth/session'
 import { changeVisibility } from '../api'
 import { adminKeys, useAdminProduct, useModerationLogs } from '../queries'
 import type { AdminProductDetail, VisibilityInput } from '../types'
@@ -88,15 +88,18 @@ function VisibilityForm({ product }: { product: AdminProductDetail }) {
 
   const save = useMutation({
     retry: false,
-    mutationFn: (input: VisibilityInput) => changeVisibility(product.id, input),
+    mutationFn: (input: VisibilityInput & { scope: () => boolean }) => changeVisibility(product.id, input, input.scope),
     onSettled: () => { sending.current = false },
-    onSuccess: (updated) => {
+    onSuccess: (updated, input) => {
+      // 기다리는 동안 계정이 바뀌었으면 이전 계정의 결과를 화면·캐시에 반영하지 않는다.
+      if (!input.scope()) return
       client.setQueryData(adminKeys.detail(product.id), updated)
       if (active.current) setReason('')
       void client.invalidateQueries({ queryKey: ['admin', 'products'] })
       void client.invalidateQueries({ queryKey: ['admin', 'logs', product.id] })
     },
-    onError: async (failure) => {
+    onError: async (failure, input) => {
+      if (!input.scope()) return
       if (failure instanceof ApiError && failure.code === 'PRODUCT_VERSION_CONFLICT') {
         await client.invalidateQueries({ queryKey: adminKeys.detail(product.id) })
         if (active.current) setNotice('다른 곳에서 상품이 먼저 변경됐어요. 최신 상태를 확인한 뒤 다시 시도해 주세요.')
@@ -125,7 +128,7 @@ function VisibilityForm({ product }: { product: AdminProductDetail }) {
     setNotice(undefined)
     if (result.error) return
     sending.current = true
-    save.mutate({ hidden: nextHidden, reason: result.reason, expectedVersion: product.version })
+    save.mutate({ hidden: nextHidden, reason: result.reason, expectedVersion: product.version, scope: captureAccountScope(client) })
   }
 
   return <form className={styles.form} onSubmit={submit} noValidate>
