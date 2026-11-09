@@ -14,10 +14,21 @@ import {
 } from '../../auth/session'
 import { sendChatMessage } from '../api'
 import { mergeChatMessages } from '../messages'
-import { chatKeys, useChatMember, useChatMessages } from '../queries'
+import {
+  chatKeys,
+  useChatMember,
+  useChatMessages,
+  usePendingChatSend,
+} from '../queries'
+import {
+  beginChatSend,
+  confirmChatSendFromHistory,
+  settleChatSend,
+  type ChatSendAttempt,
+} from '../pending'
 import { chatStatusAllowsSend, MAX_MESSAGE_LENGTH } from '../validation'
 import { useChatRealtime } from '../useChatRealtime'
-import type { ChatMessage, SendChatMessageInput } from '../types'
+import type { ChatMessage } from '../types'
 import styles from './OrderChatPanel.module.css'
 
 interface OrderChatPanelProps {
@@ -97,11 +108,13 @@ function ChatConversation({
     memberId,
     query.data?.pages[0]?.lastSequence,
   )
-  const [content, setContent] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [preparing, setPreparing] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
-  const [uncertain, setUncertain] = useState(false)
-  const pending = useRef<SendChatMessageInput | null>(null)
+  const pending = usePendingChatSend(memberId, orderId)
+  const content = pending?.input.content ?? draft
+  const busy = preparing || pending?.phase === 'sending'
+  const uncertain = pending?.phase === 'uncertain'
   const sending = useRef(false)
   const mounted = useRef(true)
   useEffect(() => {
@@ -115,6 +128,25 @@ function ChatConversation({
   const canSend =
     Boolean(query.data?.pages[0]?.canSend) && chatStatusAllowsSend(orderStatus)
 
+  useEffect(() => {
+    if (
+      pending &&
+      query.data &&
+      mergeChatMessages(query.data.pages).some(
+        (message) =>
+          message.senderId === memberId &&
+          message.clientMessageId === pending.input.clientMessageId,
+      )
+    ) {
+      confirmChatSendFromHistory(
+        client,
+        memberId,
+        orderId,
+        pending.input.clientMessageId,
+      )
+    }
+  }, [client, memberId, orderId, pending, query.data])
+
   async function checkMember() {
     if ((await getMemberSession()).id !== memberId) {
       await recheckSession(client)
@@ -125,30 +157,11 @@ function ChatConversation({
     }
   }
 
-  function completed() {
-    pending.current = null
-    setContent('')
-    setUncertain(false)
-    setFailure(null)
-  }
-
   async function refresh() {
     try {
       await checkMember()
       if (!mounted.current) return
-      const result = await query.refetch()
-      if (!mounted.current) return
-      const draft = pending.current
-      if (
-        draft &&
-        result.data &&
-        mergeChatMessages(result.data.pages).some(
-          (message) =>
-            message.senderId === memberId &&
-            message.clientMessageId === draft.clientMessageId,
-        )
-      )
-        completed()
+      await query.refetch()
     } catch (error) {
       if (mounted.current)
         setFailure(
@@ -161,49 +174,56 @@ function ChatConversation({
   async function send() {
     if (
       sending.current ||
-      (!pending.current &&
-        (!canSend || length < 1 || length > MAX_MESSAGE_LENGTH))
+      busy ||
+      (!pending && (!canSend || length < 1 || length > MAX_MESSAGE_LENGTH))
     )
       return
     sending.current = true
     const isCurrentAccount = captureAccountScope(client)
-    setBusy(true)
+    let attempt: ChatSendAttempt | undefined
+    setPreparing(true)
     setFailure(null)
     try {
       await checkMember()
       if (!mounted.current || !isCurrentAccount()) return
-      pending.current ??= {
-        clientMessageId: crypto.randomUUID(),
-        content: normalizeText(content),
-      }
+      attempt = beginChatSend(client, memberId, orderId, content)
+      if (!attempt) return
+      setDraft('')
       if (realtime.connection.current?.isConnected())
-        await realtime.connection.current.send(pending.current)
-      else await sendChatMessage(orderId, pending.current, isCurrentAccount)
+        await realtime.connection.current.send(attempt.input)
+      else await sendChatMessage(orderId, attempt.input, isCurrentAccount)
       await checkMember()
-      if (!mounted.current) return
-      completed()
-      await query.refetch()
+      settleChatSend(client, memberId, orderId, attempt, 'confirmed')
+      if (!isCurrentAccount()) return
+      if (mounted.current) setFailure(null)
+      await client.invalidateQueries({
+        queryKey: chatKeys.messages(orderId, memberId),
+      })
       await client.invalidateQueries({ queryKey: chatKeys.threads })
     } catch (error) {
-      if (!mounted.current) return
-      if (isUnclearResult(error)) {
-        setUncertain(Boolean(pending.current))
-        setFailure(
-          '전송 결과를 확인하지 못했습니다. 대화를 새로고침하거나 같은 메시지를 재전송해 주세요.',
+      const unclear = isUnclearResult(error)
+      const settled =
+        attempt &&
+        settleChatSend(
+          client,
+          memberId,
+          orderId,
+          attempt,
+          unclear ? 'uncertain' : 'rejected',
         )
-      } else {
-        pending.current = null
-        setUncertain(false)
+      if (!mounted.current || !isCurrentAccount()) return
+      if (!unclear && attempt && settled === 'cleared')
+        setDraft(attempt.input.content)
+      if (!attempt || (!unclear && settled === 'cleared'))
         setFailure(
           error instanceof Error ? error.message : '전송하지 못했습니다.',
         )
-      }
       if (error instanceof ApiError && error.status === 401)
         await client.invalidateQueries({ queryKey: chatKeys.member })
       else await query.refetch()
     } finally {
       sending.current = false
-      if (mounted.current) setBusy(false)
+      if (mounted.current) setPreparing(false)
     }
   }
 
@@ -262,7 +282,7 @@ function ChatConversation({
         )}
         <Button
           variant="secondary"
-          disabled={busy || query.isFetching}
+          disabled={query.isFetching}
           onClick={() => {
             void refresh()
           }}
@@ -292,6 +312,12 @@ function ChatConversation({
           {failure}
         </p>
       )}
+      {uncertain && (
+        <p className={styles.error} role="alert">
+          전송 결과를 확인하지 못했습니다. 대화를 새로고침하거나 같은 메시지를
+          재전송해 주세요.
+        </p>
+      )}
       {(canSend || uncertain) && (
         <div className={styles.composer}>
           <label htmlFor={`chat-${orderId}`}>메시지</label>
@@ -300,7 +326,7 @@ function ChatConversation({
             className={styles.input}
             value={content}
             readOnly={busy || uncertain}
-            onChange={(event) => setContent(event.target.value)}
+            onChange={(event) => setDraft(event.target.value)}
           />
           <span>
             {length} / {MAX_MESSAGE_LENGTH}자
