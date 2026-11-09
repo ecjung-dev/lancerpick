@@ -410,6 +410,17 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 - orderId는 `aggregate_type='ORDER'`인 이벤트만 거른다. lastErrorCode는 [공통 이벤트 계약](event-contract.md)의 고정 코드다.
 - 페이로드(수신자 등)는 응답하지 않는다. status는 대소문자 그대로 두 값만, orderId는 양수, page 0 이상. 그 밖의 값은 400 `VALIDATION_FAILED`.
 
+## 9-5 관리자 운영 현황 김창재
+
+2026-11-09 `feature/admin-dashboard`(K3 운영 현황). 기존 관리자 조회(문의·타이머·알림·충전)의 건수만 모은다. GET·`Cache-Control: no-store`·관리자 전용, 현재 DB 역할 재확인(강등 세션 403). 조회만 하며 행 잠금·DB 변경 없음.
+
+| 메서드·경로 | 입력 | 출력 |
+| --- | --- | --- |
+| GET /admin/dashboard | 없음 | inquiries{open,inReview}, reviewTimers{active,expiringWithin24Hours}, notifications{failed,retrying}, topups{unknown}, checkedAt |
+
+- inquiries: `support_inquiries` 상태 OPEN·IN_REVIEW 건수(유형 무관). reviewTimers: ACTIVE 전체와 만료 시각이 서버 현재 시각+24시간 **전**인 것(이미 지났지만 처리 전 포함). notifications: [9-4절](#9-4-관리자-알림-처리-실패-조회-김창재)의 FAILED·RETRYING 조건. topups: 상태 UNKNOWN.
+- 각 숫자는 조회 순간의 값이며 하나의 스냅샷을 보장하지 않는다. checkedAt은 UTC(마이크로초).
+
 ## 10 오류와 입력 기준
 
 | HTTP | 주요 코드 |

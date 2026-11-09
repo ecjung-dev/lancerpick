@@ -34,6 +34,13 @@ public class AdminReviewTimerQueries {
         return total == null ? 0 : total;
     }
 
+    /** 진행 중이며 until(UTC) 이전에 만료되는 타이머 수. 이미 만료됐지만 처리 전인 것도 포함한다(운영 현황용). */
+    public long countActiveExpiringBefore(LocalDateTime until) {
+        Long total = query.select(t.id.count()).from(t)
+                .where(t.status.eq(OrderResponseTimer.ACTIVE), t.expiresAt.lt(until)).fetchOne();
+        return total == null ? 0 : total;
+    }
+
     /** 만료 시각이 이른 순(먼저 자동 확정될 주문부터). 같은 시각은 타이머 ID 순. */
     public List<ActiveTimer> findActive(int size, long offset) {
         return query.select(t, buyer.id, buyer.displayName, seller.id, seller.displayName)
