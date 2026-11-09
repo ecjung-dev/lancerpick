@@ -57,6 +57,54 @@
 .error {
   color: #a11;
 }
+.floating {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+.floating .toolbar {
+  gap: 6px;
+  margin: 0 0 8px;
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.floating .toolbar button {
+  padding: 5px 8px;
+  font-size: 11px;
+}
+.floating .messages {
+  flex: 1 1 auto;
+  min-height: 40px;
+  max-height: none;
+  margin: 0 0 8px;
+  padding: 8px;
+  overscroll-behavior: contain;
+}
+.floating .message {
+  padding: 9px 12px;
+  margin: 6px 0;
+}
+.floating .time {
+  font-size: 10px;
+}
+.floating .composer {
+  gap: 5px;
+  flex-shrink: 0;
+}
+.floating .input {
+  min-height: 60px;
+  height: 60px;
+  resize: none;
+  padding: 8px;
+}
+.floating .composer button {
+  padding: 8px 12px;
+}
 @media (max-width: 480px) {
   .message {
     max-width: 100%;

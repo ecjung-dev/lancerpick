@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createServer } from 'vite'
 import {
   getChatCsrfToken,
+  getChatThreads,
   getChatMessages,
   sendChatMessage,
 } from '../src/features/order-chat/api.ts'
@@ -15,7 +16,10 @@ import {
   chatStatusAllowsSend,
 } from '../src/features/order-chat/validation.ts'
 import { mergeChatMessages } from '../src/features/order-chat/messages.ts'
-import { resetAccountState } from '../src/features/auth/session.ts'
+import {
+  captureAccountScope,
+  resetAccountState,
+} from '../src/features/auth/session.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
 
 const key = '581f0401-3684-4992-a541-137179be9f70'
@@ -35,6 +39,83 @@ const { ChatMessages, OrderChatPanel } = await server.ssrLoadModule(
 )
 after(async () => {
   await server.close()
+})
+
+test('conversation list sends only keyword and paging, preserving literal search characters', async () => {
+  let requested
+  globalThis.fetch = async (url) => {
+    requested = url
+    return new Response(
+      JSON.stringify({
+        items: [],
+        page: 2,
+        size: 20,
+        totalElements: 0,
+        totalPages: 0,
+      }),
+      { headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+  await getChatThreads('로고_%!', 2)
+  const url = new URL(requested, 'http://localhost')
+  assert.equal(url.pathname, '/api/me/order-chats')
+  assert.equal(url.searchParams.get('q'), '로고_%!')
+  assert.equal(url.searchParams.get('page'), '2')
+  assert.equal(url.searchParams.get('size'), '20')
+  assert.equal(url.searchParams.size, 3)
+  assert.throws(() => getChatThreads('가'.repeat(101), 0))
+  assert.throws(() => getChatThreads('', -1))
+})
+
+test('account switch while CSRF is pending prevents the old chat from being sent', async () => {
+  const client = new QueryClient()
+  client.setQueryData(['auth', 'me'], { id: '7' })
+  let ready, release
+  const started = new Promise((resolve) => {
+    ready = resolve
+  })
+  const csrf = new Promise((resolve) => {
+    release = resolve
+  })
+  let writes = 0
+  let csrfRequests = 0
+  globalThis.fetch = async (url) => {
+    if (url === '/api/auth/csrf') {
+      if (++csrfRequests === 1) {
+        ready()
+        return csrf
+      }
+      return new Response(
+        JSON.stringify({ token: 'new', headerName: 'X-CSRF-TOKEN' }),
+        { headers: { 'Content-Type': 'application/json' } },
+      )
+    }
+    writes++
+    return new Response('{}')
+  }
+  try {
+    const pending = sendChatMessage(
+      '11',
+      { clientMessageId: key, content: '이전 계정의 메시지' },
+      captureAccountScope(client),
+    )
+    const rejected = assert.rejects(
+      pending,
+      (error) => error.name === 'AbortError',
+    )
+    await started
+    await resetAccountState(client, null)
+    release(
+      new Response(
+        JSON.stringify({ token: 'old', headerName: 'X-CSRF-TOKEN' }),
+        { headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+    await rejected
+    assert.equal(writes, 0)
+  } finally {
+    client.clear()
+  }
 })
 
 const message = (id, sequence = id) => ({

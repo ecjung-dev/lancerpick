@@ -1,0 +1,232 @@
+.headerEntry {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--ink);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+.headerEntry[aria-expanded='true'],
+.headerEntry:hover {
+  border-bottom-color: var(--ink);
+}
+.entry,
+.restore {
+  background: var(--ink);
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 18px;
+  cursor: pointer;
+}
+.entry:disabled,
+.headerEntry:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.dock {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 90;
+  max-width: calc(100vw - 32px);
+}
+.panes {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+.panes[hidden] {
+  display: none;
+}
+.inbox,
+.conversation {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 8px 40px #0002;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: min(600px, calc(100dvh - 32px));
+  min-height: 0;
+}
+.inbox {
+  width: 340px;
+  max-width: calc(100vw - 32px);
+}
+.conversation {
+  width: 420px;
+}
+.inbox:focus,
+.conversation:focus {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.heading > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.heading h2 {
+  font-size: 17px;
+  margin: 0;
+}
+.heading strong {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.heading button {
+  border: 0;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 5px 8px;
+  font-size: 17px;
+}
+.heading .back {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.search {
+  display: flex;
+  gap: 6px;
+  padding: 12px;
+  flex-shrink: 0;
+}
+.search input {
+  width: 100%;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px;
+  font: inherit;
+  font-size: 12px;
+}
+.search button,
+.pager button,
+.threadContent > div > button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  padding: 6px 9px;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+}
+.search button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.threadContent {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 12px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.threadList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.threadList button {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  text-align: left;
+  padding: 14px 10px;
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  font: inherit;
+  overflow-wrap: anywhere;
+}
+.threadList button:hover,
+.threadList button[aria-pressed='true'] {
+  background: var(--surface);
+}
+.threadList strong {
+  font-size: 13px;
+}
+.threadList small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+.threadList strong small {
+  display: block;
+  margin-top: 3px;
+}
+.preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: #666;
+  font-size: 12px;
+}
+.pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.pager button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.orderLink {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
+}
+.conversationBody {
+  padding: 10px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 860px) {
+  .selected .inbox {
+    display: none;
+  }
+  .conversation,
+  .inbox {
+    width: min(420px, calc(100vw - 32px));
+  }
+}

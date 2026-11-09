@@ -50,6 +50,8 @@ Batch `scanRequestedAt`은 허용된 `requestedAtMillis` 파라미터를 UTC로 
 
 ## K6 실제 실행을 연결할 때
 
+2026-11-09 설계 제안(김창재): [관리자 작업 감사 이력 설계안](admin-action-audit-design.md). 아래 1~4 순서를 공통 테이블·상태·API 초안으로 구체화했다. DDL·구현은 황준범과 확정 후 진행한다.
+
 현재 감사 이력은 `product_moderation_logs`의 상품 숨김/복구 전용이다. 금융 작업을 여기에 끼워 넣거나 원장/Batch 컨텍스트를 관리자 감사 이력으로 사용하지 않는다. 공통 관리자 작업 이력 설계·API·화면은 김창재, 필요한 DDL은 황준범과 맞춘다.
 
 1. Controller는 세션의 `CurrentMemberId.require(authentication)`에서 관리자 ID를 얻고 `/api/admin/**` 권한·변경 요청 CSRF·`Cache-Control: no-store`를 적용한다. 요청 본문/쿼리의 관리자 ID를 신뢰하지 않는다.

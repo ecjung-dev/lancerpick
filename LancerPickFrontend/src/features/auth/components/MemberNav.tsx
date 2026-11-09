@@ -4,6 +4,8 @@ import { ApiError } from '../../../shared/api/client'
 import { logout } from '../api'
 import { useCurrentMember } from '../queries'
 import { NotificationNavLink } from '../../notifications/components/NotificationNavLink'
+import { ChatEntry } from '../../order-chat/components/ChatEntry'
+import { useChatWorkspace } from '../../order-chat/workspace'
 import { isUnclearResult, recheckSession, resetAccountState } from '../session'
 
 /**
@@ -12,6 +14,7 @@ import { isUnclearResult, recheckSession, resetAccountState } from '../session'
  */
 export function MemberNav({ signupClassName, buttonClassName }: { signupClassName: string; buttonClassName: string }) {
   const member = useCurrentMember()
+  const chat = useChatWorkspace()
   const client = useQueryClient()
   const navigate = useNavigate()
   const out = useMutation({
@@ -37,7 +40,8 @@ export function MemberNav({ signupClassName, buttonClassName }: { signupClassNam
     return <>
       {/* 메뉴 표시는 편의일 뿐이다. 실제 관리자 권한은 서버가 /api/admin/** 요청마다 다시 확인한다. */}
       {member.data.role === 'ADMIN' && <NavLink to="/admin/products">관리자</NavLink>}
-      <NotificationNavLink key={member.data.id} />
+      <NotificationNavLink key={member.data.id} onOpen={chat?.minimize} />
+      <ChatEntry />
       <NavLink to="/mypage">{member.data.displayName}님</NavLink>
       <button type="button" className={buttonClassName} disabled={out.isPending} onClick={() => out.mutate()}>
         {out.isPending ? '로그아웃 중…' : '로그아웃'}
