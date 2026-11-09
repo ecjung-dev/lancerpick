@@ -1,16 +1,14 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
-import com.example.lancerpick.order.repository.OrderRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,19 +18,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Profile("!demo")
 public class OrderDecisionService {
-  private final OrderRepository orders;
+  private final OrderCommandLocks locks;
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
   private final OrderDetailQueries details;
   private final Clock clock;
 
   public OrderDecisionService(
-      OrderRepository orders,
+      OrderCommandLocks locks,
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderDetailQueries details,
       Clock clock) {
-    this.orders = orders;
+    this.locks = locks;
     this.histories = histories;
     this.events = events;
     this.details = details;
@@ -50,24 +48,8 @@ public class OrderDecisionService {
   }
 
   private OrderDetailResponse decide(long memberId, String id, String reason, boolean accept) {
-    long orderId;
-    try {
-      if (id == null || !id.matches("[0-9]+")) throw invalidId();
-      orderId = Long.parseLong(id);
-      if (orderId <= 0) throw invalidId();
-    } catch (NumberFormatException e) {
-      throw invalidId();
-    }
-    if (orders.lockDecisionActor(memberId).isEmpty()) {
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    }
-    var order =
-        orders
-            .findForDecision(orderId, memberId)
-            .orElseThrow(() ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
+    long orderId = OrderIds.positive(id).orElseThrow(OrderDecisionService::invalidId);
+    var order = locks.lockParticipantOrder(memberId, orderId);
     // 수락·거절은 결제 전 단계라 계약 주문도 같은 명령을 쓴다. 알 수 없는 정책만 막는다.
     if (!order.isContractPolicy())
       com.example.lancerpick.common.policy.TradePolicyVersion.requireLegacyCommand(
@@ -75,8 +57,7 @@ public class OrderDecisionService {
     if (!order.getSellerId().equals(memberId)) {
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 수락·거절할 수 있습니다.");
     }
-    LocalDateTime at =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    LocalDateTime at = UtcTimes.nowMicros(clock);
     OrderHistory history;
     if (accept) {
       order.accept(at);

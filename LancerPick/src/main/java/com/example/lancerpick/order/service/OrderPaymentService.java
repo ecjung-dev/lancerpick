@@ -2,22 +2,19 @@ package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
-import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.entity.WalletEntryType;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
 import com.example.lancerpick.wallet.repository.WalletRepository;
 import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -28,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Profile("!demo")
 public class OrderPaymentService {
-  private final OrderRepository orders;
+  private final OrderCommandLocks locks;
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
   private final OrderDetailQueries details;
@@ -39,7 +36,7 @@ public class OrderPaymentService {
   private final FullFundingService fullFunding;
 
   public OrderPaymentService(
-      OrderRepository orders,
+      OrderCommandLocks locks,
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderDetailQueries details,
@@ -48,7 +45,7 @@ public class OrderPaymentService {
       WalletEntryRepository entries,
       Clock clock,
       FullFundingService fullFunding) {
-    this.orders = orders;
+    this.locks = locks;
     this.histories = histories;
     this.events = events;
     this.details = details;
@@ -62,23 +59,10 @@ public class OrderPaymentService {
   /** 회원 공유 잠금 → 주문 → 구매자 지갑. 외부 결제 통신은 하지 않는다. */
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public OrderDetailResponse pay(long memberId, String id, boolean agreed) {
-    long orderId;
-    try {
-      if (id == null || !id.matches("[0-9]+") || (orderId = Long.parseLong(id)) <= 0 || !agreed)
-        throw invalid();
-    } catch (NumberFormatException e) {
-      throw invalid();
-    }
-    if (orders.lockDecisionActor(memberId).isEmpty())
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    var order =
-        orders
-            .findForDecision(orderId, memberId)
-            .orElseThrow(() ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
-    if (TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion())) {
+    long orderId = OrderIds.positive(id).orElseThrow(OrderPaymentService::invalid);
+    if (!agreed) throw invalid();
+    var order = locks.lockParticipantOrder(memberId, orderId);
+    if (order.isFullFunding()) {
       return fullFunding.pay(memberId, orderId);
     }
     if (!order.getBuyerId().equals(memberId))
@@ -123,8 +107,7 @@ public class OrderPaymentService {
           HttpStatus.CONFLICT, "ORDER_STATE_CONFLICT", "결제 대기 주문만 결제할 수 있습니다.");
     var wallet =
         wallets.findByMemberIdForUpdate(memberId).orElseThrow(OrderPaymentService::integrity);
-    var at =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    var at = UtcTimes.nowMicros(clock);
     order.pay(at);
     wallet.debit(order.getPriceAmount(), at);
     long paymentId = payments.insert(orderId, order.getPriceAmount(), at);

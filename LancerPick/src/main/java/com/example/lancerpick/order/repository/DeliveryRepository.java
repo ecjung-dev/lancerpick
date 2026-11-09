@@ -15,7 +15,7 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     @Query(value = "select d.sequenceNo from Delivery d where d.id=:deliveryId and d.orderId=:orderId")
     Optional<Integer> sequenceForOrderDelivery(@Param("orderId") long orderId, @Param("deliveryId") long deliveryId);
 
-    @Query(value = "select count(c) from CancellationRequest c where c.orderId=:orderId and c.status='PENDING'")
+    @Query(value = "select count(c) from CancellationRequest c where c.orderId=:orderId and c.status=com.example.lancerpick.order.entity.CancellationRequestStatus.PENDING")
     long pendingCancellations(@Param("orderId") long orderId);
 
     @Query(value = "select count(r) from RevisionRequest r join Delivery d on d.id=r.deliveryId and d.orderId=r.orderId and d.sequenceNo=1 where r.orderId=:orderId")

@@ -50,14 +50,7 @@ public class OrderQueryService {
   }
 
   public OrderDetailResponse detail(long memberId, String id) {
-    long orderId;
-    try {
-      if (id == null || !id.matches("[0-9]+")) throw invalidInput();
-      orderId = Long.parseLong(id);
-      if (orderId <= 0) throw invalidInput();
-    } catch (NumberFormatException exception) {
-      throw invalidInput();
-    }
+    long orderId = OrderIds.positive(id).orElseThrow(OrderQueryService::invalidInput);
     var detail = details.forParticipant(orderId, memberId);
     return detail.withAllowedActions(
         OrderAllowedActions.actions(

@@ -176,7 +176,7 @@ public class ContractDocumentTransactions {
             .contains(o.getStatus())
         && o.getAcceptedAt() != null
         && o.getPaidAt() == null
-        && cancellations.findByOrderIdAndStatus(o.getId(), "PENDING").isEmpty();
+        && cancellations.findByOrderIdAndStatus(o.getId(), com.example.lancerpick.order.entity.CancellationRequestStatus.PENDING).isEmpty();
   }
 
   private OrderContract current(long id) {

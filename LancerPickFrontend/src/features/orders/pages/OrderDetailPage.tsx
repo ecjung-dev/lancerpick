@@ -4,18 +4,17 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { formatWon, formatDateTime } from '../../../shared/lib/format'
-import { normalizeText, codePointLength } from '../../../shared/lib/text'
-import {
-  payOrder,
-  cancelOrder,
-  confirmOrder,
-  acceptOrder,
-  rejectOrder,
-  deliverOrder,
-  requestOrderRevision,
-} from '../api'
 import styles from './Orders.module.css'
 import { CancellationActions } from './CancellationActions'
+import {
+  AcceptForm,
+  CancelForm,
+  ConfirmForm,
+  DeliveryForm,
+  PayForm,
+  RejectForm,
+  RevisionForm,
+} from './OrderCommandForms'
 import type { OrderDetail as OrderDetailData } from '../types'
 import { OrderHistoryList } from './OrderHistoryList'
 import { orderDeadlineView } from '../deadlines'
@@ -35,81 +34,12 @@ function OrderDetail({ id }: { id: string }) {
   const location = useLocation()
   const client = useQueryClient()
   const query = useOrder(id)
-  const [agreed, setAgreed] = useState(false)
-  const [confirmed, setConfirmed] = useState(false)
-  const [reason, setReason] = useState('')
-  const reasonLength = codePointLength(normalizeText(reason))
-  const validCancellation = reasonLength > 0 && reasonLength <= 1000
-  const [rejectionReason, setRejectionReason] = useState('')
-  const rejectionLength = codePointLength(normalizeText(rejectionReason))
-  const validRejection = rejectionLength > 0 && rejectionLength <= 1000
-  const [description, setDescription] = useState('')
-  const [resultUrl, setResultUrl] = useState('')
-  const [revisionReason, setRevisionReason] = useState('')
-  const descriptionLength = codePointLength(normalizeText(description))
-  const revisionLength = codePointLength(normalizeText(revisionReason))
-  const cleanUrl = normalizeText(resultUrl)
-  const validDelivery =
-    descriptionLength > 0 &&
-    descriptionLength <= 5000 &&
-    cleanUrl.length > 0 &&
-    codePointLength(cleanUrl) <= 2048
-  const validRevision = revisionLength > 0 && revisionLength <= 1000
-  const sequence =
-    query.data?.status === 'IN_PROGRESS'
-      ? 1
-      : query.data?.status === 'REVISION_IN_PROGRESS'
-        ? 2
-        : null
-  const firstDelivery = query.data?.deliveries.find(
-    (delivery) => delivery.sequenceNo === 1,
-  )
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  // 폼 입력 초기화 시점. 성공하면 모든 폼, 실패하면 납품 입력, 재조회 성공 시 동의 체크를 비운다.
+  const [resets, setResets] = useState({ success: 0, failure: 0, refresh: 0 })
   const lock = useRef(false)
-  async function act(
-    action:
-      | 'PAY'
-      | 'CANCEL'
-      | 'CONFIRM'
-      | 'ACCEPT'
-      | 'REJECT'
-      | 'DELIVER'
-      | 'REQUEST_REVISION',
-  ) {
-    if (lock.current || failure || !query.data?.allowedActions.includes(action))
-      return
-    if (
-      (action === 'PAY' && !agreed) ||
-      (action === 'CONFIRM' && !confirmed) ||
-      (action === 'CANCEL' && !validCancellation)
-    )
-      return
-    if (action === 'REJECT' && !validRejection) return
-    if (action === 'DELIVER' && (!validDelivery || sequence === null)) return
-    if (action === 'REQUEST_REVISION' && (!validRevision || !firstDelivery))
-      return
-    await run(async () =>
-      action === 'PAY'
-        ? await payOrder(id)
-        : action === 'CANCEL'
-          ? await cancelOrder(id, reason)
-          : action === 'ACCEPT'
-            ? await acceptOrder(id)
-            : action === 'REJECT'
-              ? await rejectOrder(id, rejectionReason)
-              : action === 'DELIVER' && sequence !== null
-                ? await deliverOrder(id, description, resultUrl, sequence)
-                : action === 'REQUEST_REVISION' && firstDelivery
-                  ? await requestOrderRevision(
-                      id,
-                      firstDelivery.id,
-                      revisionReason,
-                    )
-                  : await confirmOrder(id),
-    )
-  }
   async function run(
     command: () => Promise<OrderDetailData>,
   ): Promise<boolean> {
@@ -123,18 +53,11 @@ function OrderDetail({ id }: { id: string }) {
       setMessage(
         `주문 상태가 ${orderStatusLabel(result.status)}(으)로 확인됐습니다.`,
       )
-      setAgreed(false)
-      setConfirmed(false)
-      setReason('')
-      setRejectionReason('')
-      setDescription('')
-      setResultUrl('')
-      setRevisionReason('')
+      setResets((value) => ({ ...value, success: value.success + 1 }))
       return true
     } catch (error) {
       // 결과 불명확 후 재조회가 다음 회차를 보여도 이전 납품 내용을 그대로 보내지 않는다.
-      setDescription('')
-      setResultUrl('')
+      setResets((value) => ({ ...value, failure: value.failure + 1 }))
       setFailure(orderCommandFailureMessage(error))
       return false
     } finally {
@@ -148,8 +71,7 @@ function OrderDetail({ id }: { id: string }) {
     const result = await query.refetch()
     if (!result.error) {
       setFailure(null)
-      setAgreed(false)
-      setConfirmed(false)
+      setResets((value) => ({ ...value, refresh: value.refresh + 1 }))
     }
   }
   if (query.error instanceof ApiError && query.error.status === 401)
@@ -190,8 +112,9 @@ function OrderDetail({ id }: { id: string }) {
     )
   if (!query.data) return <p role="status">주문을 불러오는 중입니다.</p>
   const order = query.data
-  const deadlines = orderDeadlineView(order, Date.now())
+  const deadlines = orderDeadlineView(order)
   const disabled = busy || !!failure || query.isFetching
+  const forms = { order, disabled, run }
   return (
     <section className={styles.orders}>
       <Link to={`/orders${location.search}`}>← 거래 내역</Link>
@@ -326,174 +249,19 @@ function OrderDetail({ id }: { id: string }) {
       >
         현재 상태 다시 조회
       </button>
-      {order.allowedActions.includes('DELIVER') && sequence !== null && (
-        <fieldset disabled={disabled}>
-          <legend>{sequence === 1 ? '최초 납품' : '재납품'}</legend>
-          <label>
-            납품 설명
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </label>
-          <p>{descriptionLength} / 5,000자</p>
-          <label>
-            결과물 HTTPS 링크
-            <input
-              type="url"
-              value={resultUrl}
-              onChange={(e) => setResultUrl(e.target.value)}
-            />
-          </label>
-          <p>
-            구매자가 열 수 있는 링크를 입력해 주세요. 제출 후 해당 회차를 덮어쓸
-            수 없습니다.
-          </p>
-          <button
-            disabled={!validDelivery}
-            onClick={() => {
-              void act('DELIVER')
-            }}
-          >
-            {sequence}차 납품 제출
-          </button>
-        </fieldset>
-      )}
-      {order.allowedActions.includes('REQUEST_REVISION') && firstDelivery && (
-        <fieldset disabled={disabled}>
-          <legend>최초 납품 수정 요청</legend>
-          <p>보관된 거래 범위 안에서 한 번 요청할 수 있습니다.</p>
-          <label>
-            수정 사유
-            <textarea
-              value={revisionReason}
-              onChange={(e) => setRevisionReason(e.target.value)}
-            />
-          </label>
-          <p>{revisionLength} / 1,000자</p>
-          <button
-            disabled={!validRevision}
-            onClick={() => {
-              void act('REQUEST_REVISION')
-            }}
-          >
-            수정 요청
-          </button>
-        </fieldset>
-      )}
-      {order.allowedActions.includes('ACCEPT') && (
-        <fieldset disabled={disabled}>
-          <legend>주문 수락</legend>
-          <p>
-            보관된 거래 조건과 구매자의 요구사항을 확인해 주세요. 수락하면{' '}
-            {order.policyVersion === 'LEGACY_V1'
-              ? '구매자가 결제할 수 있습니다.'
-              : '계약 작성·양측 서명 후 전액 결제를 진행합니다.'}
-          </p>
-          <button
-            onClick={() => {
-              void act('ACCEPT')
-            }}
-          >
-            주문 수락
-          </button>
-        </fieldset>
-      )}
-      {order.allowedActions.includes('REJECT') && (
-        <fieldset disabled={disabled}>
-          <legend>주문 거절</legend>
-          <label>
-            거절 사유 (필수, 최대 1,000자)
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-            />
-          </label>
-          <p>{rejectionLength} / 1,000자</p>
-          <p>
-            거절하면 이 주문은 종료됩니다. 작성한 사유는 구매자에게 전달됩니다.
-          </p>
-          <button
-            disabled={!validRejection}
-            onClick={() => {
-              void act('REJECT')
-            }}
-          >
-            주문 거절
-          </button>
-        </fieldset>
-      )}
-      {order.allowedActions.includes('PAY') && (
-        <fieldset disabled={disabled}>
-          <legend>적립금 결제</legend>
-          <label>
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-            />{' '}
-            위 거래 조건과 {formatWon(order.priceAmount)} 결제에 동의합니다.
-          </label>
-          <button
-            disabled={!agreed}
-            onClick={() => {
-              void act('PAY')
-            }}
-          >
-            적립금으로 결제
-          </button>
-        </fieldset>
-      )}
-      {order.allowedActions.includes('CANCEL') && (
-        <fieldset disabled={disabled}>
-          <legend>직접 취소</legend>
-          <p>
-            {order.payment?.status === 'PAID'
-              ? '결제된 주문은 전액 적립금 환불과 함께 취소됩니다.'
-              : '결제 전 주문은 적립금 차감·환불 없이 취소됩니다.'}
-          </p>
-          <label>
-            취소 사유 (필수, 최대 1,000자)
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            />
-          </label>
-          <p>{reasonLength} / 1,000자</p>
-          <button
-            disabled={!validCancellation}
-            onClick={() => {
-              void act('CANCEL')
-            }}
-          >
-            주문 취소
-          </button>
-        </fieldset>
-      )}
-      {order.allowedActions.includes('CONFIRM') && (
-        <fieldset disabled={disabled}>
-          <legend>구매 확정</legend>
-          <p>
-            납품을 확인한 후 확정해 주세요. 확정 후에는 취소·환불할 수 없습니다.
-          </p>
-          <label>
-            <input
-              type="checkbox"
-              checked={confirmed}
-              onChange={(e) => setConfirmed(e.target.checked)}
-            />{' '}
-            결과물을 확인했고 구매 확정에 동의합니다.
-          </label>
-          <button
-            disabled={!confirmed}
-            onClick={() => {
-              void act('CONFIRM')
-            }}
-          >
-            구매 확정
-          </button>
-        </fieldset>
-      )}
+      <DeliveryForm
+        key={`deliver-${resets.success}-${resets.failure}`}
+        {...forms}
+      />
+      <RevisionForm key={`revision-${resets.success}`} {...forms} />
+      <AcceptForm {...forms} />
+      <RejectForm key={`reject-${resets.success}`} {...forms} />
+      <PayForm key={`pay-${resets.success}-${resets.refresh}`} {...forms} />
+      <CancelForm key={`cancel-${resets.success}`} {...forms} />
+      <ConfirmForm
+        key={`confirm-${resets.success}-${resets.refresh}`}
+        {...forms}
+      />
       <CancellationActions
         key={order.cancellationRequests
           .map((item) => `${item.id}:${item.status}`)

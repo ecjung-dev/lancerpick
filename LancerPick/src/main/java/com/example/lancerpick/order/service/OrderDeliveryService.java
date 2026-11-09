@@ -1,6 +1,7 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.CreateDeliveryRequest;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
@@ -10,11 +11,8 @@ import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.DeliveryRepository;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
-import com.example.lancerpick.order.repository.OrderRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Profile("!demo")
 public class OrderDeliveryService {
-  private final OrderRepository orders;
+  private final OrderCommandLocks locks;
   private final DeliveryRepository deliveries;
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
@@ -33,14 +31,14 @@ public class OrderDeliveryService {
   private final Clock clock;
 
   public OrderDeliveryService(
-      OrderRepository orders,
+      OrderCommandLocks locks,
       DeliveryRepository deliveries,
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderDetailQueries details,
       OrderFundingGuard funding,
       Clock clock) {
-    this.orders = orders;
+    this.locks = locks;
     this.deliveries = deliveries;
     this.histories = histories;
     this.events = events;
@@ -51,27 +49,12 @@ public class OrderDeliveryService {
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public OrderDetailResponse submit(long memberId, String id, CreateDeliveryRequest request) {
-    long orderId;
-    try {
-      if (id == null || !id.matches("[0-9]+")) throw invalidInput();
-      orderId = Long.parseLong(id);
-      if (orderId <= 0) throw invalidInput();
-    } catch (NumberFormatException e) {
-      throw invalidInput();
-    }
+    long orderId = OrderIds.positive(id).orElseThrow(OrderDeliveryService::invalidInput);
     if (request == null
         || request.expectedSequenceNo() == null
         || request.expectedSequenceNo() < 1
         || request.expectedSequenceNo() > 2) throw invalidInput();
-    if (orders.lockDecisionActor(memberId).isEmpty())
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    var order =
-        orders
-            .findForFulfillment(orderId, memberId)
-            .orElseThrow(() ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
+    var order = locks.lockFulfillmentOrder(memberId, orderId);
     if (!order.getSellerId().equals(memberId))
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 납품할 수 있습니다.");
     int sequence = request.expectedSequenceNo();
@@ -91,8 +74,7 @@ public class OrderDeliveryService {
           HttpStatus.INTERNAL_SERVER_ERROR, "DATA_INTEGRITY_ERROR", "수정 요청과 최초 납품 기록을 확인해야 합니다.");
     }
     funding.requireHeldForWork(order);
-    LocalDateTime at =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    LocalDateTime at = UtcTimes.nowMicros(clock);
     var delivery =
         Delivery.create(orderId, sequence, request.description(), request.resultUrl(), at);
     order.deliver(at);

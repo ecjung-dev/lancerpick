@@ -1,6 +1,7 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.CreateRevisionRequest;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
@@ -10,12 +11,9 @@ import com.example.lancerpick.order.entity.RevisionRequest;
 import com.example.lancerpick.order.repository.DeliveryRepository;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
-import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.order.repository.RevisionRequestRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Profile("!demo")
 public class OrderRevisionService {
-  private final OrderRepository orders;
+  private final OrderCommandLocks locks;
   private final DeliveryRepository deliveries;
   private final RevisionRequestRepository revisions;
   private final OrderHistoryRepository histories;
@@ -37,7 +35,7 @@ public class OrderRevisionService {
   private final Clock clock;
 
   public OrderRevisionService(
-      OrderRepository orders,
+      OrderCommandLocks locks,
       DeliveryRepository deliveries,
       RevisionRequestRepository revisions,
       OrderHistoryRepository histories,
@@ -47,7 +45,7 @@ public class OrderRevisionService {
       ReviewTimers reviewTimers,
       DeadlineNotices deadlineNotices,
       Clock clock) {
-    this.orders = orders;
+    this.locks = locks;
     this.deliveries = deliveries;
     this.revisions = revisions;
     this.histories = histories;
@@ -64,11 +62,7 @@ public class OrderRevisionService {
     long orderId = positiveId(id);
     if (input == null) throw invalidInput();
     long deliveryId = positiveId(input.deliveryId());
-    if (orders.lockDecisionActor(memberId).isEmpty())
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    var order =
-        orders.findForFulfillment(orderId, memberId).orElseThrow(() -> notFound("주문을 찾을 수 없습니다."));
+    var order = locks.lockFulfillmentOrder(memberId, orderId);
     if (!order.getBuyerId().equals(memberId))
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "구매자만 수정 요청할 수 있습니다.");
     // 이미 사용한 수정 권한은 상태가 재납품 확인 대기로 바뀌어도 되살아나지 않는다.
@@ -84,8 +78,7 @@ public class OrderRevisionService {
     if (deliveries.pendingCancellations(orderId) > 0)
       throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
     funding.requireHeldForWork(order);
-    LocalDateTime at =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    LocalDateTime at = UtcTimes.nowMicros(clock);
     // 수정 요청은 구매자의 검수 응답이다. 활성 자동 확정 타이머를 끝내고, 재납품이 새 기산점이 된다.
     reviewTimers.closeForBuyerResponse(order, memberId, at, ReviewTimers.BUYER_RESPONSE);
     var revision =
@@ -110,14 +103,7 @@ public class OrderRevisionService {
   }
 
   private static long positiveId(String id) {
-    try {
-      if (id == null || !id.matches("[0-9]+")) throw invalidInput();
-      long value = Long.parseLong(id);
-      if (value <= 0) throw invalidInput();
-      return value;
-    } catch (NumberFormatException e) {
-      throw invalidInput();
-    }
+    return OrderIds.positive(id).orElseThrow(OrderRevisionService::invalidInput);
   }
 
   private static BusinessException invalidInput() {

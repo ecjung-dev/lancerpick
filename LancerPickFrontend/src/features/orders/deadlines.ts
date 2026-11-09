@@ -8,7 +8,7 @@ function epochMicros(value: string): bigint | null {
 }
 
 /** 기한과 같은 시각은 지각이 아니다. 서버의 상태·기한 원문만 사용한다. */
-export function orderDeadlineView(order: Pick<OrderDetail, 'status' | 'currentDueAt' | 'originalDueAt' | 'revisionDueAt' | 'deliveries'>, now: number) {
+export function orderDeadlineView(order: Pick<OrderDetail, 'status' | 'currentDueAt' | 'originalDueAt' | 'revisionDueAt' | 'deliveries'>, now: number = Date.now()) {
   const active = order.status === 'IN_PROGRESS' || order.status === 'REVISION_IN_PROGRESS'
   const currentDueMicros = order.currentDueAt === null ? null : epochMicros(order.currentDueAt)
   const currentLate = active && currentDueMicros !== null && Number.isFinite(now) && BigInt(Math.trunc(now)) * 1000n > currentDueMicros

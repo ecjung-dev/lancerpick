@@ -53,6 +53,8 @@ class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
     com.example.lancerpick.order.service.ReviewTimers reviewTimers;
     @MockitoBean
+    com.example.lancerpick.order.service.OrderCommandLocks orderCommandLocks;
+    @MockitoBean
     com.example.lancerpick.contract.service.ContractDocumentTransactions contractDocumentTransactions;
     // This HTTP-only context excludes JPA; contract persistence is tested against MySQL separately.
     @MockitoBean

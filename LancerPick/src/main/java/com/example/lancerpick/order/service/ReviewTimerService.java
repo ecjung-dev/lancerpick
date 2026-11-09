@@ -1,13 +1,14 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
-import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.entity.MemberRole;
 import com.example.lancerpick.member.repository.MemberRepository;
 import com.example.lancerpick.notification.repository.OutboxEventRepository;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.ReviewTimerResponse;
+import com.example.lancerpick.order.entity.CancellationRequestStatus;
 import com.example.lancerpick.order.entity.Delivery;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
@@ -23,7 +24,6 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -61,6 +61,7 @@ public class ReviewTimerService {
   private final OutboxEventRepository outbox;
   private final TransactionTemplate expiryTransaction;
   private final Clock clock;
+  private final OrderCommandLocks locks;
 
   public ReviewTimerService(
       OrderRepository orders,
@@ -75,7 +76,8 @@ public class ReviewTimerService {
       MemberRepository members,
       OutboxEventRepository outbox,
       PlatformTransactionManager transactionManager,
-      Clock clock) {
+      Clock clock,
+      OrderCommandLocks locks) {
     this.orders = orders;
     this.timers = timers;
     this.deliveries = deliveries;
@@ -90,6 +92,7 @@ public class ReviewTimerService {
     this.expiryTransaction = new TransactionTemplate(transactionManager);
     this.expiryTransaction.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     this.clock = clock;
+    this.locks = locks;
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -99,17 +102,15 @@ public class ReviewTimerService {
             .findById(orderId)
             .filter(candidate ->
                 (candidate.getBuyerId() == memberId || candidate.getSellerId() == memberId)
-                    && isFullFunding(candidate))
+                    && candidate.isFullFunding())
             .orElseThrow(ReviewTimerService::notFound);
     return view(order, memberId, now());
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public ReviewTimerResponse start(long memberId, long orderId) {
-    if (orders.lockDecisionActor(memberId).isEmpty()) throw unauthorized();
-    var order =
-        orders.findForDecision(orderId, memberId).orElseThrow(ReviewTimerService::notFound);
-    if (!isFullFunding(order))
+    var order = locks.lockParticipantOrder(memberId, orderId);
+    if (!order.isFullFunding())
       throw conflict("ORDER_POLICY_NOT_READY", "결제 금액 보관 정책 주문이 아닙니다.");
     if (order.getSellerId() != memberId)
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 타이머를 시작할 수 있습니다.");
@@ -119,7 +120,7 @@ public class ReviewTimerService {
       return view(order, memberId, at);
     if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION)
       throw conflict("ORDER_STATE_CONFLICT", "검수 대기 주문에서만 자동 구매 확정 타이머를 시작할 수 있습니다.");
-    if (!cancellations.findByOrderIdAndStatus(orderId, "PENDING").isEmpty())
+    if (!cancellations.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING).isEmpty())
       throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
     funding.requireHeldForWork(order);
     var delivery = currentDelivery(order);
@@ -160,7 +161,7 @@ public class ReviewTimerService {
     var order =
         orders
             .findForSystemUpdate(orderId)
-            .filter(ReviewTimerService::isFullFunding)
+            .filter(Order::isFullFunding)
             .orElseThrow(ReviewTimerService::notFound);
     var timer =
         timers
@@ -282,7 +283,7 @@ public class ReviewTimerService {
       return empty("NOT_IN_REVIEW");
     }
     if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION) return empty("NOT_IN_REVIEW");
-    if (!cancellations.findByOrderIdAndStatus(orderId, "PENDING").isEmpty())
+    if (!cancellations.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING).isEmpty())
       return empty("CANCELLATION_PENDING");
     var basis = basisAt(order, currentDelivery(order));
     var eligible = OrderResponseTimer.eligibleAt(basis);
@@ -311,11 +312,7 @@ public class ReviewTimerService {
   }
 
   private LocalDateTime now() {
-    return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
-  }
-
-  private static boolean isFullFunding(Order order) {
-    return TradePolicyVersion.isFullFunding(order.getPolicyVersion());
+    return UtcTimes.nowMicros(clock);
   }
 
   private static ReviewTimerResponse response(String status, OrderResponseTimer timer, boolean canStart) {

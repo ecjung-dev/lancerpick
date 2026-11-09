@@ -232,6 +232,11 @@ public class Order {
         return com.example.lancerpick.common.policy.TradePolicyVersion.isContract(policyVersion);
     }
 
+    /** CONTRACT_V3(전액 보관) 주문인지. 알 수 없는 정책 값은 false이며, 차단은 TradePolicyVersion의 require* 검사가 맡는다. */
+    public boolean isFullFunding() {
+        return com.example.lancerpick.common.policy.TradePolicyVersion.isFullFunding(policyVersion);
+    }
+
     public void reject(LocalDateTime now) {
         requireRequested(now);
         status = OrderStatus.REJECTED;

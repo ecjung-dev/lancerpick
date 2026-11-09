@@ -43,7 +43,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
   default Optional<Order> findForFundedOrLegacyDecision(long orderId, long memberId) {
     var order = findForDecision(orderId, memberId);
     order.ifPresent(value -> {
-      if (!TradePolicyVersion.CONTRACT_V3.name().equals(value.getPolicyVersion())) {
+      if (!value.isFullFunding()) {
         TradePolicyVersion.requireLegacyCommand(value.getPolicyVersion());
       }
     });

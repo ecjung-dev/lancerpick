@@ -3,24 +3,22 @@ package com.example.lancerpick.order.service;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
+import com.example.lancerpick.order.entity.CancellationRequestStatus;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderHistoryAction;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.CancellationRequestRepository;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
-import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.entity.WalletEntryType;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
 import com.example.lancerpick.wallet.repository.WalletRepository;
 import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -32,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Profile("!demo")
 public class OrderCancellationService {
-  private final OrderRepository orders;
+  private final OrderCommandLocks locks;
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
   private final OrderDetailQueries details;
@@ -44,7 +42,7 @@ public class OrderCancellationService {
   private final FullFundingService fullFunding;
 
   public OrderCancellationService(
-      OrderRepository orders,
+      OrderCommandLocks locks,
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderDetailQueries details,
@@ -54,7 +52,7 @@ public class OrderCancellationService {
       CancellationRequestRepository requests,
       Clock clock,
       FullFundingService fullFunding) {
-    this.orders = orders;
+    this.locks = locks;
     this.histories = histories;
     this.events = events;
     this.details = details;
@@ -68,27 +66,12 @@ public class OrderCancellationService {
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public OrderDetailResponse cancel(long memberId, String id, String rawReason) {
-    long orderId;
-    try {
-      if (id == null || !id.matches("[0-9]+") || (orderId = Long.parseLong(id)) <= 0)
-        throw invalid();
-    } catch (NumberFormatException e) {
-      throw invalid();
-    }
+    long orderId = OrderIds.positive(id).orElseThrow(OrderCancellationService::invalid);
     if (rawReason == null) throw invalid();
     String reason = TextNormalizer.normalize(rawReason);
     if (reason.isEmpty() || reason.codePointCount(0, reason.length()) > 1000) throw invalid();
-    if (orders.lockDecisionActor(memberId).isEmpty())
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    var order =
-        orders
-            .findForDecision(orderId, memberId)
-            .orElseThrow(() ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
-    if (TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion())
-        && order.getPaidAt() != null) {
+    var order = locks.lockParticipantOrder(memberId, orderId);
+    if (order.isFullFunding() && order.getPaidAt() != null) {
       return fullFunding.refund(memberId, orderId, reason);
     }
     // 계약 주문은 선금 전(금액 이동 없음)만 이 경로로 취소한다. 선금 후 취소·반환은 전용 경로(E6)다.
@@ -125,8 +108,7 @@ public class OrderCancellationService {
                 OrderStatus.AWAITING_CONFIRMATION,
                 OrderStatus.REVISION_IN_PROGRESS)
             .contains(order.getStatus())) throw integrity();
-    var at =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    var at = UtcTimes.nowMicros(clock);
     var from = order.getStatus();
     order.cancel(at);
     if (paid) {
@@ -153,7 +135,7 @@ public class OrderCancellationService {
           WalletEntry.refund(
               order.getBuyerId(), original.id(), original.amount(), wallet.getBalance(), at));
     } else if (payment.isPresent()) throw integrity();
-    var pending = requests.findByOrderIdAndStatus(orderId, "PENDING");
+    var pending = requests.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING);
     if (pending.size() > 1 || (!paid && !pending.isEmpty())) throw integrity();
     if (!pending.isEmpty()) {
       var request = pending.getFirst();

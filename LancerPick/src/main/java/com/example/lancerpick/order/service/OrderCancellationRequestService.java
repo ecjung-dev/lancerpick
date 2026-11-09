@@ -2,9 +2,11 @@ package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.CancellationResultResponse;
 import com.example.lancerpick.order.dto.CreateCancellationRequest;
+import com.example.lancerpick.order.entity.CancellationRequestStatus;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderHistoryAction;
@@ -15,8 +17,6 @@ import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
@@ -32,10 +32,15 @@ public class OrderCancellationRequestService {
   public enum Resolution {
     APPROVED,
     REJECTED,
-    WITHDRAWN
+    WITHDRAWN;
+
+    CancellationRequestStatus status() {
+      return CancellationRequestStatus.valueOf(name());
+    }
   }
 
   private final OrderRepository orders;
+  private final OrderCommandLocks locks;
   private final CancellationRequestQueries requests;
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
@@ -46,6 +51,7 @@ public class OrderCancellationRequestService {
 
   public OrderCancellationRequestService(
       OrderRepository orders,
+      OrderCommandLocks locks,
       CancellationRequestQueries requests,
       OrderHistoryRepository histories,
       OrderEventPublisher events,
@@ -54,6 +60,7 @@ public class OrderCancellationRequestService {
       ReviewTimers reviewTimers,
       Clock clock) {
     this.orders = orders;
+    this.locks = locks;
     this.requests = requests;
     this.histories = histories;
     this.events = events;
@@ -107,8 +114,8 @@ public class OrderCancellationRequestService {
     var request =
         requests.byOrder(orderId, targetId).orElseThrow(OrderCancellationRequestService::notFound);
     if (request.requestedBy() != order.getBuyerId()) throw integrity();
-    if (!request.status().equals("PENDING")) {
-      if (!request.status().equals(resolution.name()))
+    if (request.status() != CancellationRequestStatus.PENDING) {
+      if (request.status() != resolution.status())
         throw conflict("REQUEST_ALREADY_RESOLVED", "다른 방식으로 이미 처리한 요청입니다.");
       return response(order, memberId, targetId);
     }
@@ -125,9 +132,9 @@ public class OrderCancellationRequestService {
           .byOrder(orderId, targetId)
           .orElseThrow(OrderCancellationRequestService::integrity)
           .status()
-          .equals("APPROVED")) throw integrity();
+          .equals(CancellationRequestStatus.APPROVED)) throw integrity();
     } else {
-      if (requests.resolve(targetId, resolution.name(), memberId, responseReason, at) != 1)
+      if (requests.resolve(targetId, resolution.status(), memberId, responseReason, at) != 1)
         throw integrity();
       var action =
           resolution == Resolution.REJECTED
@@ -142,10 +149,9 @@ public class OrderCancellationRequestService {
     return response(order, memberId, targetId);
   }
 
+  // 404 문구가 주문 공통 문구와 달라 주문 조회는 직접 한다. 정책 검증(V3 또는 LEGACY_V1)은 저장소 조회가 맡는다.
   private Order lock(long orderId, long memberId) {
-    if (orders.lockDecisionActor(memberId).isEmpty())
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
+    locks.lockActor(memberId);
     return orders
         .findForFundedOrLegacyDecision(orderId, memberId)
         .orElseThrow(OrderCancellationRequestService::notFound);
@@ -170,8 +176,7 @@ public class OrderCancellationRequestService {
   }
 
   private LocalDateTime now(Order order) {
-    LocalDateTime at =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    LocalDateTime at = UtcTimes.nowMicros(clock);
     if (at.getYear() < 1000 || at.getYear() > 9999 || at.isBefore(order.getUpdatedAt()))
       throw new IllegalStateException("Invalid cancellation request clock");
     return at;
@@ -211,14 +216,7 @@ public class OrderCancellationRequestService {
   }
 
   private static long positiveId(String id) {
-    try {
-      if (id == null || !id.matches("[0-9]+")) throw invalid();
-      long value = Long.parseLong(id);
-      if (value <= 0) throw invalid();
-      return value;
-    } catch (NumberFormatException e) {
-      throw invalid();
-    }
+    return OrderIds.positive(id).orElseThrow(OrderCancellationRequestService::invalid);
   }
 
   private static BusinessException invalid() {

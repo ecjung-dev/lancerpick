@@ -1,7 +1,6 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
-import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.contract.repository.OrderContractRepository;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.entity.Order;
@@ -45,7 +44,7 @@ public class DeadlineNotices {
   /** 전액 결제 직후 최초 납기(결제 시각 + 소요일)를 통지한다. 다음 납품은 1회차다. */
   @Transactional(propagation = Propagation.MANDATORY)
   public void deliveryDue(Order order, long paymentId) {
-    if (!isFullFunding(order) || order.getStatus() != OrderStatus.IN_PROGRESS) return;
+    if (!order.isFullFunding() || order.getStatus() != OrderStatus.IN_PROGRESS) return;
     record(
         order,
         OrderStatus.IN_PROGRESS,
@@ -59,7 +58,7 @@ public class DeadlineNotices {
   /** 수정 요청 직후 재납품 기한(수정 요청 시각 + 원래 소요일)을 통지한다. 재납품은 2회차다. */
   @Transactional(propagation = Propagation.MANDATORY)
   public void redeliveryDue(Order order, RevisionRequest revision) {
-    if (!isFullFunding(order) || order.getStatus() != OrderStatus.REVISION_IN_PROGRESS) return;
+    if (!order.isFullFunding() || order.getStatus() != OrderStatus.REVISION_IN_PROGRESS) return;
     if (revision.getId() == null) throw integrity();
     record(
         order,
@@ -102,9 +101,6 @@ public class DeadlineNotices {
     return value.atOffset(ZoneOffset.UTC).toString();
   }
 
-  private static boolean isFullFunding(Order order) {
-    return TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion());
-  }
 
   private static BusinessException integrity() {
     return new BusinessException(

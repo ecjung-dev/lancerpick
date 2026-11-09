@@ -2,21 +2,19 @@ package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
+import com.example.lancerpick.order.entity.CancellationRequestStatus;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.CancellationRequestRepository;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
-import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.settlement.entity.Settlement;
 import com.example.lancerpick.settlement.repository.SettlementRepository;
 import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Profile("!demo")
 public class OrderConfirmationService {
-  private final OrderRepository orders;
+  private final OrderCommandLocks locks;
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
   private final OrderDetailQueries details;
@@ -37,7 +35,7 @@ public class OrderConfirmationService {
   private final FullFundingService fullFunding;
 
   public OrderConfirmationService(
-      OrderRepository orders,
+      OrderCommandLocks locks,
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderDetailQueries details,
@@ -46,7 +44,7 @@ public class OrderConfirmationService {
       CancellationRequestRepository requests,
       Clock clock,
       FullFundingService fullFunding) {
-    this.orders = orders;
+    this.locks = locks;
     this.histories = histories;
     this.events = events;
     this.details = details;
@@ -59,23 +57,13 @@ public class OrderConfirmationService {
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
   public OrderDetailResponse confirm(long memberId, String id) {
-    long orderId;
-    try {
-      if (id == null || !id.matches("[0-9]+") || (orderId = Long.parseLong(id)) <= 0)
-        throw new NumberFormatException();
-    } catch (NumberFormatException e) {
-      throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "주문 ID를 확인해 주세요.");
-    }
-    if (orders.lockDecisionActor(memberId).isEmpty())
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    var order =
-        orders
-            .findForDecision(orderId, memberId)
+    long orderId =
+        OrderIds.positive(id)
             .orElseThrow(() ->
                 new BusinessException(
-                    HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
-    if (TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion())) {
+                    HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "주문 ID를 확인해 주세요."));
+    var order = locks.lockParticipantOrder(memberId, orderId);
+    if (order.isFullFunding()) {
       return fullFunding.confirm(memberId, orderId);
     }
     TradePolicyVersion.requireLegacyCommand(order.getPolicyVersion());
@@ -85,7 +73,7 @@ public class OrderConfirmationService {
     if (!completed && order.getStatus() != OrderStatus.AWAITING_CONFIRMATION)
       throw new BusinessException(
           HttpStatus.CONFLICT, "ORDER_STATE_CONFLICT", "검수 대기 주문만 구매 확정할 수 있습니다.");
-    if (!requests.findByOrderIdAndStatus(orderId, "PENDING").isEmpty())
+    if (!requests.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING).isEmpty())
       throw new BusinessException(
           HttpStatus.CONFLICT, "CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
     var payment = payments.findByOrderId(orderId).orElseThrow(OrderConfirmationService::integrity);
@@ -102,8 +90,7 @@ public class OrderConfirmationService {
         throw integrity();
     } else {
       if (existing.isPresent()) throw integrity();
-      var at =
-          LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+      var at = UtcTimes.nowMicros(clock);
       order.confirm(at);
       settlements.saveAndFlush(Settlement.create(orderId, payment.amount(), payment.rate(), at));
       events.publish(order, histories.saveAndFlush(OrderHistory.completed(orderId, memberId, at)));

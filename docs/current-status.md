@@ -1,5 +1,18 @@
 # 랜서픽 현재 구현·검증 현황
 
+## 주문 서비스 구조 정리(동작 변경 없음) — 2026-11-09 로컬
+
+`refactor/order-service-cleanup`, main `de0b72f`(#124)에서 분기. 리팩토링 제안을 Codex로 반박 검토한 뒤 그 조건대로 반영했다. API·DB·Flyway·응답 형식 변경은 없다.
+
+- **주문 잠금 공통화**: `order/service/OrderCommandLocks`(`Propagation.MANDATORY`)가 실행 회원 공유 잠금 → 당사자 주문 배타 잠금과 401/404를 맡는다. 정책 검사는 호출자에 그대로 둔다(납품·수정은 `findForFulfillment` 경로, 취소 요청은 기존 404 문구 때문에 회원 잠금만 공유). `FullFundingService.lockOrder`는 public 진입점 방어용으로 V3·금액 검증과 함께 유지한다. 계약·채팅의 같은 블록은 담당 영역이라 손대지 않았다.
+- **정책 판단**: `Order.isFullFunding()`을 추가해 주문 패키지의 `CONTRACT_V3.name().equals(...)` 비교를 바꿨다. 알 수 없는 정책 값 차단은 기존 `TradePolicyVersion.require*`가 계속 맡는다.
+- **취소 요청 상태 enum**: `CancellationRequestStatus`(PENDING·APPROVED·REJECTED·WITHDRAWN)와 `@Enumerated(STRING)`+`@JdbcTypeCode(VARCHAR)`(Order.status와 같은 매핑). 저장소 매개변수·Querydsl 조건·JPQL 리터럴·조회 Row·서비스 비교를 함께 바꿨고, 응답 DTO는 문자열 그대로다. 엔티티의 한 줄 압축 코드도 펼쳤다. 계약 서비스 두 곳(`ContractDocumentTransactions`, `OrderContractService`)은 컴파일을 위해 `"PENDING"` 인자만 enum으로 바꿨다(황준범 영역, 동작 동일).
+- **UTC 시각**: `common/time/UtcTimes.nowMicros(clock)`. 주문 패키지만 적용했고 시각을 읽는 위치(지갑 잠금 뒤, 자동 확정 재검사)는 그대로다.
+- **주문 ID 파싱**: `order/service/OrderIds.positive`(ASCII 숫자·long 범위·1 이상). 호출자별 400 문구와 잠금 전 검사 순서를 유지한다.
+- **주문 상세 화면**: 납품·수정 요청·수락·거절·결제·직접 취소·구매 확정 폼을 `OrderCommandForms.tsx`로 분리했다. 잠금 ref·busy·실패·재조회는 페이지의 `run`이 계속 소유하고(`CancellationActions`와 같은 방식), 입력 초기화는 기존 시점(성공 시 전체, 실패 시 납품 입력, 재조회 성공 시 동의 체크)에 key를 바꿔 다시 마운트한다. 컴포넌트가 작아지며 React 순수성 lint가 렌더 중 `Date.now()`를 잡아, `orderDeadlineView`의 `now` 기본값으로 옮겼다(계산 시점 동일).
+
+검증(로컬): 백엔드 `clean build`(`lancerpick_test` 3307) 936건 통과(실패·오류·건너뜀 0, 신규 `OrderIdsTests` 포함, enum 매핑의 `ddl-auto=validate` 기동 포함). 프런트 typecheck·lint·`test:api` 227건·build 통과(기존 번들 크기 경고 유지). 실행하지 않은 검증: 실제 브라우저 확인(폼 분리 후 연속 제출·실패 후 재조회 전 제출 차단은 자동 브라우저 테스트가 없어 미확인), 원격 CI.
+
 ## 거래 화면 안내 보완 — 2026-11-06 로컬 후속
 
 `fix/trade-finance-guidance`는 main `15358e0`(#116)에서 별도로 분기했다. 판매 수익 화면이 새 전자계약의 구매 적립금 지급과 기존 거래의 별도 기록을 구분하도록 문구를 수정했다. 계약 미작성의 정상 404는 상태 안내로 표시하되, 계약 생성 이력·기존 데이터가 있거나 결제 이후 상태라면 404도 오류로 남긴다. 인증·권한·통신 오류도 유지한다. 초기 구현 때 첫 서명 알림은 변경하지 않았고, 이후 별도 PR #123으로 main에 반영됐다. 초기 프런트 전체 222건(신규 회귀 3건 포함)·lint·TypeScript 포함 build 통과. SSR 자동 검사이며 실제 브라우저 재확인은 하지 않았다. 서버·API·DB 변경이 없어 백엔드 검사는 재실행하지 않았다. 기존 번들 크기 경고는 남아 있다.

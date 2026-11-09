@@ -1,14 +1,15 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
-import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.inquiry.entity.SupportInquiry;
 import com.example.lancerpick.inquiry.repository.SupportInquiryRepository;
 import com.example.lancerpick.member.entity.MemberRole;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.AdminCancellationReviewResponse;
 import com.example.lancerpick.order.entity.CancellationRequest;
+import com.example.lancerpick.order.entity.CancellationRequestStatus;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderHistoryAction;
@@ -19,7 +20,6 @@ import com.example.lancerpick.order.repository.OrderRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -117,18 +117,18 @@ public class AdminCancellationReviewService {
     if (inquiry.getRequesterId() != order.getBuyerId()
         || request.getRequestedBy() != order.getBuyerId()) throw integrity();
     if (!inquiry.isOpen()) return closedResult(order, inquiry, request, decision);
-    if (!"PENDING".equals(request.getStatus()))
+    if (request.getStatus() != CancellationRequestStatus.PENDING)
       throw conflict("REQUEST_ALREADY_RESOLVED", "취소 요청이 이미 처리되었습니다. 문의를 확인해 주세요.");
-    if (!TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion()))
+    if (!order.isFullFunding())
       throw conflict("ORDER_POLICY_NOT_READY", "결제 금액 보관 정책 주문만 관리자 취소 검토를 지원합니다.");
     if (order.getPaidAt() == null || !PAID_OPEN.contains(order.getStatus()))
       throw conflict("ORDER_STATE_CONFLICT", "결제 후 미완료 주문만 처리할 수 있습니다.");
-    if (requests.findByOrderIdAndStatus(order.getId(), "PENDING").size() != 1) throw integrity();
+    if (requests.findByOrderIdAndStatus(order.getId(), CancellationRequestStatus.PENDING).size() != 1) throw integrity();
     var at = now(order, request, inquiry);
     if (decision == Decision.APPROVED) {
       fullFunding.adminRefund(order, request, adminId, inquiryId, reason, at);
     } else {
-      request.resolveByAdmin("REJECTED", adminId, reason, at);
+      request.resolveByAdmin(CancellationRequestStatus.REJECTED, adminId, reason, at);
       requests.flush();
       events.publish(
           order,
@@ -150,7 +150,7 @@ public class AdminCancellationReviewService {
   private AdminCancellationReviewResponse closedResult(
       Order order, SupportInquiry inquiry, CancellationRequest request, Decision decision) {
     if (!"ADMIN".equals(request.getResolutionSource())
-        || !decision.name().equals(request.getStatus()))
+        || !decision.name().equals(request.getStatus().name()))
       throw conflict("INQUIRY_CLOSED", "이미 종료된 문의입니다.");
     return result(order, inquiry, request);
   }
@@ -161,15 +161,14 @@ public class AdminCancellationReviewService {
         inquiry.getId().toString(),
         order.getId().toString(),
         request.getId().toString(),
-        request.getStatus(),
+        request.getStatus().name(),
         order.getStatus().name(),
         inquiry.getStatus(),
         inquiry.getResolvedAt().atOffset(ZoneOffset.UTC));
   }
 
   private LocalDateTime now(Order order, CancellationRequest request, SupportInquiry inquiry) {
-    var at =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    var at = UtcTimes.nowMicros(clock);
     if (at.isBefore(order.getUpdatedAt())
         || at.isBefore(request.getRequestedAt())
         || at.isBefore(inquiry.getUpdatedAt()))

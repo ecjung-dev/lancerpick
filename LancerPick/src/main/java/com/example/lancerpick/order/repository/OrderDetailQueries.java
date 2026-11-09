@@ -34,7 +34,7 @@ public class OrderDetailQueries {
         OrderDetailResponse.RevisionRequest revisionResponse=revision==null?null:new OrderDetailResponse.RevisionRequest(id(revision.getId()),id(revision.getDeliveryId()),revision.getReason(),at(revision.getRequestedAt()),at(revision.getDueAt()));
         var c=QCancellationRequest.cancellationRequest;
         var cancellations=query.selectFrom(c).where(c.orderId.eq(orderId)).orderBy(c.requestedAt.asc(),c.id.asc()).fetch().stream()
-                .map(v->new OrderDetailResponse.CancellationRequest(id(v.getId()),id(v.getOrderId()),v.getRequestKey(),v.getReason(),v.getStatus(),at(v.getRequestedAt()),at(v.getResolvedAt()),id(v.getResolvedBy()),v.getResponseReason())).toList();
+                .map(v->new OrderDetailResponse.CancellationRequest(id(v.getId()),id(v.getOrderId()),v.getRequestKey(),v.getReason(),v.getStatus().name(),at(v.getRequestedAt()),at(v.getResolvedAt()),id(v.getResolvedBy()),v.getResponseReason())).toList();
         var h=QOrderHistory.orderHistory;
         var histories=query.selectFrom(h).where(h.orderId.eq(orderId)).orderBy(h.createdAt.asc(),h.id.asc()).fetch().stream()
                 .map(v->new History(id(v.getId()),id(v.getActorId()),v.getAction().name(),v.getFromStatus()==null?null:v.getFromStatus().name(),v.getToStatus().name(),v.getReason(),at(v.getCreatedAt()))).toList();

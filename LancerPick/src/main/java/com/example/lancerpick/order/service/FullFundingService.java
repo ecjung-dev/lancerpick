@@ -2,12 +2,14 @@ package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.contract.repository.ContractSignatureRepository;
 import com.example.lancerpick.contract.repository.OrderContractRepository;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.dto.OrderFundsResponse;
 import com.example.lancerpick.order.entity.CancellationRequest;
+import com.example.lancerpick.order.entity.CancellationRequestStatus;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderClosure;
 import com.example.lancerpick.order.entity.OrderHistory;
@@ -36,7 +38,6 @@ import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
@@ -75,6 +76,7 @@ public class FullFundingService {
   private final OrderEventPublisher orderEventPublisher;
   private final OrderDetailQueries orderDetailQueries;
   private final DeadlineNotices deadlineNotices;
+  private final OrderCommandLocks commandLocks;
   private final Clock clock;
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -84,7 +86,7 @@ public class FullFundingService {
             .findById(orderId)
             .filter(candidate ->
                 (candidate.getBuyerId() == memberId || candidate.getSellerId() == memberId)
-                    && TradePolicyVersion.CONTRACT_V3.name().equals(candidate.getPolicyVersion()))
+                    && candidate.isFullFunding())
             .orElseThrow(() ->
                 new BusinessException(
                     HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
@@ -259,7 +261,7 @@ public class FullFundingService {
         || !"HELD".equals(orderFunds.getStatus())) {
       throw invalidState();
     }
-    var pendingRequests = cancellationRequestRepository.findByOrderIdAndStatus(orderId, "PENDING");
+    var pendingRequests = cancellationRequestRepository.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING);
     if (pendingRequests.size() != 1) {
       throw conflict("CANCELLATION_REQUEST_REQUIRED", "구매자의 취소 요청을 승인해 주세요.");
     }
@@ -322,10 +324,10 @@ public class FullFundingService {
       String reason,
       LocalDateTime occurredAt) {
     long orderId = order.getId();
-    if (!TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion())
+    if (!order.isFullFunding()
         || request.getOrderId() != orderId
         || request.getRequestedBy() != order.getBuyerId()
-        || !"PENDING".equals(request.getStatus())) {
+        || request.getStatus() != CancellationRequestStatus.PENDING) {
       throw integrityError();
     }
     var payment = requirePayment(order);
@@ -353,7 +355,7 @@ public class FullFundingService {
     wallet.refund(payment.amount(), occurredAt);
     payment.refund(occurredAt);
     orderFunds.refund(occurredAt);
-    request.resolveByAdmin("APPROVED", adminId, reason, occurredAt);
+    request.resolveByAdmin(CancellationRequestStatus.APPROVED, adminId, reason, occurredAt);
     walletEntryRepository.saveAndFlush(
         WalletEntry.refund(
             order.getBuyerId(), payment.id(), payment.amount(), wallet.getBalance(), occurredAt));
@@ -387,7 +389,7 @@ public class FullFundingService {
    * 호출한다. 수동 확정과 같은 금액·원장·정산을 남기고 종료 기록은 SYSTEM/AUTO_CONFIRMED로 구분한다.
    */
   public void autoConfirm(Order order, OrderResponseTimer timer, LocalDateTime occurredAt) {
-    if (!TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion())
+    if (!order.isFullFunding()
         || timer.getOrderId() != order.getId()
         || !timer.isDue(occurredAt)) {
       throw integrityError();
@@ -399,7 +401,7 @@ public class FullFundingService {
     if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION
         || !"PAID".equals(payment.status())
         || !"HELD".equals(orderFunds.getStatus())
-        || !cancellationRequestRepository.findByOrderIdAndStatus(orderId, "PENDING").isEmpty()
+        || !cancellationRequestRepository.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING).isEmpty()
         || deliveryRepository
             .findFirstByOrderIdOrderBySequenceNoDesc(orderId)
             .map(delivery -> delivery.getId() != timer.getDeliveryId())
@@ -439,18 +441,10 @@ public class FullFundingService {
             OrderHistory.autoConfirmed(orderId, timer.getId(), occurredAt)));
   }
 
+  // public 진입점이 단독 호출돼도 잠금 순서와 V3·금액 검증을 보장한다. 호출 서비스가 이미 잠갔다면 같은 트랜잭션의 재잠금이다.
   private Order lockOrder(long memberId, long orderId) {
-    if (orderRepository.lockDecisionActor(memberId).isEmpty()) {
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    }
-    var order =
-        orderRepository
-            .findForDecision(orderId, memberId)
-            .orElseThrow(() ->
-                new BusinessException(
-                    HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
-    if (!TradePolicyVersion.CONTRACT_V3.name().equals(order.getPolicyVersion())) {
+    var order = commandLocks.lockParticipantOrder(memberId, orderId);
+    if (!order.isFullFunding()) {
       throw conflict("ORDER_POLICY_NOT_READY", "결제 금액 보관 정책 주문이 아닙니다.");
     }
     FullFundingPolicy.requireAmount(order.getPriceAmount());
@@ -583,13 +577,13 @@ public class FullFundingService {
   }
 
   private void requireNoPendingCancellation(Order order) {
-    if (!cancellationRequestRepository.findByOrderIdAndStatus(order.getId(), "PENDING").isEmpty()) {
+    if (!cancellationRequestRepository.findByOrderIdAndStatus(order.getId(), CancellationRequestStatus.PENDING).isEmpty()) {
       throw conflict("CANCELLATION_PENDING", "대기 중인 취소 요청을 먼저 처리해 주세요.");
     }
   }
 
   private LocalDateTime currentTime() {
-    return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    return UtcTimes.nowMicros(clock);
   }
 
   private OrderDetailResponse orderResponse(Order order, long memberId) {

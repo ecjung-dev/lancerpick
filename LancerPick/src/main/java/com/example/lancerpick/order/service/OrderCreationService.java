@@ -2,6 +2,7 @@ package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.order.dto.CreateOrderRequest;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
@@ -15,8 +16,6 @@ import com.example.lancerpick.order.repository.OrderSnapshotRepository;
 import com.example.lancerpick.order.repository.OrderTradeTermsRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -130,8 +129,7 @@ public class OrderCreationService {
           "계약 주문은 10,000원 이상인 상품부터 신청할 수 있습니다.");
     }
 
-    LocalDateTime now =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    LocalDateTime now = UtcTimes.nowMicros(clock);
     Order order =
         orders.saveAndFlush(
             Order.create(

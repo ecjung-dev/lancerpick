@@ -191,7 +191,7 @@ public class OrderContractService {
         || !Arrays.asList(allowed).contains(order.getStatus())
         || order.getAcceptedAt() == null
         || order.getPaidAt() != null
-        || !cancellations.findByOrderIdAndStatus(orderId, "PENDING").isEmpty())
+        || !cancellations.findByOrderIdAndStatus(orderId, com.example.lancerpick.order.entity.CancellationRequestStatus.PENDING).isEmpty())
       throw conflict("계약을 처리할 수 없는 주문입니다.");
     return order;
   }
