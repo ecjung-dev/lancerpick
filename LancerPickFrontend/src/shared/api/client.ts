@@ -54,7 +54,12 @@ async function getCsrfToken(): Promise<CsrfToken> {
   return request
 }
 
-type RequestOptions = Omit<RequestInit, 'body' | 'credentials'> & { json?: unknown; responseType?: 'pdf' }
+type RequestOptions = Omit<RequestInit, 'body' | 'credentials'> & {
+  json?: unknown
+  responseType?: 'pdf'
+  /** 클릭 시 계정 경계. CSRF 대기 후에도 전송 전에 검사한다. */
+  isCurrentAccount?: () => boolean
+}
 
 /** 비공개 PDF도 세션·공통 오류 처리를 통과시킨다. 바이너리는 Query 캐시에 넣지 않는다. */
 export const apiPdfRequest = (path: string, signal?: AbortSignal) =>
@@ -63,7 +68,12 @@ export const apiPdfRequest = (path: string, signal?: AbortSignal) =>
 /** 기능 api.ts에서만 사용한다. 변경 요청은 이 함수에서도 자동 재전송하지 않는다. */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   if (!path.startsWith('/') || path.startsWith('//')) throw new Error('API 상대 경로를 사용해 주세요.')
-  const { json, responseType, ...init } = options
+  const { json, responseType, isCurrentAccount, ...init } = options
+  const assertCurrentAccount = () => {
+    if (isCurrentAccount && !isCurrentAccount()) throw new DOMException('계정이 변경되어 요청을 중단했습니다.', 'AbortError')
+  }
+  assertCurrentAccount()
+  const requestGeneration = csrfGeneration
   const method = (init.method ?? 'GET').toUpperCase()
   const headers = new Headers(init.headers)
   headers.set('Accept', responseType === 'pdf' ? 'application/pdf, application/json' : 'application/json')
@@ -73,6 +83,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers.set(token.headerName, token.token)
   }
 
+  assertCurrentAccount()
   let response: Response
   try {
     response = await fetch(`/api${path}`, {
@@ -96,7 +107,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       code: 'HTTP_ERROR', message: '요청을 처리하지 못했습니다. 다시 시도해 주세요.', fieldErrors: [],
       traceId: response.headers.get('X-Trace-Id') ?? undefined,
     }
-    if (response.status === 401 || error.code === 'CSRF_INVALID') clearCsrfToken()
+    if ((response.status === 401 || error.code === 'CSRF_INVALID')
+      && requestGeneration === csrfGeneration && (!isCurrentAccount || isCurrentAccount())) clearCsrfToken()
     throw new ApiError(response.status, error)
   }
   if (response.status !== 204 && body === undefined) {

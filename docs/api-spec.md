@@ -254,7 +254,7 @@ PAYMENT_ALREADY_REFUNDED 응답에는 재결제 성공 의미를 담지 않는�
 
 | 메서드·경로 | 권한·입력 | 출력 |
 | --- | --- | --- |
-| GET /notifications | 회원; page 0 이상, size 1~100(기본 20) | Notification 목록, 생성 시각·ID 내림차순 |
+| GET /notifications | 회원; page 0 이상, size 1~100(기본 20), unreadOnly `true`/`false`(기본 false) | Notification 목록, 생성 시각·ID 내림차순. unreadOnly=true면 읽지 않은 본인 알림만 같은 순서로, totalElements·totalPages도 같은 조건. 불리언이 아니면 400 VALIDATION_FAILED |
 | GET /notifications/unread-count | 회원 | count |
 | POST /notifications/{id}/read | 본인+CSRF; 양수 알림 ID | 204. 이미 읽음도 204, 최초 읽은 시각 유지. 타인·없음 404, 형식 오류 400 |
 | POST /notifications/read-all | 회원+CSRF; 본문 없음 | 204. 요청 시점까지 생성된 본인 알림만 읽음 처리 |

@@ -71,3 +71,54 @@ test('normalization counts emoji as code points and preserves non-whitespace', (
   assert.equal(normalizeText('\uFEFF가\u200B'), '\uFEFF가\u200B')
   assert.equal(codePointLength('한😀'), 2)
 })
+
+
+test('account guard prevents POST after CSRF wait when the account changes', async () => {
+  let finishCsrf
+  let started
+  const ready = new Promise((resolve) => { started = resolve })
+  let current = true
+  let writes = 0
+  globalThis.fetch = async (url) => {
+    if (url === '/api/auth/csrf') {
+      started()
+      return await new Promise((resolve) => { finishCsrf = () => resolve(json({ token: 'csrf', headerName: 'X-CSRF-TOKEN' })) })
+    }
+    writes++
+    return new Response(null, { status: 204 })
+  }
+  const request = apiRequest('/notifications/read-all', { method: 'POST', isCurrentAccount: () => current })
+  const rejected = assert.rejects(request, (error) => error.name === 'AbortError')
+  await ready
+  current = false
+  finishCsrf()
+  await rejected
+  assert.equal(writes, 0)
+})
+
+test('late unauthorized and CSRF errors cannot discard a newer CSRF token', async () => {
+  for (const [status, code] of [[401, 'AUTHENTICATION_REQUIRED'], [403, 'CSRF_INVALID']]) {
+    clearCsrfToken()
+    let csrfCalls = 0
+    let finishOld
+    let started
+    const sent = new Promise((resolve) => { started = resolve })
+    globalThis.fetch = async (url) => {
+      if (url === '/api/auth/csrf') return json({ token: `csrf-${++csrfCalls}`, headerName: 'X-CSRF-TOKEN' })
+      if (url === '/api/old') {
+        started()
+        return await new Promise((resolve) => { finishOld = () => resolve(json({ code, message: 'old', fieldErrors: [], traceId: 'old' }, status)) })
+      }
+      return new Response(null, { status: 204 })
+    }
+    const old = apiRequest('/old', { method: 'POST' })
+    const rejected = assert.rejects(old, (error) => error.status === status)
+    await sent
+    clearCsrfToken() // 계정 전환
+    await apiRequest('/new', { method: 'POST' })
+    finishOld()
+    await rejected
+    await apiRequest('/new', { method: 'POST' })
+    assert.equal(csrfCalls, 2)
+  }
+})

@@ -31,12 +31,17 @@ public class NotificationService {
   }
 
   @Transactional(readOnly = true)
-  public PageResponse<NotificationResponse> list(long memberId, int page, int size) {
+  /** unreadOnly면 읽지 않은 알림만 같은 순서로 보여 주고, 건수도 같은 조건으로 센다. */
+  public PageResponse<NotificationResponse> list(long memberId, int page, int size, boolean unreadOnly) {
     if (page < 0 || size < 1 || size > 100)
       throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "페이지 조건이 올바르지 않습니다.");
-    long total = notifications.countByRecipientId(memberId);
+    long total =
+        unreadOnly
+            ? notifications.countByRecipientIdAndReadAtIsNull(memberId)
+            : notifications.countByRecipientId(memberId);
     long offset = (long) page * size;
-    var items = offset >= total ? List.<NotificationResponse>of() : queries.find(memberId, size, offset);
+    var items =
+        offset >= total ? List.<NotificationResponse>of() : queries.find(memberId, unreadOnly, size, offset);
     return new PageResponse<>(
         items, page, size, total, Math.toIntExact(total / size + (total % size == 0 ? 0 : 1)));
   }

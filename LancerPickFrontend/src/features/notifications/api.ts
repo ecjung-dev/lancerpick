@@ -8,14 +8,17 @@ function notificationPath(id: string) {
   return `/notifications/${id}`
 }
 
-export const getNotifications = (page: number, signal?: AbortSignal) =>
-  apiRequest<PageResponse<NotificationItem>>(`/notifications?page=${page}&size=20`, { signal })
+export const getNotifications = (page: number, unreadOnly: boolean, signal?: AbortSignal) =>
+  apiRequest<PageResponse<NotificationItem>>(
+    `/notifications?page=${page}&size=20${unreadOnly ? '&unreadOnly=true' : ''}`,
+    { signal },
+  )
 
 export const getUnreadNotificationCount = (signal?: AbortSignal) =>
   apiRequest<UnreadCount>('/notifications/unread-count', { signal })
 
-export const markNotificationRead = (id: string) =>
-  apiRequest<void>(`${notificationPath(id)}/read`, { method: 'POST' })
+export const markNotificationRead = (id: string, isCurrentAccount?: () => boolean) =>
+  apiRequest<void>(`${notificationPath(id)}/read`, { method: 'POST', isCurrentAccount })
 
-export const markAllNotificationsRead = () =>
-  apiRequest<void>('/notifications/read-all', { method: 'POST' })
+export const markAllNotificationsRead = (isCurrentAccount?: () => boolean) =>
+  apiRequest<void>('/notifications/read-all', { method: 'POST', isCurrentAccount })

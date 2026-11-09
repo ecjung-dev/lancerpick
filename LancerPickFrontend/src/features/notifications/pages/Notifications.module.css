@@ -24,6 +24,18 @@
   align-items: center;
   margin: 16px 0 24px;
 }
+.filters {
+  display: flex;
+  gap: 4px;
+}
+.notifications .filters button {
+  background: #f5f5f5;
+  color: #404040;
+}
+.notifications .filters button[aria-pressed='true'] {
+  background: #171717;
+  color: white;
+}
 .list {
   display: grid;
   gap: 8px;

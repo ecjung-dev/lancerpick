@@ -3,15 +3,19 @@ import { after, test } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MutationObserver, QueryClient, QueryClientProvider, QueryObserver, onlineManager } from '@tanstack/react-query'
 import { createServer } from 'vite'
-import { notificationMessage, notificationTarget, unreadBadge, waitsForReadBeforeNavigation } from '../src/features/notifications/messages.ts'
+import { notificationMessage, notificationTarget, unreadBadge } from '../src/features/notifications/messages.ts'
 
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-notifications',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
 const { NotificationsPage, NotificationReadError } = await server.ssrLoadModule('/src/features/notifications/pages/NotificationsPage.tsx')
 const { NotificationNavLink } = await server.ssrLoadModule('/src/features/notifications/components/NotificationNavLink.tsx')
-const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
+const { ApiError, clearCsrfToken } = await server.ssrLoadModule('/src/shared/api/client.ts')
+const { getNotifications } = await server.ssrLoadModule('/src/features/notifications/api.ts')
+const { notificationReadOptions } = await server.ssrLoadModule('/src/features/notifications/queries.ts')
+const { captureAccountScope, resetAccountState } = await server.ssrLoadModule('/src/features/auth/session.ts')
+
 after(async () => { await server.close() })
 
 test('every order event type has its own Korean message and unknown types fall back', () => {
@@ -62,7 +66,7 @@ function render(element, setup, url = '/notifications') {
 }
 
 test('notification list distinguishes unread items and links to the order detail', () => {
-  const html = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 1], {
+  const html = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 1], {
     items: [
       { id: '2', type: 'ORDER_DELIVERED', orderId: '9007199254740993', productTitle: '로고 디자인', read: false, createdAt: '2026-11-05T01:00:00Z' },
       { id: '1', type: 'ORDER_ACCEPTED', orderId: '7', productTitle: null, read: true, createdAt: '2026-11-04T01:00:00Z' },
@@ -73,25 +77,25 @@ test('notification list distinguishes unread items and links to the order detail
   assert.match(html, /로고 디자인/)
   assert.match(html, /href="\/orders\/9007199254740993"/)
   assert.match(html, /href="\/orders\/7"/)
-  assert.equal(html.match(/읽지 않음/g)?.length, 1)
+  assert.equal(html.match(/<span[^>]*>읽지 않음<\/span>/g)?.length, 1)
   assert.match(html, /2페이지/)
   assert.match(html, /disabled="">다음/)
 })
 
 test('empty list, login requirement and server errors are shown differently', () => {
-  const empty = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 0],
+  const empty = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 0],
     { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }))
   assert.match(empty, /받은 알림이 없습니다/)
 
   const unauthorized = render(createElement(NotificationsPage), (client) => {
-    client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 0], queryFn: async () => undefined }).setState({
+    client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 'all', 0], queryFn: async () => undefined }).setState({
       status: 'error', fetchStatus: 'idle', error: new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] }) })
   })
   assert.match(unauthorized, /로그인 후 알림을 확인할 수 있습니다/)
   assert.match(unauthorized, /href="\/login\?next=%2Fnotifications"/)
 
   const failed = render(createElement(NotificationsPage), (client) => {
-    client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 0], queryFn: async () => undefined }).setState({
+    client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 'all', 0], queryFn: async () => undefined }).setState({
       status: 'error', fetchStatus: 'idle', error: new ApiError(500, { code: 'INTERNAL_ERROR', message: '잠시 후 다시 시도해 주세요.', fieldErrors: [] }) })
   })
   assert.match(failed, /role="alert"/)
@@ -99,21 +103,92 @@ test('empty list, login requirement and server errors are shown differently', ()
   assert.doesNotMatch(failed, /받은 알림이 없습니다/)
 })
 
-test('only plain left clicks wait for the read request before navigating', () => {
-  const plain = { button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false }
-  assert.equal(waitsForReadBeforeNavigation(plain), true)
-  assert.equal(waitsForReadBeforeNavigation({ ...plain, button: 1 }), false)
-  for (const key of ['metaKey', 'ctrlKey', 'shiftKey', 'altKey'])
-    assert.equal(waitsForReadBeforeNavigation({ ...plain, [key]: true }), false)
+test('unread filter comes from the URL, keeps its own cache entry and empty message', () => {
+  const unread = render(createElement(NotificationsPage), (client) => {
+    client.setQueryData(['notifications', 'list', 'all', 0],
+      { items: [{ id: '1', type: 'ORDER_ACCEPTED', orderId: '7', productTitle: null, read: true, createdAt: '2026-11-04T01:00:00Z' }],
+        page: 0, size: 20, totalElements: 1, totalPages: 1 })
+    client.setQueryData(['notifications', 'list', 'unread', 0], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })
+  }, '/notifications?filter=unread')
+  assert.match(unread, /aria-pressed="true">읽지 않음/)
+  assert.match(unread, /aria-pressed="false">전체/)
+  assert.match(unread, /읽지 않은 알림이 없습니다/)
+  assert.doesNotMatch(unread, /href="\/orders\/7"/)
+
+  // 알 수 없는 필터 값은 전체 목록으로 본다.
+  const unknown = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 0],
+    { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }), '/notifications?filter=READ')
+  assert.match(unknown, /aria-pressed="true">전체/)
+  assert.match(unknown, /받은 알림이 없습니다/)
+})
+
+test('list request adds unreadOnly only for the unread filter', async () => {
+  const original = globalThis.fetch
+  const urls = []
+  globalThis.fetch = async (url) => {
+    urls.push(url)
+    return new Response(JSON.stringify({ items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+  try {
+    await getNotifications(2, false)
+    await getNotifications(0, true)
+  } finally { globalThis.fetch = original }
+  assert.deepEqual(urls, ['/api/notifications?page=2&size=20', '/api/notifications?page=0&size=20&unreadOnly=true'])
+})
+
+// SPA 이동으로 행 observer가 없어져도 목록·배지 재조회가 완료되는지 검사한다. 실제 링크 클릭 검사는 아니다.
+async function readFromUnreadView(status) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const original = globalThis.fetch
+  clearCsrfToken()
+  const calls = { list: 0, count: 0 }
+  globalThis.fetch = async (url, options) => {
+    if (url === '/api/auth/csrf') return new Response(JSON.stringify({ token: 'test', headerName: 'X-CSRF-TOKEN' }))
+    if (options?.method === 'POST') return new Response(status === 204 ? null : JSON.stringify({ code: 'INTERNAL_ERROR', message: '오류', fieldErrors: [] }),
+      { status, headers: status === 204 ? {} : { 'Content-Type': 'application/json' } })
+    calls.count++
+    return new Response(JSON.stringify({ count: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+  const key = ['notifications', 'list', 'unread', 0]
+  const item = { id: '108', type: 'ORDER_DELIVERED', orderId: '30', productTitle: null, read: false, createdAt: '2026-11-05T01:00:00Z' }
+  const list = new QueryObserver(client, { queryKey: key,
+    queryFn: async () => { calls.list++; return { items: calls.list === 1 ? [item] : [], page: 0, size: 20, totalElements: calls.list === 1 ? 1 : 0, totalPages: 1 } } })
+  const stopList = list.subscribe(() => {})
+  const counter = new QueryObserver(client, { queryKey: ['notifications', 'unread'],
+    queryFn: async () => { calls.count++; return { count: 1 } } })
+  const stopCounter = counter.subscribe(() => {})
+  try {
+    await client.getQueryCache().find({ queryKey: key }).promise
+    // 완료 콜백에 이동을 넣지 않고 읽음 처리와 후속 재조회만 검사한다.
+    const row = new MutationObserver(client, notificationReadOptions(client, '108'))
+    const stopRow = row.subscribe(() => {})
+    const pending = row.mutate(captureAccountScope(client)).catch(() => {})
+    stopRow() // 주문으로 즉시 이동해 행 observer가 사라져도 옵션 onSettled는 실행된다.
+    await pending
+    return { calls, page: client.getQueryData(key) }
+  } finally {
+    stopList(); stopCounter(); globalThis.fetch = original; client.clear()
+  }
+}
+
+test('read completion refreshes list, totals and badge even after the row unmounts', async () => {
+  for (const status of [204, 500]) {
+    const done = await readFromUnreadView(status)
+    assert.equal(done.calls.list, 2)
+    assert.ok(done.calls.count >= 2)
+    assert.deepEqual(done.page.items, [])
+    assert.equal(done.page.totalElements, 0)
+  }
 })
 
 test('read failure notice is an alert and offers the order without marking it read', () => {
   const withOrder = render(createElement(NotificationReadError, { target: '/orders/7' }), () => {})
   assert.match(withOrder, /role="alert"/)
-  assert.match(withOrder, /읽음 처리하지 못했어요/)
+  assert.match(withOrder, /읽음 처리 결과를 확인하지 못했어요/)
   assert.match(withOrder, /href="\/orders\/7"/)
   const withoutOrder = render(createElement(NotificationReadError, { target: null }), () => {})
-  assert.match(withoutOrder, /읽음 처리하지 못했어요/)
+  assert.match(withoutOrder, /읽음 처리 결과를 확인하지 못했어요/)
   assert.doesNotMatch(withoutOrder, /href=/)
 })
 
@@ -123,4 +198,97 @@ test('header link shows the unread count only when there is one', () => {
   assert.match(withCount, /\(99\+\)/)
   const none = render(createElement(NotificationNavLink), (client) => client.setQueryData(['notifications', 'unread'], { count: 0 }), '/')
   assert.doesNotMatch(none, /\(/)
+})
+
+function deferred() {
+  let resolve
+  const promise = new Promise((done) => { resolve = done })
+  return { promise, resolve }
+}
+
+test('click scope blocks delayed individual and read-all requests after an account switch', async () => {
+  const original = globalThis.fetch
+  for (const id of ['108', undefined]) {
+    const client = new QueryClient()
+    const csrfStarted = deferred()
+    const csrfResult = deferred()
+    let writes = 0
+    clearCsrfToken()
+    globalThis.fetch = async (url) => {
+      if (url === '/api/auth/csrf') {
+        csrfStarted.resolve()
+        await csrfResult.promise
+        return new Response(JSON.stringify({ token: 'csrf', headerName: 'X-CSRF-TOKEN' }))
+      }
+      writes++
+      return new Response(null, { status: 204 })
+    }
+    try {
+      const row = new MutationObserver(client, notificationReadOptions(client, id))
+      const pending = row.mutate(captureAccountScope(client))
+      const rejection = assert.rejects(pending, (error) => error.name === 'AbortError')
+      await csrfStarted.promise
+      await resetAccountState(client, null)
+      csrfResult.resolve()
+      await rejection
+      assert.equal(writes, 0)
+    } finally { client.clear(); globalThis.fetch = original; clearCsrfToken() }
+  }
+})
+
+test('scope captured at click cannot be replaced by a later account before mutation execution', async () => {
+  const original = globalThis.fetch
+  const client = new QueryClient()
+  try {
+    const scope = captureAccountScope(client)
+    await resetAccountState(client, null)
+    globalThis.fetch = async () => { assert.fail('stale click must not fetch') }
+    const row = new MutationObserver(client, notificationReadOptions(client, '108'))
+    await assert.rejects(row.mutate(scope), (error) => error.name === 'AbortError')
+  } finally { client.clear(); globalThis.fetch = original; clearCsrfToken() }
+})
+
+test('late read success or failure does not invalidate the next account notifications', async () => {
+  const original = globalThis.fetch
+  for (const status of [204, 401]) {
+    const client = new QueryClient()
+    const sent = deferred()
+    const response = deferred()
+    clearCsrfToken()
+    globalThis.fetch = async (url) => {
+      if (url === '/api/auth/csrf') return new Response(JSON.stringify({ token: 'csrf', headerName: 'X-CSRF-TOKEN' }))
+      sent.resolve()
+      await response.promise
+      return new Response(status === 204 ? null : '{}', { status })
+    }
+    try {
+      const row = new MutationObserver(client, notificationReadOptions(client, '108'))
+      const pending = row.mutate(captureAccountScope(client)).catch(() => {})
+      await sent.promise
+      await resetAccountState(client, null)
+      client.setQueryData(['notifications', 'unread'], { count: 7 })
+      response.resolve()
+      await pending
+      assert.equal(client.getQueryState(['notifications', 'unread']).isInvalidated, false)
+      assert.deepEqual(client.getQueryData(['notifications', 'unread']), { count: 7 })
+    } finally { client.clear(); globalThis.fetch = original; clearCsrfToken() }
+  }
+})
+
+test('offline read-all resumed after account change never starts a request', async () => {
+  const original = globalThis.fetch
+  const client = new QueryClient()
+  onlineManager.setOnline(false)
+  try {
+    globalThis.fetch = async () => { assert.fail('old offline intent must not fetch') }
+    const row = new MutationObserver(client, notificationReadOptions(client))
+    const pending = row.mutate(captureAccountScope(client))
+    const rejected = assert.rejects(pending, (error) => error.name === 'AbortError')
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.equal(row.getCurrentResult().isPaused, true)
+    await resetAccountState(client, null)
+    onlineManager.setOnline(true)
+    await client.resumePausedMutations()
+    await rejected
+  } finally { onlineManager.setOnline(true); client.clear(); globalThis.fetch = original; clearCsrfToken() }
 })
