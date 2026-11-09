@@ -23,10 +23,13 @@ export function getActiveReviewTimers(page: number, signal?: AbortSignal) {
   return apiRequest<PageResponse<ActiveReviewTimer>>(`/admin/review-timers?${params}`, { signal })
 }
 
-/** 해제. 공통 apiRequest가 CSRF를 붙이고, 실패해도 자동으로 다시 보내지 않는다. */
-export function stopReviewTimer(orderId: string, reason: string) {
+/**
+ * 해제. 공통 apiRequest가 CSRF를 붙이고, 실패해도 자동으로 다시 보내지 않는다.
+ * isCurrentAccount: 클릭 때 captureAccountScope로 잡은 계정 경계. 그 사이 계정이 바뀌면 보내지 않는다.
+ */
+export function stopReviewTimer(orderId: string, reason: string, isCurrentAccount?: () => boolean) {
   if (!isValidId(orderId)) return Promise.reject(new Error('올바른 주문 번호가 아닙니다.'))
-  return apiRequest<ReviewTimerStatus>(`/admin/orders/${orderId}/review-timer/stop`, { method: 'POST', json: { reason } })
+  return apiRequest<ReviewTimerStatus>(`/admin/orders/${orderId}/review-timer/stop`, { method: 'POST', json: { reason }, isCurrentAccount })
 }
 
 /** 타이머는 시간이 지나면 자동 확정되거나 다른 관리자가 해제할 수 있어 매번 최신으로 조회하고 보관하지 않는다. */

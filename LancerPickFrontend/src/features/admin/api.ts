@@ -26,11 +26,13 @@ export function getModerationLogs(id: string, page: number, signal?: AbortSignal
 /**
  * 숨김·복구. 공통 apiRequest가 CSRF를 붙이며 실패해도 자동으로 다시 보내지 않는다.
  * expectedVersion은 화면에서 마지막으로 본 상품 버전이다(바뀌었으면 서버가 409).
+ * isCurrentAccount: 클릭 때 captureAccountScope로 잡은 계정 경계. 그 사이 계정이 바뀌면 보내지 않는다.
  */
-export function changeVisibility(id: string, input: VisibilityInput) {
+export function changeVisibility(id: string, input: VisibilityInput, isCurrentAccount?: () => boolean) {
   if (!isValidProductId(id)) return Promise.reject(new Error('올바른 상품 번호가 아닙니다.'))
   return apiRequest<AdminProductDetail>(`/admin/products/${id}/visibility`, {
     method: 'PATCH',
+    isCurrentAccount,
     json: { hidden: input.hidden, reason: input.reason, expectedVersion: input.expectedVersion },
   })
 }

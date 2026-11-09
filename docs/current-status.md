@@ -7,7 +7,11 @@
 - 영향 범위: 주문 생성·수락 서비스 생성자에 의존성 하나 추가. 상품 목록·상세에서 제한 판매자 상품을 숨기거나 상품 등록을 막는 일은 상품 영역(박소현)이다.
 - 남은 것: 관리자 제재 API·화면(황준범) 연결 후 실제 브라우저 확인. 주문 상세 `allowedActions`는 제재를 반영하지 않아 제한 판매자에게도 수락 버튼이 보이고 서버가 403으로 막는다.
 
-검증(로컬, `lancerpick_test` 3307): 주문 생성·결제·계약·공통 관련 107건 통과(`OrderCreationIntegrationTests` 신규 2건: 제한 구매자의 새 주문 403·같은 키 재전송은 기존 주문·기간 끝난 제재는 허용, 판매자 보안 잠금 시 새 주문·수락 403·거절 허용·철회 후 수락). 프런트 `tests/order-attempt.test.mjs` 3건(신규 1건), typecheck·lint·`test:api` 271건·build 통과(기존 번들 크기 경고 유지). 백엔드 전체 `clean build` 995건 통과(실패·오류·건너뜀 0). main `cb305d8`(#139 U8) 병합 후 백엔드 `clean build` 1002건 통과(실패·오류·건너뜀 0), 프런트 typecheck·lint·`test:api` 271건·build 통과. 실제 서버·브라우저 확인은 하지 않았다.
+검증(로컬, `lancerpick_test` 3307): 주문 생성·결제·계약·공통 관련 107건 통과(`OrderCreationIntegrationTests` 신규 2건: 제한 구매자의 새 주문 403·같은 키 재전송은 기존 주문·기간 끝난 제재는 허용, 판매자 보안 잠금 시 새 주문·수락 403·거절 허용·철회 후 수락). 프런트 `tests/order-attempt.test.mjs` 3건(신규 1건), typecheck·lint·`test:api` 271건·build 통과(기존 번들 크기 경고 유지). 백엔드 전체 `clean build` 995건 통과(실패·오류·건너뜀 0). main `cb305d8`(#139 U8) 병합 후 백엔드 `clean build` 1002건 통과(실패·오류·건너뜀 0), 프런트 typecheck·lint·`test:api` 271건·build 통과. main `a1f90cf`(#138, 프런트·문서만 변경) 병합 후 프런트 typecheck·lint·`test:api` 272건·build 통과, 백엔드 소스는 직전 병합과 같아 재실행하지 않았다. 실제 서버·브라우저 확인은 하지 않았다.
+
+## 관리자·검토 요청 명령의 계정 경계 — 2026-11-09, main 반영(#138)
+
+`feature/admin-account-guard`(김창재, main `b7a91e2`에서 분기): #131의 `captureAccountScope`를 관리자 상품 숨김/복구, 문의 승인·거절·닫기, 타이머 해제와 구매자 관리자 검토 요청에 적용했다. 클릭 때 계정을 잡아 두고, CSRF 대기 후 전송 직전에 계정이 바뀌었으면 보내지 않으며, 늦게 도착한 성공·실패는 같은 계정일 때만 화면·캐시에 반영한다. 이미 전송된 명령의 서버 처리를 취소하지 않고 다른 탭·기기의 계정 전환을 즉시 감지하지 않는 한계는 [알림 U4](notifications.md)와 같다. API·DB 변경 없음. 작업표의 K3~K6 상태를 main 반영(#132·#133)으로 맞췄다.
 
 ## 구매자 보안 잠금 → 자동 구매 확정 타이머 연결(U8) — 2026-11-09, main 반영(#139)
 
@@ -40,7 +44,7 @@
 
 ## 관리자 금융·계약 PDF 운영 조회 연결(K3·K6 조회) — 2026-11-09, main 반영(#133)
 
-`feature/admin-finance-views`(김창재, main 반영 #133, 분기 기준 `6f59f7b`(#132)): 황준범의 금융 조회(#117)·PDF 운영 조회(#125) 서비스에 조회 전용 관리자 API 7개와 화면(`/admin/finance` 결제·충전·복구 작업 탭, `/admin/finance/orders/:id` 주문 금액·계약 PDF)을 연결했다. 후보 판단은 "재처리 후보 / 후보 아님(사유)"으로만 표시하며 실행 버튼은 없다(관리자 감사 이력 설계가 선행). 없는 정산·종료 기록은 "기록 없음"으로 표시한다. DB·Flyway 변경 없음. [API 9-3절](api-spec.md#9-3-관리자-금융계약-pdf-운영-조회-김창재) · [연결 기록](admin-finance-support.md#api화면-연결--2026-11-09-김창재-featureadmin-finance-views). 검증 결과는 PR에 기록한다.
+`feature/admin-finance-views`(김창재, main 반영 #133·`ed98643`, 분기 기준 `6f59f7b`(#132)): 황준범의 금융 조회(#117)·PDF 운영 조회(#125) 서비스에 조회 전용 관리자 API 7개와 화면(`/admin/finance` 결제·충전·복구 작업 탭, `/admin/finance/orders/:id` 주문 금액·계약 PDF)을 연결했다. 후보 판단은 "재처리 후보 / 후보 아님(사유)"으로만 표시하며 실행 버튼은 없다(관리자 감사 이력 설계가 선행). 없는 정산·종료 기록은 "기록 없음"으로 표시한다. DB·Flyway 변경 없음. [API 9-3절](api-spec.md#9-3-관리자-금융계약-pdf-운영-조회-김창재) · [연결 기록](admin-finance-support.md#api화면-연결--2026-11-09-김창재-featureadmin-finance-views). 검증 결과는 PR에 기록한다.
 
 ## 운영 문의·관리자 취소 검토(K4)·타이머 해제(K5) 연결 — 2026-11-09
 
