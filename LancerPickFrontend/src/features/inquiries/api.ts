@@ -7,12 +7,14 @@ const ID = /^[1-9][0-9]{0,18}$/
 /**
  * 구매자의 관리자 취소 검토 요청. 같은 취소 요청에 이미 열린 문의가 있으면 서버가 그 문의를 200으로 돌려준다(새로 만들면 201).
  * 공통 apiRequest가 CSRF를 붙이며, 실패해도 자동으로 다시 보내지 않는다.
+ * isCurrentAccount: 클릭 때 captureAccountScope로 잡은 계정 경계. 그 사이 계정이 바뀌면 보내지 않는다.
  */
-export function requestCancellationReview(orderId: string, requestId: string, subject: string) {
+export function requestCancellationReview(orderId: string, requestId: string, subject: string, isCurrentAccount?: () => boolean) {
   if (!ID.test(orderId) || !ID.test(requestId)) return Promise.reject(new Error('올바른 주문·요청 번호가 아닙니다.'))
   return apiRequest<Inquiry>(`/orders/${orderId}/cancellation-requests/${requestId}/review-inquiries`, {
     method: 'POST',
     json: { subject },
+    isCurrentAccount,
   })
 }
 

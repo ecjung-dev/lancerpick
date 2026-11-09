@@ -13,6 +13,7 @@ import com.example.lancerpick.payment.repository.*;
 import com.example.lancerpick.support.IntegrationTest;
 import com.example.lancerpick.wallet.entity.*;
 import com.example.lancerpick.wallet.repository.*;
+import jakarta.persistence.EntityManager;
 import java.time.*;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,7 @@ class FullFundingIntegrationTests {
   @Autowired WalletRepository wallets;
   @Autowired WalletEntryRepository entries;
   @Autowired JdbcTemplate jdbc;
+  @Autowired EntityManager em;
   long buyer, seller, product;
   final LocalDateTime at = LocalDateTime.of(2026, 11, 1, 0, 0);
 
@@ -100,7 +102,82 @@ class FullFundingIntegrationTests {
     held.release(at);
     funds.flush();
     assertThatThrownBy(() -> held.refund(at)).isInstanceOf(IllegalStateException.class);
-    assertThat(held.getStatus()).isEqualTo("RELEASED");
+    assertThat(held.getStatus()).isEqualTo(OrderFundsStatus.RELEASED);
+    em.clear();
+    assertThat(funds.findById(o.getId()).orElseThrow().getStatus())
+        .isEqualTo(OrderFundsStatus.RELEASED);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM order_funds WHERE order_id=?", String.class, o.getId()))
+        .isEqualTo("RELEASED");
+  }
+
+  @Test
+  void existingVarcharRowsLoadAsEnumsAndRefundKeepsTheStoredValues() {
+    var o = order(TradePolicyVersion.CONTRACT_V3);
+    jdbc.update(
+        "INSERT INTO"
+            + " payments(order_id,amount,fee_rate_bps,status,paid_at,order_policy_version,installment_type,refunded_amount)"
+            + " VALUES (?,10001,1000,'PAID',?,'CONTRACT_V3','FULL',0)",
+        o.getId(),
+        at);
+    long paymentId =
+        jdbc.queryForObject("SELECT id FROM payments WHERE order_id=?", Long.class, o.getId());
+    jdbc.update(
+        "INSERT INTO order_funds(order_id,payment_id,amount,remaining_amount,status,held_at) VALUES"
+            + " (?,?,10001,10001,'HELD',?)",
+        o.getId(),
+        paymentId,
+        at);
+    em.clear();
+    var payment = payments.findById(paymentId).orElseThrow();
+    var held = funds.findById(o.getId()).orElseThrow();
+    assertThat(payment.status()).isEqualTo(PaymentStatus.PAID);
+    assertThat(held.getStatus()).isEqualTo(OrderFundsStatus.HELD);
+    payment.refund(at.plusMinutes(1));
+    held.refund(at.plusMinutes(1));
+    em.flush();
+    em.clear();
+    assertThat(payments.findById(paymentId).orElseThrow().status())
+        .isEqualTo(PaymentStatus.REFUNDED);
+    assertThat(funds.findById(o.getId()).orElseThrow().getStatus())
+        .isEqualTo(OrderFundsStatus.REFUNDED);
+    assertThat(
+            jdbc.queryForObject("SELECT status FROM payments WHERE id=?", String.class, paymentId))
+        .isEqualTo("REFUNDED");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT status FROM order_funds WHERE order_id=?", String.class, o.getId()))
+        .isEqualTo("REFUNDED");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COLUMN_TYPE FROM information_schema.columns WHERE table_schema=DATABASE()"
+                    + " AND table_name='payments' AND column_name='status'",
+                String.class))
+        .isEqualTo("varchar(10)");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT COLUMN_TYPE FROM information_schema.columns WHERE table_schema=DATABASE()"
+                    + " AND table_name='order_funds' AND column_name='status'",
+                String.class))
+        .isEqualTo("varchar(16)");
+  }
+
+  @Test
+  void previouslyRefundedVarcharPaymentReadsWithoutADataMigration() {
+    var o = order(TradePolicyVersion.CONTRACT_V3);
+    jdbc.update(
+        "INSERT INTO"
+            + " payments(order_id,amount,fee_rate_bps,status,paid_at,refunded_at,order_policy_version,installment_type,refunded_amount)"
+            + " VALUES (?,10001,1000,'REFUNDED',?,?,'CONTRACT_V3','FULL',10001)",
+        o.getId(),
+        at,
+        at.plusMinutes(1));
+    em.clear();
+    var refunded = payments.findByOrderId(o.getId()).orElseThrow();
+    assertThat(refunded.status()).isEqualTo(PaymentStatus.REFUNDED);
+    assertThatThrownBy(() -> refunded.refund(at.plusMinutes(2)))
+        .isInstanceOf(IllegalStateException.class);
   }
 
   @Test

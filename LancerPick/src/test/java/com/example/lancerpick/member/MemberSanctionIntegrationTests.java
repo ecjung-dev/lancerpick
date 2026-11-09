@@ -90,7 +90,9 @@ class MemberSanctionIntegrationTests {
             return new Time();
         }
 
+        // 주문 영역의 실제 구현체(SecurityLockTimerStops) 대신 이 대역이 전달받도록 우선한다.
         @Bean
+        @Primary
         Stopper testStopper(JdbcTemplate jdbc) {
             var s = new Stopper();
             s.jdbc = jdbc;

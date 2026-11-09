@@ -1,6 +1,10 @@
 # 랜서픽 구현 작업표
 
+main 통합 후속(2026-11-09): `feature/order-chat-workspace`에 main `a1f90cf`(#137·#138·#139)를 반영했다. 아래 U5의 ‘R2 별도’와 타이머 ‘연결 전’은 분기 당시 범위 기록이다. R2와 보안 잠금 타이머 연결은 통합됐고, 제재 관리자 HTTP·화면/후속 연결은 해당 기능 기록을 따른다.
+
 U5 후속(2026-11-09, 황준범, 로컬): `feature/order-chat-workspace`(main `b7a91e2` 기준)에서 [헤더 대화 목록·전역 채팅창](order-chat-workspace.md)을 구현했다. 당사자 목록 API·검색·페이지·별도 대화창·최소화/경로 유지·계정 정리·종료 거래 조회 전용을 연결했다. DB 변경 없음. 관련 백엔드 37건·프런트 272건·lint/build 및 Edge 응답 대역 화면 검사를 통과했다. push·PR·main 병합과 실제 서버 브라우저 소켓 확인은 별도다. 기존 기반 #134·알림 #135·수익 기간 #136은 분기 기준 main에 반영됐고, 아래 미구현/병합 전 표기는 당시 기록이다. R2 PR #137은 별도다. U7/U8 관리자 HTTP·화면/담당자 연결, B3 비밀번호 기준일과 R1은 이번 완료 범위가 아니다.
+
+R2 후속(2026-11-09, 황준범, 로컬): [결제·보관 상태 enum](payment-status-enums.md)을 별도 브랜치에서 구현했다. 정은찬은 주문 호출·조회 영향, 김창재는 관리자 금융 조회/API 영향을 검토한다. enum 저장 매핑·전이·비교·DTO 문자열을 함께 맞추며 기존 DB와 금융 정책은 유지한다. 전체 검증 결과·main 반영 여부는 해당 문서를 따른다.
 
 판매 수익 §8 후속(2026-11-09, 황준범, 로컬): [기간 조회](settlement-period-query.md)를 `feature/settlement-date-filters`에서 구현했다. 정산 기록일·정렬·목록/조건 합계·화면 기간 버튼은 제공하며 상품명/주문번호 검색·구매자/상품 표시·실제 지급 구분은 남아 있다. 기존 제재 #134는 main에 반영됐고 헤더 알림 패널 `929bfe7`은 별도 브랜치에 보존한다.
 후속 U4 화면(2026-11-09, 황준범): [헤더 알림 패널](header-notification-panel.md)을 별도 브랜치 `feature/header-notification-panel`에서 로컬 구현했다. #131 API·기존 계정 정리와 연결하며 서버·DB 변경은 없다. 아래 U4 ‘패널 미구현’은 이 후속 이전 기록이다. 대화 목록/채팅창(U5)·판매 수익 조회 조건·회원 관리 API/화면은 별도다.
@@ -96,10 +100,10 @@ J5 실제 제공자 확인 후속(2026-11-09): [실제 토스 테스트 조회 �
 | --- | --- | --- | --- | --- |
 | K1 | 이메일 인증 가입·비밀번호 재설정/변경·아이디 안내·요청 제한 | F1 | 진행 중 | 로그인 상태 비밀번호 변경 완료(#84). 비밀번호 재설정·재설정 요청 제한 완료(#89, 실제 메일 발송은 C3 #90 반영으로 `MAIL_ENABLED=true` 시 가능). 브라우저 + Mailpit 확인 완료(2026-11-06, [기록](auth-login.md#브라우저--mailpit-확인--2026-11-06)). 이메일 인증 가입 main 반영(#113, [기록](auth-login.md#이메일-인증-가입--2026-11-06-featureemail-verification)). 기존 회원 이메일 인증 전환·아이디 안내는 남음. V5 토큰 스키마 사용. 메일 인프라는 C3 |
 | K2 | 인증 버전 기반 세션 무효화 계약 제공 | K1 | 완료(#84) | HTTP 세션 폐기 필터·`AuthVersionLookup` 계약. 소켓 종료(C2)는 이 계약 사용. 브라우저 2개 동시 확인은 자동 테스트로 대체 |
-| K3 | 관리자 운영 현황·충전/금액 처리 조회 | E4, J4 | 내부 금융 조회 main 반영(#117). 조회 API·화면 연결 구현(`feature/admin-finance-views`, 김창재) | 황준범이 [금융 조회 서비스·DTO](admin-finance-support.md) 제공. 김창재가 결제·충전·복구 작업 목록과 주문별 금액 조회 API·화면(`/admin/finance`)을 연결([API 9-3절](api-spec.md#9-3-관리자-금융계약-pdf-운영-조회-김창재)). 운영 현황 요약(대시보드)은 남음 |
-| K4 | 구매자 운영 문의, 판매자 무응답 취소의 관리자 승인/거절 | E6 | 서비스·문의 엔티티 main 반영(#121, 정은찬). API·화면 연결 구현(`feature/admin-cancellation-inquiries`, 김창재) | 문의 엔티티 `SupportInquiry`·저장소와 주문 쪽 승인/거절 서비스를 정은찬이 먼저 구현(2026-11-06 조장 결정). 김창재가 구매자 검토 요청·내 문의·관리자 문의 목록/상세·승인/거절·처리 불가 문의 종료 API·화면을 연결([연결 기록](admin-cancellation-review.md#api화면-연결--2026-11-09-김창재-featureadmin-cancellation-inquiries)). 문의 메시지·담당 지정·일반 문의 접수와 B4 실서버·브라우저 확인은 남음 |
-| K5 | 관리자 타이머 해제 화면·API | E7 | API·화면 연결 구현(`feature/admin-cancellation-inquiries`, 김창재) | 서비스 `ReviewTimerService.adminStop(adminId, orderId, reason)` 사용([자동 구매 확정](auto-confirm-timer.md)). 진행 중 타이머 목록·해제 API([API 9-2절](api-spec.md#9-2-관리자-자동-구매-확정-타이머-해제-김창재))와 `/admin/review-timers` 화면. B4 실서버·브라우저 확인 남음 |
-| K6 | 실패 작업 조회·재처리(알림 `FAILED`·PDF·충전), 관리자 작업 이력 | E1, J3 | 충전/Batch 조회·조건 main 반영(#117), PDF 조회(#125). 조회 화면 연결 구현(`feature/admin-finance-views`, 김창재) | [충전·Batch 후보 판단](admin-finance-support.md)·[PDF 운영 조회](admin-contract-pdf-inspection.md)를 조회 전용 API·화면으로 연결(후보 판단만 표시, 실행 버튼 없음). 실제 관리자 실행·사유·감사 이력(설계 김창재, DDL 황준범)과 알림 `FAILED` 조회·재처리는 미연결 |
+| K3 | 관리자 운영 현황·충전/금액 처리 조회 | E4, J4 | 내부 금융 조회 main 반영(#117). 조회 API·화면 연결 main 반영(#133, 김창재). 운영 현황 대시보드·재처리 실행은 후속 | 황준범이 [금융 조회 서비스·DTO](admin-finance-support.md) 제공. 김창재가 결제·충전·복구 작업 목록과 주문별 금액 조회 API·화면(`/admin/finance`)을 연결([API 9-3절](api-spec.md#9-3-관리자-금융계약-pdf-운영-조회-김창재)). 운영 현황 요약(대시보드)은 남음 |
+| K4 | 구매자 운영 문의, 판매자 무응답 취소의 관리자 승인/거절 | E6 | 서비스·문의 엔티티 main 반영(#121, 정은찬). API·화면 연결 main 반영(#132, 김창재). 문의 메시지·담당 지정·일반 문의 접수는 후속 | 문의 엔티티 `SupportInquiry`·저장소와 주문 쪽 승인/거절 서비스를 정은찬이 먼저 구현(2026-11-06 조장 결정). 김창재가 구매자 검토 요청·내 문의·관리자 문의 목록/상세·승인/거절·처리 불가 문의 종료 API·화면을 연결([연결 기록](admin-cancellation-review.md#api화면-연결--2026-11-09-김창재-featureadmin-cancellation-inquiries)). 문의 메시지·담당 지정·일반 문의 접수와 B4 실서버·브라우저 확인은 남음 |
+| K5 | 관리자 타이머 해제 화면·API | E7 | API·화면 연결 main 반영(#132, 김창재) | 서비스 `ReviewTimerService.adminStop(adminId, orderId, reason)` 사용([자동 구매 확정](auto-confirm-timer.md)). 진행 중 타이머 목록·해제 API([API 9-2절](api-spec.md#9-2-관리자-자동-구매-확정-타이머-해제-김창재))와 `/admin/review-timers` 화면. B4 실서버·브라우저 확인 남음 |
+| K6 | 실패 작업 조회·재처리(알림 `FAILED`·PDF·충전), 관리자 작업 이력 | E1, J3 | 충전/Batch 조회·조건 main 반영(#117), PDF 조회(#125). 조회 화면 연결 main 반영(#133, 김창재). 알림 `FAILED` 조회·재처리 실행·관리자 작업 이력은 후속 | [충전·Batch 후보 판단](admin-finance-support.md)·[PDF 운영 조회](admin-contract-pdf-inspection.md)를 조회 전용 API·화면으로 연결(후보 판단만 표시, 실행 버튼 없음). 실제 관리자 실행·사유·감사 이력(설계 김창재, DDL 황준범)과 알림 `FAILED` 조회·재처리는 미연결 |
 
 #### K4·K5 연결 안내 (정은찬 → 김창재, 2026-11-06)
 

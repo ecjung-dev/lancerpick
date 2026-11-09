@@ -65,6 +65,10 @@ test('timer text hides outside review and explains each state to the right party
   assert.match(reviewTimerView(timer('WAITING'), false).detail, /검수 결과/)
   assert.match(reviewTimerView(timer('WAITING'), true).detail, /시작할 수 있습니다/)
   assert.match(reviewTimerView(timer('CANCELLATION_PENDING'), true).title, /취소 요청/)
+  assert.match(reviewTimerView(timer('STARTABLE', { canStart: true }), true).title, /시작 가능/)
+  // 서버가 시작을 막은 판매자(구매자 보안 잠금)는 시작 가능으로 안내하지 않는다.
+  assert.match(reviewTimerView(timer('STARTABLE'), true).title, /시작 보류/)
+  assert.match(reviewTimerView(timer('STARTABLE'), false).title, /시작 가능/)
   const active = reviewTimerView(
     timer('ACTIVE', { startedAt: '2026-11-03T01:00:00Z', expiresAt: '2026-11-10T01:00:00Z' }),
     false,
