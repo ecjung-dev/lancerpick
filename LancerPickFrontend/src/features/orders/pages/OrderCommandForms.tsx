@@ -15,6 +15,8 @@ import type { OrderDetail } from '../types'
 // 잠금·실패·재조회 수명주기는 페이지의 run이 소유한다. 각 폼은 입력값과 제출 조건만 가진다.
 // 입력 초기화는 페이지가 key를 바꿔 다시 마운트하는 방식으로 한다.
 interface FormProps {
+  // 명령 요청 경로는 기존과 같이 화면 주소의 주문 ID를 그대로 쓴다.
+  orderId: string
   order: OrderDetail
   disabled: boolean
   run: (command: () => Promise<OrderDetail>) => Promise<boolean>
@@ -32,7 +34,7 @@ function deliverySequence(order: OrderDetail): 1 | 2 | null {
       : null
 }
 
-export function DeliveryForm({ order, disabled, run }: FormProps) {
+export function DeliveryForm({ orderId, order, disabled, run }: FormProps) {
   const [description, setDescription] = useState('')
   const [resultUrl, setResultUrl] = useState('')
   const sequence = deliverySequence(order)
@@ -47,7 +49,7 @@ export function DeliveryForm({ order, disabled, run }: FormProps) {
   function submit() {
     if (disabled || !order.allowedActions.includes('DELIVER') || !valid || sequence === null)
       return
-    void run(() => deliverOrder(order.id, description, resultUrl, sequence))
+    void run(() => deliverOrder(orderId, description, resultUrl, sequence))
   }
   return (
     <fieldset disabled={disabled}>
@@ -79,7 +81,7 @@ export function DeliveryForm({ order, disabled, run }: FormProps) {
   )
 }
 
-export function RevisionForm({ order, disabled, run }: FormProps) {
+export function RevisionForm({ orderId, order, disabled, run }: FormProps) {
   const [reason, setReason] = useState('')
   const length = textLength(reason)
   const valid = length > 0 && length <= 1000
@@ -93,7 +95,7 @@ export function RevisionForm({ order, disabled, run }: FormProps) {
       !firstDelivery
     )
       return
-    void run(() => requestOrderRevision(order.id, firstDelivery.id, reason))
+    void run(() => requestOrderRevision(orderId, firstDelivery.id, reason))
   }
   return (
     <fieldset disabled={disabled}>
@@ -111,11 +113,11 @@ export function RevisionForm({ order, disabled, run }: FormProps) {
   )
 }
 
-export function AcceptForm({ order, disabled, run }: FormProps) {
+export function AcceptForm({ orderId, order, disabled, run }: FormProps) {
   if (!order.allowedActions.includes('ACCEPT')) return null
   function submit() {
     if (disabled || !order.allowedActions.includes('ACCEPT')) return
-    void run(() => acceptOrder(order.id))
+    void run(() => acceptOrder(orderId))
   }
   return (
     <fieldset disabled={disabled}>
@@ -131,14 +133,14 @@ export function AcceptForm({ order, disabled, run }: FormProps) {
   )
 }
 
-export function RejectForm({ order, disabled, run }: FormProps) {
+export function RejectForm({ orderId, order, disabled, run }: FormProps) {
   const [reason, setReason] = useState('')
   const length = textLength(reason)
   const valid = length > 0 && length <= 1000
   if (!order.allowedActions.includes('REJECT')) return null
   function submit() {
     if (disabled || !order.allowedActions.includes('REJECT') || !valid) return
-    void run(() => rejectOrder(order.id, reason))
+    void run(() => rejectOrder(orderId, reason))
   }
   return (
     <fieldset disabled={disabled}>
@@ -158,12 +160,12 @@ export function RejectForm({ order, disabled, run }: FormProps) {
   )
 }
 
-export function PayForm({ order, disabled, run }: FormProps) {
+export function PayForm({ orderId, order, disabled, run }: FormProps) {
   const [agreed, setAgreed] = useState(false)
   if (!order.allowedActions.includes('PAY')) return null
   function submit() {
     if (disabled || !order.allowedActions.includes('PAY') || !agreed) return
-    void run(() => payOrder(order.id))
+    void run(() => payOrder(orderId))
   }
   return (
     <fieldset disabled={disabled}>
@@ -183,14 +185,14 @@ export function PayForm({ order, disabled, run }: FormProps) {
   )
 }
 
-export function CancelForm({ order, disabled, run }: FormProps) {
+export function CancelForm({ orderId, order, disabled, run }: FormProps) {
   const [reason, setReason] = useState('')
   const length = textLength(reason)
   const valid = length > 0 && length <= 1000
   if (!order.allowedActions.includes('CANCEL')) return null
   function submit() {
     if (disabled || !order.allowedActions.includes('CANCEL') || !valid) return
-    void run(() => cancelOrder(order.id, reason))
+    void run(() => cancelOrder(orderId, reason))
   }
   return (
     <fieldset disabled={disabled}>
@@ -212,12 +214,12 @@ export function CancelForm({ order, disabled, run }: FormProps) {
   )
 }
 
-export function ConfirmForm({ order, disabled, run }: FormProps) {
+export function ConfirmForm({ orderId, order, disabled, run }: FormProps) {
   const [confirmed, setConfirmed] = useState(false)
   if (!order.allowedActions.includes('CONFIRM')) return null
   function submit() {
     if (disabled || !order.allowedActions.includes('CONFIRM') || !confirmed) return
-    void run(() => confirmOrder(order.id))
+    void run(() => confirmOrder(orderId))
   }
   return (
     <fieldset disabled={disabled}>

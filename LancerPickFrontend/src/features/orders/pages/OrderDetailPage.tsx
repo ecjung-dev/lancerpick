@@ -114,7 +114,7 @@ function OrderDetail({ id }: { id: string }) {
   const order = query.data
   const deadlines = orderDeadlineView(order)
   const disabled = busy || !!failure || query.isFetching
-  const forms = { order, disabled, run }
+  const forms = { orderId: id, order, disabled, run }
   return (
     <section className={styles.orders}>
       <Link to={`/orders${location.search}`}>← 거래 내역</Link>
