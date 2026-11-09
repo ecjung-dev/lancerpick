@@ -10,6 +10,8 @@
 
 실제 브라우저 확인(2026-11-09, 개인 개발 DB `bootRun` + Vite + Playwright Chromium, V3 구매자 테스트 계정, 알림 52건 모두 읽지 않음): API로 `unreadOnly=true` 52건·읽지 않은 수 52·항목 순서가 전체 목록의 읽지 않음과 같음, `unreadOnly=maybe` 400 `VALIDATION_FAILED`. 화면에서 전체 2페이지(`?page=1`) → "읽지 않음" → URL `?filter=unread`(첫 페이지로), 버튼 `aria-pressed` 전환, 요청에 `unreadOnly=true`. 읽지 않음 첫 항목(알림 108) 클릭 → 읽음 POST 성공 후 `/orders/30` 이동, 뒤로 가면 읽지 않음 51건·첫 항목이 다음 알림으로 바뀜, "전체"로 돌아가면 URL에서 필터가 빠지고 108이 읽음으로 표시. 320px에서 `?filter=unread&page=2` 3페이지 11건·다음 비활성, 가로 넘침 없음(`scrollWidth`=`clientWidth`=305, 화면 밖 요소 0). 콘솔 오류는 로그인 전 `/api/me` 401·favicon 404·의도한 400뿐이다. 읽지 않음 보기의 빈 결과 문구와 모두 읽음은 자동 테스트로만 확인했다(개인 DB 알림을 모두 읽음 처리하지 않음). 개인 DB 잔여: 알림 108 읽음.
 
+Codex 반박 검토 지적 반영: 읽지 않음 보기에서 알림을 누르면 읽음 뒤 재조회 결과에서 그 행이 빠지는데, 주문 이동이 `mutate()` 호출별 `onSuccess`(재조회 완료 후·행이 구독 중일 때만 실행)에 있어 이동이 생략될 수 있었다(TanStack Query 5.105 `MutationObserver`의 `hasListeners()` 조건 확인). 이동을 mutation 옵션의 `onSuccess`(재조회 전 실행)로 옮겨 `notifications/queries.ts`의 `notificationReadOptions`로 분리했다. 회귀 테스트 1건: 재조회 중 행 구독이 해제돼도 `/orders/30`으로 이동하고 호출별 콜백은 실행되지 않음(기존 방식이면 이동 누락), 이동하지 않는 클릭·읽음 실패는 이동 없음. 수정 후 프런트 typecheck·lint·`test:api` 239건·build 통과. 백엔드 변경이 없어 `clean build`는 위 964건 결과를 유지했고, 수정 후 실제 브라우저 확인은 다시 하지 않았다(위 브라우저 확인은 수정 전 코드에서 이동이 성공한 경우다).
+
 ## 거래 내역 검색·기간·정렬 조건(U3) — 2026-11-09, main 반영(#130)
 
 정은찬, 작업 브랜치 `feature/order-list-search`(main `4064d08`(#128)에서 분기, 병합 후 삭제). [개편 결정 §16.1](ui-renewal-member-policy.md#161-정은찬-구현)의 U3 계약대로 `GET /api/orders`에 `q`(숫자만이면 주문번호 정확 일치, 그 밖에는 저장 상품명·상대방 표시 이름 부분 일치, 최대 100자)·`from`/`to`(한국 날짜, 종료일 포함)·`sort=latest|oldest`를 추가하고 `/orders` 화면에 검색어·기간(최근 1/3개월·전체)·정렬·결과 건수·주문번호를 붙였다. DB·Flyway 변경 없음. 판매 수익(§8) 조회 조건은 이 변경에 포함하지 않았다. [계약·화면 동작](order-query.md#목록-검색기간정렬-조건-u3--2026-11-09).

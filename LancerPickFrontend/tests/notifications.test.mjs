@@ -3,7 +3,7 @@ import { after, test } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MutationObserver, QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query'
 import { createServer } from 'vite'
 import { notificationMessage, notificationTarget, unreadBadge, waitsForReadBeforeNavigation } from '../src/features/notifications/messages.ts'
 
@@ -13,6 +13,7 @@ const { NotificationsPage, NotificationReadError } = await server.ssrLoadModule(
 const { NotificationNavLink } = await server.ssrLoadModule('/src/features/notifications/components/NotificationNavLink.tsx')
 const { ApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
 const { getNotifications } = await server.ssrLoadModule('/src/features/notifications/api.ts')
+const { notificationReadOptions } = await server.ssrLoadModule('/src/features/notifications/queries.ts')
 after(async () => { await server.close() })
 
 test('every order event type has its own Korean message and unknown types fall back', () => {
@@ -132,6 +133,40 @@ test('list request adds unreadOnly only for the unread filter', async () => {
     await getNotifications(0, true)
   } finally { globalThis.fetch = original }
   assert.deepEqual(urls, ['/api/notifications?page=2&size=20', '/api/notifications?page=0&size=20&unreadOnly=true'])
+})
+
+// 읽지 않음 보기에서는 읽음 뒤 재조회 결과에서 클릭한 행이 빠져 행(구독)이 사라진다. 그래도 주문으로 이동해야 한다.
+async function readWhileRowDisappears(status, navigateFlag) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const original = globalThis.fetch
+  const moves = []
+  let row
+  globalThis.fetch = async (url, options) => {
+    if (options?.method === 'POST') return new Response(null, { status, headers: status === 204 ? {} : { 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ count: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  }
+  const list = new QueryObserver(client, { queryKey: ['notifications', 'list', 'unread', 0],
+    queryFn: async () => { row?.unsubscribe(); return { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 } } })
+  const stopList = list.subscribe(() => {})
+  try {
+    await client.getQueryCache().find({ queryKey: ['notifications', 'list', 'unread', 0] }).promise
+    const observer = new MutationObserver(client, notificationReadOptions(client, '108', '/orders/30', (to) => moves.push(to)))
+    row = { unsubscribe: observer.subscribe(() => {}) }
+    let perCall = 0
+    await observer.mutate({ navigate: navigateFlag }, { onSuccess: () => { perCall++ } }).catch(() => {})
+    return { moves, perCall }
+  } finally {
+    stopList(); globalThis.fetch = original; client.clear()
+  }
+}
+
+test('reading from the unread view still opens the order after the refetch removes the row', async () => {
+  const done = await readWhileRowDisappears(204, true)
+  assert.deepEqual(done.moves, ['/orders/30'])
+  // 호출별 콜백은 행이 사라진 뒤라 실행되지 않는다(이동을 여기에 두면 안 되는 이유).
+  assert.equal(done.perCall, 0)
+  assert.deepEqual((await readWhileRowDisappears(204, false)).moves, [])
+  assert.deepEqual((await readWhileRowDisappears(500, true)).moves, [])
 })
 
 test('only plain left clicks wait for the read request before navigating', () => {
