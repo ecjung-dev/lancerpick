@@ -5,19 +5,40 @@ import { clearCsrfToken } from '../src/shared/api/client.ts'
 import { createCancellationRequest, resolveCancellationRequest } from '../src/features/orders/api.ts'
 import { describeHistory } from '../src/features/orders/history.ts'
 import { orderDeadlineView } from '../src/features/orders/deadlines.ts'
+import { koreanToday, orderListSearch, readOrderListFilters, recentMonths } from '../src/features/orders/listFilters.ts'
 const original = globalThis.fetch
 afterEach(() => { globalThis.fetch = original; clearCsrfToken() })
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })
 
-test('order list sends selected status and omits it for all states', async () => {
+test('order list sends selected conditions and omits empty ones', async () => {
   const urls = []
   globalThis.fetch = async (url) => { urls.push(url); return json({ items: [], totalPages: 0 }) }
-  await getOrders('SELLER', 2, undefined, 'AWAITING_PAYMENT')
-  await getOrders('BUYER', 0)
+  const none = { status: '', q: '', from: '', to: '', sort: 'latest' }
+  await getOrders({ ...none, side: 'SELLER', status: 'AWAITING_PAYMENT', page: 2 })
+  await getOrders({ ...none, side: 'BUYER', page: 0 })
+  await getOrders({ side: 'BUYER', status: '', q: '로고 50%&x', from: '2026-10-01', to: '2026-10-31', sort: 'oldest', page: 1 })
   assert.deepEqual(urls, [
     '/api/orders?side=SELLER&status=AWAITING_PAYMENT&page=2&size=20',
     '/api/orders?side=BUYER&page=0&size=20',
+    '/api/orders?side=BUYER&q=%EB%A1%9C%EA%B3%A0+50%25%26x&from=2026-10-01&to=2026-10-31&sort=oldest&page=1&size=20',
   ])
+})
+
+test('order list URL filters drop invalid values and recent months use Korean dates', () => {
+  const read = (search) => readOrderListFilters(new URLSearchParams(search))
+  assert.deepEqual(read('side=SELLER&q=%20%EB%A1%9C%EA%B3%A0%20&from=2026-10-01&to=2026-10-31&sort=oldest&page=3'),
+    { side: 'SELLER', status: '', q: '로고', from: '2026-10-01', to: '2026-10-31', sort: 'oldest', page: 3 })
+  assert.deepEqual(read(`q=${'😀'.repeat(100)}`).q, '😀'.repeat(100))
+  assert.equal(read(`q=${'😀'.repeat(101)}`).q, '')
+  assert.deepEqual([read('from=2026-02-29').from, read('from=2028-02-29').from, read('to=2026-13-01').to], ['', '2028-02-29', ''])
+  assert.deepEqual([read('from=2026-11-02&to=2026-11-01').from, read('from=2026-11-02&to=2026-11-01').to], ['', ''])
+  assert.equal(read('sort=LATEST').sort, 'latest')
+  assert.deepEqual(orderListSearch({ side: 'BUYER', status: '', q: '', from: '', to: '', sort: 'latest', page: 0 }), { side: 'BUYER' })
+  // 2026-10-31T15:30Z는 한국 날짜 11/1
+  assert.equal(koreanToday(Date.parse('2026-10-31T15:30:00Z')), '2026-11-01')
+  assert.deepEqual(recentMonths(1, Date.parse('2026-11-09T00:00:00Z')), { from: '2026-10-09', to: '2026-11-09' })
+  assert.deepEqual(recentMonths(3, Date.parse('2026-05-31T00:00:00Z')), { from: '2026-02-28', to: '2026-05-31' })
+  assert.deepEqual(recentMonths(1, Date.parse('2026-01-15T00:00:00Z')), { from: '2025-12-15', to: '2026-01-15' })
 })
 
 test('active overdue and delivered late use distinct due dates and strict boundary', () => {

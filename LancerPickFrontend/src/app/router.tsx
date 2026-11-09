@@ -30,6 +30,7 @@ export const router = createBrowserRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <ProductListPage /> },
+      { path: 'products', element: <ProductListPage view="catalog" /> },
       { path: 'products/:id', element: <ProductDetailPage /> },
       { path: 'sellers/:id', element: <PublicSellerPage /> },
       { path: 'mypage/products/new', element: <ProductEditorPage /> },

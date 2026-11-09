@@ -15,7 +15,7 @@ const labels: Record<WalletEntryType, string> = {
   INITIAL_GRANT: '가입 적립금',
   PAYMENT: '서비스 결제',
   REFUND: '결제 환불',
-  TOPUP: '테스트 결제 충전',
+  TOPUP: '적립금 충전',
   SELLER_PAYOUT: '판매대금 지급',
 }
 
@@ -151,85 +151,17 @@ export function WalletPreviewPage() {
   )
 }
 
-function WalletLayout({
-  children,
-  preview = false,
-}: {
-  children: ReactNode
-  preview?: boolean
-}) {
-  return (
-    <section className={styles.page}>
-      <div className={styles.breadcrumb}>
-        <Link to="/">홈</Link>
-        <span aria-hidden="true">/</span>
-        <span>마이페이지</span>
-      </div>
-      <div className={styles.heading}>
-        <div>
-          <p className={styles.eyebrow}>MY ACCOUNT</p>
-          <h1>마이페이지</h1>
-        </div>
-        <p>나의 거래를 한눈에, 관리도 간편하게.</p>
-      </div>
-      {preview && (
-        <div className={styles.notice} role="note">
-          <strong>화면 미리보기</strong>
-          <span>
-            아래 잔액과 내역은 예시입니다. 실제 계정·결제 정보가 아닙니다.
-          </span>
-          <Link to="/mypage">미리보기 나가기</Link>
-        </div>
-      )}
-      <div className={styles.columns}>
-        <aside className={styles.sidebar} aria-label="마이페이지 메뉴">
-          <div className={styles.account}>
-            <span className={styles.avatar} aria-hidden="true">
-              L
-            </span>
-            <strong>나의 공간</strong>
-            <small>
-              {preview
-                ? '예시 화면을 둘러보고 있어요'
-                : '적립금과 거래 내역을 확인하세요'}
-            </small>
-          </div>
-          <nav className={styles.menu} aria-label="내 활동">
-            <span className={styles.menuLabel}>내 활동</span>
-            <Link to="/mypage/seller-profile">판매자 프로필</Link>
-            <Link to="/mypage/products/new">상품 등록</Link>
-            <Link to="/mypage/products">내 상품 조회</Link>
-            <Link to="/mypage/favorites">내 관심 상품</Link>
-            <span className={styles.active} aria-current="page">
-              적립금 · 이용 내역 <span aria-hidden="true">↗</span>
-            </span>
-            <Link to="/orders?side=BUYER">구매 내역</Link>
-            <Link to="/orders?side=SELLER">판매 내역</Link>
-            <Link to="/mypage/settlements">판매 수익</Link>
-            <Link to="/mypage/profile">내 정보</Link>
-          </nav>
-        </aside>
-        <div className={styles.content}>
-          <div className={styles.sectionHeading}>
-            <h2>적립금 · 이용 내역</h2>
-            <p>사용 가능한 잔액과 적립금 변동을 확인하세요.</p>
-          </div>
-          {children}
-          <div className={styles.guide}>
-            <strong>적립금 이용 안내</strong>
-            <ul>
-              <li>가입 시 테스트 적립금 1,000,000원이 한 번 지급됩니다.</li>
-              <li>
-                테스트 적립금은 현금 가치가 없으며 실제 현금 충전·출금을
-                지원하지 않습니다.
-              </li>
-              <li>구매 적립금과 판매 수익은 별도로 관리됩니다.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-  )
+function WalletLayout({ children, preview = false }: { children: ReactNode; preview?: boolean }) {
+  return <section className={styles.page}>
+    {preview && <div className={styles.notice} role="note"><strong>화면 미리보기</strong><span>아래 잔액과 내역은 예시입니다. 실제 계정·결제 정보가 아닙니다.</span><Link to="/mypage">미리보기 나가기</Link></div>}
+    <div className={styles.sectionHeading}><h1>적립금 · 이용 내역</h1><p>사용 가능한 잔액과 적립금 변동을 확인하세요.</p></div>
+    {children}
+    <div className={styles.guide}><strong>적립금 이용 안내</strong><ul>
+      <li>가입 시 적립금 1,000,000원이 한 번 지급됩니다.</li>
+      <li>적립금은 현금 가치가 없으며 출금을 지원하지 않습니다.</li>
+      <li>새 전자계약 거래의 판매 수익은 수수료를 제외하고 적립금으로 지급됩니다. 기존 거래의 수익은 별도 기록으로 유지됩니다.</li>
+    </ul></div>
+  </section>
 }
 
 function BalanceCard({
@@ -244,7 +176,7 @@ function BalanceCard({
       <div>
         <div className={styles.balanceLabel}>
           <h3 id="balance-title">사용 가능한 적립금</h3>
-          {balance.isTest && <span>TEST CREDIT</span>}
+
         </div>
         <p className={styles.amount}>{formatWon(balance.balance)}</p>
         <p className={styles.balanceHelp}>
@@ -255,7 +187,7 @@ function BalanceCard({
         to={preview ? '/mypage/wallet/topup/preview' : '/mypage/wallet/topup'}
         className={styles.explore}
       >
-        {preview ? '충전 화면 미리보기' : '테스트 적립금 충전'}{' '}
+        {preview ? '충전 화면 미리보기' : '적립금 충전'}{' '}
         <span aria-hidden="true">↗</span>
       </Link>
     </section>

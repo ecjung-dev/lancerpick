@@ -127,7 +127,7 @@ function OrderDetail({ id }: { id: string }) {
         구매자 {order.buyer.displayName} · 판매자 {order.seller.displayName}
       </p>
       {order.policyVersion === 'CONTRACT_V3' && (
-        <OrderFundsPanel orderId={order.id} />
+        <OrderFundsPanel orderId={order.id} orderStatus={order.status} />
       )}
       {order.policyVersion === 'CONTRACT_V3' && (
         <ReviewTimerPanel orderId={order.id} sellerId={order.seller.id} />

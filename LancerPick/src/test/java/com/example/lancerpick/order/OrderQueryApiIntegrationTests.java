@@ -92,6 +92,44 @@ class OrderQueryApiIntegrationTests {
     }
 
     @Test
+    void keywordMatchesSavedTitleOrCounterpartyNameAndDigitsMatchOrderNumberOnly() throws Exception {
+        jdbc.update("UPDATE order_snapshots SET product_title_snapshot='로고 디자인 50%_할인' WHERE order_id=?", first);
+        jdbc.update("UPDATE products SET title='current 디자인' WHERE id=?", products.getFirst());
+        readIds("?side=BUYER&q=" + enc("디자인"), buyer, first);
+        readIds("?side=BUYER&q=" + enc("50%_"), buyer, first);
+        readIds("?side=BUYER&q=" + enc("0%%"), buyer);
+        readIds("?side=BUYER&q=" + enc(" sell "), buyer, second, first);
+        readIds("?side=BUYER&q=" + enc("   "), buyer, second, first);
+        readIds("?side=BUYER&q=buyer", buyer);
+        readIds("?side=BUYER&status=CANCELLED&q=sell", buyer, first);
+        readIds("?side=BUYER&q=" + second, buyer, second);
+        readIds("?side=BUYER&q=" + sold, buyer);
+        readIds("?side=SELLER&q=" + sold, buyer, sold);
+        readIds("?side=SELLER&q=third", buyer, sold);
+        readIds("?side=BUYER&q=0", buyer);
+        readIds("?side=BUYER&q=99999999999999999999", buyer);
+        readIds("?side=BUYER&q=" + enc("😀".repeat(100)), buyer);
+        read("?side=BUYER&q=" + "a".repeat(101), buyer).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    void koreanDateRangeIncludesWholeEndDayAndSortCanBeOldestFirst() throws Exception {
+        // first = 2026-10-31 23:59:59.999999 KST, second = 2026-11-01 00:00:00 KST
+        jdbc.update("UPDATE orders SET created_at='2026-10-31 14:59:59.999999' WHERE id=?", first);
+        jdbc.update("UPDATE orders SET created_at='2026-10-31 15:00:00.000000' WHERE id=?", second);
+        readIds("?side=BUYER&from=2026-11-01", buyer, second);
+        readIds("?side=BUYER&to=2026-10-31", buyer, first);
+        readIds("?side=BUYER&from=2026-10-31&to=2026-10-31", buyer, first);
+        readIds("?side=BUYER&from=2026-10-31&to=2026-11-01", buyer, second, first);
+        readIds("?side=BUYER&from=2026-11-02", buyer);
+        readIds("?side=BUYER&sort=oldest", buyer, first, second);
+        readIds("?side=BUYER&sort=latest", buyer, second, first);
+        read("?side=BUYER&sort=oldest&size=1&page=1", buyer).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2)).andExpect(jsonPath("$.items[0].id").value(Long.toString(second)));
+    }
+
+    @Test
     void sellerSideUsesOppositeParticipantAndCannotBeOverriddenByQueryMemberId() throws Exception {
         read("?side=SELLER&memberId=" + seller, buyer).andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1)).andExpect(jsonPath("$.items[0].id").value(Long.toString(sold)))
@@ -137,6 +175,9 @@ class OrderQueryApiIntegrationTests {
     @ParameterizedTest
     @ValueSource(strings = {"", "?side=", "?side=buyer", "?side=OTHER", "?side=BUYER&status=", "?side=BUYER&status=other",
             "?side=BUYER&page=-1", "?side=BUYER&size=0", "?side=BUYER&size=101", "?side=BUYER&page=1.5", "?side=BUYER&page=2147483648",
+            "?side=BUYER&from=", "?side=BUYER&to=2026-02-30", "?side=BUYER&from=2026-1-01", "?side=BUYER&from=20261-01-01",
+            "?side=BUYER&from=%2B2026-01-01", "?side=BUYER&from=2026-11-02&to=2026-11-01", "?side=BUYER&from=2026-11-01T00:00",
+            "?side=BUYER&sort=", "?side=BUYER&sort=LATEST", "?side=BUYER&sort=price",
             "/0", "/-1", "/abc", "/9223372036854775808"})
     void invalidQueriesAndIdsAre400(String suffix) throws Exception {
         read(suffix, buyer).andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
@@ -162,8 +203,19 @@ class OrderQueryApiIntegrationTests {
     }
 
     private ResultActions read(String suffix, long id) throws Exception {
-        return mvc.perform(get("/api/orders" + suffix).with(authentication(UsernamePasswordAuthenticationToken.authenticated(
+        return mvc.perform(get(java.net.URI.create("/api/orders" + suffix)).with(authentication(UsernamePasswordAuthenticationToken.authenticated(
                 new Principal(id), null, AuthorityUtils.createAuthorityList("ROLE_USER")))));
+    }
+    // 응답 items의 ID 순서와 totalElements가 기대 목록과 같아야 한다.
+    private void readIds(String suffix, long member, long... expected) throws Exception {
+        var ids = java.util.Arrays.stream(expected).mapToObj(Long::toString).toArray(String[]::new);
+        var result = read(suffix, member).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(expected.length));
+        if (ids.length == 0) result.andExpect(jsonPath("$.items").isEmpty());
+        else result.andExpect(jsonPath("$.items[*].id").value(org.hamcrest.Matchers.contains(ids)));
+    }
+    private static String enc(String value) {
+        return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
     }
     private long order(long buyer, long product) {
         return creation.create(buyer, new CreateOrderRequest(Long.toString(product), 0L, "requirements", UUID.randomUUID().toString())).orderId();
