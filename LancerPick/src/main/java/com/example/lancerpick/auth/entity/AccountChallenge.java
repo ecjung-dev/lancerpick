@@ -137,6 +137,39 @@ public class AccountChallenge {
         this.expiresAt = proofExpiresAt;
     }
 
+    /**
+     * 기존 회원 이메일 인증 메일 발급(3인 설계 §5.2). 로그인한 회원 본인 주소로만 보내며 발급 당시 auth_version을 남긴다
+     * (V5 CHECK: EXISTING_EMAIL은 member_id·credential_version 필수).
+     */
+    public static AccountChallenge existingEmail(long memberId, String email, byte[] tokenHash,
+            long credentialVersion, LocalDateTime issuedAt, LocalDateTime expiresAt) {
+        AccountChallenge challenge = new AccountChallenge();
+        challenge.purpose = ChallengePurpose.EXISTING_EMAIL;
+        challenge.memberId = memberId;
+        challenge.email = email;
+        challenge.tokenHash = tokenHash.clone();
+        challenge.credentialVersion = credentialVersion;
+        challenge.issuedAt = issuedAt;
+        challenge.expiresAt = expiresAt;
+        challenge.deliveryStatus = ChallengeDeliveryStatus.PENDING;
+        return challenge;
+    }
+
+    /**
+     * 기존 회원 이메일 인증 토큰을 쓸 수 없는 이유. 쓸 수 있으면 null. 회원·이 행을 잠근 뒤에 호출한다. 응답은 모두 같은 400이다.
+     * 다른 회원의 토큰(로그인한 계정과 다름), 발급 후 비밀번호 변경·세션 폐기, 주소 불일치도 거절한다.
+     */
+    public String existingEmailRejection(long lockedMemberId, long currentAuthVersion, String currentEmail,
+            LocalDateTime now) {
+        if (purpose != ChallengePurpose.EXISTING_EMAIL) return "WRONG_PURPOSE";
+        if (memberId == null || memberId != lockedMemberId) return "MEMBER_MISMATCH";
+        if (consumedAt != null) return "ALREADY_CONSUMED";
+        if (!now.isBefore(expiresAt)) return "EXPIRED";   // 경계 시각은 만료(DB CHECK: consumed_at < expires_at)
+        if (credentialVersion == null || credentialVersion != currentAuthVersion) return "CREDENTIAL_CHANGED";
+        if (!email.equals(currentEmail)) return "EMAIL_CHANGED";
+        return null;
+    }
+
     /** 가입 증명으로 가입할 수 없는 이유. 쓸 수 있으면 null. 이 행을 잠근 뒤에 호출한다. 응답은 모두 같은 400이다. */
     public String signupProofRejection(String normalizedEmail, LocalDateTime now) {
         if (purpose != ChallengePurpose.SIGNUP_EMAIL) {

@@ -210,6 +210,9 @@ class DefaultCatalogApiTests extends CommonApiTests {
     // 실제 처리는 PasswordResetIntegrationTests(MySQL)에서 검증한다.
     @MockitoBean
     com.example.lancerpick.auth.service.PasswordResetService passwordResetService;
+    // 기존 회원 이메일 인증도 회원·토큰 DB를 사용하므로 대체한다. 실제 처리는 ExistingEmailVerificationIntegrationTests(MySQL).
+    @MockitoBean
+    com.example.lancerpick.auth.service.ExistingEmailVerificationService existingEmailVerificationService;
     @MockitoBean
     com.example.lancerpick.auth.service.AuthRequestLimiter authRequestLimiter;
     // 가입 이메일 인증도 DB를 사용하므로 대체한다. 실제 처리는 SignupEmailIntegrationTests(MySQL)에서 검증한다.

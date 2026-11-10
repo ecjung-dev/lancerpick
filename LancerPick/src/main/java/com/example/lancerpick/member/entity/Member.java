@@ -91,6 +91,14 @@ public class Member {
         return member;
     }
 
+    /**
+     * 기존 회원 이메일 인증(K1, 3인 설계 §5.2). 그 주소로 보낸 일회용 링크를 본인이 확인했을 때만 호출한다.
+     * 이미 인증된 회원은 처음 기록한 시각을 유지한다. 비밀번호·인증 버전·지갑은 바꾸지 않는다.
+     */
+    public void verifyEmail(LocalDateTime now) {
+        if (emailVerifiedAt == null) emailVerifiedAt = now;
+    }
+
     /** PATCH /api/me 표시 이름 수정용. */
     public void changeDisplayName(String displayName, LocalDateTime now) {
         this.displayName = displayName;

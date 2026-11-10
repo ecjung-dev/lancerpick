@@ -5720,10 +5720,18 @@ API 명세 4·10·11절과 기존 SQL을 바탕으로 `OrderCreationService.crea
 ## 회원·인증·제재
 
 <details>
-<summary>기록 기준일 2026-11-10 — 1개 고유 기록 블록</summary>
+<summary>기록 기준일 2026-11-10 — 2개 고유 기록 블록</summary>
+
+<a id="existing-email-20261110"></a>
+### 기존 회원 이메일 인증 전환 — 2026-11-10 (`feature/existing-email-verification`, 김창재), main 반영(#162)
+
+- 결정 근거: 3인 설계 §5.2 "기존 회원은 검증 증거가 없으므로 일괄 인증하지 않고, 로그인 후 별도 인증을 마치면 기록"과 §7.1(목적 분리·15분·60초/시간당 5회). V5 `account_challenges`의 `EXISTING_EMAIL` 목적과 `members.email_verified_at`을 그대로 쓴다. 새 DDL·Flyway 없음.
+- 구현: `ExistingEmailVerificationService`·`ExistingEmailVerificationController`(`/api/me/email-verification-requests`, `/api/me/email-verifications`), `AccountChallenge.existingEmail`·`existingEmailRejection`, `Member.verifyEmail`, 메일 `ExistingEmailMailContent`, `MemberResponse.emailVerified` 추가. 화면은 내 정보 "이메일 인증" 칸(`EmailVerificationCard`)과 링크 화면 `/mypage/email-verification`.
+- 정책 판단: 다른 계정으로 로그인해 연 링크는 그 계정을 인증하지 않고 400으로 거절하며 토큰을 소비하지 않는다(본인이 다시 사용 가능). 발급 후 비밀번호 변경·세션 폐기(auth_version 변경)도 거절한다. 인증은 세션·비밀번호·인증 버전을 바꾸지 않는다. 재설정 성공 시 인증 시각 동시 기록은 이번에도 하지 않았다(§5.2의 착수 정책 미확정).
+- 검증: PR 본문에 기록한다.
 
 <a id="account-guide-20261110"></a>
-### 아이디 안내 API·화면 — 2026-11-10 (`feature/account-id-guide`, 김창재)
+### 아이디 안내 API·화면 — 2026-11-10 (`feature/account-id-guide`, 김창재), main 반영(#155)
 
 - 결정 근거: 3인 설계 1절 "아이디 찾기는 이메일이 아이디라는 안내로 한정, 잊어버린 이메일 복구는 보류"와 2026-11-06 정은찬의 C3 결정(토큰 없는 안내 메일은 `AccountMail.untracked`, DB 기록 없음)을 그대로 구현했다. 새 테이블·Flyway 없음.
 - 구현: `POST /api/auth/account-guide-requests`(`AccountGuideController`·`AccountGuideService`), 메일 내용 `AccountGuideMailContent`, 토큰 없는 화면 링크용 `FrontendLinks.pageLink` 추가, `SecurityConfig`에 비로그인 POST 경로 1줄 허용(CSRF 유지). 화면 `/account-guide`(`AccountGuidePage`, 공통 `EmailLinkRequestForm` 재사용)와 로그인 화면 링크.

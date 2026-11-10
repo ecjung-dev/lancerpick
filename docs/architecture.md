@@ -50,7 +50,7 @@ PDF는 생성 시도 키·문서 버전·해시·짧은 DB 트랜잭션·비공�
 <a id="api"></a>
 ## HTTP API·입력·오류
 
-HTTP 공통 형식과 기본 MVP API를 정리한다. LEGACY_V1·V3 금액/취소·타이머를 섞지 않고 [기능 명세](features.md)의 정책별 최신 계약을 함께 적용한다. 현재 MemberResponse는 displayNameChangeAvailableAt을 포함한다.
+HTTP 공통 형식과 기본 MVP API를 정리한다. LEGACY_V1·V3 금액/취소·타이머를 섞지 않고 [기능 명세](features.md)의 정책별 최신 계약을 함께 적용한다. 현재 MemberResponse는 displayNameChangeAvailableAt과 emailVerified(2026-11-10)를 포함한다.
 
 ### API·입력·오류
 
@@ -304,6 +304,8 @@ DB의 이메일 UNIQUE(`uk_members_email`) 위반만 409 EMAIL_ALREADY_EXISTS로
 | POST /me/password | 회원+CSRF; currentPassword,newPassword | 204; 현재 비밀번호 재확인 후 변경, auth_version 증가로 모든 세션 폐기. 자동 로그인 없음 |
 | POST /auth/password-reset-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답 |
 | POST /auth/password-resets | 비로그인 가능+CSRF; token,newPassword | 204; 일회용 토큰으로 비밀번호 변경, auth_version 증가로 모든 세션·다른 재설정 링크 폐기. 자동 로그인 없음 |
+| POST /me/email-verification-requests | 회원+CSRF; 본문 없음 | 202 `{message}`; 기존 회원 이메일 인증 메일(15분 일회용 링크). 이미 인증 409 EMAIL_ALREADY_VERIFIED. [규칙](features.md#existing-email-verification) |
+| POST /me/email-verifications | 회원+CSRF; token | 204; 로그인 회원 본인 토큰일 때만 email_verified_at 기록. 그 밖은 400 EMAIL_VERIFICATION_INVALID. 세션·비밀번호 유지 |
 | POST /auth/account-guide-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 아이디 안내(가입한 이메일이면 그 주소로 안내 메일, 토큰 없음). 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답. [규칙](features.md#account-guide) |
 
 이메일 인증 가입(2026-11-06 구현): 요청 email은 가입과 같이 정규화·형식 검사하며 형식 오류만 400 VALIDATION_FAILED다. 그 밖에는 이미 가입된 이메일·이메일+목적당 60초 간격·1시간 5회 제한 초과·발송 실패 모두 같은 202다(이미 가입된 주소에도 인증 메일을 보낸다). 메일 링크 `/signup/verify#token=`의 token으로 인증하며 위조·만료(15분)·이미 인증·목적 다름은 400 SIGNUP_EMAIL_TOKEN_INVALID다. 인증하면 링크 토큰은 무효가 되고 가입 증명 proof(일회용, 인증 시점부터 30분)를 받는다. `alreadyRegistered`는 메일을 받은 본인이 인증한 뒤에만 알려 준다. 가입 시 증명 없음은 400 VALIDATION_FAILED, 위조·만료·사용됨·다른 이메일·인증 전 링크 토큰·재설정 토큰은 400 EMAIL_VERIFICATION_INVALID, 이미 가입된 이메일은 409 EMAIL_ALREADY_EXISTS다. 증명 없이 가입하는 경로는 없다. 상세는 [로그인 문서](features.md#b-234-0).

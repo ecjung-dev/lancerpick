@@ -21,6 +21,7 @@ import { DISPLAY_NAME_MAX, validateDisplayName } from '../validation'
 import { useDisplayNameCooldown } from '../useDisplayNameCooldown'
 import styles from './MyProfilePage.module.css'
 import { PasswordChangeForm } from './PasswordChangeForm'
+import { EmailVerificationCard } from '../components/EmailVerificationCard'
 
 const PROFILE_PATH = '/mypage/profile'
 
@@ -70,6 +71,8 @@ export function MyProfilePage() {
         member={member.data}
         onAccountChanged={() => setAccountChanged(true)}
       />
+      <hr className={styles.divider} />
+      <EmailVerificationCard key={`email-${member.data.id}`} member={member.data} />
       <hr className={styles.divider} />
       <PasswordChangeForm
         key={`password-${member.data.id}`}
