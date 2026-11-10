@@ -47,6 +47,8 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/members").permitAll();
                     // 비밀번호 재설정은 로그아웃 상태에서 쓴다. CSRF는 그대로 적용된다(비로그인 API라도 해제하지 않음).
                     auth.requestMatchers(HttpMethod.POST, "/api/auth/password-reset-requests", "/api/auth/password-resets").permitAll();
+            // 아이디 안내(K1): 로그아웃 상태 요청. CSRF는 그대로 적용된다.
+            auth.requestMatchers(HttpMethod.POST, "/api/auth/account-guide-requests").permitAll();
                     // 가입 이메일 인증도 로그인 전에 쓴다. CSRF는 그대로 적용된다.
                     auth.requestMatchers(HttpMethod.POST, "/api/auth/signup-email-requests", "/api/auth/signup-email-verifications").permitAll();
                     auth.requestMatchers("/api/admin/**").hasRole("ADMIN");

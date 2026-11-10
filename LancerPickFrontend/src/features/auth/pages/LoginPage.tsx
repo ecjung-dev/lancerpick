@@ -108,7 +108,7 @@ export function LoginPage() {
         <Button type="submit" className={styles.submit}>{submit.isPending ? '로그인 중…' : '로그인'}</Button>
       </fieldset>
     </form>
-    <p className={styles.switch}><Link to="/password-reset/request">비밀번호를 잊으셨나요?</Link></p>
+    <p className={styles.switch}><Link to="/account-guide">아이디(이메일)가 기억나지 않나요?</Link> · <Link to="/password-reset/request">비밀번호를 잊으셨나요?</Link></p>
     <p className={styles.switch}>아직 회원이 아니신가요? <Link to="/signup">회원가입</Link></p>
   </AuthLayout>
 }

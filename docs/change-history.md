@@ -5676,6 +5676,20 @@ API 명세 4·10·11절과 기존 SQL을 바탕으로 `OrderCreationService.crea
 ## 회원·인증·제재
 
 <details>
+<summary>기록 기준일 2026-11-10 — 1개 고유 기록 블록</summary>
+
+<a id="account-guide-20261110"></a>
+### 아이디 안내 API·화면 — 2026-11-10 (`feature/account-id-guide`, 김창재)
+
+- 결정 근거: 3인 설계 1절 "아이디 찾기는 이메일이 아이디라는 안내로 한정, 잊어버린 이메일 복구는 보류"와 2026-11-06 정은찬의 C3 결정(토큰 없는 안내 메일은 `AccountMail.untracked`, DB 기록 없음)을 그대로 구현했다. 새 테이블·Flyway 없음.
+- 구현: `POST /api/auth/account-guide-requests`(`AccountGuideController`·`AccountGuideService`), 메일 내용 `AccountGuideMailContent`, 토큰 없는 화면 링크용 `FrontendLinks.pageLink` 추가, `SecurityConfig`에 비로그인 POST 경로 1줄 허용(CSRF 유지). 화면 `/account-guide`(`AccountGuidePage`, 공통 `EmailLinkRequestForm` 재사용)와 로그인 화면 링크.
+- 처리 순서는 재설정 요청과 같다: 이메일 정규화 → 요청 제한 행 준비(별도 커밋) → 짧은 트랜잭션에서 제한 확인·회원 조회 → 커밋 뒤 발송기에 넘김. 제한은 이메일별 60초·1시간 5회이며 재설정 제한과 별도 scope(`ACCOUNT_GUIDE_EMAIL_INTERVAL`·`ACCOUNT_GUIDE_EMAIL_HOUR`, HMAC 목적 `ACCOUNT_GUIDE`).
+- 검증(로컬 `lancerpick_test`, 분기 main `a7e889b`): 백엔드 관련(`auth.*`·`member.*`·`common.*`) 182건, 전체 `clean build` 1037건 통과(실패·오류·건너뜀 0). 신규 `AccountGuideIntegrationTests` 4건 — 가입 이메일 1통·토큰/비밀번호/표시 이름 미포함·`account_challenges` 행 없음, 미가입 이메일 같은 202·메일 없음, 60초 내 반복 1통·재설정 제한과 별도, 발송 실패 비노출·형식 오류 400·CSRF 누락 403. 프런트 관련 16건, 전체 `test:api` 294건·lint·build 통과.
+- 한계: 실제 SMTP 발송·Mailpit 확인은 하지 않았다(가짜 발송기). 기존 회원 이메일 인증 전환(`EXISTING_EMAIL`)은 별도 후속이다. #154 문서 통합 이후 병합하면서 기록 위치를 이 문서·features·architecture·project-progress로 옮겼다.
+
+</details>
+
+<details>
 <summary>날짜 미명시·확인 필요 — 34개 고유 기록 블록</summary>
 
 ### 관리자 회원 조회·제재 관리

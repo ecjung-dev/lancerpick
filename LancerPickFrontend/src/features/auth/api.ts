@@ -55,6 +55,14 @@ export function requestPasswordReset(email: string) {
 }
 
 /**
+ * POST /api/auth/account-guide-requests(아이디 안내). 가입한 이메일이면 그 주소로 "이 주소가 아이디"라는 안내를 보낸다.
+ * 가입 여부와 상관없이 같은 202가 온다(응답 본문은 재설정과 같은 {message} 형식). 자동으로 다시 보내지 않는다.
+ */
+export function requestAccountGuide(email: string) {
+  return apiRequest<PasswordResetAccepted>('/auth/account-guide-requests', { method: 'POST', json: { email } })
+}
+
+/**
  * POST /api/auth/password-resets. 성공하면 204. 토큰은 한 번만 쓸 수 있으므로 절대 자동으로 다시 보내지 않는다.
  * 호출 순서와 캐시 처리는 passwordReset.ts의 submitPasswordReset을 쓴다.
  */
