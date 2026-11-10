@@ -1,20 +1,22 @@
 # 랜서픽 LancerPick
 
-고도화 신규 거래 정책: [결제 금액 보관·판매자 적립금 지급·자동 구매 확정](docs/full-funding-policy.md). 새 주문은 CONTRACT_V3(전자계약 + 전액 보관)로 만들어진다. 지갑 잔액에서 해당 주문 결제 금액만 차감해 보관하고, 구매 확정(수동 또는 자동) 때 수수료를 뺀 금액을 판매자 지갑에 지급하며, 합의 취소·관리자 승인 취소 때 전액 반환한다. 기존 주문은 만들 때의 정책(LEGACY_V1 등)으로 끝까지 처리된다. [구현 범위](docs/full-funding-payment.md)·[활성화 판정](docs/v3-activation-gate.md#6-판정-기록)
+현재 구현(2026-11-10, 소스 main `a7e889b` 정적 확인): [헤더 대화 목록·전역 주문 채팅창](docs/features.md#communication-chat)은 주문별 대화 목록·별도 창·최소화·경로 유지·계정 경계와 종료 거래 조회 전용을 제공합니다. #147의 같은 UUID 재확인도 포함합니다. 구현 존재와 원격 반영·실서버 검증 범위는 [진행 현황](docs/project-progress.md#current-status)에서 구분합니다.
 
-고정 가격 프리랜서 서비스의 주문·결제·납품·구매 확정·판매 수익을 관리하는 4인 팀 프로젝트입니다. 회원가입·세션 로그인·내 정보, 주문 생성/조회/수락/납품/수정, 적립금 결제·취소/환불·확정/정산 API와 구매자 취소 요청 제출/승인/거절/철회를 구현했습니다. 로그인·가입·상품 상세·등록·수정·주문 작성과 주문 조회·처리·정산·관리자 상품 운영 화면을 연결했습니다. 사용자는 실제 화면에서 상품 등록부터 주문·결제·납품·구매 확정·정산과 취소·환불·잔액 반환을 확인했습니다. 구현 범위와 검증 기록은 [현황표](docs/current-status.md)를 따릅니다.
+신규 계약 정책은 [CONTRACT_V3 전액 결제·보관·지급·반환](docs/features.md#finance-funds)입니다. 금융 명령·납품/수정·자동 확정·알림·관리자 문의 연결은 구현돼 있지만 V3 신규 생성 기본값은 true(#152), V2는 false입니다. 후보 `c0009f2`의 게이트 통과와 기본값 활성화는 별개이며, 이후 코드의 검증 범위는 [진행 현황](docs/project-progress.md#activation-gate)을 따릅니다.
 
-마이페이지의 구매 내역·판매 내역·판매 수익 메뉴는 실제 화면으로 연결됩니다. 주문 목록은 URL에 구매/판매 구분과 페이지를 보관합니다. [현재 상태](docs/current-status.md)와 [통합 검증 기록](docs/account-trade-integration.md)을 참고하세요.
+고정 가격 프리랜서 서비스의 주문·결제·납품·구매 확정·판매 수익을 관리하는 4인 팀 프로젝트입니다. 회원가입·세션 로그인·내 정보, 주문 생성/조회/수락/납품/수정, 적립금 결제·취소/환불·확정/정산 API와 구매자 취소 요청 제출/승인/거절/철회를 구현했습니다. 로그인·가입·상품 상세·등록·수정·주문 작성과 주문 조회·처리·정산·관리자 상품 운영 화면을 연결했습니다. 사용자는 실제 화면에서 상품 등록부터 주문·결제·납품·구매 확정·정산과 취소·환불·잔액 반환을 확인했습니다. 구현 범위와 검증 기록은 [현황표](docs/project-progress.md#current-status)를 따릅니다.
 
-기본 충전 실패 흐름과 로그아웃 후 다른 계정 로그인 시 이전 정보가 남지 않는 것도 사용자 확인을 완료했습니다. 상품 수정·판매 중지·관리자 숨김 후 기존 주문의 대표 거래·정산·환불과 숨김 상품 공개 상세 차단은 정은찬이 화면에서 확인했습니다. 모바일·나머지 조합은 별도이며, 디자인 개선과 배포는 보류합니다. [수동 검증 현황](docs/manual-trade-verification.md)을 따릅니다.
+마이페이지의 구매 내역·판매 내역·판매 수익 메뉴는 실제 화면으로 연결됩니다. 주문 목록은 URL에 구매/판매 구분과 페이지를 보관합니다. [현재 상태](docs/project-progress.md#current-status)와 [통합 검증 기록](docs/change-history.md#b-12-0)을 참고하세요.
 
-2026-11-05 main `1e10d78`과 첨부 시트 대조 기준, 개인 MVP 기능은 35/35 완료이며 공통 업무는 0/8 완료(진행 중 7·시작 전 1)입니다. 후기 실제 세션 회귀·상품/후기 화면·주문 예외 확인도 후속 기록됐습니다. 실기기 모바일·추가 조합·배포 완료를 뜻하지 않으며 [팀 진행도](docs/team-progress.md)와 [작업표](docs/work-plan.md)를 참고하세요.
+대표 거래·환불·충전 실패·계정 전환의 사용자 확인은 날짜별 [수동 검증 기록](docs/change-history.md#orders)에 보존했습니다. 320px 확인과 실기기/모든 조합 검증은 구분합니다. 이후 U1/U2 화면 개편은 코드에 반영됐으며, 배포·추가 검증·Redis 보류 등 현재 남은 범위는 [진행 현황](docs/project-progress.md#remaining)을 따릅니다.
+
+2026-11-05 main `1e10d78`과 첨부 시트 대조 기준, 개인 MVP 기능은 35/35 완료이며 공통 업무는 0/8 완료(진행 중 7·시작 전 1)입니다. 후기 실제 세션 회귀·상품/후기 화면·주문 예외 확인도 후속 기록됐습니다. 실기기 모바일·추가 조합·배포 완료를 뜻하지 않으며 [팀 진행도](docs/project-progress.md#team-progress)와 [작업표](docs/project-progress.md#remaining)를 참고하세요.
 
 ## 팀 역할
 
-고도화 작업을 시작할 팀원은 [공통 기반 시작 안내](docs/advanced-team-start.md)에서 실제 제공된 스키마·내부 서비스와 아직 연결하지 않은 기능을 먼저 확인하세요.
+작업을 시작할 때는 [현재 구조·환경](docs/architecture.md)과 [담당·선행·남은 일](docs/project-progress.md#remaining)을 먼저 읽으세요. 최초 V5/V6 기반과 당시 인수인계는 변경 이력에 보존했습니다.
 
-Flyway V1~V11이 main에 있다. 계약 초안·서명·PDF, 결제 금액 보관, 자동 구매 확정 타이머, 주문 채팅(HTTP + STOMP), 주문·회원 알림, 운영 문의·관리자 취소 검토, 회원 제재 기반이 연결돼 있다. 이전 분할 결제(CONTRACT_V2) 생성 경로는 설정으로 닫혀 있다. [전체 스키마](docs/advanced-schema-foundation.md)·[정책 경계](docs/advanced-policy-boundary.md)에서 기반을, [현재 현황](docs/current-status.md)에서 남은 일을 확인한다. 담당별 고도화 항목·선행·상태는 [고도화 작업표](docs/work-plan.md#고도화-작업표--2026-11-05)를 따르세요.
+현재 HEAD에는 Flyway V1~V11, 업무 32개·Batch 시스템 9개 테이블을 제공하는 마이그레이션이 있습니다. 계약/PDF·실시간 채팅·알림·자동 확정·메일·충전 복구·관리자 문의/금융·운영 현황/알림 실패 조회 코드가 존재합니다. 관리자 회원 관리 HTTP/화면은 main 미반영 로컬 브랜치입니다. V3 신규 생성은 기본 활성(#152)이고 V2는 비활성이며 메일·충전 복구 스케줄링도 각각 설정으로 구분합니다. [현재 구조·실행 기본값](docs/architecture.md), [DB 설계](docs/database-design.md), [담당·남은 일](docs/project-progress.md)을 참고하세요. Redis는 이번 발표 범위 제외입니다. 실제 접속 DB의 적용 버전과 원격 CI 결과는 별도 확인이 필요합니다.
 
 | 담당자 | 역할 | 핵심 책임 |
 | --- | --- | --- |
@@ -23,7 +25,7 @@ Flyway V1~V11이 main에 있다. 계약 초안·서명·PDF, 결제 금액 보�
 | 김창재 | 회원·인증·관리자 | 회원가입·로그인·권한·관리자 상품 운영 |
 | 박소현 | 판매자·상품·후기 | 판매자·상품·검색·후기 |
 
-각자 자기 기능의 화면·API·DB·테스트를 책임지고, 조장과 React 공통 담당자가 어려운 설계·로직을 지원합니다. [확정 배정과 예상 업무 비중](docs/work-plan.md#확정-역할-배정)을 참고합니다.
+각자 자기 기능의 화면·API·DB·테스트를 책임지고, 조장과 React 공통 담당자가 어려운 설계·로직을 지원합니다. [확정 배정과 예상 업무 비중](docs/team-roles.md#b-1131-0)을 참고합니다.
 
 ## 저장소 구조
 
@@ -41,7 +43,7 @@ lancerpick/
 
 ## 준비 사항
 
-토스 테스트 충전 확장: [Flyway V2](docs/wallet-topup-schema.md), [신청·본인 조회](docs/wallet-topup-api.md), [승인·지급·재확인](docs/wallet-topup-approval.md)을 구현했습니다. V1 16개에 V2 충전 테이블을 더해 누적 17개입니다. 사용자 테스트에서 실제 테스트 충전 5만원·잔액 105만원·내역 2건을 확인했습니다. 현재 일반 개발 설정은 TOSS_TOPUP_ENABLED 기본값이 true이므로 개인 테스트 시크릿이 필요하며, 외부 호출을 끄려면 false를 지정합니다. test 프로필은 외부 호출을 명시적으로 비활성화합니다. 최종 브라우저·인증 화면 통합 범위는 [최신 검증](docs/account-trade-integration.md)을 따릅니다.
+토스 테스트 충전은 [신청·승인·본인 재확인](docs/features.md#finance-topup), [복구 Batch](docs/features.md#finance-batch)로 관리합니다. 일반 개발 설정은 TOSS_TOPUP_ENABLED 기본값이 true여서 개인 테스트 시크릿이 필요하고, 끄려면 false를 지정합니다. test 프로필은 외부 호출을 비활성화합니다. 과거 5만원 테스트 충전과 잔액 105만원 확인은 [검증 이력](docs/change-history.md#finance)에 보존했습니다. 현재 누적 스키마는 V1~V11이며 연결 대상 DB를 확인합니다.
 
 Windows PowerShell 기준입니다. 명령의 시작 위치는 저장소 루트입니다. 저장소를 다른 경로에 복제해도 폴더 구조는 동일합니다.
 
@@ -71,7 +73,7 @@ MySQL을 실행하고 `lancerpick` 데이터베이스와 접속 가능한 개인
 CREATE DATABASE IF NOT EXISTS lancerpick CHARACTER SET utf8mb4;
 ```
 
-DB 계정에는 해당 데이터베이스에서 개발 및 Flyway 마이그레이션에 필요한 권한이 있어야 합니다. 16개 업무 테이블의 최초 SQL은 [Flyway V1](LancerPick/src/main/resources/db/migration/V1__init.sql) 한 곳에서 관리합니다. 2026-11-02 실행용 경로로 이동했고, MySQL 8.0.46 테스트 DB에서 V1 적용·clean build 성공을 사용자 실행 결과로 확인했습니다. 후속으로 격리 MySQL 8.4.13에서 V1/V2 적용과 구현된 회원·지갑·주문 엔티티 및 API 통합 테스트를 검증했습니다. 전체 업무 기능·실제 로그인·외부 결제 검증과는 구분합니다. [검증 상세](docs/physical-db.md#2026-11-02-사용자-실행-검증-결과)를 참고합니다. 이제 일반 실행이나 DB 통합 테스트 시 Flyway가 연결된 DB에 테이블 생성을 시도하므로 먼저 대상 DB와 적용 이력을 확인합니다. demo 실행은 DB를 사용하지 않습니다.
+DB 계정에는 해당 데이터베이스에서 개발 및 Flyway 마이그레이션에 필요한 권한이 있어야 합니다. 16개 업무 테이블의 최초 SQL은 [Flyway V1](LancerPick/src/main/resources/db/migration/V1__init.sql) 한 곳에서 관리합니다. 2026-11-02 실행용 경로로 이동했고, MySQL 8.0.46 테스트 DB에서 V1 적용·clean build 성공을 사용자 실행 결과로 확인했습니다. 후속으로 격리 MySQL 8.4.13에서 V1/V2 적용과 구현된 회원·지갑·주문 엔티티 및 API 통합 테스트를 검증했습니다. 전체 업무 기능·실제 로그인·외부 결제 검증과는 구분합니다. [검증 상세](docs/change-history.md#b-777-0)를 참고합니다. 이제 일반 실행이나 DB 통합 테스트 시 Flyway가 연결된 DB에 테이블 생성을 시도하므로 먼저 대상 DB와 적용 이력을 확인합니다. demo 실행은 DB를 사용하지 않습니다.
 
 ### 2. 개인 접속 정보 작성
 
@@ -114,7 +116,7 @@ DB 없이 기존 예시 API만 확인하려면 이 폴더에서 선택적으로 
 .\gradlew.bat bootRun --args="--spring.profiles.active=demo"
 ```
 
-`demo`는 DB·JPA·Flyway 자동 설정과 개인 DB 파일 import를 사용하지 않으며 127.0.0.1에서만 수신합니다. DB 검증·운영 배포용 프로필이 아닙니다. 기본 실행은 개인 DB 설정이 필요합니다. [실행 방식 구분](docs/test-database.md#1-설정-구분)을 참고합니다.
+`demo`는 DB·JPA·Flyway 자동 설정과 개인 DB 파일 import를 사용하지 않으며 127.0.0.1에서만 수신합니다. DB 검증·운영 배포용 프로필이 아닙니다. 기본 실행은 개인 DB 설정이 필요합니다. [실행 방식 구분](docs/change-history.md#empty-unit-954)을 참고합니다.
 
 ## 프런트엔드 실행
 
@@ -130,7 +132,7 @@ npm.cmd run dev
 
 PowerShell에서 `npm.ps1` 실행 정책 오류가 없다면 `npm.cmd` 대신 `npm`을 사용해도 됩니다. 5173 포트가 사용 중이면 기존 Vite 서버를 종료한 뒤 다시 실행합니다.
 
-현재 `/`는 실제 DB의 상품·카테고리 API로 검색·필터·페이지·상품 요약을 제공합니다. `/products/:id`의 공개 상품 상세에서 `/products/:id/order` 주문 작성으로 이동할 수 있습니다([주문 진입](docs/order-entry.md)). `/orders`와 주문 상세는 거래 조회·수락/거절·납품/수정·취소 요청 처리·결제·직접 취소·확정 화면 기반을 제공합니다. `/login`, `/signup`은 로그인·가입 폼이며 헤더는 로그인 상태에 따라 회원 메뉴를 바꿉니다([인증 안내](docs/auth-login.md#프런트-연결-2026-11-04)). 상품 화면에는 DB를 사용하는 백엔드가 필요하며, 연결 실패를 프런트 샘플로 자동 대체하지 않습니다. 검색 연결의 검증 범위는 [상품 검색 안내](docs/product-search.md)를 따릅니다. 실제 운영 로그인부터 주문 작성·완료까지의 브라우저 검증은 별도입니다.
+현재 `/`는 실제 DB의 상품·카테고리 API로 검색·필터·페이지·상품 요약을 제공합니다. `/products/:id`의 공개 상품 상세에서 `/products/:id/order` 주문 작성으로 이동할 수 있습니다([주문 진입](docs/features.md#orders-create)). `/orders`와 주문 상세는 거래 조회·수락/거절·납품/수정·취소 요청 처리·결제·직접 취소·확정 화면 기반을 제공합니다. `/login`, `/signup`은 로그인·가입 폼이며 헤더는 로그인 상태에 따라 회원 메뉴를 바꿉니다([인증 안내](docs/features.md#b-216-0)). 상품 화면에는 DB를 사용하는 백엔드가 필요하며, 연결 실패를 프런트 샘플로 자동 대체하지 않습니다. 검색 연결의 검증 범위는 [상품 검색 안내](docs/features.md#products-catalog)를 따릅니다. 실제 운영 로그인부터 주문 작성·완료까지의 브라우저 검증은 별도입니다.
 
 ## 프런트와 백엔드 연결
 
@@ -138,7 +140,7 @@ PowerShell에서 `npm.ps1` 실행 정책 오류가 없다면 `npm.cmd` 대신 `n
 브라우저 → localhost:5173 → /api 요청 프록시 → localhost:8080
 ```
 
-프런트에서는 `/api/...` 상대 경로로 요청합니다. 개발 프록시는 `LancerPickFrontend/vite.config.ts`에 설정되어 있습니다. 공통 요청 함수는 세션 쿠키·CSRF 헤더·204·오류 처리를 제공합니다. 로그인·로그아웃 직후에는 `features/auth/session.ts`의 `resetAccountState()`가 CSRF 토큰과 이전 계정 캐시를 정리합니다. 백엔드 포트를 바꾸면 [API_PROXY_TARGET 설정](docs/frontend-common-guide.md#2-3-백엔드-포트가-8081일-때만)을 따릅니다.
+프런트에서는 `/api/...` 상대 경로로 요청합니다. 개발 프록시는 `LancerPickFrontend/vite.config.ts`에 설정되어 있습니다. 공통 요청 함수는 세션 쿠키·CSRF 헤더·204·오류 처리를 제공합니다. 로그인·로그아웃 직후에는 `features/auth/session.ts`의 `resetAccountState()`가 CSRF 토큰과 이전 계정 캐시를 정리합니다. 백엔드 포트를 바꾸면 [API_PROXY_TARGET 설정](docs/architecture.md#b-468-0)을 따릅니다.
 
 ## 빌드와 검사
 
@@ -163,7 +165,7 @@ npm.cmd run build
 .\gradlew.bat clean build
 ```
 
-백엔드 통합 테스트는 `@IntegrationTest`와 `test` 프로필을 사용합니다. 개발용 개인 접속 파일을 읽지 않고 `TEST_DB_URL`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD`로 테스트 전용 MySQL에 접속합니다. 테스트 전용 DB·계정 준비와 PowerShell 실행 방법은 [테스트 DB 안내](docs/test-database.md)를 따릅니다. 테스트용 URL을 생략하면 `localhost:3306/lancerpick_test`를 사용하며 계정·비밀번호는 반드시 별도로 지정합니다. 일반 실행의 `DB_*`로 대체하지 않습니다.
+백엔드 통합 테스트는 `@IntegrationTest`와 `test` 프로필을 사용합니다. 개발용 개인 접속 파일을 읽지 않고 `TEST_DB_URL`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD`로 테스트 전용 MySQL에 접속합니다. 테스트 전용 DB·계정 준비와 PowerShell 실행 방법은 [테스트 DB 안내](docs/architecture.md#environment)를 따릅니다. 테스트용 URL을 생략하면 `localhost:3306/lancerpick_test`를 사용하며 계정·비밀번호는 반드시 별도로 지정합니다. 일반 실행의 `DB_*`로 대체하지 않습니다.
 
 공통 JPA 설정은 OSIV 비활성화, 스키마 검증(`validate`), JDBC 시각 UTC입니다. Flyway는 활성화하며 테이블은 SQL로 관리합니다. V1 적용은 앞서 링크한 검증 기록의 범위로 확인했지만 업무 엔티티·인증·거래 기능 구현 완료를 의미하지 않습니다.
 
@@ -178,7 +180,7 @@ npm.cmd run build
 
 CI는 실행마다 `lancerpick_ci` DB를 만들고 종료 시 폐기합니다. 워크플로는 `TEST_DB_*`를 전달하며 JPA 설정은 백엔드 공통 파일을 사용합니다. 워크플로의 `ci_only_*` 값은 격리된 테스트 전용 값이며 실제 접속 정보가 아닙니다. 개인 설정 파일이나 로컬 DB를 사용하지 않고 별도 Secrets 등록도 필요하지 않습니다. JDBC의 공개키 조회 허용·TLS 비활성화 옵션은 CI 임시 DB 전용입니다.
 
-테이블을 추가할 때는 엔티티와 Flyway SQL을 함께 반영해야 합니다. CI는 테스트를 생략하거나 스키마를 자동 생성해 검사를 우회하지 않습니다. 현재 CI 워크플로는 프런트 `test:api`도 실행합니다([개발 규칙](docs/development-rules.md)). docs SQL 검사 스크립트는 별도 검사입니다. CI 실행 여부·성공은 해당 커밋의 Actions 결과로 확인합니다. 이번 문서 정리에서는 CI 설정이나 실행 결과를 변경하지 않습니다.
+테이블을 추가할 때는 엔티티와 Flyway SQL을 함께 반영해야 합니다. CI는 테스트를 생략하거나 스키마를 자동 생성해 검사를 우회하지 않습니다. 현재 CI 워크플로는 프런트 `test:api`도 실행합니다([개발 규칙](docs/architecture.md#conventions)). docs SQL 검사 스크립트는 별도 검사입니다. CI 실행 여부·성공은 해당 커밋의 Actions 결과로 확인합니다. 이번 문서 정리에서는 CI 설정이나 실행 결과를 변경하지 않습니다.
 
 이 구성은 자동 검사만 수행합니다. 실제 GitHub 실행 결과는 push 또는 PR 후 확인해야 합니다. PR 병합 시 두 검사를 필수로 강제하려면 저장소에서 브랜치 보호 또는 규칙을 별도로 설정합니다.
 
@@ -195,4 +197,4 @@ CI는 실행마다 `lancerpick_ci` DB를 만들고 종료 시 폐기합니다. �
 
 세부 구조는 [백엔드 README](LancerPick/README.md)와 [프런트엔드 README](LancerPickFrontend/README.md)를 참고합니다.
 
-기능 구현 방법은 [백엔드 공통 가이드](docs/backend-common-guide.md)와 [프런트 공통 가이드](docs/frontend-common-guide.md), 개발 착수 순서·남은 결정은 [작업표](docs/work-plan.md#5-개발-착수-순서와-연결-계약)를 참고합니다.
+기능 구현 방법은 [백엔드 공통 가이드](docs/architecture.md#conventions)와 [프런트 공통 가이드](docs/architecture.md#environment), 개발 착수 순서·남은 결정은 [작업표](docs/change-history.md#b-1136-0)를 참고합니다.
