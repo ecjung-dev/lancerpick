@@ -9,8 +9,8 @@ import static com.example.lancerpick.admin.dto.AdminFinanceResponses.BlockReason
 
 import com.example.lancerpick.admin.dto.AdminFinanceResponses;
 import com.example.lancerpick.admin.dto.AdminFinanceResponses.Decision;
+import com.example.lancerpick.wallet.batch.TopupRecoveryJobParameters;
 import com.example.lancerpick.wallet.config.TopupRecoveryBatchConfiguration;
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.JobInstance;
@@ -157,20 +156,8 @@ public class AdminRecoveryJobQueries {
   }
 
   private static OffsetDateTime requestedAt(JobExecution execution) {
-    try {
-      var parameters = execution.getJobParameters();
-      if (parameters.parameters().size() != 2) {
-        return null;
-      }
-      UUID.fromString(parameters.getString("run.id"));
-      Long millis = parameters.getLong("requestedAtMillis");
-      if (millis == null || millis < 0) {
-        return null;
-      }
-      var at = Instant.ofEpochMilli(millis).atOffset(ZoneOffset.UTC);
-      return at.getYear() <= 9999 ? at : null;
-    } catch (RuntimeException invalid) {
-      return null;
-    }
+    return TopupRecoveryJobParameters.requestedAt(execution.getJobParameters())
+        .map(at -> at.atOffset(ZoneOffset.UTC))
+        .orElse(null);
   }
 }

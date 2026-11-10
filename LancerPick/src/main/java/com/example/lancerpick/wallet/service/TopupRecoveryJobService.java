@@ -1,5 +1,6 @@
 package com.example.lancerpick.wallet.service;
 
+import com.example.lancerpick.wallet.batch.TopupRecoveryJobParameters;
 import com.example.lancerpick.wallet.config.TopupRecoveryBatchConfiguration;
 import java.time.Clock;
 import java.util.UUID;
@@ -41,8 +42,8 @@ public class TopupRecoveryJobService {
     return operator.start(
         job,
         new JobParametersBuilder()
-            .addString("run.id", UUID.randomUUID().toString())
-            .addLong("requestedAtMillis", clock.millis())
+            .addString(TopupRecoveryJobParameters.RUN_ID, UUID.randomUUID().toString())
+            .addLong(TopupRecoveryJobParameters.REQUESTED_AT_MILLIS, clock.millis())
             .toJobParameters());
   }
 

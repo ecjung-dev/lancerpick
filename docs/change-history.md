@@ -4,8 +4,17 @@
 
 ## 기록 해석
 
+<a id="topup-recovery-job-parameters"></a>
+### 충전 복구 Job 파라미터 규칙 공유(리팩터링 6단계) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/topup-recovery-job-parameters`, main `a32e1c4`(#178) 기준. 전체 리팩터링 검토의 마지막 단계다. 방안은 Codex 읽기 전용 검토를 받아 정했다. Job 검증기(`TopupRecoveryBatchConfiguration`)와 관리자 재시작 판단(`AdminRecoveryJobQueries.requestedAt`)이 같은 파라미터 규칙을 따로 갖고 있었고, 관리자 쪽만 UTC 9999년 상한이 있어 판단이 어긋날 수 있었다(화면은 `INVALID_JOB_PARAMETERS`, 검증기는 통과). `wallet/batch/TopupRecoveryJobParameters`(키 상수, `requestedAt(JobParameters): Optional<Instant>`, `validate`)로 모아 두 곳과 실행 생성(`TopupRecoveryJobService`)·Tasklet이 함께 쓴다. 검증기 메시지는 같다.
+
+**의도한 검증 강화**: 검증기에 9999년 상한(`9999-12-31T23:59:59.999Z`까지)이 추가됐다. 서버는 `clock.millis()`로만 값을 채우므로 정상 시계에서는 해당 값이 생기지 않고, 이런 저장 실행은 이전에도 관리자 재시작 후보에서 빠졌다. 저장된 파라미터로 재시작할 때도 검증기가 다시 적용되는 것을 통합 테스트로 확인했다(실패는 `JobRestartException`으로 감싸져 오며 관리자 재시작은 기존대로 `BATCH_RESTART_REJECTED`). 영향 영역: wallet·admin(황준범·김창재). API·DB 변경 없음.
+
+검증: `TopupRecoveryJobParametersTests` 추가(0, 9999년 마지막 밀리초 허용, 누락·추가 키·타입 불일치·UUID 아님·음수·10000년 첫 밀리초·`Long.MAX_VALUE` 거부, 검증기와 관리자 판단 일치), `TopupRecoveryIntegrationTests`에 정상 파라미터로 저장된 STOPPED 실행 재시작 성공·10000년 파라미터 FAILED 실행 재시작 거부 추가. 관련 `wallet.*`·`admin.AdminFinance*`·`admin.AdminReprocessing*` 통과, 전체 `clean build` **1,149건 통과**(실패·오류·건너뜀 0, 3분 58초, 로컬 테스트 DB, 2026-11-10). 원격 CI는 PR에서 확인한다.
+
 <a id="full-funding-records-split"></a>
-### V3 보관금 서비스에서 기록 대사 분리(리팩터링 5-5) — 2026-11-10, 로컬 구현
+### V3 보관금 서비스에서 기록 대사 분리(리팩터링 5-5) — 2026-11-10, main 반영(#178)
 
 정은찬, `refactor/full-funding-checks-split`, main `ff4d517`(#177) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 마지막 파일이다. `FullFundingService`(598줄 → 461줄)에서 서명 계약·결제·보관금·원장(결제·환불·판매자 지급)·완료 종료/정산 기록 대사를 order 내부 `FullFundingRecords`로 옮겼다. 코드는 그대로 옮겼고 호출 위치·순서도 같아 원장 행 잠금(`findByEventKeyForUpdate`)이 걸리는 시점이 바뀌지 않는다. 실행 회원 → 주문 → 지갑 잠금 순서, 트랜잭션(READ_COMMITTED, 조회 REPEATABLE_READ), 지급·반환·종료 기록·이력 저장은 서비스에 그대로 있고 새 클래스는 상태를 바꾸지 않는다. 오류 코드·메시지(`DATA_INTEGRITY_ERROR`, `CONTRACT_NOT_SIGNED`)·공개 메서드 변경 없음. 영향 영역: order·payment·wallet·settlement·contract(정은찬·황준범). API·DB 변경 없음.
 

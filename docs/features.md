@@ -1929,7 +1929,7 @@ Batch `scanRequestedAt`은 허용된 `requestedAtMillis` 파라미터를 UTC로 
 | `TopupRecoveryJobService.start()` | 새 서버 UUID와 시작 시각으로 `walletTopupRecovery` 실행 |
 | `TopupRecoveryJobService.restart(executionId)` | 같은 Job의 실패/중지 실행을 Batch 규칙에 따라 체크포인트부터 재시작 |
 
-Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Step 컨텍스트에는 `highestId`·`lastId`와 `completed`·`failed`·`deferred`·`exhausted`·`stale` 집계만 업무 값으로 저장한다. 프레임워크의 기본 체크포인트 항목도 함께 저장된다. 결제 키·처리권 토큰·외부 응답 원문은 저장하지 않는다. 업무 예외는 고정 오류 코드로 바꿔 Batch 실패 메타데이터에 제공자 원문이 들어가지 않도록 한다.
+Job 파라미터는 `run.id`(UUID)와 `requestedAtMillis`(0 이상, UTC 9999년 이내 epoch 밀리초) 두 개만 허용한다. 규칙은 `wallet/batch/TopupRecoveryJobParameters` 하나에 있고 Job 검증기(시작과 저장된 파라미터로 재시작할 때 모두 적용, 재시작 실패는 `JobRestartException`)와 관리자 재시작 판단(`INVALID_JOB_PARAMETERS`)이 같이 쓴다. Step 컨텍스트에는 `highestId`·`lastId`와 `completed`·`failed`·`deferred`·`exhausted`·`stale` 집계만 업무 값으로 저장한다. 프레임워크의 기본 체크포인트 항목도 함께 저장된다. 결제 키·처리권 토큰·외부 응답 원문은 저장하지 않는다. 업무 예외는 고정 오류 코드로 바꿔 Batch 실패 메타데이터에 제공자 원문이 들어가지 않도록 한다.
 
 프로세스 강제 종료로 메타데이터가 `STARTED`에 남으면 바로 `restart`할 수 없다. 새 Job 실행은 만료된 처리권을 다시 확보해 업무 복구를 계속할 수 있다. 예전 실행 이력의 복구는 작업자 종료를 운영자가 확인한 후 Spring Batch `JobOperator.recover`로 실패 상태를 정리하는 별도 운영 절차다. 실행 중인 작업을 자동으로 종료된 것으로 간주하거나 강제 복구하는 API는 제공하지 않는다.
 

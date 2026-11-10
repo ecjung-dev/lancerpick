@@ -1,6 +1,7 @@
 package com.example.lancerpick.wallet;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -12,6 +13,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.lancerpick.support.IntegrationTest;
+import com.example.lancerpick.wallet.batch.TopupRecoveryJobParameters;
+import com.example.lancerpick.wallet.config.TopupRecoveryBatchConfiguration;
 import com.example.lancerpick.wallet.dto.WalletTopupResponse;
 import com.example.lancerpick.wallet.entity.WalletTopupStatus;
 import com.example.lancerpick.wallet.gateway.TossGatewayException;
@@ -34,6 +37,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +51,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobRestartException;
 import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -494,6 +501,39 @@ class TopupRecoveryIntegrationTests {
     assertCredited(second);
     verify(gateway, times(1)).lookup(first.paymentKey());
     verify(gateway, times(1)).lookup(second.paymentKey());
+  }
+
+  @Test
+  void restartRevalidatesStoredParametersWithTheSharedContract() throws Exception {
+    // 정상 파라미터로 저장된 중단 실행은 재시작되고, 계약 범위(UTC 9999년)를 넘는 저장 파라미터는 재시작 때 검증기가 막는다.
+    // JobOperator.restart는 검증 실패를 JobRestartException으로 감싼다(관리자 재시작은 BATCH_RESTART_REJECTED로 기록).
+    var stopped = storedExecution(Instant.parse("2026-11-10T00:00:00Z").toEpochMilli(), BatchStatus.STOPPED);
+    var restarted = jobs.restart(stopped.getId());
+    assertThat(restarted.getStatus()).isEqualTo(BatchStatus.COMPLETED);
+    assertThat(restarted.getJobInstanceId()).isEqualTo(stopped.getJobInstanceId());
+
+    var outOfRange =
+        storedExecution(Instant.parse("+10000-01-01T00:00:00Z").toEpochMilli(), BatchStatus.FAILED);
+    assertThatThrownBy(() -> jobs.restart(outOfRange.getId()))
+        .isInstanceOf(JobRestartException.class)
+        .hasMessage("Only a server run ID and start time are permitted");
+    verify(gateway, never()).lookup(anyString());
+  }
+
+  private JobExecution storedExecution(long requestedAtMillis, BatchStatus status) {
+    var parameters =
+        new JobParametersBuilder()
+            .addString(TopupRecoveryJobParameters.RUN_ID, UUID.randomUUID().toString())
+            .addLong(TopupRecoveryJobParameters.REQUESTED_AT_MILLIS, requestedAtMillis)
+            .toJobParameters();
+    var instance =
+        jobRepository.createJobInstance(TopupRecoveryBatchConfiguration.JOB_NAME, parameters);
+    var execution =
+        jobRepository.createJobExecution(instance, parameters, new ExecutionContext());
+    execution.setStatus(status);
+    execution.setEndTime(LocalDateTime.now(ZoneOffset.UTC));
+    jobRepository.update(execution);
+    return execution;
   }
 
   private JobExecution completedJob() throws Exception {

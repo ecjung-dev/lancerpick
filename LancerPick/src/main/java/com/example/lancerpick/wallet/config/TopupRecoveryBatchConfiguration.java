@@ -1,13 +1,12 @@
 package com.example.lancerpick.wallet.config;
 
+import com.example.lancerpick.wallet.batch.TopupRecoveryJobParameters;
 import com.example.lancerpick.wallet.batch.TopupRecoveryTasklet;
 import com.example.lancerpick.wallet.repository.TopupRecoveryQueries;
 import com.example.lancerpick.wallet.service.TopupRecoveryService;
 import java.time.Clock;
-import java.util.UUID;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.job.parameters.InvalidJobParametersException;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -49,19 +48,7 @@ public class TopupRecoveryBatchConfiguration {
   @Bean
   public Job walletTopupRecoveryJob(JobRepository jobRepository, Step walletTopupRecoveryStep) {
     return new JobBuilder(JOB_NAME, jobRepository)
-        .validator(parameters -> {
-          try {
-            if (parameters.parameters().size() != 2
-                || parameters.getLong("requestedAtMillis") == null
-                || parameters.getLong("requestedAtMillis") < 0) {
-              throw new IllegalArgumentException();
-            }
-            UUID.fromString(parameters.getString("run.id"));
-          } catch (RuntimeException invalid) {
-            throw new InvalidJobParametersException(
-                "Only a server run ID and start time are permitted");
-          }
-        })
+        .validator(TopupRecoveryJobParameters::validate)
         .start(walletTopupRecoveryStep)
         .build();
   }

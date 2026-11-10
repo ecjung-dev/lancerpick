@@ -32,7 +32,7 @@ public class TopupRecoveryTasklet implements Tasklet {
         context.putLong("highestId", queries.highestId());
       }
       long lastId = context.getLong("lastId", 0);
-      long startedAt = step.getJobParameters().getLong("requestedAtMillis");
+      long startedAt = step.getJobParameters().getLong(TopupRecoveryJobParameters.REQUESTED_AT_MILLIS);
       Instant staleBefore = Instant.ofEpochMilli(startedAt).minus(properties.staleAge());
       var next =
           queries.nextId(
