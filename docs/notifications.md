@@ -1,5 +1,19 @@
 # 주문 알림·아웃박스
 
+## 비밀번호 변경 권고 알림(U6) — 2026-11-10, 로컬 구현
+
+`feature/password-change-recommendation`. 정책 근거는 [회원 변경 정책](member-change-policy.md#비밀번호-변경-권고-발송-u6--2026-11-10). 스케줄러·전체 회원 스캔·새 인덱스·마이그레이션 없이 **로그인한 회원에게만** 권고한다.
+
+- 발행: `AuthController.login`이 로그인(읽기 전용 트랜잭션·세션 저장)을 마친 뒤 `PasswordChangeRecommendations.issueAfterLogin(memberId)`를 부른다. 별도 `REQUIRES_NEW`·READ_COMMITTED 트랜잭션이고, 실패해도 로그만 남기고 로그인 응답은 200 그대로다.
+- 대상 판정: 잠금 없는 `PasswordRecommendationQuery`로 첫 권고 시각 전이면 바로 끝낸다. 대상이면 비밀번호 변경·재설정과 같은 회원 배타 잠금(`findByIdForUpdate`) 뒤 기준일을 다시 읽는다. 회차 = 기준일부터 한국 달력 6개월 구간이 다 지난 수(`MemberChangePolicy.elapsedSixMonthPeriods`, 경계는 항상 기준에서 6개월 × n).
+- 중복: 이벤트 ID = `UUID.nameUUIDFromBytes("PASSWORD_CHANGE_RECOMMENDED:<회원>:<기준일 µs>:<회차>")`. 잠금 아래 `existsByEventId`로 거르고 `uk_outbox_event`가 최종 방어다. 디스패치 전 재로그인·동시 로그인도 회차당 1건이다. 오래 로그인하지 않았다가 들어오면 지난 회차를 채우지 않고 현재 회차 1건만 만든다. 비밀번호를 바꾸면 기준일이 바뀌어 새로 센다.
+- 아웃박스: `aggregate_type=MEMBER`, `aggregate_id`=회원, `schema_version=1`, 페이로드 `memberId`·`round`·`basisAt`·`recipientIds`(본인만).
+- 디스패처: MEMBER 집계는 이 유형만 받는다(그 밖은 `UNSUPPORTED_EVENT`). 회원이 없으면 `AGGREGATE_NOT_FOUND`, 수신자가 집계 회원이 아니면 `INVALID_RECIPIENT`로 바로 FAILED. 알림은 `order_id` NULL이라 목록의 `orderId`·`productTitle`이 null이다. ORDER 집계 처리 순서·오류 코드는 그대로다.
+- 화면: 문구 추가, 알림을 누르면 `/mypage/profile`(내 정보, 비밀번호 변경 폼)로 이동한다. 주문 ID가 있으면 주문 상세가 우선이고, 이동할 곳이 정해지지 않은 회원 알림은 링크 없이 읽음 버튼으로 남는다.
+- 다른 영역 영향: auth(김창재) `AuthController`에 호출 한 줄, member(황준범) `MemberChangePolicy`에 회차 계산 메서드 추가(기존 `sixMonthsAfter` 결과 동일). DB 변경 없음.
+- 검증(자동 테스트): `PasswordChangeRecommendationIntegrationTests` 8건(경계 직전/정확한 경계·회차 1건, 기준에서 센 회차·장기 미로그인, 비밀번호 변경 뒤 옛 기준 무효, 로그인 API 발행·디스패치·목록 orderId null, 저장 실패에도 로그인 200, 동시 4건 → 1건, 다른 수신자·미지원 유형·없는 회원 FAILED), `MemberChangePolicyTests` 회차 7건 추가. 관련 백엔드 67건·프런트 typecheck·lint·`test:api` 291건·build 통과. 백엔드 전체 `clean build` **1,048건 통과**(실패 0).
+- 실서버·브라우저 확인(2026-11-10, 개인 DB `bootRun`+Vite+Playwright Chromium): 회원 14의 `password_recommendation_base_at`을 2026-04-01로 바꾼 뒤 로그인 → 아웃박스 MEMBER 1건(회차 1) COMPLETED·알림 1건(`order_id` NULL) → 헤더 알림 패널에 권고 문구·`/mypage/profile` 링크 → 클릭 시 내 정보(비밀번호 변경 폼) 이동·읽음 처리. 로그아웃 후 재로그인해도 이벤트·알림 각 1건 유지. 콘솔은 로그인 전 `/api/me` 401·favicon 404 외 오류 없음. 확인 후 기준일을 원래 값으로 복구.
+
 ## 헤더 알림 패널(U4 화면) — 2026-11-09, 로컬 구현
 
 황준범의 [헤더 패널](header-notification-panel.md)이 #131 API를 재사용한다. 종 버튼·현재 화면 위 목록, 전체/읽지 않음·모두 읽음·페이지·전체 보기, 키보드/바깥 클릭 닫기·계정/화면 이동 시 정리, 전체 목록과 공통 알림 행을 구현했다. 백엔드·DB 변경은 없고 main 반영 전이다. 아래 ‘헤더 패널 미포함’은 #131 당시 범위다.

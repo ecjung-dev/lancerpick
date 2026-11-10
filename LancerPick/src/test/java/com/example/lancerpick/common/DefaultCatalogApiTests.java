@@ -100,6 +100,8 @@ class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
     com.example.lancerpick.notification.service.OutboxDispatcher outboxDispatcher;
     @MockitoBean
+    com.example.lancerpick.notification.service.PasswordChangeRecommendations passwordChangeRecommendations;
+    @MockitoBean
     com.example.lancerpick.notification.service.NotificationService notificationService;
     @MockitoBean
     com.example.lancerpick.notification.repository.NotificationQueries notificationQueries;

@@ -1,5 +1,6 @@
 package com.example.lancerpick.notification.service;
 
+import com.example.lancerpick.member.repository.MemberRepository;
 import com.example.lancerpick.notification.entity.Notification;
 import com.example.lancerpick.notification.entity.OutboxErrorCode;
 import com.example.lancerpick.notification.entity.OutboxEvent;
@@ -39,6 +40,7 @@ public class OutboxDispatcher {
   private final OutboxEventRepository events;
   private final NotificationRepository notifications;
   private final OrderRepository orders;
+  private final MemberRepository members;
   private final JsonMapper mapper;
   private final Clock clock;
   private final TransactionTemplate tx;
@@ -47,12 +49,14 @@ public class OutboxDispatcher {
       OutboxEventRepository events,
       NotificationRepository notifications,
       OrderRepository orders,
+      MemberRepository members,
       JsonMapper mapper,
       Clock clock,
       PlatformTransactionManager transactions) {
     this.events = events;
     this.notifications = notifications;
     this.orders = orders;
+    this.members = members;
     this.mapper = mapper;
     this.clock = clock;
     this.tx = new TransactionTemplate(transactions);
@@ -107,37 +111,26 @@ public class OutboxDispatcher {
   }
 
   private List<Notification> toNotifications(OutboxEvent event) {
-    if (!OrderEventPublisher.AGGREGATE_ORDER.equals(event.getAggregateType())
-        || event.getSchemaVersion() != OrderEventPublisher.ORDER_SCHEMA_VERSION)
-      throw new EventRejected(OutboxErrorCode.UNSUPPORTED_EVENT);
-    JsonNode payload;
-    try {
-      payload = mapper.readTree(event.getPayload());
-    } catch (JacksonException e) {
-      throw new EventRejected(OutboxErrorCode.INVALID_PAYLOAD);
-    }
-    JsonNode recipients = payload.get("recipientIds");
-    if (recipients == null || !recipients.isArray() || recipients.isEmpty())
-      throw new EventRejected(OutboxErrorCode.INVALID_PAYLOAD);
+    if (OrderEventPublisher.AGGREGATE_ORDER.equals(event.getAggregateType())
+        && event.getSchemaVersion() == OrderEventPublisher.ORDER_SCHEMA_VERSION)
+      return orderNotifications(event);
+    if (PasswordChangeRecommendations.AGGREGATE_MEMBER.equals(event.getAggregateType())
+        && event.getSchemaVersion() == PasswordChangeRecommendations.MEMBER_SCHEMA_VERSION)
+      return memberNotifications(event);
+    throw new EventRejected(OutboxErrorCode.UNSUPPORTED_EVENT);
+  }
+
+  private List<Notification> orderNotifications(OutboxEvent event) {
+    var recipientIds = recipientIds(event);
     // 페이로드를 신뢰하지 않는다. 현재 주문의 구매자·판매자가 아닌 수신자가 있으면 이벤트 전체를 실패 처리한다.
     var order =
         orders
             .findById(event.getAggregateId())
             .orElseThrow(() -> new EventRejected(OutboxErrorCode.AGGREGATE_NOT_FOUND));
-    var recipientIds = new LinkedHashSet<Long>();
-    for (JsonNode recipient : recipients) {
-      long recipientId;
-      try {
-        recipientId = Long.parseLong(recipient.asString());
-      } catch (RuntimeException e) {
-        throw new EventRejected(OutboxErrorCode.INVALID_PAYLOAD);
-      }
-      if (recipientId != order.getBuyerId() && recipientId != order.getSellerId())
-        throw new EventRejected(OutboxErrorCode.INVALID_RECIPIENT);
-      recipientIds.add(recipientId);
-    }
     var result = new ArrayList<Notification>();
     for (long recipientId : recipientIds) {
+      if (recipientId != order.getBuyerId() && recipientId != order.getSellerId())
+        throw new EventRejected(OutboxErrorCode.INVALID_RECIPIENT);
       result.add(
           Notification.of(
               recipientId,
@@ -147,6 +140,47 @@ public class OutboxDispatcher {
               event.getCreatedAt()));
     }
     return result;
+  }
+
+  /** 회원 집계는 그 회원 본인에게만 보내고 주문과 연결하지 않는다(order_id NULL). */
+  private List<Notification> memberNotifications(OutboxEvent event) {
+    if (!PasswordChangeRecommendations.PASSWORD_CHANGE_RECOMMENDED.equals(event.getType()))
+      throw new EventRejected(OutboxErrorCode.UNSUPPORTED_EVENT);
+    var recipients = recipientIds(event);
+    if (!members.existsById(event.getAggregateId()))
+      throw new EventRejected(OutboxErrorCode.AGGREGATE_NOT_FOUND);
+    for (long recipientId : recipients) {
+      if (recipientId != event.getAggregateId())
+        throw new EventRejected(OutboxErrorCode.INVALID_RECIPIENT);
+    }
+    return List.of(
+        Notification.of(
+            event.getAggregateId(),
+            event.getEventId(),
+            event.getType(),
+            null,
+            event.getCreatedAt()));
+  }
+
+  private LinkedHashSet<Long> recipientIds(OutboxEvent event) {
+    JsonNode payload;
+    try {
+      payload = mapper.readTree(event.getPayload());
+    } catch (JacksonException e) {
+      throw new EventRejected(OutboxErrorCode.INVALID_PAYLOAD);
+    }
+    JsonNode recipients = payload.get("recipientIds");
+    if (recipients == null || !recipients.isArray() || recipients.isEmpty())
+      throw new EventRejected(OutboxErrorCode.INVALID_PAYLOAD);
+    var recipientIds = new LinkedHashSet<Long>();
+    for (JsonNode recipient : recipients) {
+      try {
+        recipientIds.add(Long.parseLong(recipient.asString()));
+      } catch (RuntimeException e) {
+        throw new EventRejected(OutboxErrorCode.INVALID_PAYLOAD);
+      }
+    }
+    return recipientIds;
   }
 
   private void recordFailure(long id, RuntimeException exception) {
