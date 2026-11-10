@@ -173,6 +173,8 @@ public class FullFundingService {
   public OrderDetailResponse confirm(long memberId, long orderId) {
     var order = lockOrder(memberId, orderId);
     requireRole(order.getBuyerId() == memberId);
+    // 인증 필터를 통과한 뒤 보안 잠금이 커밋된 확정 요청이 판매자 지급까지 가지 않게 회원 잠금 아래에서 다시 본다.
+    commandLocks.requireNotSecurityLocked(memberId);
     var payment = requirePayment(order);
     var orderFunds = requireOrderFunds(order, payment);
     requirePaymentEntry(order, payment);

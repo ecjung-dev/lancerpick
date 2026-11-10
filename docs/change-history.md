@@ -4,8 +4,19 @@
 
 ## 기록 해석
 
+<a id="security-lock-confirm-notice"></a>
+### 보안 잠금 구매자의 수동 확정 차단·사전 안내 잠금 순서 — 2026-11-10, 로컬 구현
+
+정은찬, `fix/security-lock-confirm-notice`, main `98187eb`에서 분기했다. `retryPending` 미연결이 결함이 아니라는 설명을 Codex로 반박 검토하다 확인한 두 경합을 고쳤다. 수정안은 Codex 설계 검토를 거쳤다. 모든 주문 명령을 막는 공통 잠금 일괄 차단안은 판매자 환불 승인·계약 PDF 내부 후처리까지 정책을 넓혀 기각했고, 확정 경로만 막는 안을 채택했다.
+
+- 결함 1(수동 확정): `SessionAuthVersionFilter`는 이미 통과한 요청을 되돌리지 않는다. 구매 확정 요청이 필터를 통과한 직후 관리자 보안 잠금이 커밋되면, 확정이 회원 공유 잠금을 얻은 뒤 판매자 지급(V3)·정산(V1)까지 진행됐다. `OrderCommandLocks.requireNotSecurityLocked`를 추가해, V3 `FullFundingService.confirm`과 V1 `OrderConfirmationService.confirm`이 구매자 권한 확인 직후·완료 재요청 반환과 상태 변경 전에 회원 잠금 아래에서 현재 보안 잠금을 다시 본다. 잠겨 있으면 403 `MEMBER_LOCKED`(로그인 거절과 같은 코드·문구)다. 확정이 먼저 회원 잠금을 얻으면 제재 적용이 기다리고 확정은 유지된다(소급 취소 없음). 일반 이용 제한은 검사하지 않는다.
+- 결함 2(사전 안내): `ReviewTimerService.notice()`는 주문만 잠그고 보안 잠금 이력을 조회해, 조회 직후 커밋된 잠금을 놓치고 자동 확정 예정 안내를 보낼 수 있었다. 만료·보안 중단과 같은 `lockBuyerThenOrder`(구매자 공유 → 주문 배타)로 바꿨다. 판정 직후 커밋되는 잠금과의 경합만 없애며, 안내가 먼저 직렬화되면 안내 저장 뒤 잠금이 적용될 수 있다.
+- 정책 범위(바꾸지 않음): 환불 수령자인 구매자의 보안 잠금은 판매자 승인·관리자 승인 환불을 막지 않는다. 판매자 본인 잠금 중 승인 허용 여부는 별도 정책이다. 구매자 `allowedActions`의 `CONFIRM` 노출은 상태 기반으로 유지하고 안전성은 서버 재검사가 맡는다.
+- 정정: `retryPending` 전달 실패 영향은 표시 지연만이 아니다. 타이머마다 별도 트랜잭션이라 일부만 중단될 수 있고, 중단 후 같은 기산점 재시작은 409 `TIMER_ADMIN_STOPPED`·해제 후 자동 재개 없음이다. 자동 확정 오지급은 만료 재검사로 계속 막는다.
+- 검증: 통합 테스트 2건(V3: 잠금 뒤 서비스 직접 호출 확정 403·지급 없음·해제 후 확정·판매자 잠금은 영향 없음, V1: 같은 조건에서 정산 없음·해제 후 정산 1건)과 단위 1건(보안 잠금 403, 일반 제한·없음 통과)을 추가했다. 로컬 테스트 DB(3307)에서 전체 `clean build` **1,075건 통과**(실패·오류·건너뜀 0). API 경로·DB·Flyway 변경 없음(구매 확정의 403 `MEMBER_LOCKED` 응답 추가). 원격 CI·PR은 별도다.
+
 <a id="order-lock-common"></a>
-### 계약·채팅 잠금 공통화(R1) — 2026-11-10, 로컬 구현
+### 계약·채팅 잠금 공통화(R1) — 2026-11-10, main 반영(#161)
 
 정은찬, `refactor/order-lock-common`, main `3d775e5`에서 분기했다. 원래 황준범 구현·정은찬 리뷰로 발표 뒤로 미뤘던 작업인데, 정은찬이 직접 맡아 발표 전에 진행했다. [§14.1 조건](#b-988-0)을 따랐다.
 
@@ -13,7 +24,7 @@
 - `OrderCommandLocks`에 두 메서드를 추가했다. `lockParticipantOrder(memberId, orderId, notFound)`는 404 문구만 호출자가 정한다(채팅 "주문 대화를 찾을 수 없습니다."). `lockParticipantOrderHidingActor`는 회원이 없을 때도 401 대신 호출자의 404를 던진다. 계약 문서 경로의 기존 응답("계약서를 찾을 수 없습니다.")을 유지하기 위해서다.
 - 계약 경로는 V2 계약 주문도 다루므로 V1·V3 필터가 있는 `lockFulfillmentOrder`를 쓰지 않는다. 계약 서비스의 401/404 문구는 공통 잠금과 원래 같았다.
 - 잠금 없는 읽기(계약 문서 조회·채팅 목록)는 바꾸지 않았다. 후기 작성(`ReviewService`, 박소현 영역)은 실행 회원 엔티티를 응답에 쓰므로 이번 범위에서 뺐다. 관리자·시스템 경로(`findActorForShare`·`findForSystemUpdate`)도 대상이 아니다.
-- 검증: `OrderCommandLocksTests` 단위 5건(잠금 순서, 회원 없음 401, 기본·호출자 404 문구, 회원 없음을 404로 숨기기)을 추가했다. 로컬 테스트 DB(3307)에서 `contract.*`·`chat.*`·`DefaultCatalogApiTests`·`OrderDecisionApiIntegrationTests`와 함께 **113건 통과**(실패·오류·건너뜀 0), 이어서 전체 `clean build` **1,072건 통과**(실패·오류·건너뜀 0). Codex 적대 리뷰 approve(지적 없음). API·DB·응답 형식 변경 없음. 원격 CI·PR은 별도다.
+- 검증: `OrderCommandLocksTests` 단위 5건(잠금 순서, 회원 없음 401, 기본·호출자 404 문구, 회원 없음을 404로 숨기기)을 추가했다. 로컬 테스트 DB(3307)에서 `contract.*`·`chat.*`·`DefaultCatalogApiTests`·`OrderDecisionApiIntegrationTests`와 함께 **113건 통과**(실패·오류·건너뜀 0), 이어서 전체 `clean build` **1,072건 통과**(실패·오류·건너뜀 0). Codex 적대 리뷰 approve(지적 없음). API·DB·응답 형식 변경 없음. main 병합(#161 `98187eb`).
 
 <a id="order-funds-time-refactor"></a>
 ### 주문 금액 경로 처리 시각 보완·리팩토링 — 2026-11-10, main 반영(#160)

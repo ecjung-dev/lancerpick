@@ -335,7 +335,7 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 <a id="members-sanctions"></a>
 ### 일반 제한·보안 잠금·관리자 회원
 
-일반 제한은 로그인과 기존 거래를 허용하고 신규 주문·상품 등록·판매자 수락을 차단한다. 보안 잠금은 새 로그인/기존 인증과 구매자 자동 확정 타이머를 차단·중단한다. 자동 취소/환불/정산 회수는 하지 않는다. 관리자 회원 목록·검색·상세·적용/해제 API와 `/admin/members` 화면은 main에 반영됐다(#157). 관리자·본인 보호, 같은 요청 키·만료·교체·해제 경합을 서버에서 검증한다. [기존 구현 근거](change-history.md#local-admin-member-branch).
+일반 제한은 로그인과 기존 거래를 허용하고 신규 주문·상품 등록·판매자 수락을 차단한다. 보안 잠금은 새 로그인/기존 인증과 구매자 자동 확정 타이머를 차단·중단하고, 잠긴 구매자의 수동 구매 확정(V1·V3)을 403 `MEMBER_LOCKED`로 막는다. 자동 취소/환불/정산 회수는 하지 않는다. 환불 수령자인 구매자의 보안 잠금은 판매자 승인·관리자 승인 환불을 막지 않으며, 판매자 본인 잠금 중 승인 허용 여부는 별도 정책으로 정한다. 관리자 회원 목록·검색·상세·적용/해제 API와 `/admin/members` 화면은 main에 반영됐다(#157). 관리자·본인 보호, 같은 요청 키·만료·교체·해제 경합을 서버에서 검증한다. [기존 구현 근거](change-history.md#local-admin-member-branch).
 
 #### 업무 규칙·연결
 
@@ -398,7 +398,7 @@ memberSanctionCommandService.revoke(adminId, memberId, sanctionId, reason);
 - 호출자는 외부 트랜잭션 없이 호출한다(`NEVER`). 서비스의 짧은 READ_COMMITTED 트랜잭션에서 회원 ID 오름차순으로 관리자 공유 잠금·대상 회원 배타 잠금을 얻는다. 주문/지갑 잠금은 이 트랜잭션에서 얻지 않는다.
 - 제재 이력 저장과 보안 잠금의 인증 버전 증가는 함께 성공·롤백한다. 버전은 만료·철회 때 감소시키지 않는다. 기존 세션은 복구되지 않고 새 로그인이 필요하다.
 - `(member_id, request_key)` UNIQUE와 대상 회원 잠금으로 반복·동시 요청을 방어한다. 같은 키·동일 인자는 최초 ID를 반환하고 인증 버전·이벤트를 반복 생성하지 않는다. 다른 인자는 409 `SANCTION_REQUEST_CONFLICT`다.
-- 보안 잠금 로그인은 올바른 비밀번호 검증 후 403 `MEMBER_LOCKED`. 기존 HTTP 세션은 기존 인증 버전 검사에서 401, 소켓은 기존 인증 재검사 경로를 사용한다. 이미 진행 중인 명령은 기존 회원 잠금 순서로 직렬화하며 완료 거래를 소급 취소하지 않는다.
+- 보안 잠금 로그인은 올바른 비밀번호 검증 후 403 `MEMBER_LOCKED`. 기존 HTTP 세션은 기존 인증 버전 검사에서 401, 소켓은 기존 인증 재검사 경로를 사용한다. 이미 진행 중인 명령은 기존 회원 잠금 순서로 직렬화하며 완료 거래를 소급 취소하지 않는다. 인증 필터를 통과한 뒤 잠금이 커밋된 구매 확정 요청은 회원 공유 잠금 아래 재검사(`OrderCommandLocks.requireNotSecurityLocked`)로 403 `MEMBER_LOCKED`가 된다. 확정이 먼저 회원 잠금을 얻으면 제재 적용이 기다리고 확정은 유지된다.
 
 #### 화면·캐시·계정 경계
 
@@ -1627,6 +1627,7 @@ CONTRACT_V3 주문은 양측 계약 서명 후 구매자 지갑 잔액에서 해
 | 403 `FORBIDDEN` | 당사자 중 해당 명령 역할이 아님 |
 | 404 `RESOURCE_NOT_FOUND` | 타인/없는 주문. 대금 조회는 다른 정책도 포함 |
 | 409 `CONTRACT_NOT_SIGNED` | 활성 계약·양측 서명 필요 |
+| 403 `MEMBER_LOCKED` | 보안 잠금 중인 구매자의 구매 확정(인증 필터를 통과한 진행 중 요청 포함) |
 | 409 `CANCELLATION_PENDING` | 취소 요청 대기 중 구매 확정 |
 | 409 `CANCELLATION_REQUEST_REQUIRED` | 구매자 요청 없이 결제 후 판매자 직접 취소 시도 |
 | 409 `PAYMENT_ALREADY_REFUNDED` | 반환한 결제의 재결제 시도 |
@@ -1769,7 +1770,7 @@ OrderPaymentController는 인증 ID·입력을 확인하고 OrderPaymentService�
 
 ##### 구매 확정
 
-POST /api/orders/{id}/confirm. 인증 구매자·CSRF 필요, 본문 없음. 검수 대기 AWAITING_CONFIRMATION이며 대기 취소 요청이 없는 주문만 가능하다. 판매자는 403, 비참여자/없는 주문은 동일 404다. 수정 중·취소/거절 등은 409 ORDER_STATE_CONFLICT, 대기 취소 요청은 409 CANCELLATION_PENDING이다.
+POST /api/orders/{id}/confirm. 인증 구매자·CSRF 필요, 본문 없음. 검수 대기 AWAITING_CONFIRMATION이며 대기 취소 요청이 없는 주문만 가능하다. 판매자는 403, 비참여자/없는 주문은 동일 404다. 수정 중·취소/거절 등은 409 ORDER_STATE_CONFLICT, 대기 취소 요청은 409 CANCELLATION_PENDING이다. 구매자가 보안 잠금 중이면 403 MEMBER_LOCKED다(인증 필터를 통과한 진행 중 요청 포함).
 
 실행자 회원 FOR SHARE → 참여자 주문 FOR UPDATE 순서로 잠그고 원결제 PAID·주문 금액 일치·결제 시각 존재를 검사한다. READ_COMMITTED 트랜잭션에서 COMPLETED·완료/갱신 시각·정산 한 건·COMPLETED 이력·응답 조립까지 함께 처리한다. 원결제의 fee_rate_bps를 복사하고 원 단위 정수 나눗셈으로 수수료를 버림 계산한다. 999원·1000bps는 수수료 99원, 판매 수익 900원이다. 구매 지갑을 변경하지 않는다.
 
@@ -2283,7 +2284,7 @@ V3는 최초/재납품 검수 무응답 48시간 후 판매자가 7일 자동 �
 ##### E9 자동 구매 확정 사전 안내
 
 - 만료 24시간 전부터 만료 전까지(`OrderResponseTimer.NOTICE_BEFORE_HOURS`) 활성 타이머의 **구매자**에게 `ORDER_AUTO_CONFIRM_SOON`을 한 번 보낸다. 판매자는 타이머를 시작한 당사자라 보내지 않는다.
-- 기존 만료 스케줄러(`ReviewTimerExpiryScheduler`, 기본 30초)가 만료 처리 뒤 `ReviewTimerService.noticeDue(50)`을 호출한다. 후보는 (만료 시각, ID) 커서로 끝까지 순회하고, 타이머마다 별도 트랜잭션에서 주문 배타 잠금 → 타이머가 활성·구간 안·검수 대기인지 재확인 → 이벤트 저장 순서다.
+- 기존 만료 스케줄러(`ReviewTimerExpiryScheduler`, 기본 30초)가 만료 처리 뒤 `ReviewTimerService.noticeDue(50)`을 호출한다. 후보는 (만료 시각, ID) 커서로 끝까지 순회하고, 타이머마다 별도 트랜잭션에서 구매자 회원 공유 잠금 → 주문 배타 잠금(만료·보안 중단과 같은 순서) → 타이머가 활성·구간 안·검수 대기인지, 시작 이후 구매자 보안 잠금이 없는지 재확인 → 이벤트 저장 순서다. 판정 직후 커밋되는 보안 잠금과의 경합만 없앤다. 안내 트랜잭션이 먼저 직렬화되면 안내 저장 뒤 잠금이 적용될 수 있다.
 - 상태 변화가 아니므로 주문 이력은 남기지 않는다. 이벤트 ID를 타이머 ID로 정한 UUID(`AUTO_CONFIRM_NOTICE:<timerId>` 이름 기반)로 저장해 `event_id` UNIQUE가 여러 서버·반복 실행의 중복을 막는다. 이미 안내한 타이머는 잠금 없이 먼저 건너뛴다.
 - 안내 후 구매자가 수정·취소 요청·확정을 하면 타이머는 기존대로 끝나고 안내는 그대로 남는다. 만료 시각이 이미 지난 타이머에는 안내 대신 자동 확정 결과(`ORDER_AUTO_CONFIRMED`)만 간다.
 - 결과 알림(`ORDER_AUTO_CONFIRMED`)·타이머 시작(`ORDER_TIMER_STARTED`)·관리자 해제(`ORDER_TIMER_ADMIN_STOPPED`)는 E7 그대로다.

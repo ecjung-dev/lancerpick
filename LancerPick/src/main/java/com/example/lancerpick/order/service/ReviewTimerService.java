@@ -271,8 +271,8 @@ public class ReviewTimerService {
   private boolean notice(long timerId) {
     var orderId = timers.orderIdOf(timerId);
     if (orderId.isEmpty()) return false;
-    var order =
-        orders.findForSystemUpdate(orderId.get()).orElseThrow(ReviewTimerService::integrity);
+    // 만료·보안 중단과 같은 순서(구매자 공유 → 주문 배타)로 잠가, 판정 직후 커밋되는 보안 잠금과 경합하지 않게 한다.
+    var order = lockBuyerThenOrder(orderId.get());
     var timer = timers.findById(timerId).orElseThrow(ReviewTimerService::integrity);
     var at = now();
     if (!timer.isInNoticeWindow(at) || order.getStatus() != OrderStatus.AWAITING_CONFIRMATION)

@@ -878,6 +878,24 @@ class ReviewTimerIntegrationTests {
   }
 
   @Test
+  void securityLockedBuyerCannotConfirmEvenIfRequestPassedAuthentication() {
+    // 인증 필터를 이미 통과한 확정 요청을 서비스 직접 호출로 재현한다. 잠금 커밋 뒤에는 지급하지 않는다.
+    paidAndDelivered();
+    long sanction = lock(buyer);
+    error(() -> confirmations.confirm(buyer, str()), "MEMBER_LOCKED");
+    error(() -> funding.confirm(buyer, id), "MEMBER_LOCKED");
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+    assertThat(balance(seller)).isEqualTo(1000000);
+    assertThat(funding.summary(seller, id).status()).isEqualTo("HELD");
+
+    // 해제 후에는 정상 확정되고, 판매자 보안 잠금은 구매자 확정을 막지 않는다.
+    unlock(buyer, sanction);
+    lock(seller);
+    confirmations.confirm(buyer, str());
+    assertThat(orderStatus()).isEqualTo("COMPLETED");
+  }
+
+  @Test
   void lockedBuyerBlocksTimerStartUntilUnlocked() {
     paidAndDelivered();
     reviewWindowPassed();

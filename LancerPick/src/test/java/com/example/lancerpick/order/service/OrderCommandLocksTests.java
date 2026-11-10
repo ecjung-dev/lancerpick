@@ -10,6 +10,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.member.entity.SanctionKind;
+import com.example.lancerpick.member.service.MemberSanctionQuery;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.repository.OrderRepository;
 import java.util.Optional;
@@ -22,7 +24,8 @@ class OrderCommandLocksTests {
   private static final long ORDER = 11L;
 
   private final OrderRepository orders = mock(OrderRepository.class);
-  private final OrderCommandLocks locks = new OrderCommandLocks(orders);
+  private final MemberSanctionQuery sanctions = mock(MemberSanctionQuery.class);
+  private final OrderCommandLocks locks = new OrderCommandLocks(orders, sanctions);
 
   @Test
   void locksActorBeforeParticipantOrder() {
@@ -95,6 +98,28 @@ class OrderCommandLocksTests {
     var sequence = inOrder(orders);
     sequence.verify(orders).lockDecisionActor(MEMBER);
     sequence.verify(orders).findForDecision(ORDER, MEMBER);
+  }
+
+  @Test
+  void securityLockedActorIsForbiddenButGeneralRestrictionIsNot() {
+    when(sanctions.restriction(MEMBER)).thenReturn(restriction(SanctionKind.SECURITY_LOCK));
+    assertThatThrownBy(() -> locks.requireNotSecurityLocked(MEMBER))
+        .isInstanceOfSatisfying(
+            BusinessException.class,
+            e -> {
+              assertThat(e.status()).isEqualTo(HttpStatus.FORBIDDEN);
+              assertThat(e.code()).isEqualTo("MEMBER_LOCKED");
+              assertThat(e.getMessage()).isEqualTo("보안 잠금 중인 계정입니다.");
+            });
+
+    when(sanctions.restriction(MEMBER)).thenReturn(restriction(SanctionKind.GENERAL_RESTRICTION));
+    locks.requireNotSecurityLocked(MEMBER);
+    when(sanctions.restriction(MEMBER)).thenReturn(restriction(SanctionKind.NONE));
+    locks.requireNotSecurityLocked(MEMBER);
+  }
+
+  private static MemberSanctionQuery.Restriction restriction(SanctionKind kind) {
+    return new MemberSanctionQuery.Restriction(kind, null, null, null, null, null);
   }
 
   private static BusinessException custom() {

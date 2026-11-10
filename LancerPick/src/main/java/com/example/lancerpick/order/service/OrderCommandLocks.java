@@ -1,6 +1,7 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.member.service.MemberSanctionQuery;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.repository.OrderRepository;
 import java.util.function.Supplier;
@@ -20,9 +21,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(propagation = Propagation.MANDATORY)
 public class OrderCommandLocks {
   private final OrderRepository orders;
+  private final MemberSanctionQuery sanctions;
 
-  public OrderCommandLocks(OrderRepository orders) {
+  public OrderCommandLocks(OrderRepository orders, MemberSanctionQuery sanctions) {
     this.orders = orders;
+    this.sanctions = sanctions;
   }
 
   /** 실행 회원을 공유 잠금한다. 회원이 없으면 401. */
@@ -30,6 +33,17 @@ public class OrderCommandLocks {
     if (orders.lockDecisionActor(memberId).isEmpty()) {
       throw new BusinessException(
           HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
+    }
+  }
+
+  /**
+   * 실행 회원이 현재 보안 잠금 중이면 403 MEMBER_LOCKED(로그인 거절과 같은 코드·문구). 반드시 {@link #lockActor} 계열로 회원을
+   * 공유 잠금한 뒤 부른다. 제재 적용의 회원 배타 잠금과 직렬화되므로, 인증 필터를 이미 통과한 요청도 잠금 커밋 뒤에는 막힌다.
+   * 구매 확정처럼 판매자에게 돈이 나가는 구매자 명령만 쓴다(환불·문의·계약 내부 처리 등은 대상이 아니다).
+   */
+  public void requireNotSecurityLocked(long memberId) {
+    if (sanctions.restriction(memberId).securityLocked()) {
+      throw new BusinessException(HttpStatus.FORBIDDEN, "MEMBER_LOCKED", "보안 잠금 중인 계정입니다.");
     }
   }
 

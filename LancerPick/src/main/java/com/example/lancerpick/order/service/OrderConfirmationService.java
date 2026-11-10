@@ -70,6 +70,8 @@ public class OrderConfirmationService {
     TradePolicyVersion.requireLegacyCommand(order.getPolicyVersion());
     if (!order.getBuyerId().equals(memberId))
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "구매자만 구매 확정할 수 있습니다.");
+    // V3는 FullFundingService.confirm이 같은 검사를 한다(직접 호출도 보호).
+    locks.requireNotSecurityLocked(memberId);
     boolean completed = order.getStatus() == OrderStatus.COMPLETED;
     if (!completed && order.getStatus() != OrderStatus.AWAITING_CONFIRMATION)
       throw new BusinessException(

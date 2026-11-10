@@ -62,6 +62,18 @@ class OrderConfirmationIntegrationTests extends OrderCancellationIntegrationTest
         jdbc.update("UPDATE orders SET status='REVISION_IN_PROGRESS' WHERE id=?",order);
         assertThatThrownBy(()->confirmations.confirm(buyer,""+order)).isInstanceOf(com.example.lancerpick.common.exception.BusinessException.class);
     }
+    @Test void securityLockedBuyerCannotConfirmLegacyOrder(){
+        // 인증 필터를 통과한 뒤 보안 잠금이 커밋된 요청: 회원 잠금 아래 재검사로 정산을 만들지 않는다.
+        awaiting();
+        jdbc.update("INSERT INTO member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at) VALUES (?,'SECURITY_LOCK','계정 도용 의심',?,?,? - INTERVAL 1 MINUTE,? + INTERVAL 1 DAY)",buyer,seller,UUID.randomUUID().toString(),AT,AT);
+        try{
+            assertThatThrownBy(()->confirmations.confirm(buyer,""+order)).isInstanceOfSatisfying(com.example.lancerpick.common.exception.BusinessException.class,e->{assertThat(e.code()).isEqualTo("MEMBER_LOCKED");assertThat(e.status().value()).isEqualTo(403);});
+            assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?",String.class,order)).isEqualTo("AWAITING_CONFIRMATION");
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM settlements WHERE order_id=?",Long.class,order)).isZero();
+        }finally{jdbc.update("DELETE FROM member_sanctions WHERE member_id=?",buyer);}
+        confirmations.confirm(buyer,""+order);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM settlements WHERE order_id=?",Long.class,order)).isEqualTo(1);
+    }
     @Test void sellerAndThirdPartyCannotConfirm()throws Exception{
         awaiting();
         mvc.perform(post("/api/orders/"+order+"/confirm").with(csrf()).with(authentication(UsernamePasswordAuthenticationToken.authenticated(new Principal(seller),null,List.of())))).andExpect(status().isForbidden());
