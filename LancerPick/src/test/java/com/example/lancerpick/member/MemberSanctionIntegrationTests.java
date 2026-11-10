@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.member.config.SecurityLockRetrySchedulingConfiguration;
 import com.example.lancerpick.member.dto.SecurityLockApplied;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.entity.SanctionKind;
@@ -61,6 +62,8 @@ class MemberSanctionIntegrationTests {
     static class Stopper implements SecurityLockTimerStopper {
         final AtomicInteger calls = new AtomicInteger();
         final AtomicBoolean fail = new AtomicBoolean();
+        final java.util.concurrent.atomic.AtomicLong failedId =
+                new java.util.concurrent.atomic.AtomicLong(-1);
         JdbcTemplate jdbc;
 
         public void stop(SecurityLockApplied event) {
@@ -78,7 +81,8 @@ class MemberSanctionIntegrationTests {
                                     event.memberId()))
                     .isGreaterThan(0);
             calls.incrementAndGet();
-            if (fail.get()) throw new IllegalStateException("injected failure");
+            if (fail.get() || failedId.get() == event.sanctionId())
+                throw new IllegalStateException("injected failure");
         }
     }
 
@@ -119,6 +123,7 @@ class MemberSanctionIntegrationTests {
         clock.value = BASE;
         stopper.calls.set(0);
         stopper.fail.set(false);
+        stopper.failedId.set(-1);
         admin = member();
         target = member();
         other = member();
@@ -210,6 +215,43 @@ class MemberSanctionIntegrationTests {
                 .isInstanceOfSatisfying(
                         BusinessException.class,
                         e -> assertThat(e.code()).isEqualTo("SANCTION_REQUEST_CONFLICT"));
+    }
+
+    @Test
+    void scheduledBatchesPassAnOlderFailureAndRecoverRevokedExpiredHistoryAfterWrapping() {
+        stopper.fail.set(true);
+        long old = apply(SanctionKind.SECURITY_LOCK);
+        long recent = apply(SanctionKind.SECURITY_LOCK);
+        assertThat(sanctions.findById(old).orElseThrow().getRevokedAt()).isNotNull();
+        stopper.fail.set(false);
+        stopper.failedId.set(old);
+        clock.value = BASE.plusSeconds(3601);
+        var job = new SecurityLockRetrySchedulingConfiguration(delivery, 1);
+        job.retry(); // Old failed row consumes only one bounded page.
+        job.retry(); // The newer pending row is not starved.
+        assertThat(sanctions.findById(old).orElseThrow().getTimerStopDeliveredAt()).isNull();
+        assertThat(sanctions.findById(recent).orElseThrow().getTimerStopDeliveredAt()).isNotNull();
+        job.retry(); // Empty page wraps back to the start.
+        stopper.failedId.set(-1);
+        job.retry();
+        var recovered = sanctions.findById(old).orElseThrow();
+        assertThat(recovered.getTimerStopDeliveredAt()).isNotNull();
+        assertThat(recovered.getRevokedAt()).isNotNull();
+        var firstMarker = recovered.getTimerStopDeliveredAt();
+        clock.value = BASE.plusSeconds(3602);
+        Integer repeated =
+                new org.springframework.transaction.support.TransactionTemplate(manager)
+                        .execute(ignored ->
+                                sanctions.markTimerStopDelivered(
+                                        old, LocalDateTime.ofInstant(clock.value, ZoneOffset.UTC)));
+        assertThat(repeated).isZero();
+        assertThat(sanctions.findById(old).orElseThrow().getTimerStopDeliveredAt())
+                .isEqualTo(firstMarker);
+        job.retry();
+        job.retry();
+        assertThat(stopper.calls).hasValue(5);
+        assertThat(query.restriction(target).kind()).isEqualTo(SanctionKind.NONE);
+        assertThat(members.findAuthVersionById(target)).contains(2L);
     }
 
     @Test
