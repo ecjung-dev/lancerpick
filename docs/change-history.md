@@ -4,6 +4,17 @@
 
 ## 기록 해석
 
+<a id="order-lock-common"></a>
+### 계약·채팅 잠금 공통화(R1) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/order-lock-common`, main `3d775e5`에서 분기했다. 원래 황준범 구현·정은찬 리뷰로 발표 뒤로 미뤘던 작업인데, 정은찬이 직접 맡아 발표 전에 진행했다. [§14.1 조건](#b-988-0)을 따랐다.
+
+- `OrderContractService`(계약 초안·서명), `ContractDocumentTransactions`(PDF 생성 선점·완료·실패 반영), `OrderChatService.send`가 각자 쓰던 `lockDecisionActor` → `findForDecision` 블록을 `OrderCommandLocks`로 바꿨다. 잠금 순서(회원 공유 → 당사자 주문 배타)·트랜잭션 소유·격리 수준·정책 검사 위치는 그대로다.
+- `OrderCommandLocks`에 두 메서드를 추가했다. `lockParticipantOrder(memberId, orderId, notFound)`는 404 문구만 호출자가 정한다(채팅 "주문 대화를 찾을 수 없습니다."). `lockParticipantOrderHidingActor`는 회원이 없을 때도 401 대신 호출자의 404를 던진다. 계약 문서 경로의 기존 응답("계약서를 찾을 수 없습니다.")을 유지하기 위해서다.
+- 계약 경로는 V2 계약 주문도 다루므로 V1·V3 필터가 있는 `lockFulfillmentOrder`를 쓰지 않는다. 계약 서비스의 401/404 문구는 공통 잠금과 원래 같았다.
+- 잠금 없는 읽기(계약 문서 조회·채팅 목록)는 바꾸지 않았다. 후기 작성(`ReviewService`, 박소현 영역)은 실행 회원 엔티티를 응답에 쓰므로 이번 범위에서 뺐다. 관리자·시스템 경로(`findActorForShare`·`findForSystemUpdate`)도 대상이 아니다.
+- 검증: `OrderCommandLocksTests` 단위 5건(잠금 순서, 회원 없음 401, 기본·호출자 404 문구, 회원 없음을 404로 숨기기)을 추가했다. 로컬 테스트 DB(3307)에서 `contract.*`·`chat.*`·`DefaultCatalogApiTests`·`OrderDecisionApiIntegrationTests`와 함께 **113건 통과**(실패·오류·건너뜀 0), 이어서 전체 `clean build` **1,072건 통과**(실패·오류·건너뜀 0). Codex 적대 리뷰 approve(지적 없음). API·DB·응답 형식 변경 없음. 원격 CI·PR은 별도다.
+
 <a id="order-funds-time-refactor"></a>
 ### 주문 금액 경로 처리 시각 보완·리팩토링 — 2026-11-10, main 반영(#160)
 
@@ -3981,6 +3992,8 @@ SessionTradeIntegrationTests는 MockMvc의 실제 Security 필터·Controller·S
 ### 14. 정은찬 제안 리팩토링 — 구현 전 / 14.1 계약·채팅 잠금 공통화 (R1)
 
 출처: `docs/ui-renewal-member-policy.md`.
+
+2026-11-10 정은찬 로컬 구현: [계약·채팅 잠금 공통화 기록](#order-lock-common). 아래는 구현 전 설계 조건이다.
 
 현재 main의 `OrderCommandLocks`는 MANDATORY로 기존 트랜잭션 안에서 실행된다. `lockActor(memberId)`, `lockParticipantOrder(memberId, orderId)`, `lockFulfillmentOrder(memberId, orderId)`를 제공한다. 회원 공유 잠금 → 당사자 주문 배타 잠금 순서를 재사용하되 주문 정책 검사는 각 서비스에 유지한다.
 

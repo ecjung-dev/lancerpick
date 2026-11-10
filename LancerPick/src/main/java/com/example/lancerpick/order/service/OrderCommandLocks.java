@@ -3,6 +3,7 @@ package com.example.lancerpick.order.service;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.repository.OrderRepository;
+import java.util.function.Supplier;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 주문 명령의 공통 잠금 순서: 실행 회원 공유 잠금 → 당사자 주문 배타 잠금. 정책 검증은 하지 않으며 호출자가 명시적으로 수행한다.
+ * 주문·문의·계약·채팅 명령이 함께 쓴다. 계약 경로는 V2도 다루므로 {@link #lockFulfillmentOrder}를 쓰지 않는다.
  * 잠금이 호출 서비스의 트랜잭션에 묶이도록 기존 트랜잭션 안에서만 실행한다.
  */
 @Component
@@ -33,8 +35,26 @@ public class OrderCommandLocks {
 
   /** 실행 회원 잠금 후 당사자 주문을 배타 잠금한다. 당사자가 아니거나 주문이 없으면 404. 정책은 검사하지 않는다. */
   public Order lockParticipantOrder(long memberId, long orderId) {
+    return lockParticipantOrder(memberId, orderId, OrderCommandLocks::orderNotFound);
+  }
+
+  /** {@link #lockParticipantOrder(long, long)}와 같고, 당사자 주문이 없을 때의 404 응답만 호출자가 정한다(채팅 등). */
+  public Order lockParticipantOrder(
+      long memberId, long orderId, Supplier<BusinessException> notFound) {
     lockActor(memberId);
-    return orders.findForDecision(orderId, memberId).orElseThrow(OrderCommandLocks::orderNotFound);
+    return orders.findForDecision(orderId, memberId).orElseThrow(notFound);
+  }
+
+  /**
+   * 잠금 순서는 {@link #lockParticipantOrder(long, long)}와 같지만 실행 회원이 없을 때도 401 대신 {@code notFound}로
+   * 숨긴다. 계약 문서(PDF) 경로처럼 존재 여부를 드러내지 않는 기존 응답 계약을 유지할 때만 쓴다.
+   */
+  public Order lockParticipantOrderHidingActor(
+      long memberId, long orderId, Supplier<BusinessException> notFound) {
+    if (orders.lockDecisionActor(memberId).isEmpty()) {
+      throw notFound.get();
+    }
+    return orders.findForDecision(orderId, memberId).orElseThrow(notFound);
   }
 
   /** {@link #lockParticipantOrder}와 같고, 납품·수정 요청 정책(LEGACY_V1·CONTRACT_V3)을 저장소에서 함께 검증한다. */
