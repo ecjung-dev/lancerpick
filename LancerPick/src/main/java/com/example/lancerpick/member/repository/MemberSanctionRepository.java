@@ -5,6 +5,7 @@ import com.example.lancerpick.member.entity.SanctionKind;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -50,7 +51,7 @@ public interface MemberSanctionRepository extends JpaRepository<MemberSanction, 
 
     @Query(
             "select s from MemberSanction s where s.memberId=:member and s.kind=:kind and"
-                + " s.revokedAt is null and s.endsAt>:now")
+                    + " s.revokedAt is null and s.endsAt>:now")
     List<MemberSanction> activeForMutation(
             @Param("member") long member,
             @Param("kind") SanctionKind kind,
@@ -59,6 +60,14 @@ public interface MemberSanctionRepository extends JpaRepository<MemberSanction, 
     @Query(
             "select s.id from MemberSanction s where"
                     + " s.kind=com.example.lancerpick.member.entity.SanctionKind.SECURITY_LOCK and"
-                    + " s.timerStopDeliveredAt is null order by s.id")
-    List<Long> pendingSecurityLocks(Pageable page);
+                    + " s.timerStopDeliveredAt is null and s.id>:after order by s.id")
+    List<Long> pendingSecurityLocksAfter(@Param("after") long after, Pageable page);
+
+    /** Only the delivery marker changes; never overwrite a concurrent revocation's fields. */
+    @Modifying
+    @Query(
+            "update MemberSanction s set s.timerStopDeliveredAt=:at where s.id=:id and "
+                    + "s.kind=com.example.lancerpick.member.entity.SanctionKind.SECURITY_LOCK and "
+                    + "s.timerStopDeliveredAt is null and s.startsAt<=:at")
+    int markTimerStopDelivered(@Param("id") long id, @Param("at") LocalDateTime at);
 }
