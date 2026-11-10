@@ -35,7 +35,7 @@
 | 수익 조회 후속 | 황준범, `feature/settlement-query-details` 로컬 구현·검증 완료 | 상품명/주문번호 검색·구매자/보관 상품 표시·원장 기반 지급 구분 연결. 관련 백엔드 40건·프런트 303건/네 검사·API 대역 브라우저 통과. main 반영·원격 CI·실제 서버 브라우저 확인은 별도 |
 | 아이디 안내·메일 복구 | 김창재 회원 기능·황준범 C3 경계. 아이디 안내 API·화면 구현(2026-11-10, `feature/account-id-guide`, [규칙](features.md#account-guide)) | 기록 없는 안내 메일 계약과 실제 연결 구분. 실제 SMTP 발송 확인 전. 기존 회원 이메일 인증 전환(EXISTING_EMAIL)은 남음. 메모리 큐/PENDING 복구·자동 재발송 미제공 |
 | R1 잠금 공통화 | 황준범 구현·정은찬 리뷰, 발표 후로 연기 | R2 enum 반영과 구분 |
-| 권장 E5·운영 확인 | 기존 담당별 검증 후속 | 최종 게이트 계정 전환 캐시·원격 CI·실제 48시간/7일 경과 미확인. DB 시각 조정과 구분 |
+| 권장 E5·운영 확인 | 기존 담당별 검증 후속 | 계정 전환 캐시는 같은 탭 브라우저로 확인(2026-11-10, [기록](change-history.md#account-switch-cache-check)). 원격 CI·실제 48시간/7일 경과는 미확인. DB 시각 조정과 구분 |
 | 모바일·브라우저·경합 확장 | 각 담당 및 공통 업무 | 320px/대표 거래와 실기기·모든 조합 검증 구분 |
 | 화면 개편·디자인 | 사용자 결정: 중대한 문제가 없으면 현재 화면 개편 범위에서 마무리 | 추가 디자인 개선은 별도 잔여 작업에 집계하지 않는다. 이번 결정은 모든 화면의 검증 완료를 뜻하지 않으며 중대한 결함은 보완한다 |
 | 배포 | 기존 보류 유지 | 화면 개편 마무리와 별개이며 배포 완료로 처리하지 않는다 |
@@ -162,7 +162,7 @@ c0009f2 통과는 [고정 후보의 검증 기록](change-history.md#gate)이다
 | E2 ● | 클라이언트가 보낸 금액·회원 ID 무시 | 서버 계약 금액으로 차감 | `httpPaymentIgnoresClientMoney…` | — |
 | E3 ● | 서명 누락·해시 불일치 상태에서 결제 | 차감 없음 | `missingSignatureCannotDebit…`, `OrderContractIntegrationTests.fileHashMismatch…` | — |
 | E4 ● | 계약 PDF 다운로드는 당사자만, 변조 파일은 503 | 바이트 노출 없음 | `ContractDocumentIntegrationTests.finishedDocument…OnlyToParties`, `missingAndTamperedFiles…`. 실제 다운로드·해시 대조 [10절](change-history.md#b-1015-0)(주문 37~39) | — |
-| E5 ○ | 계정 전환 시 대금·주문 캐시 정리 | 이전 계정 금액 미표시 | 프런트 `test:api`(order-funds queryKey) | 브라우저 두 계정 |
+| E5 ○ | 계정 전환 시 대금·주문 캐시 정리 | 이전 계정 금액 미표시 | 프런트 `test:api`(order-funds queryKey). 브라우저 한 탭에서 세 계정 전환 확인(2026-11-10, main `3353e57`, [기록](change-history.md#account-switch-cache-check)) | — |
 
 #### 시나리오 / F. 호환·회귀
 
