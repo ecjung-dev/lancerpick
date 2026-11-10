@@ -1938,14 +1938,35 @@ Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Ste
 ##### K6 실제 실행을 연결할 때
 
 <a id="b-48-1"></a>
-현재 감사 이력은 `product_moderation_logs`의 상품 숨김/복구 전용이다. 금융 작업을 여기에 끼워 넣거나 원장/Batch 컨텍스트를 관리자 감사 이력으로 사용하지 않는다. 공통 관리자 작업 이력 설계·API·화면은 김창재, 필요한 DDL은 황준범과 맞춘다.
+상품 숨김/복구는 기존 `product_moderation_logs`를 유지한다. K6 공통 감사 기반은 [V13·내부 연결 계약](#admin-action-audit)을 따른다. 관리자 실행 API·화면은 김창재, DB·내부 감사/금융/PDF 기반은 황준범 담당이다. 금융 작업을 상품 로그에 끼워 넣거나 원장/Batch 컨텍스트를 관리자 감사 이력으로 사용하지 않는다.
 
 1. Controller는 세션의 `CurrentMemberId.require(authentication)`에서 관리자 ID를 얻고 `/api/admin/**` 권한·변경 요청 CSRF·`Cache-Control: no-store`를 적용한다. 요청 본문/쿼리의 관리자 ID를 신뢰하지 않는다.
-2. 변경 서비스는 DB 권한, 사유, 대상과 중복 요청을 재검사하고 **감사 요청 기록을 먼저 커밋**한다. 실제 저장 계약과 중복 키는 관리자 영역과 확정해야 한다.
+2. 변경 서비스는 DB 권한, 사유, 대상과 중복 요청을 재검사하고 **감사 요청 기록을 먼저 커밋**한다. 내부 저장 계약은 아래 `AdminActionAuditService`이며 실행 조율자는 `execute=false`인 재전송을 다시 실행하지 않는다.
 3. 외부 조회/Batch 시작은 감사 기록 트랜잭션 밖에서 실행한다. `TopupRecoveryJobService`의 `NEVER`, 실제 충전 claim → 트랜잭션 밖 조회 → 지급 적용 경계를 깨지 않는다.
 4. 결과 이력을 별도 커밋한다. 조회·실행 결과가 불명확하면 성공/실패를 단정하지 않는다. 잔액 직접 수정·실패 상태 강제 완료·시도 수 초기화로 복구하지 않는다.
 
 관리자 단건 재확인은 인증된 구매자용 API에 타인의 ID를 넣어 호출하는 방식으로 연결하지 않는다. 관리자 권한·사유·감사 기록을 갖춘 명령 경계가 준비된 후 기존 지급 트랜잭션과 처리권 검증을 재사용한다. 이번에는 읽기 후보와 실제 실행을 구분해 제공한다.
+
+<a id="admin-action-audit"></a>
+##### K6 감사 기반 — 로컬 구현, 실행 API는 미연결
+
+2026-11-10, 황준범. main `86ecba1` 기준 `feature/admin-action-audit`에서 V13과 JPA 내부 서비스를 추가했다. [기존 제안](change-history.md#b-19-0)의 요청 선행 커밋·멱등 키·결과 분리를 구현하며 실제 재처리 버튼이나 공개 API가 완성됐다는 의미는 아니다.
+
+| 내부 호출 | 연결 규칙 |
+| --- | --- |
+| `AdminActionAuditService.begin(adminId, action, targetId, reason, UUID requestKey)` | 트랜잭션 밖에서 호출. 회원 공유 잠금·현재 DB ADMIN 검사 → 동일 키 재전송 검사 → 진행 중 대상 잠금 → 기존 운영 조회의 대상 존재/후보 검사 → REQUESTED 독립 커밋. `BeginResult(receipt, execute)` 반환 |
+| `execute=false` | 같은 관리자·키·명령·대상·정규화 사유의 재전송. 기존 상태가 REQUESTED/UNKNOWN이어도 재실행하지 않고 이력을 반환한다. 다른 인자는 409 `ADMIN_ACTION_REQUEST_CONFLICT` |
+| `execute=true` | **커밋된 요청을 받은 조율자만** 업무 명령을 트랜잭션 밖에서 실행한다. 업무 명령은 현재 ADMIN·대상·잠금·처리권·상태를 재검증해야 한다. 감사 예약만으로 실행 권한을 대신하지 않는다 |
+| `complete(logId, Outcome)` | 신뢰한 서버 내부 조율자만 호출. REQUESTED에서 SUCCEEDED / BUSINESS_REJECTED / EXECUTION_FAILED / RESULT_UNCONFIRMED 중 하나를 별도 커밋. 결과 코드와 상태를 매핑하며 예외 원문을 받지 않는다. 이미 닫힌 결과는 덮어쓰지 않는다 |
+| `inspect(adminId, logId)` | 현재 DB ADMIN 재확인 후 안전한 단건 이력 DTO 반환. 목록 API·검색·화면은 후속 |
+
+- 대상 매핑은 `TOPUP_RECHECK → WALLET_TOPUP`, `TOPUP_RECOVERY_RESTART → BATCH_JOB_EXECUTION`, `CONTRACT_PDF_REGENERATE → CONTRACT`. PDF의 `targetId`는 **계약 ID**이고 주문 ID·버전은 해당 계약에서 조회한다. 다른 대상의 `orderId`는 NULL이다.
+- 사유는 앞뒤 공백을 제거한 1~1,000자, 요청 키는 UUID다. 정규화된 사유까지 동일해야 같은 요청이다. API에서는 세션 관리자 ID를 전달하고 클라이언트가 실행 결과·관리자 ID를 지정하게 하지 않는다.
+- 같은 대상·명령의 REQUESTED는 생성 열 UNIQUE로 관리자 간에도 한 건만 허용한다. 경쟁 삽입의 UNIQUE 위반은 롤백 후 새 트랜잭션에서 승자 기록을 다시 확인한다. 진행 중이면 409 `ADMIN_ACTION_IN_PROGRESS`, 후보가 아니면 기록 없이 409 `ADMIN_ACTION_NOT_ELIGIBLE`이다.
+- `lancerpick.admin.action-audit.pending-timeout` 기본 PT10M, 허용 1~30분. **업무 처리권/실행 제한 시간이 아니라 감사 결과 미확정 표시 기준**이다. 정확히 만료된 시각부터 다음 새 요청이 기존 요청을 UNKNOWN/LEASE_EXPIRED로 닫고 새 후보를 검사한다. 후보 검사 실패 시 그 트랜잭션도 롤백한다. 자동 정리·재실행 스케줄러는 없다.
+- 외부 응답 유실·DB 결과 유실은 UNKNOWN으로 보존한다. UNKNOWN 또는 기한 경과가 재실행 성공을 보장하지 않으며 지급/Batch/PDF의 고유 처리권과 멱등 검사가 별도로 필요하다. 과거 요청의 늦은 완료 결과가 UNKNOWN을 덮지 않는다.
+- 감사 기록은 삭제 API를 제공하지 않으며 기존 상품·문의·회원 제재 이력은 중복 기록하지 않는다. `reason`은 관리자가 입력한 사유라 API·화면에서도 관리자만 볼 수 있게 해야 한다. 서버가 결제 키·외부 응답·경로·예외 원문을 사유/결과에 자동 첨부하지 않는다.
+- 남은 연결: 황준범의 관리자용 충전 재확인·Batch 재시작·PDF 실행 조율자, 김창재의 사유/UUID 입력·안전한 감사 목록/실행 API·화면. 구매자 API에 타인 ID를 주입해 재사용하지 않는다. 알림 FAILED 재발송은 이번 공통 감사 대상 밖이다.
 
 ##### 실행 설정
 

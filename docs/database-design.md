@@ -4,7 +4,7 @@
 
 ## 현재 스키마 기준
 
-실행 원본은 [백엔드 Flyway](../LancerPick/src/main/resources/db/migration)다. 아래 표는 main의 V1~V11과 메일 결과 정리 로컬 후속 V12를 구분한다. 연결된 개인/운영 DB의 실제 적용 이력은 확인 필요이며, 이번 V12 검증은 개인 DB와 분리된 테스트 DB에서만 진행한다.
+실행 원본은 [백엔드 Flyway](../LancerPick/src/main/resources/db/migration)다. main `86ecba1`의 V1~V12와 K6 감사 기반 로컬 후속 V13을 구분한다. 연결된 개인/운영 DB의 실제 적용 이력은 확인 필요하며, V13 검증은 개인 DB와 분리된 테스트 DB에서만 진행한다.
 
 | 단계 | 실제 파일의 범위 | 누적 업무 테이블 |
 | --- | --- | --- |
@@ -19,9 +19,10 @@
 | V9 | BATCH_* 시스템 테이블 9개(Flyway 이력 제외) | 31 |
 | V10 | member_sanctions·제재 종류/기간/요청 키/인증·타이머 전달 경계 | 32 |
 | V11 | members.display_name_changed_at, password_changed_at, password_recommendation_base_at | 32 |
-| V12(로컬) | account_challenges 상태 CHECK에 UNKNOWN 추가·대기 결과 조회 인덱스. 신규 테이블/컬럼 없음 | 32 |
+| V12(#166) | account_challenges 상태 CHECK에 UNKNOWN 추가·대기 결과 조회 인덱스. 신규 테이블/컬럼 없음 | 32 |
+| V13(로컬) | admin_action_logs: K6 관리자 재처리 요청·결과·멱등 키·대상별 진행 중 UNIQUE | 33 |
 
-업무 32개 + Batch 시스템 9개 = 41개이며 Flyway 이력 테이블은 제외한다. V11은 nullable 시각 2개와 UTC 기본값이 있는 NOT NULL 권고 기준일을 추가한다. 기존 회원의 과거 비밀번호 변경 시각은 알 수 없으므로 꾸며 넣지 않고 도입 시각부터 첫 6개월 권고 기준을 시작한다.
+V13 포함 업무 33개 + Batch 시스템 9개 = 42개이며 Flyway 이력 테이블은 제외한다(main V12까지는 41개). V11은 nullable 시각 2개와 UTC 기본값이 있는 NOT NULL 권고 기준일을 추가한다. 기존 회원의 과거 비밀번호 변경 시각은 알 수 없으므로 꾸며 넣지 않고 도입 시각부터 첫 6개월 권고 기준을 시작한다.
 
 ## 관계·제약·서비스 책임
 
@@ -34,7 +35,16 @@
 
 ## 인덱스·변경·ERD
 
-최신 인덱스/컬럼/NULL/FK/CHECK의 최종 기준은 위 전환표의 누적 SQL이다. V12 로컬 후속은 (delivery_status,issued_at,id) 인덱스와 UNKNOWN 허용만 추가하고 기존 토큰 데이터·시각·상태를 일괄 변환하지 않는다. 기본 컬럼 사전은 V1 범위이며 후속 추가는 위 전환표가 보완한다. 적용한 마이그레이션은 수정하지 않고 새 버전으로 변경하며 DB 설계/DDL 담당은 황준범이다. 신규 계획 테이블 admin_action_logs는 실행 스키마가 아니다.
+최신 인덱스/컬럼/NULL/FK/CHECK의 최종 기준은 위 전환표의 누적 SQL이다. V12는 (delivery_status,issued_at,id) 인덱스와 UNKNOWN 허용만 추가하고 기존 토큰 데이터·시각·상태를 일괄 변환하지 않는다. 기본 컬럼 사전은 V1 범위이며 후속 추가는 위 전환표가 보완한다. 적용한 마이그레이션은 수정하지 않고 새 버전으로 변경하며 DB 설계/DDL 담당은 황준범이다.
+
+### V13 K6 관리자 작업 감사 이력 — 로컬 후속
+
+[V13 실행 원본](../LancerPick/src/main/resources/db/migration/V13__add_admin_action_logs.sql), [내부 서비스 계약](features.md#admin-action-audit). 감사 설계 초안을 실제 마이그레이션으로 구체화했다. 금액·Batch·PDF 상태를 이 테이블에서 직접 관리하지 않는다.
+
+- 관리자 FK·PDF 주문 FK는 RESTRICT다. 대상은 충전/Batch/계약으로 나뉘므로 target_id 자체는 다형 FK를 두지 않고 서비스에서 실제 대상·후보를 검사한다.
+- `(admin_id,request_key)` UNIQUE, REQUESTED에서만 채워지는 `in_progress_key` 생성 열 UNIQUE. `(target_type,target_id,id)`, `(order_id,id)`, `(admin_id,id)` 조회 인덱스가 있다. 생성 열은 JPA에서 직접 쓰지 않는다.
+- CHECK로 명령/대상 종류/주문 ID 조합, 양수 대상 ID, 사유 길이, 상태·완료 시각·결과 코드 조합, 기한을 검증한다. 서비스는 요청 시각·기한을 UTC DATETIME(6)로 저장한다.
+- 기존 데이터 변환·샘플 요청 삽입·잔액 변경은 없다. V13 적용만으로 관리자 실행 기능이 열리지 않는다.
 
 [기존 ERD 미리보기](images/lancerpick-physical-erd-preview.png)·[PNG](images/lancerpick-physical-erd.png)·[SVG](images/lancerpick-physical-erd.svg)는 V1 16개·120컬럼·23FK 그림이다. 최신 41개 전체 그림으로 표현하지 않는다. 생성·검사 스크립트와 SQL 후보는 원래 위치에 유지했다. 후보 SQL은 자동 Flyway 실행 대상이 아니다.
 

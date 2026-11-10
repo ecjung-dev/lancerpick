@@ -4,6 +4,8 @@
 
 회원 관리 후속: 관리자 회원 조회·제재 API·화면(#157)과 비밀번호 변경 권고 알림(#156)이 main에 반영됐다. [회원 제재 API·화면](features.md#members-sanctions), [현재 반영 상태](project-progress.md#current-status), [통합 검증](change-history.md#admin-member-main-integration)을 따른다. 원본 문서를 되살리지 않고 이 통합 구조에서 관리한다.
 
+K6 후속: main `86ecba1`(#166)에서 [감사 DB·내부 연결 기반](features.md#admin-action-audit)을 로컬 구현·검증했다(백엔드 전체 1,114건 통과). V13과 요청/결과 저장 서비스만으로 실제 관리자 재처리 API·화면이 완성된 것으로 표시하지 않는다. [검증·연결 경계](change-history.md#admin-action-audit-foundation)를 함께 확인한다.
+
 ## 어디부터 읽을지
 
 | 목적 | 문서 |
