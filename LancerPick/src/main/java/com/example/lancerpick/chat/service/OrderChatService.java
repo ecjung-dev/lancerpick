@@ -12,6 +12,7 @@ import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.OrderRepository;
+import com.example.lancerpick.order.service.OrderCommandLocks;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -42,6 +43,7 @@ public class OrderChatService {
           OrderStatus.REVISION_IN_PROGRESS,
           OrderStatus.AWAITING_BALANCE);
   private final OrderRepository orderRepository;
+  private final OrderCommandLocks locks;
   private final OrderChatMessageRepository messageRepository;
   private final OrderChatMessageQueries messageQueries;
   private final Clock clock;
@@ -105,12 +107,7 @@ public class OrderChatService {
       throw invalid();
     }
     String clientMessageId = UUID.fromString(request.clientMessageId()).toString();
-    if (orderRepository.lockDecisionActor(memberId).isEmpty()) {
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    }
-    var order =
-        orderRepository.findForDecision(orderId, memberId).orElseThrow(OrderChatService::notFound);
+    var order = locks.lockParticipantOrder(memberId, orderId, OrderChatService::notFound);
     var existing =
         messageRepository.findByOrderIdAndSenderIdAndClientMessageId(
             orderId, memberId, clientMessageId);
