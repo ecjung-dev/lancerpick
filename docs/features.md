@@ -322,7 +322,7 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 <a id="members-sanctions"></a>
 ### 일반 제한·보안 잠금·관리자 회원
 
-일반 제한은 로그인과 기존 거래를 허용하고 신규 주문·상품 등록·판매자 수락을 차단한다. 보안 잠금은 새 로그인/기존 인증과 구매자 자동 확정 타이머를 차단·중단한다. 자동 취소/환불/정산 회수는 하지 않는다. 관리자 회원 목록·검색·상세·적용/해제 API와 `/admin/members` 화면은 `feature/admin-member-management`에 구현했으며 PR/main 반영 전이다. 관리자·본인 보호, 같은 요청 키·만료·교체·해제 경합을 서버에서 검증한다. [기존 구현 근거](change-history.md#local-admin-member-branch).
+일반 제한은 로그인과 기존 거래를 허용하고 신규 주문·상품 등록·판매자 수락을 차단한다. 보안 잠금은 새 로그인/기존 인증과 구매자 자동 확정 타이머를 차단·중단한다. 자동 취소/환불/정산 회수는 하지 않는다. 관리자 회원 목록·검색·상세·적용/해제 API와 `/admin/members` 화면은 main에 반영됐다(#157). 관리자·본인 보호, 같은 요청 키·만료·교체·해제 경합을 서버에서 검증한다. [기존 구현 근거](change-history.md#local-admin-member-branch).
 
 #### 업무 규칙·연결
 
@@ -333,7 +333,7 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 | 항목 | 이번 구현 | 후속 연결 |
 | --- | --- | --- |
 | B1 제재 조회 | `MemberSanctionQuery.restriction(long memberId)` | 주문·타이머 U7/U8 재사용, 황준범이 상품 등록 차단 연결(박소현 리뷰) |
-| B2 제재 명령 | `MemberSanctionCommandService.apply` / `revoke`, 관리자 DB 권한·회원 잠금·이력·중복 방지 | 황준범: 회원 관리 API·화면 연결 완료, PR 반영 전 |
+| B2 제재 명령 | `MemberSanctionCommandService.apply` / `revoke`, 관리자 DB 권한·회원 잠금·이력·중복 방지 | 황준범: 회원 관리 API·화면 연결 완료, main 반영(#157) |
 | 보안 잠금 인증 | 로그인 거절, 인증 버전 증가, 기존 HTTP/소켓 인증 재검사 경로 연결 | 실제 브라우저·소켓 폐기 확인은 별도 |
 | 타이머 중단 전달 | 커밋 후 호출, 실패/연결 전 미처리 기록, 내부 재시도 | 정은찬: `SecurityLockTimerStopper` 구현체·타이머 재검사 |
 | 만료 | 서버 UTC 시각으로 기간 종료 시 제한 없음으로 조회 | 별도 만료 Batch·행 삭제 불필요 |
