@@ -1539,7 +1539,7 @@ HttpTossPaymentGatewayTests는 네트워크 대신 MockRestServiceServer로 승�
 
 ##### 구현 범위
 
-기존 흑백 AppLayout·마이페이지·공통 apiRequest를 재사용해 충전 금액 선택, 토스 주문서형 SDK 초기화, 결제 요청, 복귀 후 서버 승인·조회, 결과 재확인 화면을 구현했다. SDK는 `@tosspayments/tosspayments-sdk@2.10.0`으로 고정한다.
+기존 흑백 AppLayout·마이페이지·공통 apiRequest를 재사용해 충전 금액 선택, 토스 주문서형 SDK 초기화, 결제 요청, 복귀 후 서버 승인·조회, 결과 재확인 화면을 구현했다. SDK는 `@tosspayments/tosspayments-sdk@2.10.0`으로 고정한다. 위젯 준비·정리와 결제 요청 흐름은 `features/wallet/useTopupCheckout.ts`, 화면은 `pages/WalletTopupPage.tsx`, 오른쪽 요약은 `components/TopupSummary.tsx`다.
 
 ##### 복귀·결과 처리
 
@@ -1870,7 +1870,7 @@ J5는 기존 PROCESSING/UNKNOWN 충전과 저장된 payment_key를 조회해 복
 
 ##### 창재님이 연결할 서비스
 
-빈: `admin/service/AdminFinanceQueryService`. 모든 public 진입에서 전달받은 회원의 **현재 DB 역할**을 검사한다. 존재하지 않는 회원·잘못된 인증 ID는 401 `AUTHENTICATION_REQUIRED`, 일반 회원은 403 `FORBIDDEN`이다. 대상 조회 전에 권한을 확인한다. 인증 시점의 세션 역할만으로 조회를 허용하지 않는다.
+빈: `admin/service/AdminFinanceQueryService`(복구 Batch 실행 조회·재시작 가능 판단은 같은 트랜잭션 안에서 `AdminRecoveryJobQueries`가 맡는다). 모든 public 진입에서 전달받은 회원의 **현재 DB 역할**을 검사한다. 존재하지 않는 회원·잘못된 인증 ID는 401 `AUTHENTICATION_REQUIRED`, 일반 회원은 403 `FORBIDDEN`이다. 대상 조회 전에 권한을 확인한다. 인증 시점의 세션 역할만으로 조회를 허용하지 않는다.
 
 | 메서드 | 반환 | 용도 |
 | --- | --- | --- |
@@ -2349,6 +2349,8 @@ V3 주문의 기한 통지(E8)·보관/지급/반환 알림 유형·자동 확�
 V3는 최초/재납품 검수 무응답 48시간 후 판매자가 7일 자동 확정 타이머를 시작하며 만료 24시간 전 사전 안내를 보낸다. 수정/취소 응답·관리자 해제·보안 잠금이 기산점/회차/활성 상태에 영향을 준다. 구매자 보안 잠금 시 새 시작을 막고 기존 타이머를 중단하며 해제 후 자동 재개하지 않는다. 자동 전달 재시도 로컬 후속과 기존 만료 재검사 방어를 구분한다.
 
 #### 처리 순서·동시성·재전송
+
+구현 위치: 명령·트랜잭션·잠금은 `order/service/ReviewTimerService`, 상태 응답·기산점·시작 가능 판단(읽기만)은 `ReviewTimerViews`, 만료 스케줄은 `ReviewTimerExpiryScheduler`.
 
 ##### 구매자 보안 잠금 연결(U8)
 

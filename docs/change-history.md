@@ -4,8 +4,17 @@
 
 ## 기록 해석
 
+<a id="refactoring-wrapup"></a>
+### 전체 리팩터링 마무리 검토 — 2026-11-10, 문서 정리
+
+정은찬, main `80d1f5b`(#179) 기준. #170~#179(1~6단계) 병합 뒤 남은 같은 패턴을 grep으로 다시 찾고 Codex 읽기 전용 반박 검토를 받았다. 결론: 계획한 리팩터링은 종료하고 큰 파일 추가 분리·'하지 않음' 3건(수수료 전역 통합·예외 팩토리 일괄화·주문 ID 래퍼)은 다시 열지 않는다.
+
+- 의도적으로 남긴 것: 직접 `UUID.fromString` 3곳(계약 PDF 파일 키 정규화, 아웃박스 이벤트 ID, 저장된 Job 파라미터 검증), 엔티티의 전달받은 시각 `truncatedTo(MICROS)`(현재 시각 생성이 아님), 관리자 실행 lease의 절삭 없는 만료 비교, PDF 바이트 크기·검색어 길이·배치 크기 상한(페이지 범위 판정 아님), 컨트롤러 `@Min/@Max`(HTTP 경계 검증), 위 401 상태 비교.
+- 문서 보완: 6단계 표기 main 반영, 401 공통화 범위를 "화면의 단독 판별"로 한정, `AdminRecoveryJobQueries`·`ReviewTimerViews`·`useTopupCheckout` 구현 위치를 [복구 Batch](features.md#finance-batch)·[타이머](features.md#communication-timer)·[충전](features.md#finance-topup)에 추가, [현재 상태](project-progress.md#current-status) 기준 커밋과 발표 전 확인 순서 갱신.
+- 실행 검증 없음(문서만 변경). 리팩터링 PR별 테스트 결과는 각 항목에 있다.
+
 <a id="topup-recovery-job-parameters"></a>
-### 충전 복구 Job 파라미터 규칙 공유(리팩터링 6단계) — 2026-11-10, 로컬 구현
+### 충전 복구 Job 파라미터 규칙 공유(리팩터링 6단계) — 2026-11-10, main 반영(#179)
 
 정은찬, `refactor/topup-recovery-job-parameters`, main `a32e1c4`(#178) 기준. 전체 리팩터링 검토의 마지막 단계다. 방안은 Codex 읽기 전용 검토를 받아 정했다. Job 검증기(`TopupRecoveryBatchConfiguration`)와 관리자 재시작 판단(`AdminRecoveryJobQueries.requestedAt`)이 같은 파라미터 규칙을 따로 갖고 있었고, 관리자 쪽만 UTC 9999년 상한이 있어 판단이 어긋날 수 있었다(화면은 `INVALID_JOB_PARAMETERS`, 검증기는 통과). `wallet/batch/TopupRecoveryJobParameters`(키 상수, `requestedAt(JobParameters): Optional<Instant>`, `validate`)로 모아 두 곳과 실행 생성(`TopupRecoveryJobService`)·Tasklet이 함께 쓴다. 검증기 메시지는 같다.
 
@@ -66,7 +75,7 @@
 
 정은찬, `refactor/frontend-shared-helpers`, main `465908b`(#171) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 3단계로, 화면 동작을 바꾸지 않는 정리만 했다.
 
-- 401 판별: 24개 파일 34곳의 `instanceof ApiError && status === 401`(부정형 포함)을 `shared/api/client.ts`의 `isUnauthorized`로 바꿨다. 거짓 분기에서 `ApiError` 전체가 타입에서 빠지지 않도록 `ApiError & { status: 401 }`로 좁힌다. 세션 재확인·캐시 정리·안내 처리는 각 화면에 그대로 둔다.
+- 401 판별: 화면의 단독 판별 24개 파일 34곳의 `instanceof ApiError && status === 401`(부정형 포함)을 `shared/api/client.ts`의 `isUnauthorized`로 바꿨다. 공통 요청 함수의 응답 재처리(`client.ts`), 채팅 소켓 오류(`order-chat/realtime.ts`), 여러 상태를 함께 묻는 판정(`OrderCreatePage`·`ProductEditorPage`)과 관리자 접근 분류(`admin/access.ts`)는 상태 값 비교를 그대로 둔다. 거짓 분기에서 `ApiError` 전체가 타입에서 빠지지 않도록 `ApiError & { status: 401 }`로 좁힌다. 세션 재확인·캐시 정리·안내 처리는 각 화면에 그대로 둔다.
 - 로그인 주소: `/login?next=${encodeURIComponent(...)}`를 직접 만들던 14곳을 `features/auth/session.ts`의 `loginPath(next)`로 바꿨다. `next` 없이 `/login`으로 가는 링크(판매자 프로필·지갑 등)는 로그인 후 이동이 바뀌므로 이번에 고치지 않았다.
 - 글자 수: `codePointLength(normalizeText(x))` 12곳 → `shared/lib/text.ts`의 `normalizedLength`. 필수·최대 길이·오류 문구는 각 화면 그대로다.
 - 관리자: 상품·문의·주문 금융 상세의 `backPath` 3개 → `features/admin/navigation.ts`의 `adminBackPath(from, 목록 경로, 기본값)`(허용 경로·기본값 동일). 회원 제재 입력의 한국 시간 변환 2곳 → `memberValidation.ts`의 `koreaInputValue`(불가능한 날짜 왕복 검사 유지).
