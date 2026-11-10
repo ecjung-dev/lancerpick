@@ -4,6 +4,17 @@
 
 ## 기록 해석
 
+<a id="sanction-screen-check"></a>
+### 관리자 제재 화면으로 U7·U8 확인 — 2026-11-10
+
+정은찬, main `3353e57`(#156·#157 병합 후). 개인 DB에서 기본 설정으로 서버·Vite를 실행하고, 회원 12를 잠시 ADMIN으로 바꿔 `/admin/members` 화면에서 제재를 적용했다. 확인용 주문은 API로 준비했고 타이머 시작 조건(납품 후 48시간)은 납품 시각만 DB에서 앞당겼다.
+
+- U7 일반 이용 제한(판매자 15, 화면 적용 → "처리했습니다"·현재 상태 "일반 이용 제한"): 구매자 신규 주문 403 `MEMBER_RESTRICTED`, 판매자 수락 403 `MEMBER_RESTRICTED`, 주문 57 상세 `allowedActions`는 `REJECT`만, 판매자 브라우저 주문 화면에 수락 버튼 없이 "주문 거절"만 표시.
+- U8 보안 잠금(구매자 14, 화면 적용): 주문 58의 진행 중 타이머 9가 곧바로 `ADMIN_STOP`(`ended_by`=12)으로 끝나고 제재 `timer_stop_delivered_at` 기록, 타이머 조회 `ADMIN_STOPPED`·`canStart` false, 구매자 로그인 403 `MEMBER_LOCKED`.
+- 콘솔 오류는 로그인 전 `/api/me` 401, 계약 전 주문의 `/contract` 404, favicon 404뿐이다.
+- 정리: 두 제재는 관리자 API로 해제(204), 회원 12 USER 복구, 확인용 주문 55·57 취소, 56·58 구매 확정.
+- 한계: 실제 48시간·7일 경과, 보안 잠금 시 기존 소켓 폐기, 모바일 화면은 확인하지 않았다. 코드 변경이 없어 자동 테스트는 다시 돌리지 않았다.
+
 <a id="admin-member-main-integration"></a>
 ### 관리자 회원 관리와 최신 main 통합 — 2026-11-10
 
