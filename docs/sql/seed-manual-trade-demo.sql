@@ -5,6 +5,7 @@
 -- 두 계정 모두 USER이며 구매·판매를 겸한다. 각 계정에 최초 적립금 100만원.
 -- 기존 이메일이 있으면 전체 생성을 거절한다. 기존 비밀번호·잔액·거래는 덮어쓰지 않는다.
 -- 주문·결제·환불·정산은 화면/API에서 직접 진행한다.
+-- 새 주문은 CONTRACT_V3(최소 주문 금액 10,000원)로 만들어지므로 모든 상품을 10,000원 이상으로 둔다.
 -- CREATE ROUTINE 권한이 필요하다. 실행 시 트랜잭션이 없는 새 SQL 연결을 사용한다.
 
 SET NAMES utf8mb4;
@@ -60,10 +61,10 @@ BEGIN
     INSERT INTO products(seller_id, category_id, title, description, scope_description, preparation_description,
                          price, duration_days, sale_status, is_hidden, version, created_at, updated_at)
     VALUES
-        (account_a, category_id_value, '[테스트 A] 999원 거래·정산 확인',
-         'B 계정으로 주문해 수락·결제·납품·구매 확정을 확인하세요. 수수료 99원, 판매 수익 900원입니다.',
+        (account_a, category_id_value, '[테스트 A] 1만원 거래·구매 확정 확인',
+         'B 계정으로 주문해 계약 서명·결제·납품·구매 확정을 확인하세요. 수수료 1,000원, 판매자 지급 9,000원입니다.',
          '간단한 배너 시안 1개. 수정 요청은 원래 범위에서 1회.', '원하는 문구와 색상을 요구사항으로 보내주세요.',
-         999, 1, 'ON_SALE', FALSE, 0, created_at_value, created_at_value),
+         10000, 1, 'ON_SALE', FALSE, 0, created_at_value, created_at_value),
         (account_a, category_id_value, '[테스트 A] 5만원 취소·환불 확인',
          'B 계정으로 주문·결제한 뒤 취소 요청과 승인, 적립금 반환을 확인하세요.',
          '로고 시안 1개. 원본 외 추가 작업 제외.', '브랜드명과 참고 스타일을 보내주세요.',

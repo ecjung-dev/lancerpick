@@ -18,7 +18,7 @@ CONTRACT_V3 주문은 양측 계약 서명 후 구매자 지갑 잔액에서 해
 
 LEGACY_V1의 수익 기록과 구매 지갑 분리 정책은 유지한다. CONTRACT_V2의 기존 금융 명령 차단도 유지한다. 기존 주문 정책을 DB에서 직접 바꾸지 않는다. 이번 변경은 기존 V7 테이블을 사용하므로 새 Flyway나 적용된 마이그레이션 변경은 없다.
 
-신규 생성 플래그 `lancerpick.order.full-funding-creation-enabled`와 V2 생성 플래그는 **기본 false**다. 서명된 V3 주문에 대한 수동 거래 경로를 구현한 것이며 전체 고도화 활성화 완료가 아니다. 자동 확정 타이머·관리자 취소 승인 API/화면·새 정책 전체 브라우저 확인은 후속이다.
+신규 생성 플래그 `lancerpick.order.full-funding-creation-enabled`는 **기본 true**다(2026-11-10, [활성화 게이트](v3-activation-gate.md#6-판정-기록) 최종 후보 `c0009f2` 판정 통과 후 변경). V2 생성 플래그는 기본 false 그대로다. 자동 확정 타이머·관리자 취소 승인 API/화면·전체 브라우저 확인은 게이트에서 끝났다. 테스트 프로필은 기존 LEGACY_V1 회귀 테스트를 위해 false로 고정하고, V3 테스트는 직접 켠다.
 
 ## API와 화면
 

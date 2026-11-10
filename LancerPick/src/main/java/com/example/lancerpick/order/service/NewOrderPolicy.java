@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 새 주문에 고정할 정책 버전을 정한다. 신규 계약 정책은 CONTRACT_V3(전액 보관)이며 full-funding-creation-enabled로 켠다.
- * V3 전액 결제·보관·지급 명령과 실제 DB 경합 검증(G1) 전에는 설정을 켜지 않으므로 기본값은 LEGACY_V1이다.
+ * 활성화 게이트(G1) 통과 후 application.properties에서 켰다. 설정이 없거나 false면 LEGACY_V1이다.
  * contract-v2-creation-enabled는 이전 분할 결제(V2) 경로의 호환용이며 신규 범위에서 켜지 않는다. 기존 주문의 정책은 바꾸지 않는다.
  */
 @Component
