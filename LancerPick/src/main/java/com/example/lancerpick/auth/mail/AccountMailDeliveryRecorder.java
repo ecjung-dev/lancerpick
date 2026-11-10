@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 계정 메일 발송 결과를 account_challenges.delivery_status에 기록한다. 발급 트랜잭션이 커밋된 뒤 별도 짧은 트랜잭션으로 실행한다.
- * PENDING인 행만 바꾸므로 같은 결과가 두 번 와도, 늦게 온 결과가 먼저 온 결과를 덮어쓰지 않는다.
+ * PENDING/UNKNOWN만 확정하므로 늦은 실제 결과는 수용하되, SENT/FAILED는 덮어쓰지 않는다.
  * 오류 코드는 대문자·숫자·밑줄의 안전한 코드만 받는다(예외 메시지·메일 내용 저장 방지).
  */
 @Service

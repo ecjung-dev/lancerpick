@@ -2,13 +2,19 @@ package com.example.lancerpick.auth.repository;
 
 import com.example.lancerpick.auth.entity.AccountChallenge;
 import com.example.lancerpick.auth.entity.ChallengeDeliveryStatus;
+
 import jakarta.persistence.LockModeType;
-import java.util.Optional;
+
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 public interface AccountChallengeRepository extends JpaRepository<AccountChallenge, Long> {
 
@@ -22,12 +28,33 @@ public interface AccountChallengeRepository extends JpaRepository<AccountChallen
     Optional<AccountChallenge> findByTokenHashForUpdate(@Param("tokenHash") byte[] tokenHash);
 
     /**
-     * 발송 결과 기록. 발송 상태 두 컬럼만 바꾸고(사용 시각 등은 건드리지 않음), 아직 PENDING인 행만 바꾼다.
-     * 늦게 도착한 결과가 이미 기록된 결과를 덮어쓰지 않는다. 바뀐 행 수를 돌려준다.
+     * 발송 결과 기록. PENDING/UNKNOWN의 상태 두 컬럼만 변경하며 인증·사용 상태는 건드리지 않는다. 늦게 온 실제 결과는 UNKNOWN을 확정할 수 있지만
+     * SENT/FAILED를 덮어쓰지 않는다.
      */
     @Modifying
-    @Query("update AccountChallenge c set c.deliveryStatus = :status, c.lastErrorCode = :errorCode "
-            + "where c.id = :id and c.deliveryStatus = com.example.lancerpick.auth.entity.ChallengeDeliveryStatus.PENDING")
-    int recordDelivery(@Param("id") long id, @Param("status") ChallengeDeliveryStatus status,
+    @Query(
+            "update AccountChallenge c set c.deliveryStatus = :status, c.lastErrorCode = :errorCode"
+                + " where c.id = :id and c.deliveryStatus in"
+                + " (com.example.lancerpick.auth.entity.ChallengeDeliveryStatus.PENDING, "
+                + "com.example.lancerpick.auth.entity.ChallengeDeliveryStatus.UNKNOWN)")
+    int recordDelivery(
+            @Param("id") long id,
+            @Param("status") ChallengeDeliveryStatus status,
             @Param("errorCode") String errorCode);
+
+    /** Only IDs are read; recipients and token hashes never enter the reconciliation job. */
+    @Query(
+            "select c.id from AccountChallenge c where"
+                + " c.deliveryStatus=com.example.lancerpick.auth.entity.ChallengeDeliveryStatus.PENDING"
+                + " and c.issuedAt<=:cutoff order by c.issuedAt,c.id")
+    List<Long> stalePendingIds(@Param("cutoff") LocalDateTime cutoff, Pageable page);
+
+    @Modifying
+    @Query(
+            "update AccountChallenge c set"
+                + " c.deliveryStatus=com.example.lancerpick.auth.entity.ChallengeDeliveryStatus.UNKNOWN,"
+                + " c.lastErrorCode='MAIL_RESULT_UNCONFIRMED' where c.id in :ids and"
+                + " c.deliveryStatus=com.example.lancerpick.auth.entity.ChallengeDeliveryStatus.PENDING"
+                + " and c.issuedAt<=:cutoff")
+    int markDeliveryUnknown(@Param("ids") List<Long> ids, @Param("cutoff") LocalDateTime cutoff);
 }

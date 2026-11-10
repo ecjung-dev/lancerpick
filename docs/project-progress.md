@@ -33,7 +33,7 @@
 | 보안 잠금 전달 실패 재시도 | 황준범 구현, main 반영(#163). 기존 주문 타이머 정은찬 경계 유지 | 전용 스케줄러·ID 순회·조건부 완료 기록 연결([설정·동작](features.md#members-sanctions), [검증](change-history.md#security-lock-delivery-retry)). 재전달 전까지 일부 타이머 ACTIVE 표시, 중단 후 같은 기산점 재시작 409·해제 후 자동 재개 없음. 자동 확정은 만료 재검사로 방어 |
 | K6 실제 재처리와 감사 이력 | 김창재 운영 연결, 황준범 DB/금융/PDF 기반·DDL 협의 | admin_action_logs는 제안이며 실행 마이그레이션 없음. 조회 후보를 실행 완료로 표현하지 않음 |
 | 수익 조회 후속 | 황준범, main 반영(#159) | 상품명/주문번호 검색·구매자/보관 상품 표시·원장 기반 지급 구분 연결. 관련 백엔드 40건·프런트 303건/네 검사·API 대역 브라우저 통과([기록](change-history.md#settlement-query-details)). 실제 서버 브라우저 확인은 별도 |
-| 아이디 안내·메일 복구 | 김창재 회원 기능·황준범 C3 경계. 아이디 안내 API·화면 main 반영(#155, [규칙](features.md#account-guide)) | 기록 없는 안내 메일 계약과 실제 연결 구분. 실제 SMTP 발송 확인 전. 기존 회원 이메일 인증 전환(EXISTING_EMAIL) API·화면 main 반영(#162, [규칙](features.md#existing-email-verification)). 재설정 성공 시 인증 시각 기록은 하지 않음. 메모리 큐/PENDING 복구·자동 재발송 미제공 |
+| 아이디 안내·메일 결과 정리 | 김창재 회원 기능·황준범 C3 경계. 아이디 안내 #155·기존 회원 이메일 인증 전환 #162는 main 반영 | `feature/mail-delivery-reconciliation`에서 V12·오래된 PENDING의 UNKNOWN 정리·늦은 실제 결과 확정 로컬 구현·검증 완료. 전체 백엔드 1,098건 통과. [규칙](features.md#mail-delivery-reconciliation), [검증](change-history.md#mail-delivery-reconciliation). 자동 재발송은 사용자 결정으로 제외. 실제 SMTP·main 반영·원격 CI는 별도. 재설정 성공 시 인증 시각 기록은 하지 않음 |
 | R1 잠금 공통화 | 완료(#161, 정은찬). 계약·계약 문서·채팅이 `OrderCommandLocks` 사용([기록](change-history.md#order-lock-common)) | 401/404 상태·코드·문구와 계약 문서 경로의 회원 없음 404 유지, 계약 경로는 `lockFulfillmentOrder` 미사용. R2 enum 반영과 구분 |
 | 권장 E5·운영 확인 | 기존 담당별 검증 후속 | 계정 전환 캐시는 같은 탭 브라우저로 확인(2026-11-10, [기록](change-history.md#account-switch-cache-check)). 원격 CI·실제 48시간/7일 경과는 미확인. DB 시각 조정과 구분 |
 | 모바일·브라우저·경합 확장 | 각 담당 및 공통 업무 | 320px/대표 거래와 실기기·모든 조합 검증 구분 |

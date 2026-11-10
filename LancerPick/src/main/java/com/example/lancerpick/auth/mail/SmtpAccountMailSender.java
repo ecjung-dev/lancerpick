@@ -22,7 +22,8 @@ import org.springframework.mail.javamail.JavaMailSender;
  * - 큐가 가득 찼거나 종료 중이면 false. 그러면 Dispatcher가 FAILED(MAIL_QUEUE_FULL)로 기록한다.
  * - 발송이 끝나면 AccountMailDeliveryRecorder에 결과를 남긴다. 실패 코드는 예외 종류로만 정하고 메시지는 남기지 않는다.
  * - 로그에는 challengeId와 예외 클래스 이름만 남긴다. 수신자·본문(토큰)은 남기지 않는다.
- * - 메모리 큐라 서버 종료 때 남은 작업은 버려지고 PENDING으로 남는다. 사용자는 요청 제한 안에서 다시 요청한다.
+ * - 메모리 큐라 서버 종료 때 남은 작업은 버려진다. 오래 남은 PENDING은 결과 정리 작업이 UNKNOWN으로 바꾼다.
+ *   자동 재발송은 하지 않고 사용자가 기존 요청 제한 안에서 다시 요청한다.
  */
 public class SmtpAccountMailSender implements AccountMailSender {
     private static final Logger log = LoggerFactory.getLogger(SmtpAccountMailSender.class);

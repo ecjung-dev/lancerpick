@@ -35,7 +35,7 @@ PDF는 생성 시도 키·문서 버전·해시·짧은 DB 트랜잭션·비공�
 
 보안 잠금 전달 재시도 로컬 후속은 `SECURITY_LOCK_RETRY_ENABLED=true`(기본), `SECURITY_LOCK_RETRY_DELAY_MS=30000`, `SECURITY_LOCK_RETRY_BATCH_SIZE=50`이다. 전용 스케줄러로 기존 전달 서비스를 호출하며 공통 test 프로필과 demo는 자동 실행하지 않는다. [재시도 계약·제한](features.md#members-sanctions)을 따른다. 신규 테이블이나 Batch Job은 추가하지 않는다.
 
-아래에는 현재 저장소의 실행·개발 환경을 정리했다. 초기 프로젝트 생성 예시는 변경 이력으로 분리했다. [루트 실행 안내](../README.md)와 실제 빌드·설정 파일을 함께 확인하고, 테스트는 TEST_DB_*로 격리한다. SMTP 메모리 큐 유실·PENDING 미복구·관리자 재처리 미연결 등 한계는 [남은 작업](project-progress.md#remaining)에 유지했다.
+아래에는 현재 저장소의 실행·개발 환경을 정리했다. 초기 프로젝트 생성 예시는 변경 이력으로 분리했다. [루트 실행 안내](../README.md)와 실제 빌드·설정 파일을 함께 확인하고, 테스트는 TEST_DB_*로 격리한다. SMTP 메모리 큐 유실·관리자 재처리 미연결 등 한계는 [남은 작업](project-progress.md#remaining)에 유지한다. 오래된 PENDING의 UNKNOWN 정리 로컬 후속은 아래 메일 인프라와 기능 명세를 따른다.
 
 ## 주제별 목차
 
@@ -1187,6 +1187,7 @@ REST 오류(`code`·`message`·`fieldErrors`·`traceId`)와 같은 필드를 쓰
 | 결과 | 기록 |
 | --- | --- |
 | 성공 | `SENT` |
+| 장시간 결과 기록 없음(로컬 후속) | `UNKNOWN` `MAIL_RESULT_UNCONFIRMED`. 미발송 확정 아님 |
 | SMTP 인증 실패(`MailAuthenticationException`) | `FAILED` `MAIL_AUTH_FAILED` |
 | 메시지 구성 오류(`MailParseException`) | `FAILED` `MAIL_INVALID_MESSAGE` |
 | 연결·전송 실패(`MailSendException`) | `FAILED` `MAIL_SEND_FAILED` |
@@ -1218,6 +1219,10 @@ Docker가 없으면 Mailpit 공식 Windows 실행 파일(GitHub 릴리스 `mailp
 | `lancerpick.mail.enabled` | `MAIL_ENABLED` | `false` |
 | `lancerpick.mail.from` | `MAIL_FROM` | `LancerPick <no-reply@lancerpick.local>` |
 | `lancerpick.mail.queue-capacity` | `MAIL_QUEUE_CAPACITY` | `100` |
+| `lancerpick.mail.reconciliation.enabled` | `MAIL_RECONCILIATION_ENABLED` | `true`. SMTP 켜짐 여부와 독립, demo/test 자동 실행 제외 |
+| `lancerpick.mail.reconciliation.stale-minutes` | `MAIL_RECONCILIATION_STALE_MINUTES` | `30`. 1 이상의 분, 발급 시각 기준 |
+| `lancerpick.mail.reconciliation.batch-size` | `MAIL_RECONCILIATION_BATCH_SIZE` | `50`. 1~100 |
+| `lancerpick.mail.reconciliation.delay-ms` | `MAIL_RECONCILIATION_DELAY_MS` | `60000`. 최초 지연·실행 종료 후 지연, 양수 밀리초 |
 | `spring.mail.host` / `port` | `MAIL_HOST` / `MAIL_PORT` | `localhost` / `1025`(Mailpit) |
 | `spring.mail.username` / `password` | `MAIL_USERNAME` / `MAIL_PASSWORD` | 비어 있음 |
 
@@ -1230,8 +1235,9 @@ Docker가 없으면 Mailpit 공식 Windows 실행 파일(GitHub 릴리스 `mailp
 
 #### 한계
 
-- 메모리 큐라 서버가 종료되면 남은 메일은 버려지고 `PENDING`으로 남는다. 여러 서버로 늘리면 각 서버가 자기 큐만 처리한다(C4·Batch에서 다시 정한다).
-- `PENDING`으로 오래 남은 행을 정리·재처리하는 작업은 없다.
+- 메모리 큐라 서버가 종료되면 남은 메일은 버려진다. 여러 서버는 각자 자기 큐만 처리한다. 메일 본문·토큰은 DB 큐로 옮기지 않는다.
+- 로컬 후속의 `AccountMailReconciliationService`가 오래된 PENDING의 결과 상태만 UNKNOWN으로 정리한다. 조건부 갱신은 발송 상태/오류 코드 두 컬럼뿐이며 만료/인증/사용을 변경하지 않는다. 늦은 실제 결과를 수용하되 SENT/FAILED는 보존한다. 전용 스케줄러는 메일을 보내지 않으며 자동 재발송은 범위에서 제외했다([기능 계약](features.md#mail-delivery-reconciliation)).
+- V12가 먼저 적용되는 정상 Boot/Flyway 기동을 사용한다. UNKNOWN 값을 모르는 구버전 앱으로 단순 롤백하면 enum 조회가 실패할 수 있어 코드/스키마 호환을 확인해야 한다. 기본 30분은 현재 15분 인증 링크 만료와 독립된 발송 결과 정리 기준이다.
 - HTML 메일·첨부·발송량 제한(전체·IP)은 없다.
 - 서버 종료 때 진행 중인 발송은 중단 신호를 받는다. 이미 SMTP 서버가 받은 뒤라면 실제로 전달됐어도 `FAILED`로 기록될 수 있다(사용자에게는 메일이 도착).
 - 비밀번호 변경·재설정 완료 안내 메일, 이메일 인증 가입·아이디 안내 메일은 K1(김창재)에서 이 발송기를 그대로 사용해 추가한다. 아이디 안내는 2026-11-10 아래 `untracked` 계약으로 구현했다([규칙](features.md#account-guide)). 가짜 발송기 통합 테스트로 확인했고 실제 SMTP 발송은 아직 확인하지 않았다.
