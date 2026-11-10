@@ -36,6 +36,16 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
         "lancerpick.mail.reconciliation.enabled=false"
 })
 class DefaultCatalogApiTests extends CommonApiTests {
+    @MockitoBean
+    com.example.lancerpick.admin.service.AdminActionExecutionGuard adminActionExecutionGuard;
+    @MockitoBean
+    com.example.lancerpick.wallet.service.AdminTopupRecheckTransactions adminTopupRecheckTransactions;
+    @MockitoBean
+    com.example.lancerpick.wallet.service.AdminTopupRecheckService adminTopupRecheckService;
+    @MockitoBean
+    com.example.lancerpick.admin.service.AdminBatchRestartService adminBatchRestartService;
+    @MockitoBean
+    com.example.lancerpick.admin.service.AdminReprocessingService adminReprocessingService;
     // K6의 실제 감사 트랜잭션은 AdminActionAuditIntegrationTests에서 MySQL로 검사한다.
     @MockitoBean
     com.example.lancerpick.admin.service.AdminActionAuditService adminActionAuditService;

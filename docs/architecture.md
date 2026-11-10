@@ -6,6 +6,8 @@
 
 React 화면 → 공통 HTTP 클라이언트(/api, 세션 쿠키·CSRF) → Spring MVC Controller/DTO → 도메인 Service → JPA/QueryDSL Repository → MySQL 구조다. 화면은 입력·조회·상태 안내를 담당하고 권한·상태 전환·금액·동시성은 서버가 최종 판단한다.
 
+K6 재처리 로컬 후속은 `AdminReprocessingService`가 감사 요청 선행 커밋 → 업무 처리권 확보 → 트랜잭션 밖 외부 조회/PDF 생성/Batch 재시작 → 업무 결과 → 감사 결과를 조율한다. Controller는 이 내부 서비스 하나를 호출하고 기존 후보 조회를 처리권으로 취급하지 않는다. [메서드·결과 코드·잠금 순서](features.md#admin-reprocessing)를 따른다. 공개 실행/감사 목록 API·화면은 아직 미연결이다.
+
 | 경계 | 책임·현재 코드 위치 |
 | --- | --- |
 | 프런트 앱 | [router.tsx](../LancerPickFrontend/src/app/router.tsx), providers, shared/api·components, features/{auth,products,seller,orders,wallet,settlements,reviews,notifications,order-chat,admin,inquiries,contracts} |

@@ -37,6 +37,19 @@ public class ContractDocumentService {
 
   public ContractResponse generate(long memberId, long orderId, int version) {
     var claim = transactions.claim(memberId, orderId, version);
+    return generate(claim);
+  }
+
+  /** 관리자 세션과 커밋된 감사 요청을 검사하는 경로. 판매자 ID를 대입하지 않는다. */
+  public void generateForAdmin(long adminId, long logId, long contractId) {
+    var claim = transactions.claimForAdmin(adminId, logId, contractId);
+    if (claim.job() == null)
+      throw new BusinessException(
+          HttpStatus.CONFLICT, "ADMIN_ACTION_NOT_ELIGIBLE", "현재 재생성할 수 없는 계약입니다.");
+    generate(claim);
+  }
+
+  private ContractResponse generate(ContractDocumentTransactions.Claim claim) {
     if (claim.job() == null) return claim.response();
     var job = claim.job();
     byte[] bytes;

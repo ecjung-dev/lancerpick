@@ -942,7 +942,7 @@ canonicalContent는 정책별로 고정한 원문이다. V2의 선금/잔금과 
 - 관리자 권한 확인 후 잘못된 주문 ID·버전: 400 `VALIDATION_FAILED`.
 - 없는 주문·계약·버전 또는 LEGACY_V1 주문: 404 `RESOURCE_NOT_FOUND`.
 - 향후 관리자 Controller는 세션에서 얻은 관리자 ID로 호출하고 관리자 접근 통제·`Cache-Control: no-store`를 적용한다. 요청의 관리자 ID를 신뢰하지 않는다.
-- 재처리 실행은 김창재의 관리자 사유·감사 이력 계약과 맞춘 후 별도 명령 서비스로 연결한다. 기존 구매자/판매자 ID를 대신 넣어 당사자 API를 호출하지 않는다. 실행 시 관리자 권한·주문 잠금·현재 계약 버전·취소 요청·시각·처리권을 다시 검사해야 한다.
+- 관리자 PDF 실행 내부 입구는 [AdminReprocessingService](#admin-reprocessing)로 로컬 구현했다. 감사 요청에 연결된 별도 관리자 경로에서 권한·주문 잠금·현재 계약 버전·취소 요청·시각·처리권을 재검사한다. 기존 구매자/판매자 ID를 대신 넣어 당사자 API를 호출하지 않는다. 관리자 실행 API·화면은 김창재 연결 범위다.
 
 ##### API·화면 연결
 
@@ -1864,7 +1864,7 @@ POST /api/orders/{id}/confirm. 인증 구매자·CSRF 필요, 본문 없음. 검
 <a id="finance-batch"></a>
 ### 충전 복구 Batch·관리자 조회
 
-J5는 기존 PROCESSING/UNKNOWN 충전과 저장된 payment_key를 조회해 복구한다. 신규 승인·충전 생성·READY 자동 처리를 하지 않는다. 처리권/재시도·기존 지급 멱등·Spring Batch 영속 메타데이터를 사용한다. 관리자 금융/PDF 후보 조회는 실제 재처리 명령과 다르며 K6 감사 이력·재확인/재시작/재생성 실행은 후속이다.
+J5는 기존 PROCESSING/UNKNOWN 충전과 저장된 payment_key를 조회해 복구한다. 신규 승인·충전 생성·READY 자동 처리를 하지 않는다. 처리권/재시도·기존 지급 멱등·Spring Batch 영속 메타데이터를 사용한다. 관리자 금융/PDF 후보 조회는 실제 실행을 예약하지 않는다. K6 [감사 기반](#admin-action-audit)·[실행 내부 입구](#admin-reprocessing)는 로컬 구현했고 관리자 실행 API/화면은 후속이다.
 
 #### 업무 규칙·연결
 
@@ -1945,7 +1945,7 @@ Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Ste
 3. 외부 조회/Batch 시작은 감사 기록 트랜잭션 밖에서 실행한다. `TopupRecoveryJobService`의 `NEVER`, 실제 충전 claim → 트랜잭션 밖 조회 → 지급 적용 경계를 깨지 않는다.
 4. 결과 이력을 별도 커밋한다. 조회·실행 결과가 불명확하면 성공/실패를 단정하지 않는다. 잔액 직접 수정·실패 상태 강제 완료·시도 수 초기화로 복구하지 않는다.
 
-관리자 단건 재확인은 인증된 구매자용 API에 타인의 ID를 넣어 호출하는 방식으로 연결하지 않는다. 관리자 권한·사유·감사 기록을 갖춘 명령 경계가 준비된 후 기존 지급 트랜잭션과 처리권 검증을 재사용한다. 이번에는 읽기 후보와 실제 실행을 구분해 제공한다.
+관리자 단건 재확인은 인증된 구매자용 API에 타인의 ID를 넣어 호출하는 방식으로 연결하지 않는다. 아래 관리자 명령 경계가 기존 지급 트랜잭션과 처리권을 재사용한다. 조회 후보·실제 실행 서비스·공개 API/화면의 구현 상태는 구분한다.
 
 <a id="admin-action-audit"></a>
 ##### K6 감사 기반 — 로컬 구현, 실행 API는 미연결
@@ -1957,7 +1957,7 @@ Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Ste
 | `AdminActionAuditService.begin(adminId, action, targetId, reason, UUID requestKey)` | 트랜잭션 밖에서 호출. 회원 공유 잠금·현재 DB ADMIN 검사 → 동일 키 재전송 검사 → 진행 중 대상 잠금 → 기존 운영 조회의 대상 존재/후보 검사 → REQUESTED 독립 커밋. `BeginResult(receipt, execute)` 반환 |
 | `execute=false` | 같은 관리자·키·명령·대상·정규화 사유의 재전송. 기존 상태가 REQUESTED/UNKNOWN이어도 재실행하지 않고 이력을 반환한다. 다른 인자는 409 `ADMIN_ACTION_REQUEST_CONFLICT` |
 | `execute=true` | **커밋된 요청을 받은 조율자만** 업무 명령을 트랜잭션 밖에서 실행한다. 업무 명령은 현재 ADMIN·대상·잠금·처리권·상태를 재검증해야 한다. 감사 예약만으로 실행 권한을 대신하지 않는다 |
-| `complete(logId, Outcome)` | 신뢰한 서버 내부 조율자만 호출. REQUESTED에서 SUCCEEDED / BUSINESS_REJECTED / EXECUTION_FAILED / RESULT_UNCONFIRMED 중 하나를 별도 커밋. 결과 코드와 상태를 매핑하며 예외 원문을 받지 않는다. 이미 닫힌 결과는 덮어쓰지 않는다 |
+| `complete(logId, Outcome)` | 신뢰한 서버 내부 조율자만 호출. REQUESTED에서 허용된 Outcome을 결과 코드/상태로 별도 커밋. 아래 업무별 코드와 기존 공통 SUCCEEDED / BUSINESS_REJECTED / EXECUTION_FAILED / RESULT_UNCONFIRMED를 지원한다. 예외 원문을 받지 않으며 이미 닫힌 결과는 덮어쓰지 않는다 |
 | `inspect(adminId, logId)` | 현재 DB ADMIN 재확인 후 안전한 단건 이력 DTO 반환. 목록 API·검색·화면은 후속 |
 
 - 대상 매핑은 `TOPUP_RECHECK → WALLET_TOPUP`, `TOPUP_RECOVERY_RESTART → BATCH_JOB_EXECUTION`, `CONTRACT_PDF_REGENERATE → CONTRACT`. PDF의 `targetId`는 **계약 ID**이고 주문 ID·버전은 해당 계약에서 조회한다. 다른 대상의 `orderId`는 NULL이다.
@@ -1966,7 +1966,40 @@ Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Ste
 - `lancerpick.admin.action-audit.pending-timeout` 기본 PT10M, 허용 1~30분. **업무 처리권/실행 제한 시간이 아니라 감사 결과 미확정 표시 기준**이다. 정확히 만료된 시각부터 다음 새 요청이 기존 요청을 UNKNOWN/LEASE_EXPIRED로 닫고 새 후보를 검사한다. 후보 검사 실패 시 그 트랜잭션도 롤백한다. 자동 정리·재실행 스케줄러는 없다.
 - 외부 응답 유실·DB 결과 유실은 UNKNOWN으로 보존한다. UNKNOWN 또는 기한 경과가 재실행 성공을 보장하지 않으며 지급/Batch/PDF의 고유 처리권과 멱등 검사가 별도로 필요하다. 과거 요청의 늦은 완료 결과가 UNKNOWN을 덮지 않는다.
 - 감사 기록은 삭제 API를 제공하지 않으며 기존 상품·문의·회원 제재 이력은 중복 기록하지 않는다. `reason`은 관리자가 입력한 사유라 API·화면에서도 관리자만 볼 수 있게 해야 한다. 서버가 결제 키·외부 응답·경로·예외 원문을 사유/결과에 자동 첨부하지 않는다.
-- 남은 연결: 황준범의 관리자용 충전 재확인·Batch 재시작·PDF 실행 조율자, 김창재의 사유/UUID 입력·안전한 감사 목록/실행 API·화면. 구매자 API에 타인 ID를 주입해 재사용하지 않는다. 알림 FAILED 재발송은 이번 공통 감사 대상 밖이다.
+- 관리자용 충전 재확인·Batch 재시작·PDF 실행 조율자는 아래 로컬 구현을 따른다. 남은 연결은 김창재의 사유/UUID 입력·안전한 감사 목록/실행 API·화면이다. 알림 FAILED 재발송은 이번 공통 감사 대상 밖이다.
+
+<a id="admin-reprocessing"></a>
+##### K6 관리자 재처리 실행 내부 입구 — 로컬 구현, 공개 API/화면 미연결
+
+황준범, `feature/admin-action-audit`, 감사 기반 커밋 `7b53482` 후속. 김창재의 #141 설계에 맞춘 내부 호출 계약이다. **Controller는 아래 서비스만 호출하며 begin/complete를 따로 중복 호출하지 않는다.** 호출자는 세션의 관리자 ID를 전달하고 변경 요청의 CSRF·ADMIN·no-store를 적용한다.
+
+| AdminReprocessingService 메서드 | 인자/대상 |
+| --- | --- |
+| `recheckTopup(adminId, topupId, reason, UUID requestKey)` | 저장된 충전 PK. 결제 키·금액·구매자 ID를 입력받지 않는다 |
+| `restartTopupRecovery(adminId, executionId, reason, UUID requestKey)` | walletTopupRecovery의 실패/중지 실행 PK. 파라미터를 추가/변경하거나 새 Job으로 바꾸지 않는다 |
+| `regenerateContractPdf(adminId, contractId, reason, UUID requestKey)` | 특정 계약 버전의 PK. 주문 ID/버전을 쓰는 Controller는 기존 `AdminContractPdfQueryService.inspect(adminId,orderId,version).contractId()`로 해석한다. 현재 계약 버전은 실행 트랜잭션에서 다시 검사한다 |
+
+공통 응답은 `Result(receipt, replay)`다. `replay=false`인 새 요청은 설계안대로 HTTP 202, `true`인 동일 키 재전송은 200에 대응할 수 있다. receipt는 감사 결과만 포함하며 결제 키·외부 응답·회원 이메일·PDF 원문/해시/경로·처리권 키는 반환하지 않는다. 대상 최신 상태는 기존 관리자 GET으로 조회한다. 요청 검증/최초 권한/후보 거절은 기존 400/401/403/404/409이고, **감사 접수 이후 업무 상태가 바뀌거나 결과가 불명확한 경우는 receipt의 상태/코드**로 판단한다.
+
+| 결과 코드 | 감사 상태 | 해석 |
+| --- | --- | --- |
+| TOPUP_CREDITED | SUCCEEDED | 기존 지급 트랜잭션 커밋으로 적립금 반영 |
+| TOPUP_RESOLVED_FAILED | SUCCEEDED | 조회 자체는 성공했고 제공자 결제가 취소/실패로 확정됨. **충전 성공 표시 금지** |
+| TOPUP_STATE_CHANGED | REJECTED | 처리권 또는 대상 상태가 바뀌어 이번 요청에서 반영하지 않음 |
+| TOPUP_RESULT_UNCONFIRMED | UNKNOWN | 외부 응답/검증/지급 커밋 결과 확인 필요 |
+| BATCH_RESTART_ACCEPTED | SUCCEEDED | 재시작 호출 수락. **Job 완료나 충전 지급 성공을 뜻하지 않음**, 최신 실행 조회 필요 |
+| BATCH_RESTART_REJECTED | REJECTED | 후보/권한/중복 실행/재시작 조건에 맞지 않아 거절 |
+| BATCH_RESULT_UNCONFIRMED | UNKNOWN | 재시작 접수 또는 메타데이터 결과가 불명확함 |
+| PDF_GENERATED | SUCCEEDED | 실제 PDF 저장·현재 계약 메타데이터 커밋 완료 |
+| PDF_GENERATION_FAILED | FAILED | 렌더링/저장 실패와 계약 FAILED 기록이 확정되어 재시도 가능 |
+| PDF_STATE_CHANGED | REJECTED | 계약 교체·주문 취소·권한 변경·다른 처리권 등으로 이번 생성 반영 불가 |
+| PDF_RESULT_UNCONFIRMED | UNKNOWN | PDF 완료 커밋 등 결과가 불명확함. 실제 상태 확인 전 재생성 성공/실패로 단정하지 않음 |
+
+- 요청 선행 커밋 → **회원 공유 잠금 → 감사 요청 쓰기 잠금 → 충전/주문 쓰기 잠금**에서 실행 관리자/요청 소유자/명령/대상/REQUESTED/감사 기한 검사 → 고유 업무 처리권 커밋 → 외부 조회/렌더링 → 업무 결과 커밋 → 감사 결과 별도 커밋 순서다. Batch는 후보 재검사 트랜잭션을 끝낸 뒤 기존 `TopupRecoveryJobService.restart`를 호출하며 Spring Batch의 최신 실행/중복 실행 방어를 유지한다.
+- 충전은 **미확정 PROCESSING/UNKNOWN**만 재확인한다. 자동 복구·Batch를 끈 환경에서도 단건 실행할 수 있고, 최소 대기·백오프·유효 처리권은 지킨다. 수동 조회는 자동 복구 시도 상한과 무관하며 자동 횟수를 초기화/증가시키지 않는다. 자동 작업자와 같은 충전 처리권을 사용하고, 저장된 키·금액/통화/주문번호 검증과 기존 원장 UNIQUE를 유지한다. READY 신규 승인·기존 FAILED 강제 복구·잔액 직접 수정은 없다.
+- PDF는 DRAFT/FAILED/만료된 GENERATING의 현재 계약만 처리한다. READY/SIGNED 파일을 덮거나 서명을 바꾸지 않는다. 주문 잠금 전에는 불변 주문 ID만 조회해 오래된 계약 엔티티가 남지 않게 하고, 생성 완료 때도 관리자 권한·주문 상태·현재 계약·생성 키를 재검사한다. 취소/교체로 무효가 된 파일은 참조 여부 확인 후 폐기하고 완료 커밋 결과가 불명확하면 파일을 유지한다. 당사자 다운로드·판매자 생성 API의 401/404 계약은 유지한다.
+- 감사 결과 저장 자체가 실패하면 기존 REQUESTED를 유지한다. 같은 키 재전송은 그 이력을 반환하며 작업을 다시 실행하지 않는다. UNKNOWN·감사 기한 만료만으로 강제 지급·강제 완료·자동 재실행하지 않는다.
+- 새 테이블·컬럼·환경변수·공개 REST 경로는 추가하지 않았다. V13 감사 테이블만 사용한다. 관리자 화면/목록·실행 API, 원격 CI와 실제 제공자 브라우저 검증은 별도다.
 
 ##### 실행 설정
 

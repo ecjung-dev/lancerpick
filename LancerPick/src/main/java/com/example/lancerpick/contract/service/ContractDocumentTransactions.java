@@ -1,10 +1,13 @@
 package com.example.lancerpick.contract.service;
 
+import com.example.lancerpick.admin.entity.AdminAction;
+import com.example.lancerpick.admin.service.AdminActionExecutionGuard;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.contract.dto.ContractResponse;
 import com.example.lancerpick.contract.entity.OrderContract;
 import com.example.lancerpick.contract.repository.OrderContractRepository;
+import com.example.lancerpick.member.entity.MemberRole;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.*;
@@ -30,6 +33,7 @@ public class ContractDocumentTransactions {
   private final OrderContractService descriptions;
   private final Clock clock;
   private final Duration timeout;
+  private final AdminActionExecutionGuard adminGuard;
 
   public ContractDocumentTransactions(
       OrderRepository orders,
@@ -38,6 +42,7 @@ public class ContractDocumentTransactions {
       CancellationRequestRepository cancellations,
       OrderContractService descriptions,
       Clock clock,
+      AdminActionExecutionGuard adminGuard,
       @Value("${contracts.generation-timeout:PT2M}") Duration timeout) {
     this.orders = orders;
     this.locks = locks;
@@ -45,13 +50,25 @@ public class ContractDocumentTransactions {
     this.cancellations = cancellations;
     this.descriptions = descriptions;
     this.clock = clock;
+    this.adminGuard = adminGuard;
     this.timeout = timeout;
     if (timeout.isNegative() || timeout.isZero() || timeout.compareTo(Duration.ofMinutes(30)) > 0)
       throw new IllegalArgumentException("Invalid PDF generation timeout");
   }
 
   public record Job(
-      long memberId, long orderId, long contractId, int version, String key, String canonical) {}
+      long memberId,
+      long orderId,
+      long contractId,
+      int version,
+      String key,
+      String canonical,
+      boolean administrator) {
+    public Job(
+        long memberId, long orderId, long contractId, int version, String key, String canonical) {
+      this(memberId, orderId, contractId, version, key, canonical, false);
+    }
+  }
 
   public record Claim(ContractResponse response, Job job) {}
 
@@ -99,6 +116,22 @@ public class ContractDocumentTransactions {
     var order = owned(memberId, orderId, true);
     if (!order.getSellerId().equals(memberId))
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 계약서를 생성할 수 있습니다.");
+    return claim(memberId, order, version, false);
+  }
+
+  public Claim claimForAdmin(long adminId, long logId, long contractId) {
+    adminGuard.require(adminId, logId, AdminAction.CONTRACT_PDF_REGENERATE, contractId);
+    var orderId =
+        contracts.findOrderIdById(contractId).orElseThrow(ContractDocumentTransactions::missing);
+    var order = adminOwned(adminId, orderId);
+    // 주문 잠금 전에는 불변 orderId만 읽는다. 변경 가능한 계약 상태를 영속성 컨텍스트에 미리 올리지 않는다.
+    var selected = current(orderId);
+    if (!selected.getId().equals(contractId)) throw conflict("최신 계약을 확인해 주세요.");
+    return claim(adminId, order, selected.getVersion(), true);
+  }
+
+  private Claim claim(long memberId, Order order, int version, boolean administrator) {
+    long orderId = order.getId();
     if (!writable(order)) throw conflict("현재 주문에서는 계약서를 생성할 수 없습니다.");
     var c = current(orderId);
     if (c.getVersion() != version) throw conflict("계약 버전을 다시 확인해 주세요.");
@@ -118,7 +151,8 @@ public class ContractDocumentTransactions {
             c.getId(),
             c.getVersion(),
             c.getGenerationKey(),
-            response.canonicalContent()));
+            response.canonicalContent(),
+            administrator));
   }
 
   public Applied complete(Job job, String key, long size, byte[] hash) {
@@ -127,7 +161,10 @@ public class ContractDocumentTransactions {
         || size > com.example.lancerpick.contract.document.PrivateContractStorage.MAX_BYTES
         || hash == null
         || hash.length != 32) throw new IllegalArgumentException("Invalid PDF completion metadata");
-    var order = owned(job.memberId(), job.orderId(), true);
+    var order =
+        job.administrator()
+            ? adminOwned(job.memberId(), job.orderId())
+            : owned(job.memberId(), job.orderId(), true);
     var c = current(job.orderId());
     if (c.getId() != job.contractId() || !c.getGenerationKey().equals(job.key()))
       return rejected(c, key);
@@ -157,7 +194,8 @@ public class ContractDocumentTransactions {
   }
 
   public void fail(Job job) {
-    owned(job.memberId(), job.orderId(), true);
+    if (job.administrator()) adminOwned(job.memberId(), job.orderId());
+    else owned(job.memberId(), job.orderId(), true);
     var c = current(job.orderId());
     if (c.getId() == job.contractId()) {
       c.failGeneration(job.key(), now());
@@ -177,12 +215,29 @@ public class ContractDocumentTransactions {
     return order;
   }
 
+  private Order adminOwned(long adminId, long orderId) {
+    var member =
+        orders
+            .findActorForShare(adminId)
+            .orElseThrow(() ->
+                new BusinessException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다."));
+    if (member.getRole() != MemberRole.ADMIN)
+      throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "관리자 권한이 필요합니다.");
+    var order =
+        orders.findForSystemUpdate(orderId).orElseThrow(ContractDocumentTransactions::missing);
+    if (!TradePolicyVersion.isContract(order.getPolicyVersion())) throw missing();
+    return order;
+  }
+
   private boolean writable(Order o) {
     return Set.of(OrderStatus.AWAITING_PAYMENT, OrderStatus.AWAITING_CONTRACT)
             .contains(o.getStatus())
         && o.getAcceptedAt() != null
         && o.getPaidAt() == null
-        && cancellations.findByOrderIdAndStatus(o.getId(), com.example.lancerpick.order.entity.CancellationRequestStatus.PENDING).isEmpty();
+        && cancellations
+            .findByOrderIdAndStatus(
+                o.getId(), com.example.lancerpick.order.entity.CancellationRequestStatus.PENDING)
+            .isEmpty();
   }
 
   private OrderContract current(long id) {

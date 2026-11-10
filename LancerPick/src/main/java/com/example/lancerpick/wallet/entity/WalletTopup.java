@@ -160,19 +160,28 @@ public class WalletTopup {
 
   /** 호출자는 충전 행을 잠근 상태여야 한다. 지급 결과가 아닌 외부 조회 처리권만 부여한다. */
   public boolean canRecover(Instant now, Instant staleBefore, int maxAttempts) {
+    return canManuallyRecover(now, staleBefore) && recoveryAttemptCount < maxAttempts;
+  }
+
+  /** 수동 조회는 자동 시도 상한을 적용하지 않지만 처리권·최소 대기·백오프는 지킨다. */
+  public boolean canManuallyRecover(Instant now, Instant staleBefore) {
     return (status == WalletTopupStatus.PROCESSING || status == WalletTopupStatus.UNKNOWN)
         && paymentKey != null
         && processingStartedAt != null
         && !processingStartedAt.isAfter(staleBefore)
-        && recoveryAttemptCount < maxAttempts
         && (nextRecoveryAt == null || !nextRecoveryAt.isAfter(now))
         && (recoveryLeaseUntil == null || !recoveryLeaseUntil.isAfter(now));
   }
 
   public void claimRecovery(UUID token, Instant now, Duration leaseDuration) {
+    claimManualRecovery(token, now, leaseDuration);
+    recoveryAttemptCount = Math.addExact(recoveryAttemptCount, 1);
+  }
+
+  /** 관리자 조회는 자동 횟수를 초기화하거나 소모하지 않고 동일 처리권을 공유한다. */
+  public void claimManualRecovery(UUID token, Instant now, Duration leaseDuration) {
     recoveryLeaseToken = Objects.requireNonNull(token).toString();
     recoveryLeaseUntil = now.plus(leaseDuration).truncatedTo(ChronoUnit.MICROS);
-    recoveryAttemptCount = Math.addExact(recoveryAttemptCount, 1);
     updatedAt = monotonic(now);
   }
 

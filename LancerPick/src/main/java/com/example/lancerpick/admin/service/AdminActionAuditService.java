@@ -37,7 +37,18 @@ public class AdminActionAuditService {
     SUCCEEDED(AdminActionStatus.SUCCEEDED),
     BUSINESS_REJECTED(AdminActionStatus.REJECTED),
     EXECUTION_FAILED(AdminActionStatus.FAILED),
-    RESULT_UNCONFIRMED(AdminActionStatus.UNKNOWN);
+    RESULT_UNCONFIRMED(AdminActionStatus.UNKNOWN),
+    TOPUP_CREDITED(AdminActionStatus.SUCCEEDED),
+    TOPUP_RESOLVED_FAILED(AdminActionStatus.SUCCEEDED),
+    TOPUP_RESULT_UNCONFIRMED(AdminActionStatus.UNKNOWN),
+    TOPUP_STATE_CHANGED(AdminActionStatus.REJECTED),
+    BATCH_RESTART_ACCEPTED(AdminActionStatus.SUCCEEDED),
+    BATCH_RESTART_REJECTED(AdminActionStatus.REJECTED),
+    BATCH_RESULT_UNCONFIRMED(AdminActionStatus.UNKNOWN),
+    PDF_GENERATED(AdminActionStatus.SUCCEEDED),
+    PDF_GENERATION_FAILED(AdminActionStatus.FAILED),
+    PDF_STATE_CHANGED(AdminActionStatus.REJECTED),
+    PDF_RESULT_UNCONFIRMED(AdminActionStatus.UNKNOWN);
 
     private final AdminActionStatus status;
 
