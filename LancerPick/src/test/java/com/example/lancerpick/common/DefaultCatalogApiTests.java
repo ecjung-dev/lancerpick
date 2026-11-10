@@ -31,7 +31,8 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
                 + "org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration,"
                 + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration",
         "lancerpick.notifications.dispatch-enabled=false",
-        "lancerpick.order.review-timer.expiry-enabled=false"
+        "lancerpick.order.review-timer.expiry-enabled=false",
+        "lancerpick.member.security-lock-retry.enabled=false"
 })
 class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean

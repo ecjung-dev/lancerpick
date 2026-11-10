@@ -12,11 +12,13 @@ import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.common.security.AuthenticatedMember;
 import com.example.lancerpick.contract.service.ContractDocumentService;
 import com.example.lancerpick.contract.service.OrderContractService;
+import com.example.lancerpick.member.config.SecurityLockRetrySchedulingConfiguration;
 import com.example.lancerpick.member.dto.SecurityLockApplied;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.entity.SanctionKind;
 import com.example.lancerpick.member.repository.MemberRepository;
 import com.example.lancerpick.member.service.MemberSanctionCommandService;
+import com.example.lancerpick.member.service.SecurityLockDelivery;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.notification.service.OutboxDispatcher;
 import com.example.lancerpick.order.dto.CreateCancellationRequest;
@@ -70,8 +72,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * E7 검수 무응답 자동 구매 확정과 E8 기한 통지·E9 V3 알림(보관·지급·반환·자동 확정 사전 안내). 실제 커밋·잠금으로 검사하며, 48시간·7일 경과는 DB의 납품·타이머 시각을 같은 폭으로 과거로 옮겨
- * 재현한다(DB CHECK의 시각 관계는 유지된다).
+ * E7 검수 무응답 자동 구매 확정과 E8 기한 통지·E9 V3 알림(보관·지급·반환·자동 확정 사전 안내). 실제 커밋·잠금으로 검사하며, 48시간·7일 경과는 DB의
+ * 납품·타이머 시각을 같은 폭으로 과거로 옮겨 재현한다(DB CHECK의 시각 관계는 유지된다).
  */
 @IntegrationTest
 @AutoConfigureMockMvc
@@ -115,6 +117,7 @@ class ReviewTimerIntegrationTests {
   @Autowired DeadlineNotices deadlineNotices;
   @Autowired MemberSanctionCommandService sanctionCommands;
   @Autowired SecurityLockTimerStops timerStops;
+  @Autowired SecurityLockDelivery lockDelivery;
   @MockitoSpyBean OrderEventPublisher events;
   long buyer, seller, other, admin, product, category, id;
   final List<Long> ids = new ArrayList<>();
@@ -172,7 +175,13 @@ class ReviewTimerIntegrationTests {
               var at = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
               var o =
                   Order.create(
-                      buyer, seller, product, UUID.randomUUID(), AMOUNT, 1, at,
+                      buyer,
+                      seller,
+                      product,
+                      UUID.randomUUID(),
+                      AMOUNT,
+                      1,
+                      at,
                       TradePolicyVersion.CONTRACT_V3);
               o.accept(at);
               orders.saveAndFlush(o);
@@ -307,7 +316,9 @@ class ReviewTimerIntegrationTests {
 
   String timerColumn(String column) {
     return jdbc.queryForObject(
-        "SELECT " + column + " FROM order_response_timers WHERE order_id=? ORDER BY id DESC LIMIT 1",
+        "SELECT "
+            + column
+            + " FROM order_response_timers WHERE order_id=? ORDER BY id DESC LIMIT 1",
         String.class,
         id);
   }
@@ -457,7 +468,8 @@ class ReviewTimerIntegrationTests {
     error(() -> timers.start(seller, id), "CANCELLATION_PENDING");
 
     long request =
-        jdbc.queryForObject("SELECT id FROM cancellation_requests WHERE order_id=?", Long.class, id);
+        jdbc.queryForObject(
+            "SELECT id FROM cancellation_requests WHERE order_id=?", Long.class, id);
     requests.resolve(
         seller,
         str(),
@@ -762,8 +774,7 @@ class ReviewTimerIntegrationTests {
 
     timerInNoticeWindow();
     parallel(
-        () -> Integer.toString(timers.noticeDue(10)),
-        () -> Integer.toString(timers.noticeDue(10)));
+        () -> Integer.toString(timers.noticeDue(10)), () -> Integer.toString(timers.noticeDue(10)));
     timers.noticeDue(10);
     assertThat(outbox(OrderEventPublisher.AUTO_CONFIRM_SOON)).isEqualTo(1);
     long timer =
@@ -848,7 +859,8 @@ class ReviewTimerIntegrationTests {
     assertThat(timerColumn("status")).isEqualTo("CANCELLED");
     assertThat(timerColumn("end_reason")).isEqualTo("ADMIN_STOP");
     assertThat(timerColumn("ended_by")).isEqualTo(Long.toString(admin));
-    assertThat(timerColumn("admin_stop_reason")).isEqualTo(ReviewTimerService.SECURITY_LOCK_STOP_REASON);
+    assertThat(timerColumn("admin_stop_reason"))
+        .isEqualTo(ReviewTimerService.SECURITY_LOCK_STOP_REASON);
     assertThat(timerColumn("admin_stop_reason")).doesNotContain("계정 도용 의심");
     assertThat(securityStops()).isEqualTo(1);
     assertThat(outbox("ORDER_TIMER_ADMIN_STOPPED")).isEqualTo(1);
@@ -878,6 +890,29 @@ class ReviewTimerIntegrationTests {
   }
 
   @Test
+  void retryAfterStopBeforeDeliveryMarkerDoesNotDuplicateTimerHistoryNotificationsOrPayout() {
+    paidAndDelivered();
+    startTimer();
+    long sanction = lock(buyer);
+    // Reproduce a crash after the order stop committed but before its delivery marker committed.
+    jdbc.update("UPDATE member_sanctions SET timer_stop_delivered_at=NULL WHERE id=?", sanction);
+    new SecurityLockRetrySchedulingConfiguration(lockDelivery, 100).retry();
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT timer_stop_delivered_at IS NOT NULL FROM member_sanctions WHERE id=?",
+                Boolean.class,
+                sanction))
+        .isTrue();
+    assertThat(timerColumn("status")).isEqualTo("CANCELLED");
+    assertThat(timerColumn("end_reason")).isEqualTo("ADMIN_STOP");
+    assertThat(securityStops()).isEqualTo(1);
+    assertThat(outbox("ORDER_TIMER_ADMIN_STOPPED")).isEqualTo(1);
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+    assertThat(balance(seller)).isEqualTo(1000000);
+    assertThat(funding.summary(seller, id).status()).isEqualTo("HELD");
+  }
+
+  @Test
   void lockedBuyerBlocksTimerStartUntilUnlocked() {
     paidAndDelivered();
     reviewWindowPassed();
@@ -891,6 +926,57 @@ class ReviewTimerIntegrationTests {
     unlock(buyer, sanction);
     assertThat(timers.status(seller, id).canStart()).isTrue();
     assertThat(timers.start(seller, id).status()).isEqualTo("ACTIVE");
+  }
+
+  @Test
+  void independentRetrySchedulersStopTheSamePendingTimerOnlyOnce() throws Exception {
+    paidAndDelivered();
+    startTimer();
+    var appliedAt = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    String key = UUID.randomUUID().toString();
+    // Reproduce a committed lock whose after-commit callback never ran (process interruption).
+    new org.springframework.transaction.support.TransactionTemplate(manager)
+        .executeWithoutResult(ignored -> {
+          jdbc.update(
+              "INSERT INTO"
+                  + " member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at)"
+                  + " VALUES (?,'SECURITY_LOCK','복구 경합 확인',?,?,?,?)",
+              buyer,
+              admin,
+              key,
+              appliedAt,
+              appliedAt.plusDays(1));
+          jdbc.update(
+              "UPDATE members SET auth_version=auth_version+1,updated_at=? WHERE id=?",
+              appliedAt,
+              buyer);
+        });
+    long sanction =
+        jdbc.queryForObject(
+            "SELECT id FROM member_sanctions WHERE member_id=? AND request_key=?",
+            Long.class,
+            buyer,
+            key);
+    var first = new SecurityLockRetrySchedulingConfiguration(lockDelivery, 100);
+    var second = new SecurityLockRetrySchedulingConfiguration(lockDelivery, 100);
+    assertThat(parallel(() -> result(first::retry), () -> result(second::retry)))
+        .containsOnly("OK");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT timer_stop_delivered_at IS NOT NULL FROM member_sanctions WHERE id=?",
+                Boolean.class,
+                sanction))
+        .isTrue();
+    assertThat(securityStops()).isEqualTo(1);
+    assertThat(outbox("ORDER_TIMER_ADMIN_STOPPED")).isEqualTo(1);
+    assertThat(timerColumn("status")).isEqualTo("CANCELLED");
+    assertThat(timerColumn("end_reason")).isEqualTo("ADMIN_STOP");
+    assertThat(orderStatus()).isEqualTo("AWAITING_CONFIRMATION");
+    assertThat(funding.summary(seller, id).status()).isEqualTo("HELD");
+    assertThat(balance(seller)).isEqualTo(1000000);
+    assertThat(
+            jdbc.queryForObject("SELECT auth_version FROM members WHERE id=?", Long.class, buyer))
+        .isEqualTo(1);
   }
 
   @Test
@@ -913,7 +999,8 @@ class ReviewTimerIntegrationTests {
     // 커밋 후 전달이 실패한 채 잠금 기간이 끝난 상태: 전달 기록 없음, 현재 제한 없음.
     var now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
     jdbc.update(
-        "INSERT INTO member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at)"
+        "INSERT INTO"
+            + " member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at)"
             + " VALUES (?,'SECURITY_LOCK','계정 도용 의심',?,?,?,?)",
         buyer,
         admin,
@@ -938,7 +1025,8 @@ class ReviewTimerIntegrationTests {
     timerInNoticeWindow();
     var now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
     jdbc.update(
-        "INSERT INTO member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at)"
+        "INSERT INTO"
+            + " member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at)"
             + " VALUES (?,'SECURITY_LOCK','계정 도용 의심',?,?,?,?)",
         buyer,
         admin,

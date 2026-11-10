@@ -62,11 +62,10 @@ public class SecurityLockDelivery {
                             row.getMemberId(),
                             row.getReason(),
                             row.getStartsAt()));
-            tx.executeWithoutResult(ignored -> {
-                var current = repository.findById(id).orElseThrow();
-                current.delivered(UtcTimes.nowMicros(clock));
-                repository.flush();
-            });
+            var at = UtcTimes.nowMicros(clock);
+            if (at.isBefore(row.getStartsAt()))
+                throw new IllegalStateException("Clock moved backwards");
+            tx.executeWithoutResult(ignored -> repository.markTimerStopDelivered(id, at));
             return true;
         } catch (RuntimeException exception) {
             log.warn(
@@ -78,18 +77,39 @@ public class SecurityLockDelivery {
     }
 
     public int retryPending(int limit) {
-        if (limit < 1 || limit > 100) {
+        return retryPendingAfter(0, limit).delivered();
+    }
+
+    public record RetryBatch(int delivered, long nextId) {}
+
+    /** Bounded ID scan. An empty page wraps the scheduler to the first pending ID next time. */
+    public RetryBatch retryPendingAfter(long after, int limit) {
+        if (after < 0 || limit < 1 || limit > 100) {
             throw new IllegalArgumentException("Invalid limit");
         }
         if (handlers.getIfAvailable() == null) {
-            return 0;
+            return new RetryBatch(0, 0);
         }
         int count = 0;
-        for (long id : repository.pendingSecurityLocks(PageRequest.of(0, limit))) {
-            if (deliver(id)) {
-                count++;
+        long next = 0;
+        for (long id : repository.pendingSecurityLocksAfter(after, PageRequest.of(0, limit))) {
+            try {
+                if (deliver(id)) count++;
+            } catch (org.springframework.dao.DataAccessResourceFailureException
+                    | org.springframework.dao.TransientDataAccessResourceException
+                    | org.springframework.dao.RecoverableDataAccessException
+                    | org.springframework.transaction.CannotCreateTransactionException
+                            unavailable) {
+                // Avoid waiting once per row when the database itself is unavailable.
+                throw unavailable;
+            } catch (RuntimeException failure) {
+                log.warn(
+                        "Security lock timer retry {} failed: {}",
+                        id,
+                        failure.getClass().getSimpleName());
             }
+            next = id;
         }
-        return count;
+        return new RetryBatch(count, next);
     }
 }
