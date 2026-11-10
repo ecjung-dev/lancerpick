@@ -90,13 +90,7 @@ public class OrderQueryService {
     long orderId = OrderIds.positive(id).orElseThrow(OrderQueryService::invalidInput);
     var detail = details.forParticipant(orderId, memberId);
     var actions =
-        OrderAllowedActions.actions(
-            detail.policyVersion(),
-            detail.status(),
-            detail.buyer().id().equals(Long.toString(memberId)),
-            detail.revisionRequest(),
-            detail.cancellationRequests(),
-            detail.review());
+        OrderAllowedActions.actions(detail, detail.buyer().id().equals(Long.toString(memberId)));
     // 표시만 보완한다. 제재 사유는 응답에 노출하지 않고 명령의 회원 잠금·권한 검사는 유지한다.
     if (actions.contains("ACCEPT") && sanctions.restriction(memberId).blocksNewActivity()) {
       actions = actions.stream().filter(action -> !"ACCEPT".equals(action)).toList();

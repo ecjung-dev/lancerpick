@@ -13,14 +13,12 @@ import com.example.lancerpick.order.entity.CancellationRequestStatus;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderHistoryAction;
-import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.CancellationRequestRepository;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Set;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -44,10 +42,6 @@ public class AdminCancellationReviewService {
     APPROVED,
     REJECTED
   }
-
-  private static final Set<OrderStatus> PAID_OPEN =
-      Set.of(
-          OrderStatus.IN_PROGRESS, OrderStatus.AWAITING_CONFIRMATION, OrderStatus.REVISION_IN_PROGRESS);
 
   private final OrderRepository orders;
   private final SupportInquiryRepository inquiries;
@@ -121,13 +115,17 @@ public class AdminCancellationReviewService {
       throw conflict("REQUEST_ALREADY_RESOLVED", "취소 요청이 이미 처리되었습니다. 문의를 확인해 주세요.");
     if (!order.isFullFunding())
       throw conflict("ORDER_POLICY_NOT_READY", "결제 금액 보관 정책 주문만 관리자 취소 검토를 지원합니다.");
-    if (order.getPaidAt() == null || !PAID_OPEN.contains(order.getStatus()))
+    if (order.getPaidAt() == null || !order.getStatus().isWorkOpen())
       throw conflict("ORDER_STATE_CONFLICT", "결제 후 미완료 주문만 처리할 수 있습니다.");
     if (requests.findByOrderIdAndStatus(order.getId(), CancellationRequestStatus.PENDING).size() != 1) throw integrity();
-    var at = now(order, request, inquiry);
+    LocalDateTime at;
     if (decision == Decision.APPROVED) {
-      fullFunding.adminRefund(order, request, adminId, inquiryId, reason, at);
+      // 처리 시각은 구매자 지갑 잠금 뒤에 정하고, 문의 종료에도 같은 시각을 쓴다.
+      at =
+          fullFunding.adminRefund(
+              order, request, adminId, inquiryId, reason, () -> now(order, request, inquiry));
     } else {
+      at = now(order, request, inquiry);
       request.resolveByAdmin(CancellationRequestStatus.REJECTED, adminId, reason, at);
       requests.flush();
       events.publish(

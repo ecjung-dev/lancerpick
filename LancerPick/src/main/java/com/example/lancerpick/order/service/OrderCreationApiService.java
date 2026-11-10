@@ -24,14 +24,9 @@ public class OrderCreationApiService {
   public Result create(long buyerId, CreateOrderRequest request) {
     var result = creation.create(buyerId, request);
     var detail = details.forParticipant(result.orderId(), buyerId);
-    var actions =
-        OrderAllowedActions.actions(
-            detail.policyVersion(), detail.status(),
-            detail.buyer().id().equals(Long.toString(buyerId)),
-            detail.revisionRequest(),
-            detail.cancellationRequests(),
-            detail.review());
-    return new Result(detail.withAllowedActions(actions), result.created());
+    return new Result(
+        OrderAllowedActions.attach(detail, detail.buyer().id().equals(Long.toString(buyerId))),
+        result.created());
   }
 
   public record Result(OrderDetailResponse order, boolean created) {}

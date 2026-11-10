@@ -74,13 +74,7 @@ public class OrderDecisionService {
     // 변경 감지와 이력 저장을 응답 조회 전에 flush한다. 이후 실패도 같은 트랜잭션에서 롤백한다.
     events.publish(order, histories.saveAndFlush(history));
     var detail = details.forParticipant(orderId, memberId);
-    return detail.withAllowedActions(
-        OrderAllowedActions.actions(
-            detail.policyVersion(), detail.status(),
-            false,
-            detail.revisionRequest(),
-            detail.cancellationRequests(),
-            detail.review()));
+    return OrderAllowedActions.attach(detail, false);
   }
 
   private static BusinessException invalidId() {
