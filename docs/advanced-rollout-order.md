@@ -23,7 +23,7 @@ main beccf52 문서 갱신까지 반영했다. V2 생성(#82)·비밀번호 변�
 
 V1~V6는 수정하지 않는다. V7은 기존 정책/데이터를 보존하는 확장이다. payments 주문당 한 건 UNIQUE와 findByOrderId·단건 조회, 전액 환불 제약을 유지한다. 선금/잔금용 UNIQUE 교체·복수 결제 조회·부분 반환 확장은 V3에 필요하지 않다. 개발 DB도 백업 후 코드와 migration을 함께 적용한다.
 
-새 스위치는 lancerpick.order.full-funding-creation-enabled이며 기본 false다. 과거 contract-v2-creation-enabled와 구분하고 기존 policy_version을 변경하지 않는다. 테이블만 생성됐다는 이유로 새 주문을 허용하지 않는다. 옛 DDL 후보를 V7 위에 직접 실행하지 않는다.
+새 스위치는 lancerpick.order.full-funding-creation-enabled이며 활성화 게이트 통과 후 2026-11-10 기본값을 true로 바꿨다. 과거 contract-v2-creation-enabled와 구분하고 기존 policy_version을 변경하지 않는다. 테이블만 생성됐다는 이유로 새 주문을 허용하지 않는다. 옛 DDL 후보를 V7 위에 직접 실행하지 않는다.
 
 ## 4. 활성화 근거
 

@@ -49,7 +49,7 @@
 
 현재 정책을 설정으로 일괄 바꿔 기존 주문의 policy_version을 UPDATE하지 않는다. 과거 계약의 내용·파일·해시는 다시 생성하거나 덮어쓰지 않는다. 새 계약 JSON에는 총액·FULL_HOLD·정상 수수료를 고정하며 deposit/balance는 넣지 않는다.
 
-`lancerpick.order.full-funding-creation-enabled=false`가 기본이다. true일 때만 신규 V3 생성 경로를 선택한다. 이전 `contract-v2-creation-enabled`는 과거 호환용이며 V3 활성화 스위치가 아니다. 두 설정이 모두 false면 기존 MVP 신규 주문을 생성한다. V3 금액 명령·화면·경합 검증 전 기본값을 바꾸지 않는다.
+`lancerpick.order.full-funding-creation-enabled=true`가 기본이다(2026-11-10, [활성화 게이트](v3-activation-gate.md#6-판정-기록) 판정 통과 후 변경). true면 신규 주문은 V3로 만든다. 이전 `contract-v2-creation-enabled`는 과거 호환용이며 V3 활성화 스위치가 아니다. 두 설정이 모두 false면 기존 MVP 신규 주문(LEGACY_V1)을 생성한다. 되돌릴 때는 false로 바꾸며, 이미 만든 V3 주문은 V3 경로로 끝까지 처리한다.
 
 ## 4. DB와 마이그레이션
 
