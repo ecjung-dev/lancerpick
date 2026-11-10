@@ -36,6 +36,8 @@ import com.example.lancerpick.wallet.entity.Wallet;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
 import com.example.lancerpick.wallet.repository.WalletRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -50,6 +52,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +63,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -85,7 +89,8 @@ class AdminCancellationReviewIntegrationTests {
   }
 
   @Autowired MemberRepository members;
-  @Autowired WalletRepository wallets;
+  @MockitoSpyBean WalletRepository wallets;
+  @Autowired EntityManager entityManager;
   @Autowired WalletEntryRepository entries;
   @Autowired OrderRepository orders;
   @Autowired OrderSnapshotRepository snapshots;
@@ -358,6 +363,41 @@ class AdminCancellationReviewIntegrationTests {
     assertThat(outbox("ORDER_FUNDS_REFUNDED")).isEqualTo(1);
     assertThat(dispatchedTypes(buyer)).contains("ORDER_FUNDS_REFUNDED");
     assertThat(dispatchedTypes(seller)).contains("ORDER_FUNDS_REFUNDED");
+  }
+
+  @Test
+  void adminApprovalUsesTimeAfterWaitingForBuyerWallet() {
+    long second = create();
+    jdbc.update("UPDATE wallets SET balance=2000000 WHERE member_id=?", buyer);
+    var intervened = new AtomicBoolean();
+    var separateTransaction = new TransactionTemplate(manager);
+    separateTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    // 관리자 승인의 구매자 지갑 잠금 직전에, 같은 구매자의 다른 주문 결제를 별도 트랜잭션으로 커밋해 지갑 갱신 시각을 앞당긴다.
+    doAnswer(invocation -> {
+      if (intervened.compareAndSet(false, true))
+        separateTransaction.executeWithoutResult(ignored ->
+            payments.pay(buyer, Long.toString(second), true));
+      return java.util.Optional.ofNullable(
+          entityManager.find(Wallet.class, buyer, LockModeType.PESSIMISTIC_WRITE));
+    }).when(wallets).findByMemberIdForUpdate(buyer);
+
+    var result = reviews.approve(admin, inquiryId, "지갑 대기 뒤 승인");
+
+    assertThat(intervened).isTrue();
+    assertThat(result.orderStatus()).isEqualTo("CANCELLED");
+    assertThat(balance(buyer)).isEqualTo(2000000);
+    // 주문 취소·문의 종료·지갑 갱신이 지갑 잠금 뒤의 같은 시각이고, 끼어든 결제보다 늦어야 한다.
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT o.cancelled_at=i.resolved_at AND o.cancelled_at=w.updated_at AND"
+                    + " o.cancelled_at>=p.paid_at FROM orders o JOIN support_inquiries i ON i.id=?"
+                    + " JOIN wallets w ON w.member_id=o.buyer_id JOIN payments p ON p.order_id=?"
+                    + " WHERE o.id=?",
+                Boolean.class,
+                inquiryId,
+                second,
+                id))
+        .isTrue();
   }
 
   @Test

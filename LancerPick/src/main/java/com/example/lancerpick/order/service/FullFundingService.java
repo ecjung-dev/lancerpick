@@ -32,6 +32,7 @@ import com.example.lancerpick.payment.repository.PaymentRepository;
 import com.example.lancerpick.payment.service.FullFundingPolicy;
 import com.example.lancerpick.settlement.entity.Settlement;
 import com.example.lancerpick.settlement.repository.SettlementRepository;
+import com.example.lancerpick.wallet.entity.Wallet;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.entity.WalletEntryType;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
@@ -42,7 +43,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Set;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -59,7 +60,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class FullFundingService {
-  private static final int FEE_RATE_BPS = 1_000;
+  private static final int FEE_RATE_BPS = FullFundingPolicy.FEE_RATE_BPS;
 
   private final OrderRepository orderRepository;
   private final OrderTradeTermsRepository orderTradeTermsRepository;
@@ -125,12 +126,7 @@ public class FullFundingService {
       if (payment.status() == PaymentStatus.REFUNDED) {
         throw conflict("PAYMENT_ALREADY_REFUNDED", "이미 반환된 결제입니다.");
       }
-      if (!Set.of(
-              OrderStatus.IN_PROGRESS,
-              OrderStatus.REVISION_IN_PROGRESS,
-              OrderStatus.AWAITING_CONFIRMATION,
-              OrderStatus.COMPLETED)
-          .contains(order.getStatus())) {
+      if (!(order.getStatus().isWorkOpen() || order.getStatus() == OrderStatus.COMPLETED)) {
         throw integrityError();
       }
       if (order.getStatus() == OrderStatus.COMPLETED) {
@@ -199,7 +195,6 @@ public class FullFundingService {
         || settlementRepository.findByOrderId(orderId).isPresent()) {
       throw integrityError();
     }
-    var distribution = FullFundingPolicy.completed(payment.amount());
     var wallet =
         walletRepository
             .findByMemberIdForUpdate(order.getSellerId())
@@ -208,16 +203,7 @@ public class FullFundingService {
     var occurredAt = currentTime();
     // 구매자 확정은 활성 자동 확정 타이머를 끝낸다. 만료 시각이 지났으면 자동 확정이 우선이라 충돌로 응답한다.
     reviewTimers.closeForBuyerResponse(order, memberId, occurredAt, ReviewTimers.ORDER_CLOSED);
-    wallet.creditSettlement(distribution.sellerPayout(), occurredAt);
-    walletEntryRepository.saveAndFlush(
-        WalletEntry.sellerPayout(
-            order.getSellerId(),
-            payment.id(),
-            distribution.sellerPayout(),
-            wallet.getBalance(),
-            occurredAt));
-    settlementRepository.saveAndFlush(
-        Settlement.create(orderId, payment.amount(), FEE_RATE_BPS, occurredAt));
+    payoutToSeller(order, payment, wallet, occurredAt);
     orderClosureRepository.saveAndFlush(
         OrderClosure.completed(orderId, memberId, payment.amount(), occurredAt));
     orderFunds.release(occurredAt);
@@ -254,11 +240,7 @@ public class FullFundingService {
           order.getBuyerId(), payment, WalletEntryType.REFUND, payment.amount(), "REFUND:");
       return orderResponse(order, memberId);
     }
-    if (!Set.of(
-                OrderStatus.IN_PROGRESS,
-                OrderStatus.AWAITING_CONFIRMATION,
-                OrderStatus.REVISION_IN_PROGRESS)
-            .contains(order.getStatus())
+    if (!order.getStatus().isWorkOpen()
         || payment.status() != PaymentStatus.PAID
         || orderFunds.getStatus() != OrderFundsStatus.HELD) {
       throw invalidState();
@@ -283,50 +265,26 @@ public class FullFundingService {
             .findByMemberIdForUpdate(order.getBuyerId())
             .orElseThrow(FullFundingService::integrityError);
     var occurredAt = currentTime();
-    wallet.refund(payment.amount(), occurredAt);
-    payment.refund(occurredAt);
-    orderFunds.refund(occurredAt);
     request.approve(memberId, null, occurredAt);
-    walletEntryRepository.saveAndFlush(
-        WalletEntry.refund(
-            order.getBuyerId(), payment.id(), payment.amount(), wallet.getBalance(), occurredAt));
+    refundHeldFunds(order, payment, orderFunds, wallet, occurredAt);
     orderClosureRepository.saveAndFlush(
         OrderClosure.refunded(orderId, memberId, request.getId(), payment.amount(), occurredAt));
-    var previousStatus = order.getStatus();
-    order.cancel(occurredAt);
-    orderRepository.flush();
-    paymentRepository.flush();
-    orderFundsRepository.flush();
-    cancellationRequestRepository.flush();
-    orderEventPublisher.publish(
-        order,
-        orderHistoryRepository.saveAndFlush(
-            OrderHistory.cancellationRequestEvent(
-                orderId,
-                memberId,
-                OrderHistoryAction.CANCELLATION_APPROVED,
-                previousStatus,
-                occurredAt,
-                null)));
-    orderEventPublisher.publish(
-        order,
-        orderHistoryRepository.saveAndFlush(
-            OrderHistory.cancelled(orderId, memberId, previousStatus, occurredAt, reason)));
+    cancelAndPublish(order, memberId, occurredAt, null, reason);
     return orderResponse(order, memberId);
   }
 
   /**
    * 운영 문의(취소 검토)에 대한 관리자 승인 취소(K4). 호출자가 관리자 공유 잠금 → 주문 배타 잠금 → 문의 잠금을 얻고 대기 취소 요청·문의를 확인한 같은
    * 트랜잭션에서 호출한다. 판매자 승인과 같은 전액 반환·원장을 남기고, 취소 요청은 ADMIN 처리로, 종료 기록은 ADMIN_CANCELLATION(문의 ID 포함)으로
-   * 구분한다.
+   * 구분한다. 처리 시각은 구매자 지갑 잠금 뒤 {@code timeAfterWalletLock}으로 정하고 돌려준다. 호출자는 문의 종료에 같은 시각을 쓴다.
    */
-  public void adminRefund(
+  public LocalDateTime adminRefund(
       Order order,
       CancellationRequest request,
       long adminId,
       long inquiryId,
       String reason,
-      LocalDateTime occurredAt) {
+      Supplier<LocalDateTime> timeAfterWalletLock) {
     long orderId = order.getId();
     if (!order.isFullFunding()
         || request.getOrderId() != orderId
@@ -337,11 +295,7 @@ public class FullFundingService {
     var payment = requirePayment(order);
     var orderFunds = requireOrderFunds(order, payment);
     requirePaymentEntry(order, payment);
-    if (!Set.of(
-                OrderStatus.IN_PROGRESS,
-                OrderStatus.AWAITING_CONFIRMATION,
-                OrderStatus.REVISION_IN_PROGRESS)
-            .contains(order.getStatus())
+    if (!order.getStatus().isWorkOpen()
         || payment.status() != PaymentStatus.PAID
         || orderFunds.getStatus() != OrderFundsStatus.HELD) {
       throw invalidState();
@@ -356,36 +310,15 @@ public class FullFundingService {
         walletRepository
             .findByMemberIdForUpdate(order.getBuyerId())
             .orElseThrow(FullFundingService::integrityError);
-    wallet.refund(payment.amount(), occurredAt);
-    payment.refund(occurredAt);
-    orderFunds.refund(occurredAt);
+    // 지갑 잠금 대기 중 같은 구매자의 다른 거래가 지갑을 갱신했을 수 있으므로 잠금 뒤의 시각을 쓴다.
+    var occurredAt = timeAfterWalletLock.get();
     request.resolveByAdmin(CancellationRequestStatus.APPROVED, adminId, reason, occurredAt);
-    walletEntryRepository.saveAndFlush(
-        WalletEntry.refund(
-            order.getBuyerId(), payment.id(), payment.amount(), wallet.getBalance(), occurredAt));
+    refundHeldFunds(order, payment, orderFunds, wallet, occurredAt);
     orderClosureRepository.saveAndFlush(
         OrderClosure.adminCancelled(
             orderId, adminId, request.getId(), inquiryId, payment.amount(), occurredAt));
-    var previousStatus = order.getStatus();
-    order.cancel(occurredAt);
-    orderRepository.flush();
-    paymentRepository.flush();
-    orderFundsRepository.flush();
-    cancellationRequestRepository.flush();
-    orderEventPublisher.publish(
-        order,
-        orderHistoryRepository.saveAndFlush(
-            OrderHistory.cancellationRequestEvent(
-                orderId,
-                adminId,
-                OrderHistoryAction.CANCELLATION_APPROVED,
-                previousStatus,
-                occurredAt,
-                reason)));
-    orderEventPublisher.publish(
-        order,
-        orderHistoryRepository.saveAndFlush(
-            OrderHistory.cancelled(orderId, adminId, previousStatus, occurredAt, reason)));
+    cancelAndPublish(order, adminId, occurredAt, reason, reason);
+    return occurredAt;
   }
 
   /**
@@ -414,7 +347,6 @@ public class FullFundingService {
         || settlementRepository.findByOrderId(orderId).isPresent()) {
       throw integrityError();
     }
-    var distribution = FullFundingPolicy.completed(payment.amount());
     var wallet =
         walletRepository
             .findByMemberIdForUpdate(order.getSellerId())
@@ -422,16 +354,7 @@ public class FullFundingService {
     // 처리 대상 선정 시각을 지급에 재사용하지 않는다. 다른 주문이 먼저 지갑을 갱신했을 수 있다.
     occurredAt = currentTime();
     if (!timer.isDue(occurredAt)) throw integrityError();
-    wallet.creditSettlement(distribution.sellerPayout(), occurredAt);
-    walletEntryRepository.saveAndFlush(
-        WalletEntry.sellerPayout(
-            order.getSellerId(),
-            payment.id(),
-            distribution.sellerPayout(),
-            wallet.getBalance(),
-            occurredAt));
-    settlementRepository.saveAndFlush(
-        Settlement.create(orderId, payment.amount(), FEE_RATE_BPS, occurredAt));
+    payoutToSeller(order, payment, wallet, occurredAt);
     orderClosureRepository.saveAndFlush(
         OrderClosure.autoConfirmed(orderId, timer.getId(), payment.amount(), occurredAt));
     timer.expire(occurredAt);
@@ -443,6 +366,61 @@ public class FullFundingService {
         order,
         orderHistoryRepository.saveAndFlush(
             OrderHistory.autoConfirmed(orderId, timer.getId(), occurredAt)));
+  }
+
+  /** 판매자 지갑 잠금 뒤 호출한다. 수수료를 뺀 금액을 적립하고 원장·정산을 남긴다. */
+  private void payoutToSeller(Order order, Payment payment, Wallet wallet, LocalDateTime occurredAt) {
+    var distribution = FullFundingPolicy.completed(payment.amount());
+    wallet.creditSettlement(distribution.sellerPayout(), occurredAt);
+    walletEntryRepository.saveAndFlush(
+        WalletEntry.sellerPayout(
+            order.getSellerId(),
+            payment.id(),
+            distribution.sellerPayout(),
+            wallet.getBalance(),
+            occurredAt));
+    settlementRepository.saveAndFlush(
+        Settlement.create(order.getId(), payment.amount(), FEE_RATE_BPS, occurredAt));
+  }
+
+  /** 구매자 지갑 잠금 뒤 호출한다. 보관금 전액을 반환하고 원장을 남긴다. */
+  private void refundHeldFunds(
+      Order order, Payment payment, OrderFunds orderFunds, Wallet wallet, LocalDateTime occurredAt) {
+    wallet.refund(payment.amount(), occurredAt);
+    payment.refund(occurredAt);
+    orderFunds.refund(occurredAt);
+    walletEntryRepository.saveAndFlush(
+        WalletEntry.refund(
+            order.getBuyerId(), payment.id(), payment.amount(), wallet.getBalance(), occurredAt));
+  }
+
+  /** 주문을 취소 상태로 바꾸고 취소 승인·취소 이력을 남긴다. 승인 이력 사유와 취소 사유는 호출 흐름마다 다르다. */
+  private void cancelAndPublish(
+      Order order,
+      long actorId,
+      LocalDateTime occurredAt,
+      String approvalReason,
+      String cancelReason) {
+    var previousStatus = order.getStatus();
+    order.cancel(occurredAt);
+    orderRepository.flush();
+    paymentRepository.flush();
+    orderFundsRepository.flush();
+    cancellationRequestRepository.flush();
+    orderEventPublisher.publish(
+        order,
+        orderHistoryRepository.saveAndFlush(
+            OrderHistory.cancellationRequestEvent(
+                order.getId(),
+                actorId,
+                OrderHistoryAction.CANCELLATION_APPROVED,
+                previousStatus,
+                occurredAt,
+                approvalReason)));
+    orderEventPublisher.publish(
+        order,
+        orderHistoryRepository.saveAndFlush(
+            OrderHistory.cancelled(order.getId(), actorId, previousStatus, occurredAt, cancelReason)));
   }
 
   // public 진입점이 단독 호출돼도 잠금 순서와 V3·금액 검증을 보장한다. 호출 서비스가 이미 잠갔다면 같은 트랜잭션의 재잠금이다.
@@ -594,14 +572,7 @@ public class FullFundingService {
 
   private OrderDetailResponse orderResponse(Order order, long memberId) {
     var detail = orderDetailQueries.forParticipant(order.getId(), memberId);
-    return detail.withAllowedActions(
-        OrderAllowedActions.actions(
-            detail.policyVersion(),
-            detail.status(),
-            order.getBuyerId() == memberId,
-            detail.revisionRequest(),
-            detail.cancellationRequests(),
-            detail.review()));
+    return OrderAllowedActions.attach(detail, order.getBuyerId() == memberId);
   }
 
   private static void requireRole(boolean allowed) {

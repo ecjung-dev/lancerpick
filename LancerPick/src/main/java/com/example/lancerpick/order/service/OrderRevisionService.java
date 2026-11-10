@@ -92,14 +92,7 @@ public class OrderRevisionService {
             OrderHistory.revisionRequested(orderId, memberId, at, revision.getReason())));
     deadlineNotices.redeliveryDue(order, revision);
     var detail = details.forParticipant(orderId, memberId);
-    return detail.withAllowedActions(
-        OrderAllowedActions.actions(
-            detail.policyVersion(),
-            detail.status(),
-            true,
-            detail.revisionRequest(),
-            detail.cancellationRequests(),
-            detail.review()));
+    return OrderAllowedActions.attach(detail, true);
   }
 
   private static long positiveId(String id) {

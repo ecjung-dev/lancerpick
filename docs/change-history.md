@@ -4,6 +4,15 @@
 
 ## 기록 해석
 
+<a id="order-funds-time-refactor"></a>
+### 주문 금액 경로 처리 시각 보완·리팩토링 — 2026-11-10, 로컬 구현
+
+정은찬, `fix/order-funds-time-refactor`, main `db92468`에서 분기했다. 주문 도메인 점검안을 Codex로 적대적 리뷰한 뒤, 리뷰에서 확인된 결함과 축소한 리팩토링 범위만 반영했다.
+
+- 결함: 관리자 취소 승인(`AdminCancellationReviewService` → `FullFundingService.adminRefund`)과 V1 판매자 직접 취소(`OrderCancellationService`)는 구매자 지갑 잠금 **전**에 처리 시각을 정했다. 잠금을 기다리는 동안 같은 구매자의 다른 주문 결제가 지갑을 더 늦은 시각으로 갱신하면 `Wallet.refund`의 시각 역행 검사(`IllegalArgumentException`)로 승인·환불 전체가 롤백됐다. 두 경로 모두 지갑 잠금 뒤 시각을 정하도록 바꿨다. 관리자 승인은 `adminRefund`가 잠금 뒤 시각을 정해 돌려주고, 문의 종료도 같은 시각을 쓴다. 판매자 승인 환불·수동/자동 확정·결제는 원래 잠금 뒤 시각을 써서 바꾸지 않았다.
+- 리팩토링: V3 수수료율을 `FullFundingPolicy.FEE_RATE_BPS` 한 곳에서 참조한다. 요율 자체는 10%로 유지하며, V1 `Payment.create`의 1000·약정 상수·V7 DB CHECK는 별도 정책 변경 때 함께 다룬다. `FullFundingService`는 판매자 적립·원장·정산(`payoutToSeller`), 보관금 반환·원장(`refundHeldFunds`), 취소·이력 발행(`cancelAndPublish`)만 공통화했다. 타이머 처리·취소 요청 처리 주체(SELLER/ADMIN)·종료 기록 유형·이력 사유는 흐름마다 그대로 둔다. 상세 응답의 `allowedActions` 조립 10곳은 `OrderAllowedActions.attach`로 모으고, 제재 판매자 ACCEPT 숨김은 상세 조회에만 둔다(다른 경로는 판매자에게 REQUESTED 주문을 돌려주지 않는다). 세 작업 상태 집합 5곳은 `OrderStatus.isWorkOpen()`으로 바꾸고, COMPLETED를 포함하는 3곳은 조건을 명시했다. 낡은 직접 취소 서비스 주석을 고쳤다.
+- 검증: 회귀 테스트 2건(관리자 승인·V1 판매자 환불, 지갑 잠금 직전에 같은 구매자의 다른 주문 결제를 별도 트랜잭션으로 커밋)을 추가했다. 수정 전 코드에서는 두 건 모두 실패했고, 수정 후 로컬 테스트 DB(3307)에서 `order.*`·`payment.*` **415건 통과**(실패·오류·건너뜀 0). 이어서 전체 `clean build` **1,063건 통과**(실패·오류·건너뜀 0). 원격 CI·push·PR은 별도다. API·DB·Flyway·응답 형식 변경 없음.
+
 <a id="settlement-query-details"></a>
 ### 판매 수익 검색·지급 구분 — 2026-11-10, 로컬 구현
 

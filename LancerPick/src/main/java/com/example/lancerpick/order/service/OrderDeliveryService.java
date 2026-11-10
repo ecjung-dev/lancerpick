@@ -82,14 +82,7 @@ public class OrderDeliveryService {
     events.publish(
         order, histories.saveAndFlush(OrderHistory.delivered(orderId, memberId, from, at)));
     var detail = details.forParticipant(orderId, memberId);
-    return detail.withAllowedActions(
-        OrderAllowedActions.actions(
-            detail.policyVersion(),
-            detail.status(),
-            false,
-            detail.revisionRequest(),
-            detail.cancellationRequests(),
-            detail.review()));
+    return OrderAllowedActions.attach(detail, false);
   }
 
   private static BusinessException invalidInput() {

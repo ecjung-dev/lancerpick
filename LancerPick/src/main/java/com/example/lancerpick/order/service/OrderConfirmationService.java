@@ -97,14 +97,7 @@ public class OrderConfirmationService {
       events.publish(order, histories.saveAndFlush(OrderHistory.completed(orderId, memberId, at)));
     }
     var detail = details.forParticipant(orderId, memberId);
-    return detail.withAllowedActions(
-        OrderAllowedActions.actions(
-            detail.policyVersion(),
-            detail.status(),
-            true,
-            detail.revisionRequest(),
-            detail.cancellationRequests(),
-            detail.review()));
+    return OrderAllowedActions.attach(detail, true);
   }
 
   private static BusinessException integrity() {
