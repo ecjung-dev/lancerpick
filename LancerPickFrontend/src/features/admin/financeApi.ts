@@ -5,7 +5,7 @@ import { isValidProductId as isValidId } from './validation.ts'
 
 /**
  * 관리자 금융·계약 PDF 운영 조회(K3·K6 조회만). ID는 문자열, 금액은 정수 원, 시각은 UTC다.
- * 응답의 후보 판단(eligible·reason)은 조회 순간의 조건일 뿐 실행 권한이 아니며, 이 화면에는 실행 버튼이 없다.
+ * 응답의 후보 판단(eligible·reason)은 조회 순간의 조건일 뿐 실행 권한이 아니다. 실행은 reprocessApi.ts(K6)가 따로 요청하고 서버가 다시 검사한다.
  */
 export type TopupStatus = 'READY' | 'PROCESSING' | 'UNKNOWN' | 'COMPLETED' | 'FAILED'
 export type PolicyVersion = 'LEGACY_V1' | 'CONTRACT_V2' | 'CONTRACT_V3'
@@ -133,7 +133,7 @@ const KINDS: Record<string, string> = { INITIAL_GENERATION: '최초 생성', RET
 
 /** 후보 판단 표시. "후보"는 실행 허가가 아님을 문구로 드러낸다. */
 export function decisionLabel(eligible: boolean, reason: string | null | undefined, kind?: string) {
-  if (eligible) return `재처리 후보${kind && KINDS[kind] ? ` (${KINDS[kind]})` : ''} · 실행은 아직 지원하지 않아요`
+  if (eligible) return `재처리 후보${kind && KINDS[kind] ? ` (${KINDS[kind]})` : ''} · 실행 직전에 서버가 다시 확인해요`
   if (!reason || reason === 'NONE') return '후보 아님'
   return `후보 아님: ${REASONS[reason] ? `${REASONS[reason]} (${reason})` : reason}`
 }

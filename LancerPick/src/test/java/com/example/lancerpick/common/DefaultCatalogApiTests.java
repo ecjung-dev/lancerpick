@@ -51,6 +51,11 @@ class DefaultCatalogApiTests extends CommonApiTests {
     com.example.lancerpick.admin.service.AdminActionAuditService adminActionAuditService;
     @MockitoBean
     com.example.lancerpick.admin.service.AdminActionEligibility adminActionEligibility;
+    // K6 감사 이력 목록도 DB를 읽는다. 실제 조회는 AdminReprocessingApiIntegrationTests(MySQL).
+    @MockitoBean
+    com.example.lancerpick.admin.service.AdminActionLogService adminActionLogService;
+    @MockitoBean
+    com.example.lancerpick.admin.repository.AdminActionLogQueries adminActionLogQueries;
     @MockitoBean
     com.example.lancerpick.admin.service.AdminMemberService adminMemberService;
     @MockitoBean

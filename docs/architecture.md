@@ -6,7 +6,7 @@
 
 React 화면 → 공통 HTTP 클라이언트(/api, 세션 쿠키·CSRF) → Spring MVC Controller/DTO → 도메인 Service → JPA/QueryDSL Repository → MySQL 구조다. 화면은 입력·조회·상태 안내를 담당하고 권한·상태 전환·금액·동시성은 서버가 최종 판단한다.
 
-K6 재처리 로컬 후속은 `AdminReprocessingService`가 감사 요청 선행 커밋 → 업무 처리권 확보 → 트랜잭션 밖 외부 조회/PDF 생성/Batch 재시작 → 업무 결과 → 감사 결과를 조율한다. Controller는 이 내부 서비스 하나를 호출하고 기존 후보 조회를 처리권으로 취급하지 않는다. [메서드·결과 코드·잠금 순서](features.md#admin-reprocessing)를 따른다. 공개 실행/감사 목록 API·화면은 아직 미연결이다.
+K6 재처리 로컬 후속은 `AdminReprocessingService`가 감사 요청 선행 커밋 → 업무 처리권 확보 → 트랜잭션 밖 외부 조회/PDF 생성/Batch 재시작 → 업무 결과 → 감사 결과를 조율한다. Controller는 이 내부 서비스 하나를 호출하고 기존 후보 조회를 처리권으로 취급하지 않는다. [메서드·결과 코드·잠금 순서](features.md#admin-reprocessing)를 따른다. 공개 실행/감사 목록 API·화면은 `AdminReprocessingController`와 `/admin/finance`(충전·복구 작업 칸, "관리자 작업 이력" 탭)·`/admin/finance/orders/:id`(계약 PDF 칸)로 로컬 연결했다(2026-11-10, 김창재, [API 표](#b-204-1)).
 
 | 경계 | 책임·현재 코드 위치 |
 | --- | --- |
@@ -214,9 +214,15 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 | GET /admin/finance/recovery-jobs | page,size | 충전 복구 Job 인스턴스별 최신 실행·재시작 후보 판단 |
 | GET /admin/finance/recovery-jobs/{executionId} | 없음 | 실행 상세 |
 | GET /admin/orders/{orderId}/contract-pdf | version(선택) | 계약 PDF 메타데이터·생성 후보 판단 |
+| POST /admin/finance/topups/{id}/recheck | reason(1~1,000자), requestKey(UUID) | 감사 receipt. 새 요청 202, 같은 키 재전송 200(재실행 없음) |
+| POST /admin/finance/recovery-jobs/{executionId}/restart | reason, requestKey | 감사 receipt(202/200). 재시작 수락은 Job 완료가 아님 |
+| POST /admin/orders/{orderId}/contract-pdf/regenerate | reason, requestKey, version(선택, 생략 시 현재 계약) | 감사 receipt(202/200) |
+| GET /admin/action-logs | action, targetId(action과 함께만), orderId, page, size(1~100) | 관리자 작업 감사 이력(요청 ID 내림차순) |
 
 - 충전 status는 READY·PROCESSING·UNKNOWN·COMPLETED·FAILED, 결제 status는 PAID·REFUNDED, policyVersion은 LEGACY_V1·CONTRACT_V2·CONTRACT_V3만(대소문자 그대로). ID 필터는 양수. 잘못된 값 400 `VALIDATION_FAILED`, 없는 대상 404 `RESOURCE_NOT_FOUND`.
-- 결제 키·처리권·파일 경로/해시·회원 이메일은 응답에 없다. 후보 판단(eligible·reason)은 조회 순간의 조건일 뿐 실행 권한이 아니며, 재확인·재시작·재생성 실행 API는 없다(관리자 감사 이력 설계 후 별도).
+- 결제 키·처리권·파일 경로/해시·회원 이메일은 응답에 없다. 후보 판단(eligible·reason)은 조회 순간의 조건일 뿐 실행 권한이 아니다.
+- K6 실행 POST(2026-11-10, 김창재)는 CSRF·ADMIN·no-store이고 `AdminReprocessingService` 하나만 호출한다. 본문은 `reason`·`requestKey`(문자열 UUID)와 PDF의 `version`(정수)만 받으며 관리자 ID·결과·금액·결제 키는 받지 않는다. 충전·Batch에 version을 보내거나 형식이 틀리면 400 `VALIDATION_FAILED`. 감사 접수 전 거절은 기존 400/401/403/404/409(`ADMIN_ACTION_IN_PROGRESS`·`ADMIN_ACTION_NOT_ELIGIBLE`·`ADMIN_ACTION_REQUEST_CONFLICT`)이고, 접수 뒤 업무 거절·실패·불명확은 receipt의 status·resultCode로 알린다. PDF는 주문·버전을 기존 PDF 운영 조회로 계약 ID로 바꾼 뒤 실행한다. 결과 코드는 [K6 실행 계약](features.md#admin-reprocessing).
+- `GET /admin/action-logs`는 현재 DB 역할이 ADMIN일 때만(강등 세션 403) 관리자가 쓴 사유를 포함한 receipt를 돌려준다. 결제 키·외부 응답·파일 정보·처리권 키·회원 이메일은 없다.
 
 #### 오류와 입력 기준
 

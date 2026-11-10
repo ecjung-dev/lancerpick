@@ -4,6 +4,15 @@
 
 ## 기록 해석
 
+<a id="admin-reprocessing-api-history"></a>
+### K6 관리자 재처리 실행 API·화면 — 2026-11-10, 로컬 구현
+
+김창재, `feature/admin-reprocessing-api`, main `c76b2eb`(#167) 기준. #141 설계의 API·화면 초안을 황준범의 [내부 입구](features.md#admin-reprocessing)에 연결했다. 현재 규칙은 [API·화면](features.md#admin-reprocessing-api)과 [API 표](architecture.md#b-204-1)를 따른다. 새 DDL·마이그레이션은 없다.
+
+설계 초안과 달라진 점: 초안은 실행 응답에 "기록 + 대상 최신 상태"를 넣으려 했으나 #167 계약대로 receipt만 돌려주고 대상 상태는 기존 GET으로 다시 읽는다. 초안의 `targetType` 필터는 action에서 정해지므로 받지 않고, targetId는 action과 함께만 허용한다. PDF 실행은 주문·버전을 기존 PDF 운영 조회로 계약 ID로 바꾼 뒤 실행하며, 이 조회를 실행 허가로 쓰지 않는다.
+
+검증(프런트): 관련 `admin-reprocess`·`admin-finance` 16건 통과. 전체 typecheck·lint·`test:api` 321건·build 통과(2026-11-10). 백엔드(사용자 실행, 로컬 테스트 DB `lancerpick_test`에 V12·V13 Flyway 적용): 관련 `admin.*`·`common.*` 154건 통과, 전체 `clean build` **1,141건 통과**(실패·오류·건너뜀 0, 4분 25초). 신규 `AdminReprocessingApiIntegrationTests` 7건 포함이며 #167의 1,134건과 합산하지 않는다. 이 7건은 실행 서비스를 대역으로 두고 HTTP 계약(ADMIN·CSRF·입력·202/200·PDF 계약 해석)을, 감사 목록은 실제 MySQL로 검사했다. 실제 토스·Batch·PDF 실행의 브라우저 확인과 원격 CI는 미확인이다.
+
 <a id="admin-reprocessing-services"></a>
 ### K6 관리자 재처리 서비스 입구 — 2026-11-10, 로컬 후속
 

@@ -62,7 +62,7 @@ test('URL filters keep only documented values (exact case, positive IDs)', () =>
 })
 
 test('candidate labels never read as permission and keep the original code', () => {
-  assert.match(decisionLabel(true, 'NONE'), /재처리 후보 · 실행은 아직 지원하지 않아요/)
+  assert.match(decisionLabel(true, 'NONE'), /재처리 후보 · 실행 직전에 서버가 다시 확인해요/)
   assert.match(decisionLabel(true, null, 'RETRY_FAILED'), /실패 후 재생성/)
   assert.equal(decisionLabel(false, 'LEASE_ACTIVE'), '후보 아님: 다른 작업이 처리 중 (LEASE_ACTIVE)')
   assert.equal(decisionLabel(false, 'SOMETHING_NEW'), '후보 아님: SOMETHING_NEW')
@@ -99,7 +99,7 @@ test('order finance shows missing records as "기록 없음", not 0원, and PDF 
     assert.match(html, /HELD/)
     assert.match(html, /실제 파일 확인은 아님/)
     assert.match(html, /후보 아님: 지금 주문 상태에서는 생성 불가 \(ORDER_NOT_WRITABLE\)/)
-    assert.doesNotMatch(html, /<button[^>]*>(재시도|재생성|재확인|재시작)/, '조회 화면에는 실행 버튼이 없다')
+    assert.doesNotMatch(html, /<button[^>]*>(재시도|재생성|재확인|재시작)/, '후보가 아니면 실행 버튼이 없다')
   } finally { client.clear() }
 })
 
@@ -121,7 +121,7 @@ test('finance page defaults to payments, restores filters from the URL and links
   } finally { client.clear() }
 })
 
-test('topup tab shows candidate decisions as information only', () => {
+test('topup tab shows the decision and offers a recheck only for candidates', () => {
   const client = newClient()
   try {
     client.setQueryData(['admin', 'finance', 'topups', { memberId: '', status: 'UNKNOWN' }, 0], { ...empty, totalElements: 1, totalPages: 1, items: [{
@@ -131,6 +131,8 @@ test('topup tab shows candidate decisions as information only', () => {
     const html = render('/admin/finance?tab=topups&status=UNKNOWN', '/admin/finance', createElement(AdminFinancePage), client)
     assert.match(html, /충전 #9/)
     assert.match(html, /복구 기능 꺼짐 \(RECOVERY_DISABLED\)/)
-    assert.match(html, /재처리 후보 · 실행은 아직 지원하지 않아요/)
+    assert.match(html, /재처리 후보 · 실행 직전에 서버가 다시 확인해요/)
+    assert.match(html, /<summary>충전 재확인<\/summary>/)
+    assert.match(html, /<button type="submit">재확인 요청<\/button>/)
   } finally { client.clear() }
 })

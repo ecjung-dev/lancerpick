@@ -56,3 +56,9 @@
 .cards li small { display: block; margin-top: 8px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .cards li.attention { border: 2px solid var(--ink); }
 .cards li.attention span { color: var(--ink); }
+
+.reprocess { margin: 10px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; }
+.reprocess summary { cursor: pointer; font-weight: 700; }
+.reprocess label { display: block; margin: 12px 0 6px; font-weight: 650; }
+.reprocess label span { margin-left: 6px; font-size: 11px; color: var(--muted); font-weight: 450; }
+.reprocess textarea { width: 100%; min-height: 80px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; resize: vertical; }

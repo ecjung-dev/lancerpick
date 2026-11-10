@@ -16,7 +16,7 @@
 | 관리자 회원 관리 | 목록·검색·상태·상세·제재 적용/해제·이력 API/화면 main 반영(#157) | 상품 등록 제재 검사와 V3 최소 금액 검증 모두 유지. 새 DDL 없음 |
 | 회원 변경 정책 U6/B3 | V11·닉네임 6개월·비밀번호 권고 기준일/조회 기반과 권고 알림 발송 main 반영(#156) | 로그인 때 회차별 1건·스케줄러 없음([권고 알림](features.md#password-recommendation)) |
 | 회원 제재 U7/U8 | 주문 생성·수락 차단과 보안 잠금 타이머 중단 존재. 관리자 화면으로 적용·해제해 개인 DB 실서버·브라우저 확인(2026-11-10) | 일반 제한은 기존 거래 허용. 미전달 자동 재시도 main 반영(#163), 기존 만료 재검사 방어 유지. 잠긴 구매자의 수동 확정 차단·사전 안내 잠금 순서 보완은 main 반영(#164). 잠긴 판매자의 거래 진전 명령 차단은 같은 이름의 브랜치에서 #164 이후 별도 후속(병합 전, [기록](change-history.md#security-lock-confirm-notice)) |
-| 관리자 운영·금융·문의·PDF | 기존 조회/승인/타이머에 #149 알림 실패 조회·#151 운영 대시보드 추가 | K6 V13 감사 기반에 관리자 충전 재확인·Batch 재시작·PDF 생성 실행 내부 입구를 로컬 구현. 관리자 목록/실행 API·화면은 미연결([연결 계약](features.md#admin-reprocessing)). 기존 회원 제재 이력은 유지 |
+| 관리자 운영·금융·문의·PDF | 기존 조회/승인/타이머에 #149 알림 실패 조회·#151 운영 대시보드 추가 | K6 V13 감사 기반에 관리자 충전 재확인·Batch 재시작·PDF 생성 실행 내부 입구 main 반영(#167). 관리자 실행/감사 목록 API·화면은 로컬 브랜치에서 연결, main 반영 전([API·화면](features.md#admin-reprocessing-api)). 기존 회원 제재 이력은 유지 |
 | 알림·채팅·화면 개편 | 저장/실시간·세션 경계, U1~U5 관련 구현 기록 보존 | #147 같은 UUID 복구 수정 보존. 실제 서버와 API 대역 검사를 구분 |
 | DB | V1~V11 파일, 업무 32개·Batch 시스템 9개 | 연결 DB에 실제 적용된 버전은 접속 조회하지 않았으므로 확인 필요 |
 
@@ -31,7 +31,7 @@
 | --- | --- | --- |
 | V3 생성 기본값 | 완료(#152), 정은찬·황준범 공동 검토 경계 유지 | V3 true·test false. 발표 후보에서 대표 V3 거래 재확인, 기존 주문 정책 유지 |
 | 보안 잠금 전달 실패 재시도 | 황준범 구현, main 반영(#163). 기존 주문 타이머 정은찬 경계 유지 | 전용 스케줄러·ID 순회·조건부 완료 기록 연결([설정·동작](features.md#members-sanctions), [검증](change-history.md#security-lock-delivery-retry)). 재전달 전까지 일부 타이머 ACTIVE 표시, 중단 후 같은 기산점 재시작 409·해제 후 자동 재개 없음. 자동 확정은 만료 재검사로 방어 |
-| K6 실제 재처리와 감사 이력 | 김창재 운영 API·화면, 황준범 DB/금융/PDF 기반 | `feature/admin-action-audit`: V13·JPA 감사 기반 `7b53482` 후속으로 `AdminReprocessingService` 세 입구·업무별 결과 코드·감사 증명/처리권 연결 로컬 구현·검증 완료. 전체 백엔드 1,134건 통과(토스 대역). 김창재의 관리자 목록/실행 API·화면 연결은 후속. [호출 계약](features.md#admin-reprocessing), [후속 검증](change-history.md#admin-reprocessing-services), [기반 검증 1,114건](change-history.md#admin-action-audit-foundation) |
+| K6 실제 재처리와 감사 이력 | 김창재 운영 API·화면, 황준범 DB/금융/PDF 기반 | `feature/admin-action-audit`: V13·JPA 감사 기반 `7b53482` 후속으로 `AdminReprocessingService` 세 입구·업무별 결과 코드·감사 증명/처리권 연결 로컬 구현·검증 완료. 전체 백엔드 1,134건 통과(토스 대역). 김창재의 관리자 실행 POST 3개·감사 이력 GET·화면(`/admin/finance` 재처리 칸·작업 이력 탭, 주문 금액 화면 PDF 칸)은 `feature/admin-reprocessing-api`에서 로컬 구현(main 반영 전, [API·화면](features.md#admin-reprocessing-api)). [호출 계약](features.md#admin-reprocessing), [후속 검증](change-history.md#admin-reprocessing-services), [기반 검증 1,114건](change-history.md#admin-action-audit-foundation) |
 | 수익 조회 후속 | 황준범, main 반영(#159) | 상품명/주문번호 검색·구매자/보관 상품 표시·원장 기반 지급 구분 연결. 관련 백엔드 40건·프런트 303건/네 검사·API 대역 브라우저 통과([기록](change-history.md#settlement-query-details)). 실제 서버 브라우저 확인은 별도 |
 | 아이디 안내·메일 결과 정리 | 김창재 회원 기능·황준범 C3 경계. 아이디 안내 #155·기존 회원 이메일 인증 전환 #162·메일 결과 정리 #166은 main 반영 | V12·오래된 PENDING의 UNKNOWN 정리·늦은 실제 결과 확정. #166 전 전체 백엔드 1,098건 통과. [규칙](features.md#mail-delivery-reconciliation), [검증](change-history.md#mail-delivery-reconciliation). 자동 재발송은 사용자 결정으로 제외. 실제 SMTP·현재 HEAD/원격 CI 검증과 구분. 재설정 성공 시 인증 시각 기록은 하지 않음 |
 | R1 잠금 공통화 | 완료(#161, 정은찬). 계약·계약 문서·채팅이 `OrderCommandLocks` 사용([기록](change-history.md#order-lock-common)) | 401/404 상태·코드·문구와 계약 문서 경로의 회원 없음 404 유지, 계약 경로는 `lockFulfillmentOrder` 미사용. R2 enum 반영과 구분 |

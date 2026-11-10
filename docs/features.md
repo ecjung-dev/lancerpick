@@ -942,12 +942,12 @@ canonicalContent는 정책별로 고정한 원문이다. V2의 선금/잔금과 
 - 관리자 권한 확인 후 잘못된 주문 ID·버전: 400 `VALIDATION_FAILED`.
 - 없는 주문·계약·버전 또는 LEGACY_V1 주문: 404 `RESOURCE_NOT_FOUND`.
 - 향후 관리자 Controller는 세션에서 얻은 관리자 ID로 호출하고 관리자 접근 통제·`Cache-Control: no-store`를 적용한다. 요청의 관리자 ID를 신뢰하지 않는다.
-- 관리자 PDF 실행 내부 입구는 [AdminReprocessingService](#admin-reprocessing)로 로컬 구현했다. 감사 요청에 연결된 별도 관리자 경로에서 권한·주문 잠금·현재 계약 버전·취소 요청·시각·처리권을 재검사한다. 기존 구매자/판매자 ID를 대신 넣어 당사자 API를 호출하지 않는다. 관리자 실행 API·화면은 김창재 연결 범위다.
+- 관리자 PDF 실행 내부 입구는 [AdminReprocessingService](#admin-reprocessing)로 로컬 구현했다. 감사 요청에 연결된 별도 관리자 경로에서 권한·주문 잠금·현재 계약 버전·취소 요청·시각·처리권을 재검사한다. 기존 구매자/판매자 ID를 대신 넣어 당사자 API를 호출하지 않는다. 관리자 실행 API·화면은 김창재가 [로컬 연결](#admin-reprocessing-api)했다.
 
 ##### API·화면 연결
 
 <a id="b-40-0"></a>
-`GET /api/admin/orders/{orderId}/contract-pdf?version=`(no-store)로 이 서비스를 그대로 호출하고, `/admin/finance/orders/:id` 화면의 "계약 PDF" 칸에 버전·상태·파일 정보 유무·생성 후보 판단을 조회 전용으로 보여 준다. 재생성 실행 버튼은 없다. [API 9-3절](architecture.md#b-204-1).
+`GET /api/admin/orders/{orderId}/contract-pdf?version=`(no-store)로 이 서비스를 그대로 호출하고, `/admin/finance/orders/:id` 화면의 "계약 PDF" 칸에 버전·상태·파일 정보 유무·생성 후보 판단을 보여 준다. 현재 버전의 생성 후보이면 사유를 적고 재생성을 요청할 수 있다(2026-11-10, [K6 실행 API·화면](#admin-reprocessing-api)). [API 9-3절](architecture.md#b-204-1).
 
 ##### 계약서 PDF 생성·복구·당사자 다운로드
 
@@ -1966,7 +1966,7 @@ Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Ste
 - `lancerpick.admin.action-audit.pending-timeout` 기본 PT10M, 허용 1~30분. **업무 처리권/실행 제한 시간이 아니라 감사 결과 미확정 표시 기준**이다. 정확히 만료된 시각부터 다음 새 요청이 기존 요청을 UNKNOWN/LEASE_EXPIRED로 닫고 새 후보를 검사한다. 후보 검사 실패 시 그 트랜잭션도 롤백한다. 자동 정리·재실행 스케줄러는 없다.
 - 외부 응답 유실·DB 결과 유실은 UNKNOWN으로 보존한다. UNKNOWN 또는 기한 경과가 재실행 성공을 보장하지 않으며 지급/Batch/PDF의 고유 처리권과 멱등 검사가 별도로 필요하다. 과거 요청의 늦은 완료 결과가 UNKNOWN을 덮지 않는다.
 - 감사 기록은 삭제 API를 제공하지 않으며 기존 상품·문의·회원 제재 이력은 중복 기록하지 않는다. `reason`은 관리자가 입력한 사유라 API·화면에서도 관리자만 볼 수 있게 해야 한다. 서버가 결제 키·외부 응답·경로·예외 원문을 사유/결과에 자동 첨부하지 않는다.
-- 관리자용 충전 재확인·Batch 재시작·PDF 실행 조율자는 아래 로컬 구현을 따른다. 남은 연결은 김창재의 사유/UUID 입력·안전한 감사 목록/실행 API·화면이다. 알림 FAILED 재발송은 이번 공통 감사 대상 밖이다.
+- 관리자용 충전 재확인·Batch 재시작·PDF 실행 조율자는 아래 로컬 구현을 따른다. 사유/UUID 입력·감사 목록/실행 API·화면은 [K6 실행 API·화면](#admin-reprocessing-api)(김창재)으로 연결했다. 알림 FAILED 재발송은 이번 공통 감사 대상 밖이다.
 
 <a id="admin-reprocessing"></a>
 ##### K6 관리자 재처리 실행 내부 입구 — 로컬 구현, 공개 API/화면 미연결
@@ -2000,6 +2000,29 @@ Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Ste
 - PDF는 DRAFT/FAILED/만료된 GENERATING의 현재 계약만 처리한다. READY/SIGNED 파일을 덮거나 서명을 바꾸지 않는다. 주문 잠금 전에는 불변 주문 ID만 조회해 오래된 계약 엔티티가 남지 않게 하고, 생성 완료 때도 관리자 권한·주문 상태·현재 계약·생성 키를 재검사한다. 취소/교체로 무효가 된 파일은 참조 여부 확인 후 폐기하고 완료 커밋 결과가 불명확하면 파일을 유지한다. 당사자 다운로드·판매자 생성 API의 401/404 계약은 유지한다.
 - 감사 결과 저장 자체가 실패하면 기존 REQUESTED를 유지한다. 같은 키 재전송은 그 이력을 반환하며 작업을 다시 실행하지 않는다. UNKNOWN·감사 기한 만료만으로 강제 지급·강제 완료·자동 재실행하지 않는다.
 - 새 테이블·컬럼·환경변수·공개 REST 경로는 추가하지 않았다. V13 감사 테이블만 사용한다. 관리자 화면/목록·실행 API, 원격 CI와 실제 제공자 브라우저 검증은 별도다.
+
+<a id="admin-reprocessing-api"></a>
+##### K6 관리자 재처리 실행 API·화면 — 로컬 구현(김창재, 2026-11-10)
+
+`feature/admin-reprocessing-api`, main `c76b2eb`(#167) 기준. 위 내부 입구를 HTTP와 화면에 연결했다. 새 DDL·마이그레이션·환경변수는 없다. 경로·입력은 [API 표](architecture.md#b-204-1)를 따른다.
+
+| 규칙 | 내용 |
+| --- | --- |
+| 호출 | `AdminReprocessingController`는 실행마다 `AdminReprocessingService` 메서드 하나만 부른다. begin/complete를 따로 부르거나 결과 코드를 고르지 않는다. 관리자 ID는 `CurrentMemberId.require(authentication)` |
+| 입력 | `reason`·`requestKey`는 JSON 문자열만(숫자·boolean 자동 변환 없음), requestKey는 UUID 형식. `version`은 PDF에서만 정수 1 이상. 사유 정리·길이(1~1,000자)는 감사 서비스가 최종 검사 |
+| 응답 | `Result.replay=false` → 202, `true` → 200. 본문은 `AdminActionReceipt`. 대상 최신 상태는 기존 GET으로 다시 조회 |
+| PDF 대상 | 경로의 주문 ID와 version(생략 시 현재)을 `AdminContractPdfQueryService.inspect`로 계약 ID로 바꾼다. 계약이 없으면 감사 기록 없이 404. 해석 후 계약이 바뀌면 실행 재검사가 `PDF_STATE_CHANGED`로 거절 |
+| 감사 목록 | `AdminActionLogService`(현재 DB ADMIN 재확인) + `AdminActionLogQueries`(QueryDSL, 잠금 없음). action·targetId(action과 함께, 대상 종류로 한정)·orderId, ID 내림차순 |
+
+화면:
+
+- `/admin/finance` 충전 탭은 `manualRecheck.eligible`, 충전 복구 작업 탭은 `restart.eligible`이고 실행 번호가 있을 때만 "재처리" 칸(접힌 상태)을 보여 준다. `/admin/finance/orders/:id`의 계약 PDF 칸은 현재 버전이고 생성 후보일 때, 조회한 version으로 요청한다.
+- 버튼을 누를 때 `crypto.randomUUID()`로 requestKey를 한 번 만든다. 보낸 요청은 계정별 Query 메모리(`['admin','reprocess',명령,대상]`)에 보관해 화면을 이동해도 남고 로그아웃·계정 전환 때 지워진다.
+- 통신 오류·5xx는 "서버가 이미 처리했을 수 있어요"로 바꾸고 **같은 키·같은 사유로만** "같은 요청으로 결과 확인"을 허용한다(후보에서 빠져도 이 확인은 가능). 첫 요청의 명확한 4xx는 기록이 없으므로 지우고, 불명확했던 요청의 재전송이 거절되면 첫 요청 결과를 단정하지 않고 그대로 둔다.
+- 자동 재시도·처리 중 재전송은 없다(ref와 `sending` 상태로 두 번 클릭 방지). 클릭 시 계정 경계(`captureAccountScope`)를 잡아 계정이 바뀌면 보내지 않고 응답도 반영하지 않는다. 응답 뒤 금융 조회와 작업 이력을 다시 읽는다.
+- 결과는 receipt의 상태(처리 중·처리됨·반영 안 됨·실패·결과 확인 필요)와 결과 코드 설명으로 보여 준다. `BATCH_RESTART_ACCEPTED`는 "접수"이지 작업 완료가 아니고, `TOPUP_RESOLVED_FAILED`는 충전되지 않았음을 표시한다. 모르는 코드는 코드만 보여 준다.
+- "관리자 작업 이력" 탭(작업 종류 필터, URL `action`)과 주문 금액 화면의 이력 칸(orderId)은 조회만 한다. 요청 키는 화면에 보여 주지 않는다.
+- 알림 FAILED 재발송은 여전히 범위 밖이다.
 
 ##### 실행 설정
 

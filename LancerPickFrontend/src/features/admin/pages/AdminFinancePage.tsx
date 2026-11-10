@@ -11,19 +11,24 @@ import { orderStatusLabel } from '../../orders/status'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { AdminReprocessPanel } from '../components/AdminReprocessPanel'
+import { AdminActionLogList } from '../components/AdminActionLogList'
+import { ACTION_LABELS, type ReprocessAction } from '../reprocessApi'
 import styles from './Admin.module.css'
 
-type Tab = 'topups' | 'payments' | 'jobs'
+type Tab = 'topups' | 'payments' | 'jobs' | 'logs'
 const TABS: { key: Tab; label: string }[] = [
   { key: 'payments', label: '결제·환불' }, { key: 'topups', label: '충전' }, { key: 'jobs', label: '충전 복구 작업' },
+  { key: 'logs', label: '관리자 작업 이력' },
 ]
+const ACTIONS = Object.keys(ACTION_LABELS) as ReprocessAction[]
 const time = (value: string | null) => value ? formatDateTime(value) : '—'
 
 /** /admin/finance. 탭·필터·페이지를 URL에 두어 새로고침·뒤로가기·주문 금액 화면에서 돌아오기 때 그대로 복원한다. 조회만 한다. */
 export function AdminFinancePage() {
   const [params, setParams] = useSearchParams()
   const raw = params.get('tab')
-  const tab: Tab = raw === 'topups' || raw === 'jobs' ? raw : 'payments'
+  const tab: Tab = raw === 'topups' || raw === 'jobs' || raw === 'logs' ? raw : 'payments'
 
   function apply(next: Record<string, string>) {
     // 조건이 바뀌면 첫 페이지부터. 빈 조건은 주소에 남기지 않는다.
@@ -36,13 +41,14 @@ export function AdminFinancePage() {
     <p className={styles.eyebrow}>ADMIN</p>
     <AdminNav />
     <h1>금융 조회</h1>
-    <p className={styles.lead}>충전·결제·보관금·정산과 충전 복구 작업을 조회만 해요. "재처리 후보"는 지금 조건만 보여 주는 것이고, 재확인·재시작 실행은 운영 이력 기능과 함께 추가할 예정이에요.</p>
+    <p className={styles.lead}>충전·결제·보관금·정산과 충전 복구 작업을 조회해요. "재처리 후보"인 충전·복구 작업은 사유를 적고 재확인·재시작을 요청할 수 있어요. 실행 직전에 서버가 조건을 다시 확인하고, 모든 요청은 관리자 작업 이력에 남아요.</p>
     <nav className={styles.tabs} aria-label="금융 조회 종류">
       {TABS.map((item) => <Link key={item.key} to={`/admin/finance?tab=${item.key}`} aria-current={tab === item.key ? 'page' : undefined}>{item.label}</Link>)}
     </nav>
     {tab === 'payments' && <Payments key={params.toString()} filter={readPaymentFilter(params)} onApply={(f) => apply({ tab, ...f })} search={params.toString()} />}
     {tab === 'topups' && <Topups key={params.toString()} filter={readTopupFilter(params)} onApply={(f) => apply({ tab, ...f })} />}
     {tab === 'jobs' && <Jobs />}
+    {tab === 'logs' && <Logs key={params.toString()} action={readAction(params)} onApply={(action) => apply({ tab, action })} />}
   </section>
 }
 
@@ -117,6 +123,7 @@ function Topups({ filter, onApply }: { filter: TopupFilter; onApply: (next: Topu
                 <small>신청 {time(item.createdAt)} · 처리 시작 {time(item.processingStartedAt)} · 다음 복구 {time(item.nextRecoveryAt)} · 처리권 만료 {time(item.recoveryLeaseUntil)} · 완료 {time(item.completedAt)}</small>
                 <p>자동 복구: {decisionLabel(item.automaticRecovery.eligible, item.automaticRecovery.reason)}</p>
                 <p>관리자 재확인: {decisionLabel(item.manualRecheck.eligible, item.manualRecheck.reason)}</p>
+                <AdminReprocessPanel action="TOPUP_RECHECK" target={item.id} eligible={item.manualRecheck.eligible} />
               </li>)}
             </ul>}
             <Pager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="충전 목록 페이지" />
@@ -141,8 +148,26 @@ function Jobs() {
           {Object.entries(job.outcomes).map(([key, count]) => <span key={key}> · {key} {count}</span>)}</p>
         <small>원래 스캔 요청 시각 {time(job.scanRequestedAt)}</small>
         <p>재시작: {decisionLabel(job.restart.eligible, job.restart.reason)}</p>
+        {job.executionId && <AdminReprocessPanel action="TOPUP_RECOVERY_RESTART" target={job.executionId} eligible={job.restart.eligible} />}
       </li>)}
     </ul>}
     <Pager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="복구 작업 페이지" />
+  </>
+}
+
+/** 허용하지 않는 값은 "전체"로 바꿔 서버 400을 일으키지 않는다. */
+function readAction(params: URLSearchParams): ReprocessAction | undefined {
+  const value = params.get('action') ?? ''
+  return (ACTIONS as string[]).includes(value) ? (value as ReprocessAction) : undefined
+}
+
+function Logs({ action, onApply }: { action?: ReprocessAction; onApply: (action: string) => void }) {
+  return <>
+    <form className={styles.filters} role="search" onSubmit={(e: FormEvent) => e.preventDefault()}>
+      <label>작업 종류 <select value={action ?? ''} onChange={(e) => onApply(e.target.value)}>
+        <option value="">전체</option>{ACTIONS.map((a) => <option key={a} value={a}>{ACTION_LABELS[a]}</option>)}
+      </select></label>
+    </form>
+    <AdminActionLogList filter={{ action }} empty="관리자 작업 이력이 없어요." />
   </>
 }

@@ -8,6 +8,8 @@ import { isValidProductId as isValidId } from '../validation'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { AdminReprocessPanel } from '../components/AdminReprocessPanel'
+import { AdminActionLogList } from '../components/AdminActionLogList'
 import styles from './Admin.module.css'
 
 /** 결제 목록에서 넘겨준 돌아갈 주소. 금융 조회 경로만 허용한다. */
@@ -18,7 +20,7 @@ const time = (value: string | null | undefined) => value ? formatDateTime(value)
 /** 기록이 없으면 0원으로 바꾸지 않고 "기록 없음"으로 보여 준다. */
 const NONE = <p>기록 없음</p>
 
-/** /admin/finance/orders/:id. 한 주문의 결제·보관금·정산·종료 분배와 계약 PDF 상태를 조회만 한다. */
+/** /admin/finance/orders/:id. 한 주문의 결제·보관금·정산·종료 분배와 계약 PDF 상태를 조회하고, 후보인 PDF는 재생성을 요청할 수 있다(K6). */
 export function AdminOrderFinancePage() {
   const { id = '' } = useParams()
   const back = backPath(useLocation().state?.from)
@@ -33,7 +35,9 @@ export function AdminOrderFinancePage() {
       : missing ? <AsyncState title="주문을 찾을 수 없어요" description="주문 번호를 다시 확인해 주세요." />
         : finance.isError ? <AsyncState title="주문 금액을 불러오지 못했어요" error={finance.error} onRetry={() => { void finance.refetch() }} />
           : !finance.data ? <AsyncState title="주문 금액을 불러오고 있어요" />
-            : <><FinanceSummary data={finance.data} /><ContractPdfSection orderId={id} /></>}
+            : <><FinanceSummary data={finance.data} /><ContractPdfSection orderId={id} />
+              <section className={styles.block}><h2>관리자 작업 이력</h2>
+                <AdminActionLogList filter={{ orderId: id }} empty="이 주문의 계약 PDF 관리자 작업 이력이 없어요." /></section></>}
   </section>
 }
 
@@ -84,11 +88,15 @@ function ContractPdfSection({ orderId }: { orderId: string }) {
 }
 
 function PdfFacts({ data }: { data: ContractPdf }) {
-  return <dl className={styles.facts}>
+  return <><dl className={styles.facts}>
     <dt>버전</dt><dd>{data.version}{data.currentVersion ? ' (현재)' : ''} · 계약 #{data.contractId}</dd>
     <dt>상태</dt><dd>{data.status}</dd>
     <dt>파일 정보</dt><dd>{data.fileMetadataPresent ? 'DB에 파일 정보 있음(실제 파일 확인은 아님)' : 'DB에 파일 정보 없음'}</dd>
     <dt>생성·변경</dt><dd>{time(data.createdAt)} · {time(data.updatedAt)}</dd>
     <dt>판단</dt><dd>{decisionLabel(data.generationCandidate.eligible, data.generationCandidate.reason, data.generationCandidate.kind)} · 확인 {time(data.checkedAt)}</dd>
   </dl>
+  {/* 조회한 버전을 그대로 보낸다. 그사이 계약이 바뀌면 서버가 이번 생성을 반영하지 않는다. */}
+  <AdminReprocessPanel action="CONTRACT_PDF_REGENERATE" target={data.orderId} version={data.version}
+    eligible={data.currentVersion && data.generationCandidate.eligible} />
+  </>
 }
