@@ -8,6 +8,7 @@ import com.example.lancerpick.contract.repository.OrderContractRepository;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.*;
+import com.example.lancerpick.order.service.OrderCommandLocks;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.*;
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class ContractDocumentTransactions {
   private final OrderRepository orders;
+  private final OrderCommandLocks locks;
   private final OrderContractRepository contracts;
   private final CancellationRequestRepository cancellations;
   private final OrderContractService descriptions;
@@ -31,12 +33,14 @@ public class ContractDocumentTransactions {
 
   public ContractDocumentTransactions(
       OrderRepository orders,
+      OrderCommandLocks locks,
       OrderContractRepository contracts,
       CancellationRequestRepository cancellations,
       OrderContractService descriptions,
       Clock clock,
       @Value("${contracts.generation-timeout:PT2M}") Duration timeout) {
     this.orders = orders;
+    this.locks = locks;
     this.contracts = contracts;
     this.cancellations = cancellations;
     this.descriptions = descriptions;
@@ -162,10 +166,12 @@ public class ContractDocumentTransactions {
   }
 
   private Order owned(long memberId, long orderId, boolean lock) {
-    if (lock && orders.lockDecisionActor(memberId).isEmpty()) throw missing();
+    // 문서 경로는 회원 없음도 401이 아닌 404로 숨기는 기존 계약을 유지한다(R1, §14.1).
     var order =
-        (lock ? orders.findForDecision(orderId, memberId) : orders.findById(orderId))
-            .orElseThrow(ContractDocumentTransactions::missing);
+        lock
+            ? locks.lockParticipantOrderHidingActor(
+                memberId, orderId, ContractDocumentTransactions::missing)
+            : orders.findById(orderId).orElseThrow(ContractDocumentTransactions::missing);
     if ((!order.getBuyerId().equals(memberId) && !order.getSellerId().equals(memberId))
         || !TradePolicyVersion.isContract(order.getPolicyVersion())) throw missing();
     return order;

@@ -17,7 +17,6 @@ import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.Set;
 import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -165,14 +164,7 @@ public class OrderCancellationRequestService {
     var detail = details.forParticipant(order.getId(), memberId);
     return new CancellationResultResponse(
         request.response(),
-        detail.withAllowedActions(
-            OrderAllowedActions.actions(
-                detail.policyVersion(),
-                detail.status(),
-                order.getBuyerId().equals(memberId),
-                detail.revisionRequest(),
-                detail.cancellationRequests(),
-                detail.review())));
+        OrderAllowedActions.attach(detail, order.getBuyerId().equals(memberId)));
   }
 
   private LocalDateTime now(Order order) {
@@ -184,11 +176,7 @@ public class OrderCancellationRequestService {
 
   private static void requirePaidOpen(Order order) {
     if (order.getPaidAt() == null
-        || !Set.of(
-                OrderStatus.IN_PROGRESS,
-                OrderStatus.AWAITING_CONFIRMATION,
-                OrderStatus.REVISION_IN_PROGRESS)
-            .contains(order.getStatus()))
+        || !order.getStatus().isWorkOpen())
       throw conflict("ORDER_STATE_CONFLICT", "결제 후 미완료 주문만 취소 요청할 수 있습니다.");
   }
 

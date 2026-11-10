@@ -13,21 +13,25 @@ import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.CancellationRequestRepository;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
+import com.example.lancerpick.payment.entity.Payment;
 import com.example.lancerpick.payment.entity.PaymentStatus;
 import com.example.lancerpick.payment.repository.PaymentRepository;
+import com.example.lancerpick.wallet.entity.Wallet;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.entity.WalletEntryType;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
 import com.example.lancerpick.wallet.repository.WalletRepository;
 import java.time.Clock;
-import java.util.Set;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 직접 취소 진입점. 취소 요청 제출·승인·거절·철회 API는 주문 담당자의 후속 작업이다. */
+/**
+ * 주문 직접 취소({@code POST /api/orders/{id}/cancel}). 결제 전 취소와 V1 결제 주문의 판매자 환불을 처리하고, V3 결제 주문은
+ * {@link FullFundingService#refund}로 넘긴다. 취소 요청 제출·처리는 {@link OrderCancellationRequestService}가 맡는다.
+ */
 @Service
 @Profile("!demo")
 public class OrderCancellationService {
@@ -75,7 +79,7 @@ public class OrderCancellationService {
     if (order.isFullFunding() && order.getPaidAt() != null) {
       return fullFunding.refund(memberId, orderId, reason);
     }
-    // 계약 주문은 선금 전(금액 이동 없음)만 이 경로로 취소한다. 선금 후 취소·반환은 전용 경로(E6)다.
+    // 계약 주문(V2·V3)은 결제 전(금액 이동 없음)만 이 경로로 취소한다. V3 결제 후 반환은 위에서 넘겼고, V2 결제 후는 지원하지 않는다.
     if (!order.isContractPolicy() || order.getPaidAt() != null)
       TradePolicyVersion.requireLegacyCommand(order.getPolicyVersion());
     boolean buyer = order.getBuyerId().equals(memberId);
@@ -103,20 +107,14 @@ public class OrderCancellationService {
     if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.REJECTED)
       throw state();
     if (!buyer && order.getStatus() == OrderStatus.REQUESTED) throw state();
-    if (paid
-        != Set.of(
-                OrderStatus.IN_PROGRESS,
-                OrderStatus.AWAITING_CONFIRMATION,
-                OrderStatus.REVISION_IN_PROGRESS)
-            .contains(order.getStatus())) throw integrity();
-    var at = UtcTimes.nowMicros(clock);
-    var from = order.getStatus();
-    order.cancel(at);
+    if (paid != order.getStatus().isWorkOpen()) throw integrity();
+    Payment original = null;
+    Wallet wallet = null;
     if (paid) {
-      var original = payment.orElseThrow(OrderCancellationService::integrity);
+      original = payment.orElseThrow(OrderCancellationService::integrity);
       if (original.status() != PaymentStatus.PAID || original.amount() != order.getPriceAmount())
         throw integrity();
-      var wallet =
+      wallet =
           wallets
               .findByMemberIdForUpdate(order.getBuyerId())
               .orElseThrow(OrderCancellationService::integrity);
@@ -130,12 +128,18 @@ public class OrderCancellationService {
           || debit.getType() != WalletEntryType.PAYMENT
           || debit.getAmountDelta() != -original.amount()) throw integrity();
       if (entries.existsByEventKey("REFUND:" + original.id())) throw integrity();
+    } else if (payment.isPresent()) throw integrity();
+    // 지갑 잠금 대기 중 같은 구매자의 다른 거래가 지갑을 갱신했을 수 있으므로 잠금 뒤의 시각을 쓴다.
+    var at = UtcTimes.nowMicros(clock);
+    var from = order.getStatus();
+    order.cancel(at);
+    if (paid) {
       wallet.refund(original.amount(), at);
       if (payments.markRefunded(original.id(), at) != 1) throw integrity();
       entries.saveAndFlush(
           WalletEntry.refund(
               order.getBuyerId(), original.id(), original.amount(), wallet.getBalance(), at));
-    } else if (payment.isPresent()) throw integrity();
+    }
     var pending = requests.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING);
     if (pending.size() > 1 || (!paid && !pending.isEmpty())) throw integrity();
     if (!pending.isEmpty()) {
@@ -155,14 +159,7 @@ public class OrderCancellationService {
 
   private OrderDetailResponse response(long id, long member, boolean buyer) {
     var d = details.forParticipant(id, member);
-    return d.withAllowedActions(
-        OrderAllowedActions.actions(
-            d.policyVersion(),
-            d.status(),
-            buyer,
-            d.revisionRequest(),
-            d.cancellationRequests(),
-            d.review()));
+    return OrderAllowedActions.attach(d, buyer);
   }
 
   private static BusinessException invalid() {

@@ -10,6 +10,7 @@ import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.*;
+import com.example.lancerpick.order.service.OrderCommandLocks;
 import com.example.lancerpick.payment.service.ContractPaymentPolicy;
 import java.io.IOException;
 import java.time.*;
@@ -29,6 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class OrderContractService {
   private final OrderRepository orders;
+  private final OrderCommandLocks locks;
   private final OrderSnapshotRepository snapshots;
   private final CancellationRequestRepository cancellations;
   private final MemberRepository members;
@@ -43,6 +45,7 @@ public class OrderContractService {
 
   public OrderContractService(
       OrderRepository orders,
+      OrderCommandLocks locks,
       OrderSnapshotRepository snapshots,
       CancellationRequestRepository cancellations,
       MemberRepository members,
@@ -53,6 +56,7 @@ public class OrderContractService {
       JsonMapper mapper,
       Clock clock) {
     this.orders = orders;
+    this.locks = locks;
     this.snapshots = snapshots;
     this.cancellations = cancellations;
     this.members = members;
@@ -180,12 +184,8 @@ public class OrderContractService {
   }
 
   private Order lock(long memberId, long orderId, OrderStatus... allowed) {
-    if (orders.lockDecisionActor(memberId).isEmpty())
-      throw error(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    var order =
-        orders
-            .findForDecision(orderId, memberId)
-            .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "주문을 찾을 수 없습니다."));
+    // V2 계약 주문도 다루므로 정책 필터가 있는 lockFulfillmentOrder가 아니라 당사자 잠금만 쓰고 정책은 아래에서 검사한다.
+    var order = locks.lockParticipantOrder(memberId, orderId);
     if (!com.example.lancerpick.common.policy.TradePolicyVersion.isContract(
             order.getPolicyVersion())
         || !Arrays.asList(allowed).contains(order.getStatus())

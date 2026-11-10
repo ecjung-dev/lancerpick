@@ -7,6 +7,17 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import com.example.lancerpick.order.service.OrderCancellationService;
+import com.example.lancerpick.wallet.entity.Wallet;
+import com.example.lancerpick.wallet.repository.WalletRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import java.time.Clock;
+import java.time.ZoneOffset;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import java.util.*;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.*;
@@ -17,6 +28,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 /** 결제 시나리오도 재실행해 취소 기능 추가에 따른 회귀를 함께 확인한다. */
 class OrderCancellationIntegrationTests extends OrderPaymentIntegrationTests {
     @Autowired OrderCancellationService cancellations;
+    @MockitoSpyBean WalletRepository wallets;
+    @MockitoSpyBean(name="paymentClock") Clock clock;
+    @Autowired EntityManager entityManager;
+    @Autowired PlatformTransactionManager manager;
     @AfterEach void removeRequests(){for(long id:ids)jdbc.update("DELETE FROM cancellation_requests WHERE order_id=?",id);}
     @Test void sellerRefundAndRepeatedCancellationCreditExactlyOnce() throws Exception {
         payments.pay(buyer,""+order,true);
@@ -73,6 +88,28 @@ class OrderCancellationIntegrationTests extends OrderPaymentIntegrationTests {
         assertThat(balance()).isEqualTo(70000);
         assertThat(jdbc.queryForObject("SELECT status FROM orders WHERE id=?",String.class,order)).isEqualTo("CANCELLED");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM payments WHERE order_id=? AND status='PAID'",Long.class,order)).isZero();
+    }
+    @Test void refundUsesTimeAfterWaitingForBuyerWallet() throws Exception {
+        payments.pay(buyer,""+order,true);
+        long second=newOrder();
+        jdbc.update("UPDATE wallets SET balance=balance+50000 WHERE member_id=?",buyer);
+        var later=AT.plusSeconds(1);
+        var intervened=new AtomicBoolean();
+        var separate=new TransactionTemplate(manager);
+        separate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        // 판매자 환불이 구매자 지갑을 잠그기 직전에, 같은 구매자의 다른 주문 결제를 더 늦은 시각으로 커밋한다.
+        doAnswer(invocation->{
+            if(intervened.compareAndSet(false,true)){
+                doReturn(later.toInstant(ZoneOffset.UTC)).when(clock).instant();
+                separate.executeWithoutResult(ignored->payments.pay(buyer,""+second,true));
+            }
+            return java.util.Optional.ofNullable(entityManager.find(Wallet.class,buyer,LockModeType.PESSIMISTIC_WRITE));
+        }).when(wallets).findByMemberIdForUpdate(buyer);
+        cancel(seller).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELLED"));
+        assertThat(intervened).isTrue();
+        assertThat(balance()).isEqualTo(70000);
+        assertThat(jdbc.queryForObject("SELECT DATE_FORMAT(refunded_at,'%Y-%m-%d %H:%i:%s.%f') FROM payments WHERE order_id=?",String.class,order)).isEqualTo("2026-11-03 01:00:01.123456");
+        assertThat(jdbc.queryForObject("SELECT DATE_FORMAT(cancelled_at,'%Y-%m-%d %H:%i:%s.%f') FROM orders WHERE id=?",String.class,order)).isEqualTo("2026-11-03 01:00:01.123456");
     }
     org.springframework.test.web.servlet.ResultActions cancel(long actor)throws Exception {
         return mvc.perform(post("/api/orders/"+order+"/cancel").with(csrf()).with(authentication(UsernamePasswordAuthenticationToken.authenticated(new Principal(actor),null,List.of()))).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\" reason \"}"));

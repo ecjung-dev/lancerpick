@@ -1,6 +1,7 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.dto.OrderDetailResponse.CancellationRequest;
 import com.example.lancerpick.order.dto.OrderDetailResponse.Review;
 import com.example.lancerpick.order.dto.OrderDetailResponse.RevisionRequest;
@@ -10,6 +11,21 @@ import java.util.List;
 /** 버튼 표시용 정책이다. 실제 업무 명령은 상태·권한을 다시 검증해야 한다. */
 final class OrderAllowedActions {
   private OrderAllowedActions() {}
+
+  /** 참여자 상세에 버튼 표시용 행동을 붙인다. 판매자 제재에 따른 ACCEPT 숨김은 상세 조회({@link OrderQueryService})만 한다. */
+  static OrderDetailResponse attach(OrderDetailResponse detail, boolean buyer) {
+    return detail.withAllowedActions(actions(detail, buyer));
+  }
+
+  static List<String> actions(OrderDetailResponse detail, boolean buyer) {
+    return actions(
+        detail.policyVersion(),
+        detail.status(),
+        buyer,
+        detail.revisionRequest(),
+        detail.cancellationRequests(),
+        detail.review());
+  }
 
   static List<String> actions(
       String policyVersion,

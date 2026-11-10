@@ -16,7 +16,6 @@ import com.example.lancerpick.wallet.entity.WalletEntryType;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
 import com.example.lancerpick.wallet.repository.WalletRepository;
 import java.time.Clock;
-import java.util.Set;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -80,12 +79,7 @@ public class OrderPaymentService {
             HttpStatus.CONFLICT, "PAYMENT_ALREADY_REFUNDED", "이미 환불된 결제입니다.");
       if (payment.status() != PaymentStatus.PAID
           || payment.amount() != order.getPriceAmount()
-          || !Set.of(
-                  OrderStatus.IN_PROGRESS,
-                  OrderStatus.AWAITING_CONFIRMATION,
-                  OrderStatus.REVISION_IN_PROGRESS,
-                  OrderStatus.COMPLETED)
-              .contains(order.getStatus())) throw integrity();
+          || !(order.getStatus().isWorkOpen() || order.getStatus() == OrderStatus.COMPLETED)) throw integrity();
       var entry =
           entries
               .findByEventKeyForUpdate("PAYMENT:" + payment.id())
@@ -97,12 +91,7 @@ public class OrderPaymentService {
           || entry.getAmountDelta() != -payment.amount()) throw integrity();
       return response(orderId, memberId);
     }
-    if (Set.of(
-            OrderStatus.IN_PROGRESS,
-            OrderStatus.AWAITING_CONFIRMATION,
-            OrderStatus.REVISION_IN_PROGRESS,
-            OrderStatus.COMPLETED)
-        .contains(order.getStatus())) throw integrity();
+    if (order.getStatus().isWorkOpen() || order.getStatus() == OrderStatus.COMPLETED) throw integrity();
     if (order.getStatus() != OrderStatus.AWAITING_PAYMENT)
       throw new BusinessException(
           HttpStatus.CONFLICT, "ORDER_STATE_CONFLICT", "결제 대기 주문만 결제할 수 있습니다.");
@@ -120,14 +109,7 @@ public class OrderPaymentService {
 
   private OrderDetailResponse response(long id, long memberId) {
     var detail = details.forParticipant(id, memberId);
-    return detail.withAllowedActions(
-        OrderAllowedActions.actions(
-            detail.policyVersion(),
-            detail.status(),
-            true,
-            detail.revisionRequest(),
-            detail.cancellationRequests(),
-            detail.review()));
+    return OrderAllowedActions.attach(detail, true);
   }
 
   private static BusinessException invalid() {

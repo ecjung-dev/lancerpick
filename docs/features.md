@@ -1099,7 +1099,7 @@ POST /api/orders/{id}/cancel. 본문은 `{"reason":"취소 사유"}`. 인증 참
 
 구매자는 결제 전 취소 가능하다. 판매자는 명세 5절에 따라 수락 후 미완료 주문을 직접 취소할 수 있다. REQUESTED에서 판매자는 기존 거절 API를 사용한다. 결제 후 구매자는 직접 취소할 수 없고 취소 요청을 사용해야 한다. 완료·거절 주문은 409, 비참여자·없는 주문은 동일 404다.
 
-회원 공유 잠금 → 주문 배타 잠금 → 구매자 지갑 배타 잠금 순서를 사용한다. READ_COMMITTED 한 트랜잭션에서 주문 CANCELLED·취소 시각·원결제 REFUNDED·전액 지갑 복구·REFUND 원장·CANCELLED 이력을 반영한다. 원장 키는 REFUND:{paymentId}다. 구매자와 환불액은 주문/원결제에서 가져오며 클라이언트가 지정하지 않는다. UTC 마이크로초 시각을 공유한다.
+회원 공유 잠금 → 주문 배타 잠금 → 구매자 지갑 배타 잠금 순서를 사용한다. READ_COMMITTED 한 트랜잭션에서 주문 CANCELLED·취소 시각·원결제 REFUNDED·전액 지갑 복구·REFUND 원장·CANCELLED 이력을 반영한다. 원장 키는 REFUND:{paymentId}다. 구매자와 환불액은 주문/원결제에서 가져오며 클라이언트가 지정하지 않는다. UTC 마이크로초 시각을 공유하며, 결제 주문은 구매자 지갑 잠금을 얻은 뒤 그 시각을 정한다(잠금 대기 중 같은 구매자의 다른 거래가 지갑을 먼저 갱신해도 환불이 실패하지 않게 한다).
 
 대기 취소 요청이 한 건이면 직접 취소와 함께 APPROVED로 해결하고 CANCELLATION_APPROVED 이력도 기록한다. 대기 요청이 여러 건인 모순 상태는 500 DATA_INTEGRITY_ERROR로 롤백한다. 요청 해결·원장·이력·응답 조립 중 실패도 전체 롤백한다.
 
@@ -1180,7 +1180,7 @@ CancellationResult는 cancellationRequest와 현재 order(OrderDetail)다. 요�
 
 판매자 승인(`/cancel`·취소 요청 승인)과 구매자 철회도 주문 잠금으로 직렬화되므로 둘 중 먼저 잠근 쪽만 반영된다. **취소 검토 문의의 상태를 바꾸는 다른 경로(문의 영역의 종료·담당 지정)는 주문 → 문의 순서를 지키거나 문의만 잠가야 한다**(문의 → 주문 순서는 교착 위험).
 
-승인 금액 처리는 `FullFundingService.adminRefund`가 판매자 승인 환불과 같은 검증(결제·보관·원장 일치, 보관 HELD, 종료·정산 없음, 활성 타이머 없음)을 거쳐 구매자 지갑 환불·`REFUND` 원장·결제/보관 `REFUNDED`·종료 기록을 남긴다. 이력은 관리자 실행자의 `CANCELLATION_APPROVED`(알림 없음)·`CANCELLED`, 거절은 `CANCELLATION_REJECTED`다.
+승인 금액 처리는 `FullFundingService.adminRefund`가 판매자 승인 환불과 같은 검증(결제·보관·원장 일치, 보관 HELD, 종료·정산 없음, 활성 타이머 없음)을 거쳐 구매자 지갑 환불·`REFUND` 원장·결제/보관 `REFUNDED`·종료 기록을 남긴다. 이력은 관리자 실행자의 `CANCELLATION_APPROVED`(알림 없음)·`CANCELLED`, 거절은 `CANCELLATION_REJECTED`다. 승인 처리 시각은 구매자 지갑 잠금 뒤에 정하고, 환불·요청 처리·종료 기록·주문 취소·이력·문의 종료에 같은 시각을 쓴다.
 
 ##### 생성·재전송
 
