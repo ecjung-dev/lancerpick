@@ -42,7 +42,7 @@ export function SettlementPage() {
       수수료를 제외하고 구매 적립금으로 지급됩니다.
     </p>
     <p>기존 거래의 수익은 별도 기록으로 유지하며, 출금 기능은 제공하지 않습니다.</p>
-    <SettlementFiltersForm key={`${filters.from}|${filters.to}|${filters.sort}`} filters={filters} onApply={apply} />
+    <SettlementFiltersForm key={JSON.stringify([filters.from, filters.to, filters.sort, filters.q])} filters={filters} onApply={apply} />
     {error ? <div role="alert">
       <p>판매 수익을 불러오지 못했습니다.</p>
       <button onClick={retry}>다시 조회</button>
@@ -50,6 +50,7 @@ export function SettlementPage() {
       : !list.data || !summary.data ? <p role="status">판매 수익을 불러오는 중입니다.</p>
       : <>
         <h2>조회 조건 합계</h2>
+        {filters.q && <p>검색: {filters.q}</p>}
         <p className={styles.period}>{filters.from || filters.to ? `${filters.from || '시작 제한 없음'} ~ ${filters.to || '종료 제한 없음'}` : '전체 기간'} · 사용 가능한 적립금 잔액과 다른 금액입니다.</p>
         <dl className={styles['settlement-summary']}>
           <div><dt>구매 확정 거래 수</dt><dd>{summary.data.completedCount}건</dd></div>
@@ -61,12 +62,17 @@ export function SettlementPage() {
         {list.data.items.length === 0 ? <p>조회 조건에 맞는 정산 내역이 없습니다.</p>
           : <ul className={styles['settlement-list']}>
             {list.data.items.map(item => <li key={item.id}>
+              <strong>{item.productTitle ?? '보관된 상품 정보 없음'}</strong>
+              <p>구매자: {item.buyerDisplayName ?? '정보 없음'}</p>
               <Link className={styles['order-link']} to={`/orders/${item.orderId}`}>
                 주문 #{item.orderId} 상세 보기
               </Link>
               <time dateTime={item.createdAt}>정산 기록일 {formatDateTime(item.createdAt)}</time>
               <p>결제액 {formatWon(item.grossAmount)} · 수수료 {formatWon(item.feeAmount)}</p>
               <b>판매 수익 {formatWon(item.sellerAmount)}</b>
+              <p>{item.payoutStatus === 'CREDITED' ? '적립금 지급 완료'
+                : item.payoutStatus === 'RECORD_ONLY' ? '기존 거래 · 수익 기록만 보관'
+                : '적립금 지급 기록 확인 필요'}</p>
             </li>)}
           </ul>}
         {list.data.items.length === 0 && page > 0 &&

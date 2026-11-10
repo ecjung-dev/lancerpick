@@ -8,9 +8,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.lancerpick.common.security.AuthenticatedMember;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.order.entity.Order;
+import com.example.lancerpick.order.entity.OrderSnapshot;
+import com.example.lancerpick.payment.entity.Payment;
 import com.example.lancerpick.settlement.entity.Settlement;
 import com.example.lancerpick.settlement.service.SettlementQueryService;
 import com.example.lancerpick.support.IntegrationTest;
+import com.example.lancerpick.wallet.entity.Wallet;
+import com.example.lancerpick.wallet.entity.WalletEntry;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -187,6 +191,85 @@ class SettlementDateQueryIntegrationTests {
         .containsExactly("" + inside);
     assertThat(queries.list(seller, 0, 20, "1000-01-01", "9999-12-31", null).totalElements())
         .isEqualTo(6);
+  }
+
+  @Test
+  void snapshotSearchAndSummaryStayOwnedLiteralAndIgnoreProductEdits() throws Exception {
+    em.persist(OrderSnapshot.create(first, 0L, "로고 50%_특별!", "설명", "범위", "준비", "약관", "요구"));
+    em.persist(OrderSnapshot.create(last, 0L, "로고 50XX특별!", "설명", "범위", "준비", "약관", "요구"));
+    em.flush();
+    jdbc.update("UPDATE products SET title='현재 상품명 변경' WHERE id=?", product);
+    var page = queries.list(seller, 0, 20, "2026-11-09", "2026-11-09", null, "50%_");
+    assertThat(page.totalElements()).isEqualTo(1);
+    assertThat(page.items().getFirst().productTitle()).isEqualTo("로고 50%_특별!");
+    assertThat(page.items().getFirst().buyerId()).isEqualTo("" + buyer);
+    assertThat(queries.summary(seller, "2026-11-09", "2026-11-09", "50%_").grossAmount())
+        .isEqualTo(2000);
+    assertThat(queries.list(otherSeller, 0, 20, null, null, null, "" + first).totalElements())
+        .isZero();
+    assertThat(queries.list(seller, 0, 20, null, null, null, "" + first).totalElements())
+        .isEqualTo(1);
+    for (var invalidNumber : List.of("0", "99999999999999999999999999999"))
+      assertThat(queries.summary(seller, null, null, invalidNumber).completedCount()).isZero();
+    for (var path : List.of("/api/me/settlements", "/api/me/settlements/summary"))
+      mvc.perform(get(path).with(authentication(auth(seller))).param("q", "가".repeat(101)))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+  }
+
+  @Test
+  void payoutRequiresAnActualMatchingSellerLedgerRatherThanPolicyName() {
+    assertThat(
+            queries
+                .list(seller, 0, 20, null, null, null, "" + first)
+                .items()
+                .getFirst()
+                .payoutStatus())
+        .isEqualTo("RECORD_ONLY");
+    long funded = settled(seller, product, "2026-11-09T01:00:00", 10_000);
+    jdbc.update("UPDATE orders SET policy_version='CONTRACT_V3' WHERE id=?", funded);
+    var p = Payment.fullFunding(funded, 10_000, BASE);
+    em.persist(Wallet.withInitialGrant(buyer, BASE));
+    em.persist(Wallet.withInitialGrant(seller, BASE));
+    em.persist(p);
+    em.flush();
+    assertThat(
+            queries
+                .list(seller, 0, 20, null, null, null, "" + funded)
+                .items()
+                .getFirst()
+                .payoutStatus())
+        .isEqualTo("UNCONFIRMED");
+    em.persist(WalletEntry.sellerPayout(buyer, p.id(), 9000, 1_009_000, BASE));
+    em.flush();
+    assertThat(
+            queries
+                .list(seller, 0, 20, null, null, null, "" + funded)
+                .items()
+                .getFirst()
+                .payoutStatus())
+        .isEqualTo("UNCONFIRMED");
+    // A forged/mismatched ledger must not become proof of the seller's credit.
+    jdbc.update(
+        "UPDATE wallet_entries SET member_id=?,amount_delta=8999 WHERE payment_id=?",
+        seller,
+        p.id());
+    assertThat(
+            queries
+                .list(seller, 0, 20, null, null, null, "" + funded)
+                .items()
+                .getFirst()
+                .payoutStatus())
+        .isEqualTo("UNCONFIRMED");
+    jdbc.update("UPDATE wallet_entries SET amount_delta=9000 WHERE payment_id=?", p.id());
+    assertThat(
+            queries
+                .list(seller, 0, 20, null, null, null, "" + funded)
+                .items()
+                .getFirst()
+                .payoutStatus())
+        .isEqualTo("CREDITED");
+    assertThat(queries.summary(seller).completedCount()).isEqualTo(6);
   }
 
   private UsernamePasswordAuthenticationToken auth(long id) {

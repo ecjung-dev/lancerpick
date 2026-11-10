@@ -32,20 +32,22 @@ public class SettlementController {
       @RequestParam(required = false) String from,
       @RequestParam(required = false) String to,
       @RequestParam(required = false) String sort,
+      @RequestParam(required = false) String q,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(queries.list(members.require(authentication), page, size, from, to, sort));
+        .body(queries.list(members.require(authentication), page, size, from, to, sort, q));
   }
 
   @GetMapping("/summary")
   public ResponseEntity<SettlementSummaryResponse> summary(
       Authentication authentication,
       @RequestParam(required = false) String from,
-      @RequestParam(required = false) String to) {
+      @RequestParam(required = false) String to,
+      @RequestParam(required = false) String q) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(queries.summary(members.require(authentication), from, to));
+        .body(queries.summary(members.require(authentication), from, to, q));
   }
 }

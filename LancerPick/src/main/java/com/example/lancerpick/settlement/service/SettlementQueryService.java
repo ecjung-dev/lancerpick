@@ -35,25 +35,41 @@ public class SettlementQueryService {
 
   public PageResponse<SettlementResponse> list(
       long member, int page, int size, String from, String to, String sort) {
+    return list(member, page, size, from, to, sort, null);
+  }
+
+  public PageResponse<SettlementResponse> list(
+      long member, int page, int size, String from, String to, String sort, String q) {
     if (page < 0 || size < 1 || size > 100) {
       throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "페이지를 확인해 주세요.");
     }
-    var condition = condition(member, from, to, sort);
+    var condition = condition(member, from, to, sort, q);
     long total = queries.count(condition);
     long offset = (long) page * size;
     List<SettlementResponse> items =
         offset >= total
             ? List.of()
             : queries.list(condition, size, offset).stream()
-                .map(row ->
-                    new SettlementResponse(
-                        row.getId().toString(),
-                        Long.toString(row.getOrderId()),
-                        row.getGrossAmount(),
-                        row.getFeeRateBps(),
-                        row.getFeeAmount(),
-                        row.getSellerAmount(),
-                        row.getCreatedAt().atOffset(ZoneOffset.UTC).toString()))
+                .map(view -> {
+                  var row = view.value();
+                  return new SettlementResponse(
+                      row.getId().toString(),
+                      Long.toString(row.getOrderId()),
+                      row.getGrossAmount(),
+                      row.getFeeRateBps(),
+                      row.getFeeAmount(),
+                      row.getSellerAmount(),
+                      row.getCreatedAt().atOffset(ZoneOffset.UTC).toString(),
+                      view.title(),
+                      view.buyerId(),
+                      view.buyerName(),
+                      view.policyVersion(),
+                      view.credited()
+                          ? "CREDITED"
+                          : "LEGACY_V1".equals(view.policyVersion())
+                              ? "RECORD_ONLY"
+                              : "UNCONFIRMED");
+                })
                 .toList();
     int totalPages = Math.toIntExact(total / size + (total % size == 0 ? 0 : 1));
     return new PageResponse<>(items, page, size, total, totalPages);
@@ -64,13 +80,17 @@ public class SettlementQueryService {
   }
 
   public SettlementSummaryResponse summary(long member, String from, String to) {
-    var totals = queries.totals(condition(member, from, to, null));
+    return summary(member, from, to, null);
+  }
+
+  public SettlementSummaryResponse summary(long member, String from, String to, String q) {
+    var totals = queries.totals(condition(member, from, to, null, q));
     return new SettlementSummaryResponse(
         totals.count(), safe(totals.gross()), safe(totals.fee()), safe(totals.seller()));
   }
 
   private static SettlementQueryRepository.Condition condition(
-      long member, String from, String to, String sort) {
+      long member, String from, String to, String sort, String q) {
     var start = date(from);
     var end = date(to);
     if ((start != null && end != null && start.isAfter(end))
@@ -84,7 +104,22 @@ public class SettlementQueryService {
       lower = minimum;
     }
     var upper = end == null ? null : kstStart(end.plusDays(1));
-    return new SettlementQueryRepository.Condition(member, lower, upper, "oldest".equals(sort));
+    String keyword = q == null ? null : q.strip();
+    if (keyword != null && keyword.isEmpty()) keyword = null;
+    if (keyword != null && keyword.codePointCount(0, keyword.length()) > 100)
+      throw invalidCondition();
+    boolean numeric = keyword != null && keyword.matches("[0-9]+");
+    Long orderId = null;
+    if (numeric) {
+      try {
+        long id = Long.parseLong(keyword);
+        if (id > 0) orderId = id;
+      } catch (NumberFormatException ignored) {
+        /* 범위 밖 번호는 빈 결과다. */
+      }
+    }
+    return new SettlementQueryRepository.Condition(
+        member, lower, upper, "oldest".equals(sort), numeric ? null : keyword, numeric, orderId);
   }
 
   private static LocalDate date(String value) {

@@ -7,6 +7,11 @@ export interface Settlement {
   feeAmount: number
   sellerAmount: number
   createdAt: string
+  productTitle: string | null
+  buyerId: string
+  buyerDisplayName: string
+  policyVersion: string
+  payoutStatus: 'CREDITED' | 'RECORD_ONLY' | 'UNCONFIRMED'
 }
 
 export interface SettlementSummary {
