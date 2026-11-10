@@ -121,7 +121,7 @@ Member: id,email,displayName,role,hasSellerProfile(email_verified_at은 응답�
 | PUT /me/favorites/{productId} | 회원+CSRF; 공개·판매 중 상품 | 204, 중복 등록도 204. 상품이 없거나 비공개면 404 |
 | DELETE /me/favorites/{productId} | 회원+CSRF | 204, 이미 해제된 상품도 204 |
 
-SellerProfile: id(회원 ID),displayName,introduction,specialty,portfolioUrl. 이메일·잔액은 공개하지 않는다. ProductInput: categoryId,title,description,scopeDescription,preparationDescription,priceAmount,durationDays. 가격 1~1,000,000원, 기간 1~30일. portfolioUrl은 선택이다.
+SellerProfile: id(회원 ID),displayName,introduction,specialty,portfolioUrl. 이메일·잔액은 공개하지 않는다. ProductInput: categoryId,title,description,scopeDescription,preparationDescription,priceAmount,durationDays. 가격 1~1,000,000원, 기간 1~30일. 판매 중 상품(등록, ON_SALE 상품 수정, ON_SALE으로 재개)의 가격이 현재 신규 주문 최소 금액(`minimumOrderAmount`, CONTRACT_V3면 10,000원) 미만이면 400 `PRODUCT_PRICE_BELOW_ORDER_MINIMUM`이고 아무것도 바꾸지 않는다. 판매 중지 상품은 가격을 올리기 전에도 수정할 수 있다. 공개 상품 목록은 최소 금액 미만 상품을 빼고, 공개 상세는 그대로 보여 주며 `minimumOrderAmount`로 주문 불가를 안내한다. portfolioUrl은 선택이다.
 
 판매자 공개 화면은 `GET /sellers/{id}`로 소개를 조회하고 `GET /products?sellerId={id}`로 같은 판매자의 상품을 조회한다. `sellerId`는 선택이며 양의 BIGINT 십진 문자열을 받는다. 형식이나 범위가 잘못되면 400 `VALIDATION_FAILED`를 반환한다. 집계와 목록에는 같은 판매자 조건을 적용하며 숨김·판매 중지 상품은 제외한다.
 
@@ -425,10 +425,10 @@ AdminProductSummary: id,title,priceAmount,durationDays,category(id,name),seller(
 
 | HTTP | 주요 코드 |
 | --- | --- |
-| 400 | VALIDATION_FAILED, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED, PASSWORD_RESET_TOKEN_INVALID, SIGNUP_EMAIL_TOKEN_INVALID, EMAIL_VERIFICATION_INVALID |
+| 400 | VALIDATION_FAILED, PRODUCT_PRICE_BELOW_ORDER_MINIMUM, TERMS_AGREEMENT_REQUIRED, INVALID_URL, CURRENT_PASSWORD_INCORRECT, PASSWORD_UNCHANGED, PASSWORD_RESET_TOKEN_INVALID, SIGNUP_EMAIL_TOKEN_INVALID, EMAIL_VERIFICATION_INVALID |
 | 401 | AUTHENTICATION_REQUIRED, INVALID_CREDENTIALS |
 | 403 / 404 | FORBIDDEN, CSRF_INVALID, MEMBER_RESTRICTED(주문 생성·판매자 수락, U7) / RESOURCE_NOT_FOUND |
-| 409 | EMAIL_ALREADY_EXISTS, PRODUCT_VERSION_CONFLICT, PRODUCT_NOT_ORDERABLE, SELF_PURCHASE_NOT_ALLOWED, CONTRACT_MINIMUM_AMOUNT_NOT_MET(V2 생성 활성화 후에만) |
+| 409 | EMAIL_ALREADY_EXISTS, PRODUCT_VERSION_CONFLICT, PRODUCT_NOT_ORDERABLE, SELF_PURCHASE_NOT_ALLOWED, CONTRACT_MINIMUM_AMOUNT_NOT_MET(V2·V3 계약 주문 생성 시 10,000원 미만) |
 | 409 | ORDER_STATE_CONFLICT, INSUFFICIENT_BALANCE, IDEMPOTENCY_KEY_REUSED |
 | 409 | CANCELLATION_PENDING, REQUEST_ALREADY_RESOLVED, REVISION_ALREADY_USED, REVIEW_ALREADY_EXISTS, PAYMENT_ALREADY_REFUNDED, DELIVERY_ALREADY_SUBMITTED, DELIVERY_SEQUENCE_CONFLICT |
 | 405 / 406 / 415 | METHOD_NOT_ALLOWED(`Allow` 헤더 포함) / NOT_ACCEPTABLE / UNSUPPORTED_MEDIA_TYPE |

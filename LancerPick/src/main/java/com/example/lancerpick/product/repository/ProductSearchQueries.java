@@ -29,21 +29,22 @@ public class ProductSearchQueries {
         this.query = new JPAQueryFactory(entityManager);
     }
 
-    public long count(String keyword, Long categoryId, ProductSearchOptions options) {
+    public long count(String keyword, Long categoryId, ProductSearchOptions options, Long minimumOrderAmount) {
         Long total = query.select(p.id.count()).from(p)
                 .join(c).on(c.id.eq(p.categoryId))
                 .join(m).on(m.id.eq(p.sellerId))
-                .where(where(keyword, categoryId, options)).fetchOne();
+                .where(where(keyword, categoryId, options).and(orderable(minimumOrderAmount))).fetchOne();
         return total == null ? 0 : total;
     }
 
-    public List<ProductSummaryResponse> find(String keyword, Long categoryId, ProductSearchOptions options, int size, long offset) {
+    public List<ProductSummaryResponse> find(String keyword, Long categoryId, ProductSearchOptions options,
+            Long minimumOrderAmount, int size, long offset) {
         return query.select(p.id, p.title, p.price, p.durationDays,
                         c.id, c.name, c.displayOrder, m.id, m.displayName)
                 .from(p)
                 .join(c).on(c.id.eq(p.categoryId))
                 .join(m).on(m.id.eq(p.sellerId))
-                .where(where(keyword, categoryId, options))
+                .where(where(keyword, categoryId, options).and(orderable(minimumOrderAmount)))
                 .orderBy(switch (options.sort()) {
                     case NEWEST -> p.createdAt.desc();
                     case PRICE_ASC -> p.price.asc();
@@ -74,6 +75,13 @@ public class ProductSearchQueries {
                 row.get(p.version), row.get(p.saleStatus),
                 row.get(p.createdAt).atOffset(ZoneOffset.UTC), row.get(p.updatedAt).atOffset(ZoneOffset.UTC),
                 minimumOrderAmount));
+    }
+
+    /** 공개 목록은 현재 신규 주문 정책으로 주문할 수 없는 가격의 상품을 뺀다. 상세는 안내 문구로 남긴다. */
+    private static BooleanBuilder orderable(Long minimumOrderAmount) {
+        var predicate = new BooleanBuilder();
+        if (minimumOrderAmount != null) predicate.and(p.price.goe(minimumOrderAmount));
+        return predicate;
     }
 
     private static BooleanBuilder where(String keyword, Long categoryId, ProductSearchOptions options) {

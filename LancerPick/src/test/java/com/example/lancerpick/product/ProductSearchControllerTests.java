@@ -40,7 +40,7 @@ class ProductSearchControllerTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty())
                 .andExpect(jsonPath("$.page").value(0)).andExpect(jsonPath("$.size").value(20))
                 .andExpect(jsonPath("$.totalElements").value(0)).andExpect(jsonPath("$.totalPages").value(0));
-        verify(queries).count(null, null, ProductSearchOptions.DEFAULT);
+        verify(queries).count(null, null, ProductSearchOptions.DEFAULT, null);
         verifyNoMoreInteractions(queries);
     }
 
@@ -82,7 +82,7 @@ class ProductSearchControllerTests {
         String keyword = "😀".repeat(100);
         mvc.perform(get("/api/products").param("keyword", "\u00a0" + keyword + "\u3000"))
                 .andExpect(status().isOk());
-        verify(queries).count(keyword, null, ProductSearchOptions.DEFAULT);
+        verify(queries).count(keyword, null, ProductSearchOptions.DEFAULT, null);
         mvc.perform(get("/api/products").param("keyword", keyword + "😀"))
                 .andExpect(status().isBadRequest());
         verifyNoMoreInteractions(queries);
@@ -106,12 +106,12 @@ class ProductSearchControllerTests {
 
     @Test
     void whitespaceOnlyMeansNoKeywordAndOffsetDoesNotOverflow() throws Exception {
-        when(queries.count(null, 12L, ProductSearchOptions.DEFAULT)).thenReturn(201L);
+        when(queries.count(null, 12L, ProductSearchOptions.DEFAULT, null)).thenReturn(201L);
         mvc.perform(get("/api/products").param("keyword", "\u0085 \u3000")
                         .param("categoryId", "12").param("page", "2147483647").param("size", "100"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty())
                 .andExpect(jsonPath("$.totalElements").value(201)).andExpect(jsonPath("$.totalPages").value(3));
-        verify(queries).count(null, 12L, ProductSearchOptions.DEFAULT);
+        verify(queries).count(null, 12L, ProductSearchOptions.DEFAULT, null);
         verifyNoMoreInteractions(queries);
     }
 }
