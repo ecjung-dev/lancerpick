@@ -19,7 +19,7 @@ public class MyProductService {
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public PageResponse<OwnedProductSummaryResponse> list(long memberId, int page, int size) {
-        if (page < 0 || size < 1 || size > 100) {
+        if (!PageResponse.isValidRequest(page, size)) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "페이지는 0 이상, 조회 개수는 1~100이어야 합니다.");
         }
         long total = queries.count(memberId);

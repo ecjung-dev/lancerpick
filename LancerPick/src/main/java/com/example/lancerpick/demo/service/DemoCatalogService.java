@@ -33,7 +33,7 @@ public class DemoCatalogService {
 
     public PageResponse<Product> products(String keyword, String categoryId, int page, int size) {
         String query = TextNormalizer.normalize(keyword).toLowerCase(Locale.ROOT);
-        if (query.codePointCount(0, query.length()) > 100 || page < 0 || size < 1 || size > 100
+        if (query.codePointCount(0, query.length()) > 100 || !PageResponse.isValidRequest(page, size)
                 || (categoryId != null && !categoryId.matches("[1-9][0-9]{0,18}"))) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "검색 조건과 페이지 범위를 확인해 주세요.");
         }

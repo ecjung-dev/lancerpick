@@ -40,14 +40,14 @@ public class WalletQueryService {
 
     public PageResponse<WalletEntryResponse> getEntries(long authenticatedMemberId, int page, int size) {
         requireValidMemberId(authenticatedMemberId);
-        if (page < 0 || size < 1 || size > 100) {
+        if (!PageResponse.isValidRequest(page, size)) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "페이지 범위를 확인해 주세요.");
         }
         // 조회 대상 지갑이 없더라도 자동 생성하거나 적립금을 지급하지 않는다.
         if (!wallets.existsById(authenticatedMemberId)) throw walletNotFound();
 
         long total = entries.countByMemberId(authenticatedMemberId);
-        int totalPages = Math.toIntExact(total / size + (total % size == 0 ? 0 : 1));
+        int totalPages = PageResponse.totalPages(total, size);
         long offset = (long) page * size;
         List<WalletEntryResponse> items = offset >= total ? List.of()
                 : entries.findHistory(authenticatedMemberId, size, offset).stream()

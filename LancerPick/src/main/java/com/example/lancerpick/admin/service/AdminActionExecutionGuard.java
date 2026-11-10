@@ -4,8 +4,6 @@ import com.example.lancerpick.admin.entity.AdminAction;
 import com.example.lancerpick.admin.entity.AdminActionStatus;
 import com.example.lancerpick.admin.repository.AdminActionLogRepository;
 import com.example.lancerpick.common.exception.BusinessException;
-import com.example.lancerpick.member.entity.MemberRole;
-import com.example.lancerpick.member.repository.MemberRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -20,25 +18,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Profile("!demo")
 @Transactional(propagation = Propagation.MANDATORY)
 public class AdminActionExecutionGuard {
-  private final MemberRepository members;
+  private final AdminAuthorization authorization;
   private final AdminActionLogRepository logs;
   private final Clock clock;
 
   public AdminActionExecutionGuard(
-      MemberRepository members, AdminActionLogRepository logs, Clock clock) {
-    this.members = members;
+      AdminAuthorization authorization, AdminActionLogRepository logs, Clock clock) {
+    this.authorization = authorization;
     this.logs = logs;
     this.clock = clock;
   }
 
   public void require(long adminId, long logId, AdminAction action, long targetId) {
-    var member =
-        members
-            .findByIdForShare(adminId)
-            .orElseThrow(() ->
-                new BusinessException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다."));
-    if (member.getRole() != MemberRole.ADMIN)
-      throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "관리자 권한이 필요합니다.");
+    authorization.lockAdmin(adminId);
     var log = logs.findByIdForUpdate(logId).orElseThrow(() -> rejected());
     if (log.getAdminId() != adminId
         || log.getAction() != action

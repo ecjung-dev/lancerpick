@@ -69,7 +69,7 @@ public class ProductSearchService {
     }
 
     private static void validatePage(int page, int size) {
-        if (page < 0 || size < 1 || size > 100) {
+        if (!PageResponse.isValidRequest(page, size)) {
             throw invalid("페이지는 0 이상, 조회 개수는 1~100이어야 합니다.");
         }
     }

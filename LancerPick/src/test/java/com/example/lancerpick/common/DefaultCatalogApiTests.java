@@ -38,6 +38,9 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
 class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
     com.example.lancerpick.admin.service.AdminActionExecutionGuard adminActionExecutionGuard;
+    // 관리자 권한 재검사는 회원 DB를 읽는다. 실제 401·403은 관리자 통합 테스트(MySQL)에서 검사한다.
+    @MockitoBean
+    com.example.lancerpick.admin.service.AdminAuthorization adminAuthorization;
     @MockitoBean
     com.example.lancerpick.wallet.service.AdminTopupRecheckTransactions adminTopupRecheckTransactions;
     @MockitoBean

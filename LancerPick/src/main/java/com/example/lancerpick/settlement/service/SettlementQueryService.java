@@ -40,7 +40,7 @@ public class SettlementQueryService {
 
   public PageResponse<SettlementResponse> list(
       long member, int page, int size, String from, String to, String sort, String q) {
-    if (page < 0 || size < 1 || size > 100) {
+    if (!PageResponse.isValidRequest(page, size)) {
       throw new BusinessException(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "페이지를 확인해 주세요.");
     }
     var condition = condition(member, from, to, sort, q);
@@ -71,7 +71,7 @@ public class SettlementQueryService {
                               : "UNCONFIRMED");
                 })
                 .toList();
-    int totalPages = Math.toIntExact(total / size + (total % size == 0 ? 0 : 1));
+    int totalPages = PageResponse.totalPages(total, size);
     return new PageResponse<>(items, page, size, total, totalPages);
   }
 

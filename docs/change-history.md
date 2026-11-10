@@ -4,8 +4,21 @@
 
 ## 기록 해석
 
+<a id="admin-check-paging"></a>
+### 관리자 권한 재검사·목록 페이지 범위 정리(리팩터링 4단계) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/admin-check-paging`, main `c740953`(#172) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 4단계로, 응답·잠금 순서를 바꾸지 않는 정리만 했다.
+
+- 관리자 권한: 5곳에 따로 있던 DB 권한 재검사를 `admin/service/AdminAuthorization`으로 모았다. 조회용 `requireAdmin`(잠금 없음, 역할만 읽음)은 회원·금융·문의 조회가 쓰고, `lockAdmin`(회원 공유 잠금, `MANDATORY`)은 감사 요청·감사 조회(`AdminActionAuditService`)와 재처리 실행 확인(`AdminActionExecutionGuard`)이 쓴다. 기존 잠금 여부·401/403 코드·문구는 그대로이고, 문의 조회의 403 문구("관리자만 운영 문의를 처리할 수 있습니다.")도 유지했다. 금융 조회 전용 `AdminFinanceQueries.memberRole`은 쓰는 곳이 없어 지웠다. 주문 잠금 순서에 들어가는 문의 닫기·관리자 계약 PDF는 주문 저장소의 실행 회원 잠금을 그대로 쓴다.
+- 목록 범위: `page < 0 || size < 1 || size > 100`을 12개 서비스에서 `PageResponse.isValidRequest`로 바꿨다. 오류 문구와 다른 입력 검사와의 순서는 각 서비스 그대로다.
+- 페이지 수: `Math.toIntExact` 올림 계산을 쓰던 7곳(관리자 회원·금융, 주문 목록, 채팅 목록, 알림, 정산, 지갑)만 `PageResponse.totalPages`로 바꿨다. `(int)` 변환을 쓰는 관리자 문의·상품·아웃박스·타이머·감사 이력·문의 목록과 상한 포화 처리를 하는 상품 검색은 극단값 동작이 달라 두었다.
+
+영향 영역: admin(김창재·황준범), product·review(박소현), wallet·settlement(황준범), order·chat·notification(정은찬), demo. API·DB 변경 없음.
+
+검증: 신규 `PageResponseTests` 2건 포함 전체 `clean build` **1,146건 통과**(실패·오류·건너뜀 0, 3분 44초, 로컬 테스트 DB, 2026-11-10). DB 없는 `DefaultCatalogApiTests` 컨텍스트에는 다른 관리자 DB 빈처럼 `AdminAuthorization`을 대역으로 추가했다(첫 실행에서 이 컨텍스트 9건이 빈 누락으로 실패한 뒤 수정). 프런트는 바꾸지 않았고, 원격 CI는 PR에서 확인한다.
+
 <a id="frontend-shared-helpers"></a>
-### 프런트 401 판별·로그인 주소·글자 수 정리(리팩터링 3단계) — 2026-11-10, 로컬 구현
+### 프런트 401 판별·로그인 주소·글자 수 정리(리팩터링 3단계) — 2026-11-10, main 반영(#172)
 
 정은찬, `refactor/frontend-shared-helpers`, main `465908b`(#171) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 3단계로, 화면 동작을 바꾸지 않는 정리만 했다.
 

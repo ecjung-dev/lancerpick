@@ -28,9 +28,7 @@ public class OrderChatThreadQueryService {
   public PageResponse<ChatThreadResponse> list(long member, String q, int page, int size) {
     String keyword = q == null ? null : q.strip();
     if (keyword != null && keyword.isEmpty()) keyword = null;
-    if (page < 0
-        || size < 1
-        || size > 100
+    if (!PageResponse.isValidRequest(page, size)
         || (keyword != null && keyword.codePointCount(0, keyword.length()) > 100)) {
       throw new BusinessException(
           HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "대화 목록 조회 조건을 확인해 주세요.");
@@ -61,7 +59,7 @@ public class OrderChatThreadQueryService {
                         at(row.activityAt())))
                 .toList();
     return new PageResponse<>(
-        items, page, size, count, Math.toIntExact(count / size + (count % size == 0 ? 0 : 1)));
+        items, page, size, count, PageResponse.totalPages(count, size));
   }
 
   private static String preview(String text) {

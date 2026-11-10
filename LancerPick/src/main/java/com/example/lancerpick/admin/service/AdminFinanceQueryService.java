@@ -21,7 +21,6 @@ import com.example.lancerpick.admin.repository.AdminFinanceQueries.TopupFilter;
 import com.example.lancerpick.admin.repository.AdminFinanceQueries.TopupRow;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.web.PageResponse;
-import com.example.lancerpick.member.entity.MemberRole;
 import com.example.lancerpick.payment.entity.PaymentStatus;
 import com.example.lancerpick.wallet.config.TopupRecoveryBatchConfiguration;
 import com.example.lancerpick.wallet.config.TopupRecoveryProperties;
@@ -61,6 +60,7 @@ public class AdminFinanceQueryService {
           "RESULT_REQUIRES_REVIEW",
           "CREDIT_PENDING");
   private final AdminFinanceQueries queries;
+  private final AdminAuthorization authorization;
   private final JobRepository jobs;
   private final TopupRecoveryProperties properties;
   private final TossPaymentGateway gateway;
@@ -69,12 +69,14 @@ public class AdminFinanceQueryService {
 
   public AdminFinanceQueryService(
       AdminFinanceQueries queries,
+      AdminAuthorization authorization,
       JobRepository jobs,
       TopupRecoveryProperties properties,
       TossPaymentGateway gateway,
       Clock clock,
       @Value("${lancerpick.wallet.topup-recovery.enabled:false}") boolean recoveryEnabled) {
     this.queries = queries;
+    this.authorization = authorization;
     this.jobs = jobs;
     this.properties = properties;
     this.gateway = gateway;
@@ -84,7 +86,7 @@ public class AdminFinanceQueryService {
 
   public PageResponse<AdminFinanceResponses.Topup> topups(
       long adminId, TopupFilter filter, int page, int size) {
-    requireAdmin(adminId);
+    authorization.requireAdmin(adminId);
     validatePage(page, size);
     var selected = filter == null ? new TopupFilter(null, null) : filter;
     positive(selected.memberId());
@@ -102,7 +104,7 @@ public class AdminFinanceQueryService {
   }
 
   public AdminFinanceResponses.Topup topup(long adminId, long topupId) {
-    requireAdmin(adminId);
+    authorization.requireAdmin(adminId);
     positive(topupId);
     var row = queries.topup(topupId).orElseThrow(AdminFinanceQueryService::notFound);
     return topup(row, clock.instant(), providerAvailable());
@@ -110,7 +112,7 @@ public class AdminFinanceQueryService {
 
   public PageResponse<AdminFinanceResponses.PaymentRecord> payments(
       long adminId, PaymentFilter filter, int page, int size) {
-    requireAdmin(adminId);
+    authorization.requireAdmin(adminId);
     validatePage(page, size);
     var selected = filter == null ? new PaymentFilter(null, null, null, null, null) : filter;
     positive(selected.orderId());
@@ -128,7 +130,7 @@ public class AdminFinanceQueryService {
   }
 
   public AdminFinanceResponses.OrderFinance orderFinance(long adminId, long orderId) {
-    requireAdmin(adminId);
+    authorization.requireAdmin(adminId);
     positive(orderId);
     return queries.orderFinance(orderId).orElseThrow(AdminFinanceQueryService::notFound);
   }
@@ -136,7 +138,7 @@ public class AdminFinanceQueryService {
   /** 한 JobInstance의 최신 실행만 목록에 표시한다. 상세 조회에서는 이전 실행도 검사할 수 있다. */
   public PageResponse<AdminFinanceResponses.RecoveryJob> recoveryJobs(
       long adminId, int page, int size) {
-    requireAdmin(adminId);
+    authorization.requireAdmin(adminId);
     validatePage(page, size);
     if ((long) page * size > Integer.MAX_VALUE) {
       throw invalid();
@@ -181,7 +183,7 @@ public class AdminFinanceQueryService {
   }
 
   public AdminFinanceResponses.RecoveryJob recoveryJob(long adminId, long executionId) {
-    requireAdmin(adminId);
+    authorization.requireAdmin(adminId);
     positive(executionId);
     org.springframework.batch.core.job.JobExecution execution;
     try {
@@ -343,22 +345,6 @@ public class AdminFinanceQueryService {
     }
   }
 
-  private void requireAdmin(long id) {
-    if (id <= 0) {
-      throw new BusinessException(
-          HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
-    }
-    var role =
-        queries
-            .memberRole(id)
-            .orElseThrow(() ->
-                new BusinessException(
-                    HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다."));
-    if (role != MemberRole.ADMIN) {
-      throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "관리자 권한이 필요합니다.");
-    }
-  }
-
   private static void positive(Long id) {
     if (id != null && id <= 0) {
       throw invalid();
@@ -366,7 +352,7 @@ public class AdminFinanceQueryService {
   }
 
   private static void validatePage(int page, int size) {
-    if (page < 0 || size < 1 || size > 100) {
+    if (!PageResponse.isValidRequest(page, size)) {
       throw invalid();
     }
   }
@@ -376,7 +362,7 @@ public class AdminFinanceQueryService {
     long offset = (long) page * size;
     var items = offset >= total ? List.<T>of() : loader.apply(offset);
     return new PageResponse<>(
-        items, page, size, total, Math.toIntExact(total / size + (total % size == 0 ? 0 : 1)));
+        items, page, size, total, PageResponse.totalPages(total, size));
   }
 
   private static OffsetDateTime at(Instant value) {

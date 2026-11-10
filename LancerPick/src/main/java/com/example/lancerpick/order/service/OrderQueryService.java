@@ -49,7 +49,7 @@ public class OrderQueryService {
   public PageResponse<OrderSummaryResponse> list(
       long memberId, OrderSide side, String status, String q, String from, String to, String sort,
       int page, int size) {
-    if (side == null || page < 0 || size < 1 || size > 100) throw invalidInput();
+    if (side == null || !PageResponse.isValidRequest(page, size)) throw invalidInput();
     OrderStatus filter = null;
     if (status != null) {
       try {
@@ -83,7 +83,7 @@ public class OrderQueryService {
             ? List.<OrderSummaryResponse>of()
             : lists.find(condition, size, offset);
     return new PageResponse<>(
-        items, page, size, total, Math.toIntExact(total / size + (total % size == 0 ? 0 : 1)));
+        items, page, size, total, PageResponse.totalPages(total, size));
   }
 
   public OrderDetailResponse detail(long memberId, String id) {

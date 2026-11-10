@@ -3,6 +3,7 @@ package com.example.lancerpick.review.service;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
 import com.example.lancerpick.common.time.UtcTimes;
+import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.review.dto.*;
@@ -64,7 +65,7 @@ public class ReviewService {
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ProductReviewsResponse list(String id, int page, int size, String ratingParam) {
         long productId = parseId(id);
-        if (page < 0 || size < 1 || size > 100 || (ratingParam != null && !ratingParam.matches("[1-5]"))) {
+        if (!PageResponse.isValidRequest(page, size) || (ratingParam != null && !ratingParam.matches("[1-5]"))) {
             throw invalid();
         }
         Integer rating = ratingParam == null ? null : Integer.valueOf(ratingParam);

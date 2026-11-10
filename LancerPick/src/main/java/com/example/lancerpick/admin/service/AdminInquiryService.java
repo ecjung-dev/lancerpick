@@ -43,6 +43,7 @@ public class AdminInquiryService {
     public static final String APPROVE = "APPROVE";
     public static final String REJECT = "REJECT";
     public static final String CLOSE = "CLOSE";
+    private static final String FORBIDDEN_MESSAGE = "관리자만 운영 문의를 처리할 수 있습니다.";
     private static final Set<String> STATUSES =
             Set.of(SupportInquiry.OPEN, SupportInquiry.IN_REVIEW, SupportInquiry.CLOSED);
     private static final Set<String> TYPES =
@@ -53,6 +54,7 @@ public class AdminInquiryService {
     private final OrderRepository orders;
     private final CancellationRequestRepository requests;
     private final MemberRepository members;
+    private final AdminAuthorization authorization;
     private final Clock clock;
 
     public AdminInquiryService(
@@ -61,18 +63,20 @@ public class AdminInquiryService {
             OrderRepository orders,
             CancellationRequestRepository requests,
             MemberRepository members,
+            AdminAuthorization authorization,
             Clock clock) {
         this.queries = queries;
         this.inquiries = inquiries;
         this.orders = orders;
         this.requests = requests;
         this.members = members;
+        this.authorization = authorization;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     public PageResponse<Summary> list(long adminId, String status, String type, int page, int size) {
-        requireAdmin(adminId);
+        authorization.requireAdmin(adminId, FORBIDDEN_MESSAGE);
         var filter = new InquiryFilter(option(status, STATUSES, "status"), option(type, TYPES, "type"));
         long total = queries.count(filter);
         long offset = (long) page * size;
@@ -82,7 +86,7 @@ public class AdminInquiryService {
 
     @Transactional(readOnly = true)
     public Detail detail(long adminId, long inquiryId) {
-        requireAdmin(adminId);
+        authorization.requireAdmin(adminId, FORBIDDEN_MESSAGE);
         return detailOf(inquiries.findById(inquiryId).orElseThrow(AdminInquiryService::notFound));
     }
 
@@ -163,11 +167,6 @@ public class AdminInquiryService {
                 members.findById(memberId).map(m -> m.getDisplayName()).orElse(null));
     }
 
-    private void requireAdmin(long adminId) {
-        var admin = members.findById(adminId).orElseThrow(AdminInquiryService::unauthorized);
-        if (admin.getRole() != MemberRole.ADMIN) throw forbidden();
-    }
-
     private static String option(String raw, Set<String> allowed, String field) {
         if (raw == null) return null;
         if (!allowed.contains(raw))
@@ -189,6 +188,6 @@ public class AdminInquiryService {
     }
 
     private static BusinessException forbidden() {
-        return new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "관리자만 운영 문의를 처리할 수 있습니다.");
+        return new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", FORBIDDEN_MESSAGE);
     }
 }

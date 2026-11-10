@@ -511,7 +511,7 @@ Entity 저장·변경은 JPA, 검색·조인·집계는 QueryDSL을 사용한다
 
 J5의 Spring Batch JDBC 저장소는 프레임워크 실행 메타데이터(`BATCH_*`) 전용이다. 업무 Repository는 JPA/QueryDSL을 유지하며 시스템 테이블을 업무 엔티티로 재구현하지 않는다. [충전 복구 경계](features.md#finance-batch)를 따른다. `wallet/config`는 Job·설정 값·전용 스케줄러 구성, `wallet/batch`는 Tasklet, `wallet/service`는 복구 조율·짧은 지급 트랜잭션을 담당한다.
 
-기존에 적용한 Flyway 마이그레이션을 수정하지 않고 후속 버전을 추가한다. 서버 시작과 검사에서 ddl-auto=validate로 매핑을 확인한다. ID는 JSON 문자열, 금액은 정수 원, API 시각은 UTC ISO 8601 기준이다. MySQL DATETIME과 LocalDateTime의 UTC 보관 규칙을 유지한다. 저장용 현재 시각은 `common/time/UtcTimes.nowMicros(clock)`(UTC, 마이크로초 절삭)으로 구하며, 잠금 뒤 시각이 필요한 곳은 잠금 뒤에 호출한다. 요청 키·클라이언트 메시지 ID 같은 UUID 문자열은 `common/text/UuidText.parse`(8-4-4-4-12 16진수만 허용)로 검사하고, 오류 코드·문구는 호출자가 정한다.
+기존에 적용한 Flyway 마이그레이션을 수정하지 않고 후속 버전을 추가한다. 서버 시작과 검사에서 ddl-auto=validate로 매핑을 확인한다. ID는 JSON 문자열, 금액은 정수 원, API 시각은 UTC ISO 8601 기준이다. MySQL DATETIME과 LocalDateTime의 UTC 보관 규칙을 유지한다. 저장용 현재 시각은 `common/time/UtcTimes.nowMicros(clock)`(UTC, 마이크로초 절삭)으로 구하며, 잠금 뒤 시각이 필요한 곳은 잠금 뒤에 호출한다. 요청 키·클라이언트 메시지 ID 같은 UUID 문자열은 `common/text/UuidText.parse`(8-4-4-4-12 16진수만 허용)로 검사하고, 오류 코드·문구는 호출자가 정한다. 목록 요청 범위(page 0 이상, size 1~100)는 `PageResponse.isValidRequest`로 판정하고(문구·다른 조건과의 순서는 서비스가 유지), 올림 페이지 수는 `PageResponse.totalPages`(int 초과 시 예외)를 쓴다. 관리자 서비스의 DB 권한 재검사는 `admin/service/AdminAuthorization`으로 한다: 조회는 잠금 없는 `requireAdmin`, 감사 요청·재처리 실행처럼 회원 → 감사 기록 → 대상 순서로 잠그는 경로는 `lockAdmin`(회원 공유 잠금, 기존 트랜잭션 필수). 주문 잠금 순서에 들어가는 관리자 경로(문의 닫기·관리자 계약 PDF)는 주문 저장소의 실행 회원 잠금을 그대로 쓴다.
 
 #### 랜서픽 공통 개발 규칙 v1.0
 

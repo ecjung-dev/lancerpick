@@ -7,8 +7,6 @@ import com.example.lancerpick.admin.entity.AdminActionStatus;
 import com.example.lancerpick.admin.repository.AdminActionLogRepository;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.time.UtcTimes;
-import com.example.lancerpick.member.entity.MemberRole;
-import com.example.lancerpick.member.repository.MemberRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -57,7 +55,7 @@ public class AdminActionAuditService {
   }
 
   private final AdminActionLogRepository logs;
-  private final MemberRepository members;
+  private final AdminAuthorization authorization;
   private final AdminActionEligibility eligibility;
   private final Clock clock;
   private final Duration pendingTimeout;
@@ -65,7 +63,7 @@ public class AdminActionAuditService {
 
   public AdminActionAuditService(
       AdminActionLogRepository logs,
-      MemberRepository members,
+      AdminAuthorization authorization,
       AdminActionEligibility eligibility,
       Clock clock,
       PlatformTransactionManager manager,
@@ -75,7 +73,7 @@ public class AdminActionAuditService {
       throw new IllegalArgumentException("Audit pending timeout must be between 1 and 30 minutes");
     }
     this.logs = logs;
-    this.members = members;
+    this.authorization = authorization;
     this.eligibility = eligibility;
     this.clock = clock;
     this.pendingTimeout = pendingTimeout;
@@ -108,7 +106,7 @@ public class AdminActionAuditService {
 
   private BeginResult request(
       long adminId, AdminAction action, long targetId, String reason, UUID requestKey) {
-    requireAdmin(adminId);
+    authorization.lockAdmin(adminId);
     var replay = logs.findByAdminIdAndRequestKey(adminId, requestKey.toString());
     if (replay.isPresent()) {
       var log = replay.get();
@@ -162,23 +160,13 @@ public class AdminActionAuditService {
 
   public AdminActionReceipt inspect(long adminId, long logId) {
     return transaction.execute(ignored -> {
-      requireAdmin(adminId);
+      authorization.lockAdmin(adminId);
       return AdminActionReceipt.from(
           logs.findById(logId)
               .orElseThrow(() ->
                   new BusinessException(
                       HttpStatus.NOT_FOUND, "ADMIN_ACTION_NOT_FOUND", "관리자 작업 이력을 찾을 수 없습니다.")));
     });
-  }
-
-  private void requireAdmin(long adminId) {
-    var member =
-        members
-            .findByIdForShare(adminId)
-            .orElseThrow(() ->
-                new BusinessException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다."));
-    if (member.getRole() != MemberRole.ADMIN)
-      throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "관리자 권한이 필요합니다.");
   }
 
   private LocalDateTime now() {

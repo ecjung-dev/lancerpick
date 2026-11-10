@@ -7,9 +7,7 @@ import com.example.lancerpick.admin.repository.AdminMemberQueries;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.common.web.PageResponse;
-import com.example.lancerpick.member.entity.MemberRole;
 import com.example.lancerpick.member.entity.SanctionKind;
-import com.example.lancerpick.member.repository.MemberRepository;
 import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -25,18 +23,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 public class AdminMemberService {
   private final AdminMemberQueries queries;
-  private final MemberRepository members;
+  private final AdminAuthorization authorization;
   private final Clock clock;
 
-  public AdminMemberService(AdminMemberQueries queries, MemberRepository members, Clock clock) {
+  public AdminMemberService(
+      AdminMemberQueries queries, AdminAuthorization authorization, Clock clock) {
     this.queries = queries;
-    this.members = members;
+    this.authorization = authorization;
     this.clock = clock;
   }
 
   public PageResponse<Summary> list(
       long adminId, String q, String restriction, int page, int size) {
-    requireAdmin(adminId);
+    authorization.requireAdmin(adminId);
     page(page, size);
     String keyword = q == null ? null : q.strip();
     if (keyword != null && keyword.isEmpty()) keyword = null;
@@ -68,11 +67,11 @@ public class AdminMemberService {
         page,
         size,
         count,
-        pages(count, size));
+        PageResponse.totalPages(count, size));
   }
 
   public Detail detail(long adminId, long memberId) {
-    requireAdmin(adminId);
+    authorization.requireAdmin(adminId);
     if (memberId < 1) throw invalid();
     var now = UtcTimes.nowMicros(clock);
     var row = queries.detail(memberId, now).orElseThrow(AdminMemberService::missing);
@@ -85,7 +84,7 @@ public class AdminMemberService {
   }
 
   public PageResponse<Sanction> history(long adminId, long memberId, int page, int size) {
-    requireAdmin(adminId);
+    authorization.requireAdmin(adminId);
     page(page, size);
     var now = UtcTimes.nowMicros(clock);
     if (memberId < 1) throw invalid();
@@ -96,26 +95,11 @@ public class AdminMemberService {
         page,
         size,
         count,
-        pages(count, size));
-  }
-
-  private void requireAdmin(long id) {
-    var role =
-        members
-            .findRoleById(id)
-            .orElseThrow(() ->
-                new BusinessException(
-                    HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다."));
-    if (role != MemberRole.ADMIN)
-      throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "관리자 권한이 필요합니다.");
+        PageResponse.totalPages(count, size));
   }
 
   private static void page(int page, int size) {
-    if (page < 0 || size < 1 || size > 100) throw invalid();
-  }
-
-  private static int pages(long count, int size) {
-    return Math.toIntExact(count / size + (count % size == 0 ? 0 : 1));
+    if (!PageResponse.isValidRequest(page, size)) throw invalid();
   }
 
   private static BusinessException missing() {

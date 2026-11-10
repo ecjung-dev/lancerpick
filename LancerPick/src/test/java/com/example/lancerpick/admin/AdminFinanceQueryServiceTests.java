@@ -7,8 +7,8 @@ import static org.mockito.Mockito.when;
 import com.example.lancerpick.admin.dto.AdminFinanceResponses.BlockReason;
 import com.example.lancerpick.admin.repository.AdminFinanceQueries;
 import com.example.lancerpick.admin.repository.AdminFinanceQueries.TopupRow;
+import com.example.lancerpick.admin.service.AdminAuthorization;
 import com.example.lancerpick.admin.service.AdminFinanceQueryService;
-import com.example.lancerpick.member.entity.MemberRole;
 import com.example.lancerpick.wallet.config.TopupRecoveryProperties;
 import com.example.lancerpick.wallet.entity.WalletTopupStatus;
 import com.example.lancerpick.wallet.gateway.TossPaymentGateway;
@@ -24,7 +24,6 @@ class AdminFinanceQueryServiceTests {
   void disabledBatchStillAllowsInspectionAndDoesNotRemoveManualRecheckCandidate() {
     var now = Instant.parse("2026-11-06T00:03:00Z");
     var queries = mock(AdminFinanceQueries.class);
-    when(queries.memberRole(1)).thenReturn(Optional.of(MemberRole.ADMIN));
     when(queries.topup(2))
         .thenReturn(
             Optional.of(
@@ -44,6 +43,7 @@ class AdminFinanceQueryServiceTests {
     var service =
         new AdminFinanceQueryService(
             queries,
+            mock(AdminAuthorization.class),
             mock(JobRepository.class),
             new TopupRecoveryProperties(120, 180, 8, 60),
             mock(TossPaymentGateway.class),

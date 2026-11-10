@@ -2,8 +2,6 @@ package com.example.lancerpick.admin.repository;
 
 import com.example.lancerpick.admin.dto.AdminFinanceResponses;
 import com.example.lancerpick.common.policy.TradePolicyVersion;
-import com.example.lancerpick.member.entity.MemberRole;
-import com.example.lancerpick.member.entity.QMember;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.QOrder;
 import com.example.lancerpick.order.entity.QOrderClosure;
@@ -60,11 +58,6 @@ public class AdminFinanceQueries {
       Instant leaseUntil,
       Instant completedAt,
       boolean identified) {}
-
-  public Optional<MemberRole> memberRole(long id) {
-    var m = QMember.member;
-    return Optional.ofNullable(query.select(m.role).from(m).where(m.id.eq(id)).fetchOne());
-  }
 
   public long countTopups(TopupFilter filter) {
     return query.select(t.id.count()).from(t).where(topupWhere(filter)).fetchOne();
