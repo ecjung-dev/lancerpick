@@ -7531,6 +7531,20 @@ J1의 다음 단계는 같은 서비스를 재사용하는 WebSocket/STOMP 전�
 
 </details>
 <details>
+<summary>기록 기준일 2026-11-10 — 1개 고유 기록 블록</summary>
+
+### 비밀번호 변경 권고 알림(U6) — 2026-11-10, `feature/password-change-recommendation`(정은찬)
+
+<a id="b-u6-recommendation"></a>
+- **결정**: 스케줄러·전체 회원 스캔·새 인덱스·마이그레이션 없이 로그인한 회원에게만 권고한다(2026-11-09 조장 결정, Codex 반박 리뷰 반영). 로그인 트랜잭션은 `readOnly`·회원 잠금 없이 세션까지 저장하므로 쓰기로 바꾸면 커밋 실패·세션 성공이 어긋날 수 있어, 로그인 성공 뒤 별도 트랜잭션으로 분리했다. 중복은 알림 테이블이 아니라 아웃박스 `event_id`로 판정한다(디스패처는 별도 트랜잭션이라 디스패치 전 재로그인을 알림 테이블로는 막을 수 없다). 현재 규칙은 [권고 발송](features.md#password-recommendation)·[회원 알림](features.md#communication-notifications).
+- **구현 중 보완**: 비밀번호를 바꾸지 않은 회원은 첫 권고 이후 계속 대상이라 매 로그인마다 회원 배타 잠금을 잡게 되어, 잠금 전에 이번 회차 이벤트 존재를 확인해 있으면 끝내도록 했다(잠금 아래에서 다시 확인).
+- **자동 테스트**: 커밋 `712c84c`, 격리 MySQL 8.4 `lancerpick_test`. `PasswordChangeRecommendationIntegrationTests` 8건(경계 직전/정확한 경계·회차 1건, 기준에서 센 회차·장기 미로그인, 비밀번호 변경 뒤 옛 기준 무효, 로그인 API 발행·디스패치·목록 orderId null, 저장 실패에도 로그인 200, 동시 4건 → 1건, 다른 수신자·미지원 유형·없는 회원 FAILED), `MemberChangePolicyTests` 회차 7건 추가. 백엔드 `clean build` 1,048건 통과(실패 0). 프런트 typecheck·lint·`test:api` 291건·build 통과.
+- **실서버·브라우저**: 개인 DB `bootRun`+Vite+Playwright Chromium. 회원 14의 `password_recommendation_base_at`을 2026-04-01로 바꾼 뒤 로그인 → 아웃박스 MEMBER 1건(회차 1) COMPLETED·알림 1건(`order_id` NULL) → 헤더 알림 패널에 권고 문구·`/mypage/profile` 링크 → 클릭 시 내 정보 이동·읽음. 로그아웃 후 재로그인해도 이벤트·알림 각 1건. 콘솔은 로그인 전 `/api/me` 401·favicon 404 외 오류 없음. 확인 후 기준일 원복.
+- **리뷰**: Codex 적대 리뷰 approve(지적 없음, 정적 검토).
+- **한계**: main #154 문서 통합 이전 커밋에서 실행한 결과다. 병합 후 문서만 새 위치로 옮겼고 코드는 같다. 원격 CI는 PR에서 확인한다.
+
+</details>
+<details>
 <summary>기록 기준일 2026-11-09 — 4개 고유 기록 블록</summary>
 
 ### 구매자 보안 잠금 연결(U8) — 2026-11-09, `feature/security-lock-timer-stop`(정은찬)

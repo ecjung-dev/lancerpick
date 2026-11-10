@@ -3,6 +3,7 @@ package com.example.lancerpick.auth.controller;
 import com.example.lancerpick.auth.dto.LoginRequest;
 import com.example.lancerpick.auth.service.AuthService;
 import com.example.lancerpick.member.dto.MemberResponse;
+import com.example.lancerpick.notification.service.PasswordChangeRecommendations;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -21,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordChangeRecommendations passwordRecommendations;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, PasswordChangeRecommendations passwordRecommendations) {
         this.authService = authService;
+        this.passwordRecommendations = passwordRecommendations;
     }
 
     /** POST /api/auth/login — 성공 시 200 Member, 실패 시 401 INVALID_CREDENTIALS */
@@ -31,6 +34,8 @@ public class AuthController {
     public ResponseEntity<MemberResponse> login(@Valid @RequestBody LoginRequest loginRequest,
             HttpServletRequest request, HttpServletResponse response) {
         MemberResponse member = authService.login(loginRequest, request, response);
+        // 로그인 트랜잭션·세션 저장이 끝난 뒤 별도 트랜잭션으로 비밀번호 변경 권고(U6). 실패해도 로그인은 성공으로 둔다.
+        passwordRecommendations.issueAfterLogin(Long.parseLong(member.id()));
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(member);
     }
 
