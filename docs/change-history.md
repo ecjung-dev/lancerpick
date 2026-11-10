@@ -4,8 +4,15 @@
 
 ## 기록 해석
 
+<a id="order-chat-panel-split"></a>
+### 주문 대화 화면에서 발송 흐름·목록 분리(리팩터링 5-2) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/order-chat-panel-split`, main `b8b74ae`(#174) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 두 번째 파일이다. `OrderChatPanel.tsx`(408줄 → 222줄)에서 입력·발송·복구 흐름(초안·미확정 발송 상태, 이력에서 발송 확인, 발송 전후 계정 확인, 새로고침, 소켓/HTTP 발송)을 `features/order-chat/useChatSend.ts`로, 메시지 목록을 `components/ChatMessages.tsx`로 옮겼다. 코드는 그대로 옮겼고 같은 `clientMessageId` 재전송(멱등)·계정 확인·불명확 결과 처리·훅 호출 순서는 같다. 화면 문구·버튼 상태 변경 없음. 영향 영역: order-chat(정은찬). API·서버 변경 없음.
+
+검증: typecheck·lint·build 통과, `test:api` **326건 통과**(`order-chat.test.mjs`는 `ChatMessages`를 새 파일에서 읽도록 수정, 2026-11-10). 실제 브라우저 확인은 하지 않았고 원격 CI는 PR에서 확인한다.
+
 <a id="admin-finance-query-split"></a>
-### 관리자 금융 조회에서 복구 Batch 조회 분리(리팩터링 5-1) — 2026-11-10, 로컬 구현
+### 관리자 금융 조회에서 복구 Batch 조회 분리(리팩터링 5-1) — 2026-11-10, main 반영(#174)
 
 정은찬, `refactor/admin-finance-query-split`, main `634b283`(#173) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 첫 파일이다. `AdminFinanceQueryService`(394줄)에서 충전 복구 Batch 실행 조회·실행 파라미터 해석·재시작 가능 판단을 admin 내부 `AdminRecoveryJobQueries`로 옮겼다(서비스 252줄). 공개 메서드·권한 검사·입력 검사·페이지 응답·트랜잭션(읽기 전용, REPEATABLE_READ)은 기존 서비스에 그대로 있고, 새 클래스는 그 트랜잭션 안에서 호출된다. 판단은 여전히 화면 표시용 스냅샷이며 실제 재시작은 `AdminBatchRestartService`가 실행 시점에 다시 검사한다. 응답·404 조건은 같다. 영향 영역: admin·wallet(김창재·황준범). API·DB 변경 없음.
 

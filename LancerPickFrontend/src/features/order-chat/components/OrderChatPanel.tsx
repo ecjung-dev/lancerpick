@@ -1,35 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
-import { formatDateTime } from '../../../shared/lib/format'
-import { normalizedLength } from '../../../shared/lib/text'
-import { getMemberSession } from '../../auth/api'
-import {
-  captureAccountScope,
-  isUnclearResult,
-  loginPath,
-  recheckSession,
-} from '../../auth/session'
-import { sendChatMessage } from '../api'
+import { loginPath, recheckSession } from '../../auth/session'
 import { mergeChatMessages } from '../messages'
-import {
-  chatKeys,
-  useChatMember,
-  useChatMessages,
-  usePendingChatSend,
-} from '../queries'
-import {
-  beginChatSend,
-  confirmChatSendFromHistory,
-  settleChatSend,
-  type ChatSendAttempt,
-} from '../pending'
+import { useChatMember, useChatMessages } from '../queries'
 import { chatStatusAllowsSend, MAX_MESSAGE_LENGTH } from '../validation'
 import { useChatRealtime } from '../useChatRealtime'
-import type { ChatMessage } from '../types'
+import { useChatSend } from '../useChatSend'
+import { ChatMessages } from './ChatMessages'
 import styles from './OrderChatPanel.module.css'
 
 interface OrderChatPanelProps {
@@ -102,131 +83,17 @@ function ChatConversation({
   floating = false,
   active = true,
 }: ChatConversationProps) {
-  const client = useQueryClient()
   const query = useChatMessages(orderId, memberId)
   const realtime = useChatRealtime(
     orderId,
     memberId,
     query.data?.pages[0]?.lastSequence,
   )
-  const [draft, setDraft] = useState('')
-  const [preparing, setPreparing] = useState(false)
-  const [failure, setFailure] = useState<string | null>(null)
-  const pending = usePendingChatSend(memberId, orderId)
-  const content = pending?.input.content ?? draft
-  const busy = preparing || pending?.phase === 'sending'
-  const uncertain = pending?.phase === 'uncertain'
-  const sending = useRef(false)
-  const mounted = useRef(true)
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
-  }, [])
   const messages = mergeChatMessages(query.data?.pages ?? [])
-  const length = normalizedLength(content)
   const canSend =
     Boolean(query.data?.pages[0]?.canSend) && chatStatusAllowsSend(orderStatus)
-
-  useEffect(() => {
-    if (
-      pending &&
-      query.data &&
-      mergeChatMessages(query.data.pages).some(
-        (message) =>
-          message.senderId === memberId &&
-          message.clientMessageId === pending.input.clientMessageId,
-      )
-    ) {
-      confirmChatSendFromHistory(
-        client,
-        memberId,
-        orderId,
-        pending.input.clientMessageId,
-      )
-    }
-  }, [client, memberId, orderId, pending, query.data])
-
-  async function checkMember() {
-    if ((await getMemberSession()).id !== memberId) {
-      await recheckSession(client)
-      await client.invalidateQueries({ queryKey: chatKeys.member })
-      throw new Error(
-        '계정이 변경되었습니다. 현재 계정으로 대화를 다시 확인해 주세요.',
-      )
-    }
-  }
-
-  async function refresh() {
-    try {
-      await checkMember()
-      if (!mounted.current) return
-      await query.refetch()
-    } catch (error) {
-      if (mounted.current)
-        setFailure(
-          error instanceof Error ? error.message : '대화를 다시 확인해 주세요.',
-        )
-      await client.invalidateQueries({ queryKey: chatKeys.member })
-    }
-  }
-
-  async function send() {
-    if (
-      sending.current ||
-      busy ||
-      (!pending && (!canSend || length < 1 || length > MAX_MESSAGE_LENGTH))
-    )
-      return
-    sending.current = true
-    const isCurrentAccount = captureAccountScope(client)
-    let attempt: ChatSendAttempt | undefined
-    setPreparing(true)
-    setFailure(null)
-    try {
-      await checkMember()
-      if (!mounted.current || !isCurrentAccount()) return
-      attempt = beginChatSend(client, memberId, orderId, content)
-      if (!attempt) return
-      setDraft('')
-      if (realtime.connection.current?.isConnected())
-        await realtime.connection.current.send(attempt.input)
-      else await sendChatMessage(orderId, attempt.input, isCurrentAccount)
-      await checkMember()
-      settleChatSend(client, memberId, orderId, attempt, 'confirmed')
-      if (!isCurrentAccount()) return
-      if (mounted.current) setFailure(null)
-      await client.invalidateQueries({
-        queryKey: chatKeys.messages(orderId, memberId),
-      })
-      await client.invalidateQueries({ queryKey: chatKeys.threads })
-    } catch (error) {
-      const unclear = isUnclearResult(error)
-      const settled =
-        attempt &&
-        settleChatSend(
-          client,
-          memberId,
-          orderId,
-          attempt,
-          unclear ? 'uncertain' : 'rejected',
-        )
-      if (!mounted.current || !isCurrentAccount()) return
-      if (!unclear && attempt && settled === 'cleared')
-        setDraft(attempt.input.content)
-      if (!attempt || (!unclear && settled === 'cleared'))
-        setFailure(
-          error instanceof Error ? error.message : '전송하지 못했습니다.',
-        )
-      if (isUnauthorized(error))
-        await client.invalidateQueries({ queryKey: chatKeys.member })
-      else await query.refetch()
-    } finally {
-      sending.current = false
-      if (mounted.current) setPreparing(false)
-    }
-  }
+  const { content, setDraft, busy, uncertain, failure, length, send, refresh } =
+    useChatSend({ orderId, memberId, query, realtime, canSend })
 
   if (realtime.state === 'auth-required')
     return (
@@ -351,58 +218,5 @@ function ChatConversation({
         </div>
       )}
     </section>
-  )
-}
-
-export function ChatMessages({
-  messages,
-  memberId,
-  followLatest = false,
-}: {
-  messages: ChatMessage[]
-  memberId: string
-  followLatest?: boolean
-}) {
-  const list = useRef<HTMLOListElement>(null)
-  const following = useRef(true)
-  const lastId = messages.at(-1)?.id
-  const lastSender = messages.at(-1)?.senderId
-  useEffect(() => {
-    if (
-      followLatest &&
-      (following.current || lastSender === memberId) &&
-      list.current
-    ) {
-      list.current.scrollTop = list.current.scrollHeight
-    }
-  }, [followLatest, lastId, lastSender, memberId])
-  if (!messages.length) return <p>아직 대화가 없습니다.</p>
-  return (
-    <ol
-      ref={list}
-      className={styles.messages}
-      aria-label="메시지 내역"
-      onScroll={() => {
-        if (followLatest && list.current)
-          following.current =
-            list.current.scrollHeight -
-              list.current.clientHeight -
-              list.current.scrollTop <
-            48
-      }}
-    >
-      {messages.map((message) => (
-        <li
-          className={`${styles.message} ${message.senderId === memberId ? styles.mine : ''}`}
-          key={message.id}
-        >
-          <strong>{message.senderId === memberId ? '나' : '상대방'}</strong>
-          <p className={styles.content}>{message.content}</p>
-          <time className={styles.time} dateTime={message.createdAt}>
-            {formatDateTime(message.createdAt)}
-          </time>
-        </li>
-      ))}
-    </ol>
   )
 }

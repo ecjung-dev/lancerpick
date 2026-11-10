@@ -34,8 +34,11 @@ const server = await createServer({
   server: { middlewareMode: true, ws: false, watch: null },
   appType: 'custom',
 })
-const { ChatMessages, OrderChatPanel } = await server.ssrLoadModule(
+const { OrderChatPanel } = await server.ssrLoadModule(
   '/src/features/order-chat/components/OrderChatPanel.tsx',
+)
+const { ChatMessages } = await server.ssrLoadModule(
+  '/src/features/order-chat/components/ChatMessages.tsx',
 )
 after(async () => {
   await server.close()
