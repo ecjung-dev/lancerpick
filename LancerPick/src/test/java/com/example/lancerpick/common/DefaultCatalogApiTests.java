@@ -216,4 +216,7 @@ class DefaultCatalogApiTests extends CommonApiTests {
     com.example.lancerpick.auth.service.SignupEmailService signupEmailService;
     @MockitoBean
     com.example.lancerpick.auth.mail.AccountMailDeliveryRecorder accountMailDeliveryRecorder;
+    // 아이디 안내도 회원 조회·요청 제한에 DB를 사용하므로 대체한다. 실제 처리는 AccountGuideIntegrationTests(MySQL).
+    @MockitoBean
+    com.example.lancerpick.auth.service.AccountGuideService accountGuideService;
 }

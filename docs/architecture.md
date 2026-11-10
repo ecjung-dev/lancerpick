@@ -302,6 +302,7 @@ DB의 이메일 UNIQUE(`uk_members_email`) 위반만 409 EMAIL_ALREADY_EXISTS로
 | POST /me/password | 회원+CSRF; currentPassword,newPassword | 204; 현재 비밀번호 재확인 후 변경, auth_version 증가로 모든 세션 폐기. 자동 로그인 없음 |
 | POST /auth/password-reset-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답 |
 | POST /auth/password-resets | 비로그인 가능+CSRF; token,newPassword | 204; 일회용 토큰으로 비밀번호 변경, auth_version 증가로 모든 세션·다른 재설정 링크 폐기. 자동 로그인 없음 |
+| POST /auth/account-guide-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 아이디 안내(가입한 이메일이면 그 주소로 안내 메일, 토큰 없음). 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답. [규칙](features.md#account-guide) |
 
 이메일 인증 가입(2026-11-06 구현): 요청 email은 가입과 같이 정규화·형식 검사하며 형식 오류만 400 VALIDATION_FAILED다. 그 밖에는 이미 가입된 이메일·이메일+목적당 60초 간격·1시간 5회 제한 초과·발송 실패 모두 같은 202다(이미 가입된 주소에도 인증 메일을 보낸다). 메일 링크 `/signup/verify#token=`의 token으로 인증하며 위조·만료(15분)·이미 인증·목적 다름은 400 SIGNUP_EMAIL_TOKEN_INVALID다. 인증하면 링크 토큰은 무효가 되고 가입 증명 proof(일회용, 인증 시점부터 30분)를 받는다. `alreadyRegistered`는 메일을 받은 본인이 인증한 뒤에만 알려 준다. 가입 시 증명 없음은 400 VALIDATION_FAILED, 위조·만료·사용됨·다른 이메일·인증 전 링크 토큰·재설정 토큰은 400 EMAIL_VERIFICATION_INVALID, 이미 가입된 이메일은 409 EMAIL_ALREADY_EXISTS다. 증명 없이 가입하는 경로는 없다. 상세는 [로그인 문서](features.md#b-234-0).
 
@@ -1229,7 +1230,7 @@ Docker가 없으면 Mailpit 공식 Windows 실행 파일(GitHub 릴리스 `mailp
 - `PENDING`으로 오래 남은 행을 정리·재처리하는 작업은 없다.
 - HTML 메일·첨부·발송량 제한(전체·IP)은 없다.
 - 서버 종료 때 진행 중인 발송은 중단 신호를 받는다. 이미 SMTP 서버가 받은 뒤라면 실제로 전달됐어도 `FAILED`로 기록될 수 있다(사용자에게는 메일이 도착).
-- 비밀번호 변경·재설정 완료 안내 메일, 이메일 인증 가입·아이디 안내 메일은 K1(김창재)에서 이 발송기를 그대로 사용해 추가한다.
+- 비밀번호 변경·재설정 완료 안내 메일, 이메일 인증 가입·아이디 안내 메일은 K1(김창재)에서 이 발송기를 그대로 사용해 추가한다. 아이디 안내는 2026-11-10 아래 `untracked` 계약으로 구현했다([규칙](features.md#account-guide)). 가짜 발송기 통합 테스트로 확인했고 실제 SMTP 발송은 아직 확인하지 않았다.
 - 토큰이 없어 `account_challenges` 행이 없는 안내 메일(아이디 안내 등)은 `AccountMail.untracked(to, subject, body)`로 만든다. `challengeId`가 null이면 Dispatcher·발송기가 `AccountMailDeliveryRecorder`를 부르지 않고 로그(`challengeId=null`·오류 코드)만 남긴다(2026-11-06 결정, DB 변경 없음). 그래서 이런 메일의 발송 결과는 DB로 확인할 수 없다.
 
 <a id="environment"></a>

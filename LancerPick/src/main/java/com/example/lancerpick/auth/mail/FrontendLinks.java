@@ -26,6 +26,13 @@ public class FrontendLinks {
         return baseUrl + path + "#token=" + token;
     }
 
+    /** 토큰 없는 화면 주소. 예: pageLink("/login") → http://localhost:5173/login. path는 코드에 고정된 값만 쓴다. */
+    public String pageLink(String path) {
+        if (path == null || !path.startsWith("/") || path.startsWith("//"))
+            throw new IllegalArgumentException("path must be an absolute site path");
+        return baseUrl + path;
+    }
+
     /** 서버가 켜질 때 한 번 확인한다. http/https, 호스트 있음, 아이디·쿼리·fragment 없음. 끝의 / 는 뗀다. */
     private static String validatedBaseUrl(String value) {
         URI uri;

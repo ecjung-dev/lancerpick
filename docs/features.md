@@ -204,6 +204,19 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 
 메일 링크: `lancerpick.frontend.base-url`(기본 `http://localhost:5173`, 환경변수 `FRONTEND_BASE_URL`) + `/password-reset#token=…`. 요청 Host·returnUrl을 쓰지 않는다. 링크 GET은 화면만 보여주고, 토큰 사용은 POST에서만 한다.
 
+##### 아이디 안내
+
+<a id="account-guide"></a>
+랜서픽은 별도 아이디 없이 가입한 이메일로 로그인한다. 아이디 안내는 **입력한 주소가 가입한 이메일이면 그 주소로 "이 주소가 아이디"라는 안내를 보내는 것**까지다. 잊어버린 이메일을 찾아 주지 않는다(표시 이름으로 이메일 찾기·마스킹 목록 없음).
+
+| 경로 | 입력·권한 | 결과 |
+| --- | --- | --- |
+| POST /api/auth/account-guide-requests | 비로그인 가능 + CSRF; email | 202 `{message}` `no-store`. 가입 여부·제한 초과·발송 실패와 무관하게 같은 응답. 이메일 형식 오류만 400 VALIDATION_FAILED |
+
+- 요청 제한: 이메일별 60초 간격·1시간 5회. 비밀번호 재설정 제한과 따로 센다.
+- 메일: 제목 "[랜서픽] 아이디 안내", 본문에 로그인·비밀번호 재설정 화면 링크(서버 설정 주소 + `/login`, `/password-reset/request`). 토큰 없음, 비밀번호·표시 이름 등 다른 회원 정보 없음. `AccountMail.untracked`라 `account_challenges` 행과 발송 결과 기록이 없다([메일 경계](architecture.md#mail)).
+- 화면: `/account-guide`. 비밀번호 재설정 요청과 같은 공통 폼(같은 안내·1회 전송·60초 다시 요청 잠금). 로그인 화면의 "아이디(이메일)가 기억나지 않나요?" 링크로 들어간다.
+
 ##### 비밀번호 재설정·요청 제한
 
 <a id="b-229-0"></a>
@@ -317,7 +330,7 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 - 기존 회원 이메일 인증 전환(§5.2)과 재설정 성공 시 `email_verified_at` 기록은 하지 않았다(다음 작업). 기존 회원의 `email_verified_at`은 NULL 그대로다.
 - 메일이 꺼진 기본 상태에서는 화면 가입이 불가하다(위 "우회 경로 없음").
 - 사용하지 않은 가입 인증 행·증명의 정리 작업은 없다. 테스트 도우미가 넣은 행도 각 테스트가 지우지 않으면 테스트 DB에 남는다(회원 FK가 없어 다른 테스트에 영향 없음).
-- 아이디 안내 메일 계약은 정했다(2026-11-06): challenge 행 없이 `AccountMail.untracked`로 보내며 발송 결과는 DB에 기록하지 않는다(작업표 C3 전달 4번). 아이디 안내 화면·API 구현은 남았다.
+- 아이디 안내 메일 계약은 정했다(2026-11-06): challenge 행 없이 `AccountMail.untracked`로 보내며 발송 결과는 DB에 기록하지 않는다(작업표 C3 전달 4번). 화면·API는 2026-11-10 위 [아이디 안내](#account-guide)로 구현했다([기록](change-history.md#account-guide-20261110)).
 
 <a id="members-sanctions"></a>
 ### 일반 제한·보안 잠금·관리자 회원
