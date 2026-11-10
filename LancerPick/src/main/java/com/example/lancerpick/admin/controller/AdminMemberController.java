@@ -3,19 +3,11 @@ package com.example.lancerpick.admin.controller;
 import com.example.lancerpick.admin.dto.AdminMemberResponses;
 import com.example.lancerpick.admin.dto.AdminMemberSanctionRequest;
 import com.example.lancerpick.admin.service.AdminMemberService;
-import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.security.CurrentMemberId;
 import com.example.lancerpick.common.web.PageResponse;
-import com.example.lancerpick.member.entity.SanctionKind;
 import com.example.lancerpick.member.service.MemberSanctionCommandService;
-import java.time.DateTimeException;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -79,27 +71,10 @@ public class AdminMemberController {
       @PathVariable long memberId,
       @RequestBody AdminMemberSanctionRequest request) {
     long actor = members.require(authentication);
-    UUID key;
-    SanctionKind kind;
-    LocalDateTime end;
-    try {
-      if (request.requestKey() == null
-          || !request
-              .requestKey()
-              .matches(
-                  "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))
-        throw invalid();
-      key = UUID.fromString(request.requestKey());
-      kind = SanctionKind.valueOf(request.kind() == null ? "" : request.kind());
-      end =
-          OffsetDateTime.parse(request.endsAt() == null ? "" : request.endsAt())
-              .withOffsetSameInstant(ZoneOffset.UTC)
-              .toLocalDateTime();
-    } catch (IllegalArgumentException | DateTimeException failure) {
-      throw invalid();
-    }
-    if (kind == SanctionKind.NONE || end.getYear() < 1000 || end.getYear() > 9999) throw invalid();
-    long id = commands.apply(actor, memberId, kind, request.reason(), end, key);
+    var parsed = request.parse();
+    long id =
+        commands.apply(
+            actor, memberId, parsed.kind(), request.reason(), parsed.endsAt(), parsed.requestKey());
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
         .body(new AdminMemberResponses.Applied(Long.toString(memberId), Long.toString(id)));
@@ -113,10 +88,5 @@ public class AdminMemberController {
       @RequestBody AdminMemberSanctionRequest.Revoke request) {
     commands.revoke(members.require(authentication), memberId, sanctionId, request.reason());
     return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
-  }
-
-  private static BusinessException invalid() {
-    return new BusinessException(
-        HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "제재 종류·종료 시각·요청 키를 확인해 주세요.");
   }
 }

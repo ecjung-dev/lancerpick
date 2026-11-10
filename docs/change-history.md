@@ -4,8 +4,21 @@
 
 ## 기록 해석
 
+<a id="backend-shared-helpers"></a>
+### 백엔드 공통 시각·UUID 입력 정리(리팩터링 2단계) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/backend-shared-helpers`, main `9123f88`(#170) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 2단계로, 동작을 바꾸지 않는 정리만 했다.
+
+- 저장용 현재 시각: 19개 파일 21곳에 직접 쓰던 UTC 변환·마이크로초 절삭을 기존 `UtcTimes.nowMicros(clock)`로 바꿨다(auth·member·admin·seller·product·review·wallet·notification·contract·chat). 호출 위치·횟수는 그대로다. 절삭 없이 만료를 비교하는 `AdminActionExecutionGuard`의 lease 검사는 의미가 달라 두었다.
+- UUID 입력: 같은 정규식+`UUID.fromString`이 5곳에 있어 `common/text/UuidText.parse`로 모았다(관리자 재처리·제재 요청 키, 주문 생성 요청 키, 취소 요청 키, 채팅 `clientMessageId`). 허용 형식·오류 코드·문구는 호출자별로 그대로이고 소문자 문자열 정규화가 필요한 곳(취소 요청·채팅)은 계속 `toString()`을 쓴다. 채팅 소켓에서 `clientMessageId`가 null로 오면 이전에는 서버 오류가 날 수 있었고 이제 같은 400 `VALIDATION_FAILED`가 된다.
+- 관리자 제재 요청: `AdminMemberController.apply`의 요청 키·종류·종료 시각 파싱을 `AdminMemberSanctionRequest.parse()`로 옮겼다. 인증 확인 뒤 파싱하는 순서와 400 문구는 같다.
+
+영향 영역: auth·member·admin·common(김창재), seller·product·review(박소현), wallet·contract(황준범), notification·chat·order(정은찬). API·DB 변경 없음.
+
+검증: 신규 `UuidTextTests` 3건 포함 전체 `clean build` **1,144건 통과**(실패·오류·건너뜀 0, 3분 51초, 로컬 테스트 DB, 2026-11-10). 프런트는 바꾸지 않아 검사하지 않았고, 원격 CI는 PR에서 확인한다.
+
 <a id="auth-error-code-unify"></a>
-### 관리자 경로 401 오류 코드 통일 — 2026-11-10, 로컬 수정
+### 관리자 경로 401 오류 코드 통일 — 2026-11-10, main 반영(#170)
 
 정은찬, `fix/auth-error-code-unify`, main `c0ae56e`(#169) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)에서 관리자 실행 회원이 없을 때 401 응답의 `code`가 [오류 코드 표](architecture.md#api)의 `AUTHENTICATION_REQUIRED`가 아니라 `UNAUTHORIZED`인 곳 3개를 찾아 맞췄다: `AdminActionAuditService.requireAdmin`, `AdminActionExecutionGuard.require`(#167), `ContractDocumentTransactions.adminOwned`(관리자 PDF 경로). HTTP 상태·문구·잠금은 그대로이고 응답 `code`만 바뀐다. 프런트는 이 경로에서 HTTP 상태로만 분기해 화면 영향이 없다. 일반 계약 문서 경로의 회원 없음→404 은닉은 유지했다. 영향 영역: admin(김창재·황준범), contract(황준범).
 

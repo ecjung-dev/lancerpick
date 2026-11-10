@@ -9,18 +9,16 @@ import com.example.lancerpick.chat.repository.OrderChatMessageQueries;
 import com.example.lancerpick.chat.repository.OrderChatMessageRepository;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.text.UuidText;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.order.service.OrderCommandLocks;
 import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Profile;
@@ -98,15 +96,13 @@ public class OrderChatService {
       throw invalid();
     }
     String content = TextNormalizer.normalize(request.content());
-    if (content.isEmpty()
-        || content.codePointCount(0, content.length()) > 2000
-        || !request
-            .clientMessageId()
-            .matches(
-                "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) {
+    if (content.isEmpty() || content.codePointCount(0, content.length()) > 2000) {
       throw invalid();
     }
-    String clientMessageId = UUID.fromString(request.clientMessageId()).toString();
+    String clientMessageId =
+        UuidText.parse(request.clientMessageId())
+            .orElseThrow(OrderChatService::invalid)
+            .toString();
     var order = locks.lockParticipantOrder(memberId, orderId, OrderChatService::notFound);
     var existing =
         messageRepository.findByOrderIdAndSenderIdAndClientMessageId(
@@ -122,7 +118,7 @@ public class OrderChatService {
       throw new BusinessException(HttpStatus.CONFLICT, "CHAT_CLOSED", "종료된 주문의 대화는 조회만 할 수 있습니다.");
     }
     var occurredAt =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        UtcTimes.nowMicros(clock);
     if (occurredAt.getYear() < 1000
         || occurredAt.getYear() > 9999
         || occurredAt.isBefore(order.getCreatedAt())) {

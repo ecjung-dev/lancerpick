@@ -4,13 +4,12 @@ import com.example.lancerpick.auth.mail.AccountGuideMailContent;
 import com.example.lancerpick.auth.mail.AccountMail;
 import com.example.lancerpick.auth.mail.AccountMailDispatcher;
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.dto.EmailRules;
 import com.example.lancerpick.member.repository.MemberRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -61,7 +60,7 @@ public class AccountGuideService {
     public void requestGuide(String rawEmail) {
         String email = EmailRules.normalize(rawEmail).orElseThrow(AccountGuideService::invalidEmail);
         byte[] subject = hasher.subject(HMAC_PURPOSE, email);
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime now = UtcTimes.nowMicros(clock);
 
         limiter.prepare(REQUEST_POLICY, subject, now);   // 별도 커밋
         Optional<AccountMail> mail = transaction.execute(status -> {

@@ -1,5 +1,6 @@
 package com.example.lancerpick.notification.service;
 
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.repository.MemberRepository;
 import com.example.lancerpick.notification.entity.Notification;
 import com.example.lancerpick.notification.entity.OutboxErrorCode;
@@ -9,8 +10,6 @@ import com.example.lancerpick.notification.repository.OutboxEventRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -205,7 +204,7 @@ public class OutboxDispatcher {
   }
 
   private LocalDateTime now() {
-    return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    return UtcTimes.nowMicros(clock);
   }
 
   /** 다시 시도해도 성공할 수 없는 이벤트. 코드는 {@link OutboxErrorCode#permanent()}가 true인 값만 쓴다. */

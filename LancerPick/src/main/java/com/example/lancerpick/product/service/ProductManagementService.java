@@ -1,6 +1,7 @@
 package com.example.lancerpick.product.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.service.MemberSanctionQuery;
 import com.example.lancerpick.order.service.NewOrderPolicy;
@@ -13,7 +14,6 @@ import jakarta.persistence.LockModeType;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -107,7 +107,7 @@ public class ProductManagementService {
         if (category == null) throw ProductWriteInput.invalid();
         return category;
     }
-    private LocalDateTime now() { return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS); }
+    private LocalDateTime now() { return UtcTimes.nowMicros(clock); }
     private OwnedProductResponse response(Product product) {
         var category = category(product.getCategoryId());
         var member = em.find(Member.class, product.getSellerId());

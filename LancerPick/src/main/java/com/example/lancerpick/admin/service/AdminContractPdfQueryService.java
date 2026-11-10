@@ -4,6 +4,7 @@ import com.example.lancerpick.admin.dto.AdminContractPdfResponse;
 import com.example.lancerpick.admin.dto.AdminContractPdfResponse.*;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.contract.entity.OrderContract;
 import com.example.lancerpick.contract.repository.OrderContractRepository;
 import com.example.lancerpick.member.entity.MemberRole;
@@ -14,7 +15,6 @@ import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.CancellationRequestRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import java.time.*;
-import java.time.temporal.ChronoUnit;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -75,7 +75,7 @@ public class AdminContractPdfQueryService {
                 : contracts.findByOrderIdAndVersion(orderId, version))
             .orElseThrow(AdminContractPdfQueryService::missing);
     var now =
-        LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        UtcTimes.nowMicros(clock);
     boolean current = Integer.valueOf(1).equals(contract.getActiveSlot());
     return new AdminContractPdfResponse(
         Long.toString(orderId),

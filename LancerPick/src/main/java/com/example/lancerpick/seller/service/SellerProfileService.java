@@ -1,6 +1,7 @@
 package com.example.lancerpick.seller.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.repository.MemberRepository;
 import com.example.lancerpick.seller.dto.SellerProfileRequest;
@@ -11,8 +12,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -68,9 +67,7 @@ public class SellerProfileService {
             );
         }
 
-        LocalDateTime now = LocalDateTime
-                .ofInstant(clock.instant(), ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime now = UtcTimes.nowMicros(clock);
 
         var existing = profiles.findById(memberId);
         boolean created = existing.isEmpty();

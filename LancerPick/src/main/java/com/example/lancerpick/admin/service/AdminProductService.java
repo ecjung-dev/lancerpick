@@ -8,11 +8,10 @@ import com.example.lancerpick.admin.repository.AdminProductQueries;
 import com.example.lancerpick.admin.repository.AdminProductQueries.ProductFilter;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.common.web.PageResponse;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -85,7 +84,7 @@ public class AdminProductService {
             throw versionConflict();
         }
 
-        LocalDateTime at = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime at = UtcTimes.nowMicros(clock);
         if (queries.updateVisibility(productId, hidden, current.version(), at) != 1) {
             throw versionConflict();
         }

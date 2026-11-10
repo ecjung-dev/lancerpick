@@ -2,6 +2,7 @@ package com.example.lancerpick.review.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.review.dto.*;
@@ -9,9 +10,7 @@ import com.example.lancerpick.review.entity.Review;
 import com.example.lancerpick.review.repository.ReviewQueries;
 import com.example.lancerpick.review.repository.ReviewRepository;
 import java.time.Clock;
-import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -56,7 +55,7 @@ public class ReviewService {
         if (reviews.existsByOrderId(orderId)) {
             throw error(HttpStatus.CONFLICT, "REVIEW_ALREADY_EXISTS", "이미 작성한 후기가 있습니다.");
         }
-        var now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        var now = UtcTimes.nowMicros(clock);
         var review = reviews.saveAndFlush(Review.create(orderId, request.rating(), content, now));
         return new ReviewResponse(review.getId().toString(), idOf(orderId), actor.getDisplayName(),
                 review.getRating(), review.getContent(), now.atOffset(ZoneOffset.UTC));

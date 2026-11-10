@@ -1,6 +1,7 @@
 package com.example.lancerpick.wallet.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.wallet.entity.Wallet;
 import com.example.lancerpick.wallet.entity.WalletEntry;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
@@ -8,7 +9,6 @@ import com.example.lancerpick.wallet.repository.WalletRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -42,8 +42,7 @@ public class WalletInitializationService {
                 .orElseThrow(() -> new BusinessException(HttpStatus.NOT_FOUND,
                         "RESOURCE_NOT_FOUND", "회원을 찾을 수 없습니다."));
 
-        LocalDateTime grantedAt = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC)
-                .truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime grantedAt = UtcTimes.nowMicros(clock);
         // INSERT IGNORE의 묵시적 값 보정을 피한다. 금액·ID·시각은 검증한 서버 값만 사용한다.
         if (grantedAt.getYear() < 1000 || grantedAt.getYear() > 9999) {
             throw new IllegalStateException("Clock is outside the MySQL DATETIME range");

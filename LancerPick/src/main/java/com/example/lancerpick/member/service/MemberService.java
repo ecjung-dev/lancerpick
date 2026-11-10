@@ -5,6 +5,7 @@ import com.example.lancerpick.auth.repository.AccountChallengeRepository;
 import com.example.lancerpick.auth.service.OneTimeTokens;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.dto.ChangePasswordRequest;
 import com.example.lancerpick.member.dto.EmailRules;
 import com.example.lancerpick.member.dto.MemberResponse;
@@ -17,8 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import org.hibernate.exception.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -70,7 +69,7 @@ public class MemberService {
                 .orElseThrow(() -> verificationInvalid("MALFORMED", null));
         AccountChallenge proof = challengeRepository.findByTokenHashForUpdate(proofHash)
                 .orElseThrow(() -> verificationInvalid("UNKNOWN", null));
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime now = UtcTimes.nowMicros(clock);
         String rejection = proof.signupProofRejection(email, now);
         if (rejection != null) {
             throw verificationInvalid(rejection, proof.getId());
@@ -119,7 +118,7 @@ public class MemberService {
         Member member = memberRepository.findByIdForUpdate(memberId)
                 .orElseThrow(MemberService::authenticationRequired);
         if (!displayName.equals(member.getDisplayName())) {
-            LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+            LocalDateTime now = UtcTimes.nowMicros(clock);
             if (member.getDisplayNameChangedAt() != null
                     && now.isBefore(MemberChangePolicy.sixMonthsAfter(member.getDisplayNameChangedAt()))) {
                 throw new BusinessException(HttpStatus.CONFLICT, "DISPLAY_NAME_CHANGE_NOT_ALLOWED",
@@ -159,7 +158,7 @@ public class MemberService {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "PASSWORD_UNCHANGED", "새 비밀번호가 현재 비밀번호와 같습니다.");
         }
 
-        LocalDateTime now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime now = UtcTimes.nowMicros(clock);
         member.changePassword(passwordEncoder.encode(request.newPassword()), now);   // 트랜잭션 종료 시 UPDATE
     }
 

@@ -9,11 +9,11 @@ import com.example.lancerpick.admin.service.AdminContractPdfQueryService;
 import com.example.lancerpick.admin.service.AdminReprocessingService;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.security.CurrentMemberId;
+import com.example.lancerpick.common.text.UuidText;
 import com.example.lancerpick.common.web.PageResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -38,9 +38,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @Profile("!demo")
 public class AdminReprocessingController {
-    private static final Pattern UUID_TEXT =
-            Pattern.compile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
-
     private final AdminReprocessingService reprocessing;
     private final AdminContractPdfQueryService pdfs;
     private final AdminActionLogService logs;
@@ -109,8 +106,7 @@ public class AdminReprocessingController {
     }
 
     private static UUID requestKey(AdminReprocessingRequest request) {
-        if (request.requestKey() == null || !UUID_TEXT.matcher(request.requestKey()).matches()) throw invalid();
-        return UUID.fromString(request.requestKey());
+        return UuidText.parse(request.requestKey()).orElseThrow(AdminReprocessingController::invalid);
     }
 
     /** 충전·Batch에는 버전 개념이 없다. 잘못 보낸 값을 조용히 무시하지 않는다. */

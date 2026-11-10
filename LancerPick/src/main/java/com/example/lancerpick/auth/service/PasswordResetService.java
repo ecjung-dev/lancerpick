@@ -6,14 +6,13 @@ import com.example.lancerpick.auth.mail.AccountMailDispatcher;
 import com.example.lancerpick.auth.mail.PasswordResetMailContent;
 import com.example.lancerpick.auth.repository.AccountChallengeRepository;
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.dto.EmailRules;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.repository.MemberRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,7 +137,7 @@ public class PasswordResetService {
     }
 
     private LocalDateTime now() {
-        return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        return UtcTimes.nowMicros(clock);
     }
 
     /** 내부 원인은 안전한 코드로 로그에만 남기고(토큰 X), 응답은 하나로 통일한다. */

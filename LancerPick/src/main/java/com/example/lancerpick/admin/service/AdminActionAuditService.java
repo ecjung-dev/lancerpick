@@ -6,13 +6,12 @@ import com.example.lancerpick.admin.entity.AdminActionLog;
 import com.example.lancerpick.admin.entity.AdminActionStatus;
 import com.example.lancerpick.admin.repository.AdminActionLogRepository;
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.entity.MemberRole;
 import com.example.lancerpick.member.repository.MemberRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -183,7 +182,7 @@ public class AdminActionAuditService {
   }
 
   private LocalDateTime now() {
-    return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    return UtcTimes.nowMicros(clock);
   }
 
   private BusinessException conflict(String code, String message) {

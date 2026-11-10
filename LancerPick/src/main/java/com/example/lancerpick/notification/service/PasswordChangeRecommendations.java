@@ -1,5 +1,6 @@
 package com.example.lancerpick.notification.service;
 
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.member.repository.MemberRepository;
 import com.example.lancerpick.member.service.MemberChangePolicy;
 import com.example.lancerpick.member.service.PasswordRecommendationQuery;
@@ -135,6 +136,6 @@ public class PasswordChangeRecommendations {
   }
 
   private LocalDateTime now() {
-    return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    return UtcTimes.nowMicros(clock);
   }
 }

@@ -2,6 +2,7 @@ package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.text.UuidText;
 import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.CancellationResultResponse;
@@ -17,7 +18,6 @@ import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.UUID;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -198,11 +198,7 @@ public class OrderCancellationRequestService {
   }
 
   private static String uuid(String key) {
-    if (key == null
-        || !key.matches(
-            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"))
-      throw invalid();
-    return UUID.fromString(key).toString();
+    return UuidText.parse(key).orElseThrow(OrderCancellationRequestService::invalid).toString();
   }
 
   private static long positiveId(String id) {

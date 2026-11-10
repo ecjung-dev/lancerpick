@@ -4,6 +4,7 @@ import com.example.lancerpick.admin.entity.AdminAction;
 import com.example.lancerpick.admin.service.AdminActionExecutionGuard;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.common.policy.TradePolicyVersion;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.contract.dto.ContractResponse;
 import com.example.lancerpick.contract.entity.OrderContract;
 import com.example.lancerpick.contract.repository.OrderContractRepository;
@@ -13,7 +14,6 @@ import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.*;
 import com.example.lancerpick.order.service.OrderCommandLocks;
 import java.time.*;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -255,7 +255,7 @@ public class ContractDocumentTransactions {
   }
 
   private LocalDateTime now() {
-    return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    return UtcTimes.nowMicros(clock);
   }
 
   private static BusinessException missing() {

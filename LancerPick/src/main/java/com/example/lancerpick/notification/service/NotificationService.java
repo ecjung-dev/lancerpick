@@ -1,6 +1,7 @@
 package com.example.lancerpick.notification.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.notification.dto.NotificationResponse;
 import com.example.lancerpick.notification.dto.UnreadCountResponse;
@@ -8,8 +9,6 @@ import com.example.lancerpick.notification.repository.NotificationQueries;
 import com.example.lancerpick.notification.repository.NotificationRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -79,7 +78,7 @@ public class NotificationService {
   }
 
   private LocalDateTime now() {
-    return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    return UtcTimes.nowMicros(clock);
   }
 
   private static BusinessException invalidId() {

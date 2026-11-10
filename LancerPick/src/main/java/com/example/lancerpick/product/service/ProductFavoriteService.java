@@ -1,6 +1,7 @@
 package com.example.lancerpick.product.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.common.web.PageResponse;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.product.dto.ProductSummaryResponse;
@@ -10,9 +11,6 @@ import com.example.lancerpick.product.repository.ProductFavoriteQueries;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import java.time.Clock;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -59,7 +57,7 @@ public class ProductFavoriteService {
         }
         var key = new ProductFavorite.Key(memberId, productId);
         if (entityManager.find(ProductFavorite.class, key) == null) {
-            var now = LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+            var now = UtcTimes.nowMicros(clock);
             entityManager.persist(new ProductFavorite(key, now));
         }
     }

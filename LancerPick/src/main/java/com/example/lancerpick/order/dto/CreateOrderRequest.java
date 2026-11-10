@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.http.HttpStatus;
 import com.example.lancerpick.common.text.TextNormalizer;
+import com.example.lancerpick.common.text.UuidText;
 
 import java.util.UUID;
 import tools.jackson.databind.annotation.JsonDeserialize;
@@ -55,17 +56,11 @@ public record CreateOrderRequest(
     }
 
     public UUID requestKeyAsUuid() {
-        if (requestKey == null
-                || !requestKey.matches(
-                "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) {
-            throw new BusinessException(
-                    HttpStatus.BAD_REQUEST,
-                    "VALIDATION_FAILED",
-                    "요청 키는 UUID 형식이어야 합니다."
-            );
-        }
-
-        return UUID.fromString(requestKey);
+        return UuidText.parse(requestKey).orElseThrow(() -> new BusinessException(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_FAILED",
+                "요청 키는 UUID 형식이어야 합니다."
+        ));
     }
 
     public String normalizedRequirements() {

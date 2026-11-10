@@ -1,6 +1,7 @@
 package com.example.lancerpick.contract.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.common.time.UtcTimes;
 import com.example.lancerpick.contract.dto.ContractResponse;
 import com.example.lancerpick.contract.entity.*;
 import com.example.lancerpick.contract.repository.*;
@@ -14,7 +15,6 @@ import com.example.lancerpick.order.service.OrderCommandLocks;
 import com.example.lancerpick.payment.service.ContractPaymentPolicy;
 import java.io.IOException;
 import java.time.*;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
@@ -243,7 +243,7 @@ public class OrderContractService {
   }
 
   private LocalDateTime now() {
-    return LocalDateTime.ofInstant(clock.instant(), ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+    return UtcTimes.nowMicros(clock);
   }
 
   // MySQL JSON may reorder keys; reconstruct the flat, sorted-key representation.
