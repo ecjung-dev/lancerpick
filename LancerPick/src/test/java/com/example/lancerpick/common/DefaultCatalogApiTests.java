@@ -35,6 +35,10 @@ import com.example.lancerpick.wallet.service.TopupApprovalTransactions;
 })
 class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
+    com.example.lancerpick.admin.service.AdminMemberService adminMemberService;
+    @MockitoBean
+    com.example.lancerpick.admin.repository.AdminMemberQueries adminMemberQueries;
+    @MockitoBean
     com.example.lancerpick.member.service.PasswordRecommendationQuery passwordRecommendationQuery;
     @MockitoBean
     com.example.lancerpick.chat.repository.OrderChatThreadQueries orderChatThreadQueries;
@@ -99,6 +103,8 @@ class DefaultCatalogApiTests extends CommonApiTests {
     com.example.lancerpick.notification.service.OrderEventPublisher orderEventPublisher;
     @MockitoBean
     com.example.lancerpick.notification.service.OutboxDispatcher outboxDispatcher;
+    @MockitoBean
+    com.example.lancerpick.notification.service.PasswordChangeRecommendations passwordChangeRecommendations;
     @MockitoBean
     com.example.lancerpick.notification.service.NotificationService notificationService;
     @MockitoBean

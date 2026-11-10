@@ -7,4 +7,9 @@ public record SettlementResponse(
     int feeRateBps,
     long feeAmount,
     long sellerAmount,
-    String createdAt) {}
+    String createdAt,
+    String productTitle,
+    String buyerId,
+    String buyerDisplayName,
+    String policyVersion,
+    String payoutStatus) {}

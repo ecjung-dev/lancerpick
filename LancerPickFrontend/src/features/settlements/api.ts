@@ -7,6 +7,7 @@ function periodParams(period: SettlementPeriod) {
   const params = new URLSearchParams()
   if (period.from) params.set('from', period.from)
   if (period.to) params.set('to', period.to)
+  if (period.q) params.set('q', period.q)
   return params
 }
 
@@ -16,10 +17,10 @@ export function getSettlements(page: number, size = 20, signal?: AbortSignal,
   const params = new URLSearchParams({ page: String(page), size: String(size) })
   for (const [key, value] of periodParams(period)) params.set(key, value)
   if (sort === 'oldest') params.set('sort', sort)
-  return apiRequest<PageResponse<Settlement>>(`/me/settlements?${params}`, { signal })
+  return apiRequest<PageResponse<Settlement>>(`/me/settlements?${params}`, { signal, cache: 'no-store' })
 }
 
 export function getSettlementSummary(signal?: AbortSignal, period: SettlementPeriod = { from: '', to: '' }) {
   const params = periodParams(period)
-  return apiRequest<SettlementSummary>(`/me/settlements/summary${params.size ? `?${params}` : ''}`, { signal })
+  return apiRequest<SettlementSummary>(`/me/settlements/summary${params.size ? `?${params}` : ''}`, { signal, cache: 'no-store' })
 }

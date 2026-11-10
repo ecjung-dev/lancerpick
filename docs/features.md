@@ -71,7 +71,7 @@
 <a id="members-profile"></a>
 ### 내 정보·닉네임·비밀번호 기준일
 
-내 정보 응답은 id(문자열), email, displayName, role, hasSellerProfile, displayNameChangeAvailableAt다. 닉네임 첫 변경은 허용하며 변경 후 한국 달력 6개월 제한을 적용한다. null 가능일은 첫 변경 가능을 뜻한다. 비밀번호 권고 기준일은 저장/조회 기반까지 있고 실제 권고 발송·반복/중복·스케줄러는 정은찬 후속이다.
+내 정보 응답은 id(문자열), email, displayName, role, hasSellerProfile, displayNameChangeAvailableAt다. 닉네임 첫 변경은 허용하며 변경 후 한국 달력 6개월 제한을 적용한다. null 가능일은 첫 변경 가능을 뜻한다. 비밀번호 권고 기준일부터 6개월마다 로그인한 회원에게 변경 권고 알림을 보낸다([권고 알림](#password-recommendation)).
 
 #### 실행·환경
 
@@ -132,7 +132,16 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 | basisAt | 중복 원천에 사용할 권고 기준 시각. null 아님 |
 | firstRecommendedAt | basisAt의 한국 달력 6개월 후, UTC |
 
-정은찬은 이 기준을 읽어 `PASSWORD_CHANGE_RECOMMENDED` 발송·회차/중복 원천·스케줄링을 연결한다. 기준일 이후 비밀번호가 바뀌면 예전 기준으로 알림이 생성되지 않도록 알림 저장 트랜잭션의 최신 기준 재확인/회원 잠금 여부를 함께 정해야 한다. 이 조회 서비스가 재확인·알림 저장을 원자적으로 묶어 주지는 않는다. 기존 아웃박스의 MEMBER 집계·order_id NULL 계약을 유지한다. 미변경 회원에게 반복하는 회차 계산과 실제 스캔 쿼리·인덱스는 발송 구현 시 별도 확정한다.
+이 조회 서비스는 재확인·알림 저장을 원자적으로 묶어 주지 않는다. 발송 쪽(정은찬)이 알림 저장 트랜잭션에서 회원 잠금 뒤 기준을 다시 읽는다. 발송 규칙은 아래와 같다.
+
+<a id="password-recommendation"></a>
+##### 비밀번호 변경 권고 발송(U6)
+
+- 스케줄링·스캔 쿼리·인덱스 없음: **로그인한 회원에게만** 권고한다. 권고일 뿐이라 로그인하지 않는 회원에게 알림이 쌓이지 않아도 되고, 다음 로그인 때 현재 회차가 생긴다.
+- 반복 회차: 기준일부터 한국 달력 6개월 × n이 지날 때마다 1건(`MemberChangePolicy.elapsedSixMonthPeriods`). n번째 경계는 앞 경계에 6개월을 더하지 않고 기준에서 계산한다(8/31 기준 → 2/28, 8/31, 2/28 …). 오래 로그인하지 않았다가 들어오면 지난 회차를 채우지 않고 현재 회차 1건만 만든다.
+- 최신 기준 재확인: 알림 저장 트랜잭션에서 비밀번호 변경·재설정과 같은 회원 배타 잠금(`findByIdForUpdate`) 뒤 기준일을 다시 읽는다. 비밀번호를 바꾸면 기준일이 바뀌어 새로 센다.
+- 중복 원천: (회원, 기준일, 회차)의 이름 기반 이벤트 ID + 아웃박스 `uk_outbox_event`.
+- 로그인 경계: 로그인 트랜잭션(읽기 전용·세션 저장)에 넣지 않는다. 로그인 성공 뒤 별도 짧은 트랜잭션이며 실패해도 로그인은 성공이다. 발행·전달 세부는 [아웃박스·알림](#communication-notifications)의 회원 알림 절을 따른다.
 
 김창재의 기존 변경/재설정 경로는 `Member.changePassword`를 재사용하므로 기록을 한곳에서 갱신한다. 세션·요청 제한·메일·토큰 소비와 기존 롤백 경계를 바꾸지 않았다. 기존 회원 초기 기준에 관한 미정 문구보다 위 사용자 결정을 우선한다.
 
@@ -326,7 +335,7 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 <a id="members-sanctions"></a>
 ### 일반 제한·보안 잠금·관리자 회원
 
-일반 제한은 로그인과 기존 거래를 허용하고 신규 주문·판매자 수락을 차단한다. 상품 등록 제재 검사는 main 미반영 로컬 브랜치 범위다. 보안 잠금은 새 로그인/기존 인증과 구매자 자동 확정 타이머를 차단·중단한다. 자동 취소/환불/정산 회수는 하지 않는다. 관리자 회원 목록·검색·상세·적용/해제 HTTP/화면은 main에 없으며 [로컬 브랜치 기록](change-history.md#local-admin-member-branch)으로 보존한다. 관리자·본인 보호, 같은 요청 키·만료·교체·해제 경합을 서버에서 검증한다.
+일반 제한은 로그인과 기존 거래를 허용하고 신규 주문·상품 등록·판매자 수락을 차단한다. 보안 잠금은 새 로그인/기존 인증과 구매자 자동 확정 타이머를 차단·중단한다. 자동 취소/환불/정산 회수는 하지 않는다. 관리자 회원 목록·검색·상세·적용/해제 API와 `/admin/members` 화면은 main에 반영됐다(#157). 관리자·본인 보호, 같은 요청 키·만료·교체·해제 경합을 서버에서 검증한다. [기존 구현 근거](change-history.md#local-admin-member-branch).
 
 #### 업무 규칙·연결
 
@@ -336,8 +345,8 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 
 | 항목 | 이번 구현 | 후속 연결 |
 | --- | --- | --- |
-| B1 제재 조회 | `MemberSanctionQuery.restriction(long memberId)` | 정은찬: 주문·타이머 검사(주문 생성·판매자 수락 차단 U7 연결 2026-11-09, `order/service/NewTradeRestrictions`), 박소현: 신규 상품 활동 검사 |
-| B2 제재 명령 | `MemberSanctionCommandService.apply` / `revoke`, 관리자 DB 권한·회원 잠금·이력·중복 방지 | 황준범: 회원 관리 API·화면 |
+| B1 제재 조회 | `MemberSanctionQuery.restriction(long memberId)` | 주문·타이머 U7/U8 재사용, 황준범이 상품 등록 차단 연결(박소현 리뷰) |
+| B2 제재 명령 | `MemberSanctionCommandService.apply` / `revoke`, 관리자 DB 권한·회원 잠금·이력·중복 방지 | 황준범: 회원 관리 API·화면 연결 완료, main 반영(#157) |
 | 보안 잠금 인증 | 로그인 거절, 인증 버전 증가, 기존 HTTP/소켓 인증 재검사 경로 연결 | 실제 브라우저·소켓 폐기 확인은 별도 |
 | 타이머 중단 전달 | 커밋 후 호출, 실패/연결 전 미처리 기록, 내부 재시도 | 정은찬: `SecurityLockTimerStopper` 구현체·타이머 재검사 |
 | 만료 | 서버 UTC 시각으로 기간 종료 시 제한 없음으로 조회 | 별도 만료 Batch·행 삭제 불필요 |
@@ -345,6 +354,20 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 #### API·입력·오류
 
 ##### API 계약
+
+관리자 회원 API의 공통 prefix는 `/api/admin/members`다. 로그인한 ADMIN에 더해 현재 DB 역할을 검사하며 변경은 CSRF를 요구한다. 응답은 no-store다.
+
+| 메서드·하위 경로 | 입력 | 성공 |
+| --- | --- | --- |
+| GET 목록 | q·restriction·page=0·size=20 | 200 PageResponse |
+| GET `/{memberId}` | 회원 ID | 200 member·emailVerifiedAt·serverTime·canManage·activeSanctions |
+| GET `/{memberId}/sanctions` | page·size | 200 전체 이력 PageResponse |
+| POST `/{memberId}/sanctions` | kind·reason·endsAt·requestKey | 신규/같은 요청 모두 200 `{memberId,sanctionId}` |
+| POST `/{memberId}/sanctions/{sanctionId}/revoke` | reason | 204 |
+
+q는 100 코드 포인트 이하이며 숫자만이면 회원 ID 정확 일치, 나머지는 이메일·표시 이름의 문자 그대로 부분 일치다. restriction은 생략 또는 NONE/GENERAL_RESTRICTION/SECURITY_LOCK이며 두 제재 공존 시 대표 상태로 필터링한다. page≥0, size 1~100, 최신 가입·ID 내림차순이다. ID는 JSON 문자열이다. 적용 종료 시각은 오프셋 ISO 필수·UTC 변환 후 미래 시각, requestKey는 표준 UUID다. 사유는 정규화 후 1~1000 코드 포인트, 숫자/불리언의 문자열 강제 변환은 차단한다.
+
+목록은 id/email/displayName/role/restriction/createdAt, 제재 이력은 id/kind/state/reason/appliedBy/startsAt/endsAt/revokedAt/revokedBy/revokeReason/timerStopDeliveredAt이다. 비밀번호·해시·인증 버전·요청 키는 조회하지 않는다. 해제 재시도는 최초 사유·시각을 보존하며 이전 제재 ID 해제가 교체된 새 제재를 해제하지 않는다. 본인/관리자 대상 403, 없는 회원·타 회원 제재 404, 잘못된 입력 400, 다른 조건의 같은 키 409다. 일반 권한·CSRF·상세 오류 코드는 아래 공통 계약과 기존 이력에 따른다.
 
 ##### B1: 조회 계약
 
@@ -370,7 +393,7 @@ long sanctionId = memberSanctionCommandService.apply(
 memberSanctionCommandService.revoke(adminId, memberId, sanctionId, reason);
 ```
 
-- 관리자 ID는 추후 Controller의 `CurrentMemberId.require(authentication)`에서 받는다. 요청 본문의 관리자 ID를 신뢰하지 않는다. 서비스도 DB ADMIN 권한을 확인한다. 자기 자신·관리자 계정 대상 제재는 거절한다.
+- 관리자 ID는 Controller의 `CurrentMemberId.require(authentication)`에서 받는다. 요청 본문의 관리자 ID를 신뢰하지 않는다. 서비스도 DB ADMIN 권한을 확인한다. 자기 자신·관리자 계정 대상 제재는 거절한다.
 - 사유는 정규화 후 1~1,000자, 종료 시각은 잠금 뒤 서버 시각보다 미래다. 모든 시각은 UTC LocalDateTime, 마이크로초 정밀도다.
 - 호출자는 외부 트랜잭션 없이 호출한다(`NEVER`). 서비스의 짧은 READ_COMMITTED 트랜잭션에서 회원 ID 오름차순으로 관리자 공유 잠금·대상 회원 배타 잠금을 얻는다. 주문/지갑 잠금은 이 트랜잭션에서 얻지 않는다.
 - 제재 이력 저장과 보안 잠금의 인증 버전 증가는 함께 성공·롤백한다. 버전은 만료·철회 때 감소시키지 않는다. 기존 세션은 복구되지 않고 새 로그인이 필요하다.
@@ -380,6 +403,8 @@ memberSanctionCommandService.revoke(adminId, memberId, sanctionId, reason);
 #### 화면·캐시·계정 경계
 
 ##### 화면과 요청 복구
+
+관리자 메뉴의 회원 관리에서 검색·상세·현재 제재·전체 이력·적용/해제를 제공한다. 한국 시간 입력을 UTC로 변환하며 실제 판단은 서버 시각을 따른다. 30초/포커스 재조회, 401/403 후 캐시 표시 차단, 처리 영향 확인 체크, 전송 중 반복 클릭 차단을 적용한다. 불명확한 결과는 계정별 메모리에 전체 원래 요청과 UUID를 보존해 경로 이동 후에도 같은 키로 재확인한다. 로그아웃/계정 변경 시 정리하며 브라우저 종료/새로고침을 넘는 영속 보관은 없다. 보안 잠금 타이머 전달 미완료는 경고하되 재시도 스케줄러는 별도다.
 
 #### 데이터·제약
 
@@ -1715,9 +1740,26 @@ OrderPaymentController는 인증 ID·입력을 확인하고 OrderPaymentService�
 결제는 거래 조건·금액 동의, 구매 확정은 결과물 확인과 확정 후 환불 불가 안내 동의가 있어야 실행한다. 직접 취소는 사유를 받는다. 완료·환불 등 재호출 결과는 응답의 현재 상태를 표시하고 임의로 결제 성공 화면으로 이동하지 않는다.
 
 <a id="finance-settlement"></a>
+
+### 판매 수익 검색·지급 구분 후속 — 2026-11-10, 로컬 구현
+
+`feature/settlement-query-details`(황준범, main `3353e57` 기준). GET `/api/me/settlements`와 `/summary`에 선택 검색어 `q`를 추가한다. 공백 정리 후 100 코드 포인트 이하, 숫자만이면 주문번호 정확 일치(0/범위 초과는 빈 결과), 나머지는 주문 당시 보관 상품명 부분 일치다. `%`, `_`, `!`는 문자 그대로 검색한다. 기간·정렬·페이지와 기존 금액 필드는 유지하며 목록·총건수·합계가 동일한 판매자/기간/검색 조건을 사용한다. 상품 원본 수정은 검색 결과의 보관 상품명을 바꾸지 않는다.
+
+목록 응답에 `productTitle`(보관 정보가 없으면 null), `buyerId`, `buyerDisplayName`(현재 표시 이름), `policyVersion`, `payoutStatus`를 추가한다. JPA/QueryDSL 스칼라 및 정산 조회이며 구매자 이메일·인증 정보를 반환하지 않는다. 지급 상태는 다음과 같다.
+
+| 값 | 의미 |
+| --- | --- |
+| CREDITED | 해당 주문의 PAID 결제·정책·결제액과 해당 판매자의 동일 수익 금액 SELLER_PAYOUT 원장이 일치함 |
+| RECORD_ONLY | 위 지급 증거가 없는 LEGACY_V1 수익 기록. 적립금 지급 완료로 표시하지 않음 |
+| UNCONFIRMED | 그 외 정책의 정산에 지급 증거가 없음. 화면에서 지급 기록 확인 필요로 표시 |
+
+실제 지급 여부를 계약 버전만으로 단정하지 않으며 다른 회원의 원장·금액 불일치는 지급 근거로 쓰지 않는다. 원장 EXISTS로 판정해 목록/합계 행 수를 늘리지 않는다. 합계는 조회 조건의 정산 기록 합계이며 사용 가능 잔액이나 지급 완료 금액 합계가 아니다. 금액 지급/환불 명령·DB·Flyway는 바꾸지 않는다.
+
+판매 수익 화면은 검색·기간·정렬을 URL에 보존하고 페이지·새로고침과 계정 캐시 경계를 유지한다. 입력 초기화와 검색 조건이 목록/합계의 조회 키에 함께 반영된다. 새 화면 표시는 API 추가 필드를 사용하며 실제 서버 재시작이 필요하다. 검증 범위는 [이력](change-history.md#settlement-query-details)을 따른다. main 반영 전이며 PR·CI 상태는 GitHub에서 확인한다.
+
 ### 구매 확정·판매 수익
 
-구매 확정·정산/지급·주문 완료·원장을 함께 처리하고 반복 요청으로 중복 생성하지 않는다. 본인 판매 수익 목록/조건 합계·한국 날짜 기간을 제공한다. 기록상의 수익과 실제 적립금 지급을 정책 버전별로 구분한다. 상품명/주문번호 검색·구매자/상품 표시 등 남은 범위는 진행 문서에 둔다.
+구매 확정·정산/지급·주문 완료·원장을 함께 처리하고 반복 요청으로 중복 생성하지 않는다. 본인 판매 수익 목록/조건 합계·한국 날짜 기간을 제공한다. 상품명/주문번호 검색·구매자/보관 상품 표시·실제 지급 증거 구분은 위 로컬 후속에 구현했으며 main 반영 여부는 진행 문서를 따른다.
 
 #### 업무 규칙·연결
 
@@ -2142,7 +2184,7 @@ V3 주문의 기한 통지(E8)·보관/지급/반환 알림 유형·자동 확�
 2. `OutboxDispatchScheduler`가 2초 간격(`lancerpick.notifications.dispatch-delay-ms`)으로 기한이 된 이벤트를 최대 100건 고른다.
 3. `OutboxDispatcher`는 이벤트마다 **별도 트랜잭션**에서 행을 잠그고 상태를 다시 확인한 뒤 알림을 만들고 `COMPLETED`로 바꾼다. 여러 처리기가 같은 이벤트를 골라도 한 번만 완료된다.
 4. 처리 실패는 다른 이벤트를 막지 않는다. 시도 수를 늘리고 30초부터 두 배씩(최대 1시간) 미룬다. 최초 실패를 포함해 5회 실패하면 `FAILED`로 멈춘다. 알림 실패는 이미 커밋된 거래를 되돌리지 않는다.
-   - 다시 시도해도 성공할 수 없는 오류(지원하지 않는 집계·스키마 버전, JSON·수신자 ID 형식 오류, 주문 당사자가 아닌 수신자, 없는 주문)는 첫 실패에서 바로 `FAILED`로 멈춘다.
+   - 다시 시도해도 성공할 수 없는 오류(지원하지 않는 집계·스키마 버전·유형, JSON·수신자 ID 형식 오류, 주문 당사자가 아니거나 집계 회원이 아닌 수신자, 없는 주문·회원)는 첫 실패에서 바로 `FAILED`로 멈춘다.
    - 실패 기록은 기한이 지난 `PENDING`에만 남긴다. 같은 이벤트를 고른 다른 처리기가 이미 다음 시도를 미뤘다면 횟수를 다시 올리지 않아, 동시 경합만으로 `FAILED`가 되지 않는다.
    - 실패 기록 자체가 실패해도(잠금 대기 초과 등) 예외를 이벤트 단위로 삼키고 로그만 남긴다. 이벤트는 `PENDING`으로 남아 다음 배치에서 다시 처리되며, 같은 배치의 다른 이벤트는 계속 처리된다.
 
@@ -2156,6 +2198,18 @@ V3 주문의 기한 통지(E8)·보관/지급/반환 알림 유형·자동 확�
 - 처리기는 페이로드의 수신자가 현재 주문의 구매자·판매자인지 다시 확인하고, 아니면 이벤트를 실패 처리한다.
 - 읽음 처리는 `read_at IS NULL` 조건부 UPDATE라 동시 요청에도 먼저 기록한 시각을 덮어쓰지 않는다.
 - 페이로드에는 주문 ID·이력 ID·행동·수신자 ID만 넣는다. 사유·요구사항·결제 정보는 넣지 않는다. 처리 실패 로그에는 이벤트 ID와 예외 유형만 남긴다.
+
+##### 회원 알림: 비밀번호 변경 권고(U6)
+
+주문과 무관한 회원 알림이다. 정책(회차·기준 재확인)은 [비밀번호 변경 권고 발송](#password-recommendation)을 따른다.
+
+- 발행: `AuthController.login`이 로그인을 마친 뒤 `PasswordChangeRecommendations.issueAfterLogin(memberId)`를 부른다. 별도 `REQUIRES_NEW`·READ_COMMITTED 트랜잭션이고 실패는 회원 ID·예외 유형만 로그로 남긴다(로그인 응답 200 유지).
+- 대상 판정: 잠금 없는 `PasswordRecommendationQuery`로 첫 권고 시각 전이면 끝낸다. 이번 회차 이벤트가 이미 있으면 잠그지 않고 끝낸다(비밀번호를 바꾸지 않은 회원의 매 로그인 잠금 방지). 그 밖에는 회원 배타 잠금 → 기준일 재조회 → 회차 계산 → `existsByEventId` 재확인 → 저장.
+- 이벤트 ID: `UUID.nameUUIDFromBytes("PASSWORD_CHANGE_RECOMMENDED:<회원>:<기준일 µs>:<회차>")`. 구성 문자열을 바꾸면 이미 저장된 권고와 중복되므로 바꾸지 않는다. 디스패치 전 재로그인·동시 로그인도 회차당 1건이다.
+- 아웃박스: `aggregate_type=MEMBER`, `aggregate_id`=회원, `schema_version=1`, 유형 `PASSWORD_CHANGE_RECOMMENDED`, 페이로드 `memberId`·`round`·`basisAt`·`recipientIds`(본인만).
+- 디스패처: MEMBER 집계는 이 유형만 받는다(그 밖은 `UNSUPPORTED_EVENT`). 회원이 없으면 `AGGREGATE_NOT_FOUND`, 수신자가 집계 회원이 아니면 `INVALID_RECIPIENT`로 바로 `FAILED`. 알림은 `order_id` NULL이라 목록의 `orderId`·`productTitle`이 null이다. ORDER 집계의 처리 순서·오류 코드는 그대로다.
+- 화면: 문구 "비밀번호를 바꾼 지 6개월이 지났습니다. 계정 보호를 위해 내 정보에서 비밀번호 변경을 권장합니다." 선택 시 `/mypage/profile`(내 정보, 비밀번호 변경 폼)로 이동한다. `notificationTarget`은 주문 ID가 있으면 주문 상세가 우선이고, 이동할 곳이 정해지지 않은 회원 알림은 링크 없이 읽음 버튼으로 남는다. 읽음 실패 안내의 링크 문구는 주문이 아니면 "읽음 처리 없이 바로 가기"다.
+- DB·스케줄러 변경 없음. 다른 영역: auth `AuthController` 호출 한 줄, member `MemberChangePolicy` 회차 계산 메서드(기존 `sixMonthsAfter` 결과 동일).
 
 ##### 다른 영역 영향
 

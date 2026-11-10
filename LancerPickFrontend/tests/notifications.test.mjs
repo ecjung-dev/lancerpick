@@ -47,6 +47,17 @@ test('only valid order IDs become links, keeping large IDs as strings', () => {
     assert.equal(notificationTarget({ orderId }), null)
 })
 
+test('password change recommendation is a member notice that links to my profile, not an order', () => {
+  const message = notificationMessage('PASSWORD_CHANGE_RECOMMENDED')
+  assert.notEqual(message, notificationMessage('ORDER_SOMETHING_NEW'))
+  assert.match(message, /비밀번호/)
+  assert.equal(notificationTarget({ orderId: null, type: 'PASSWORD_CHANGE_RECOMMENDED' }), '/mypage/profile')
+  // 주문 ID가 있으면 주문 상세가 우선하고, 이동할 곳이 정해지지 않은 회원 알림은 링크가 없다.
+  assert.equal(notificationTarget({ orderId: '7', type: 'PASSWORD_CHANGE_RECOMMENDED' }), '/orders/7')
+  for (const type of ['MEMBER_SOMETHING_NEW', 'toString', '__proto__', undefined])
+    assert.equal(notificationTarget({ orderId: null, type }), null)
+})
+
 test('unread badge hides zero or invalid counts and caps at 99+', () => {
   assert.equal(unreadBadge(undefined), null)
   assert.equal(unreadBadge(0), null)

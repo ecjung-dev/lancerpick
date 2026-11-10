@@ -1,6 +1,7 @@
 package com.example.lancerpick.product;
 
 import com.example.lancerpick.common.exception.BusinessException;
+import com.example.lancerpick.member.service.MemberSanctionQuery;
 import com.example.lancerpick.order.service.NewOrderPolicy;
 import com.example.lancerpick.product.dto.ProductSearchOptions;
 import com.example.lancerpick.product.dto.ProductSummaryResponse;
@@ -32,6 +33,7 @@ class ProductOrderMinimumPriceIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired EntityManager em;
     @Autowired Clock clock;
+    @Autowired MemberSanctionQuery sanctions;
     @Autowired ProductSearchQueries queries;
     final JsonMapper json = new JsonMapper();
     final NewOrderPolicy v3 = new NewOrderPolicy(false, true);
@@ -43,8 +45,8 @@ class ProductOrderMinimumPriceIntegrationTests {
     String token;
 
     @BeforeEach void fixture() {
-        v3Products = new ProductManagementService(em, clock, v3);
-        legacyProducts = new ProductManagementService(em, clock, legacy);
+        v3Products = new ProductManagementService(em, clock, sanctions, v3);
+        legacyProducts = new ProductManagementService(em, clock, sanctions, legacy);
         seller = insert("INSERT INTO members(email,password_hash,display_name,role,created_at,updated_at) VALUES (?,'fixture','판매자','USER',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))", UUID.randomUUID() + "@test.invalid");
         category = insert("INSERT INTO categories(name,display_order) VALUES (?,0)", UUID.randomUUID().toString());
         jdbc.update("INSERT INTO seller_profiles(member_id,introduction,specialty,created_at,updated_at) VALUES (?,'소개','분야',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))", seller);
@@ -81,6 +83,20 @@ class ProductOrderMinimumPriceIntegrationTests {
         var fixed = v3Products.patch(seller, String.valueOf(id), json.readTree("{\"priceAmount\":10000,\"expectedVersion\":0}"));
         assertThat(fixed.priceAmount()).isEqualTo(10_000);
         assertThat(fixed.version()).isEqualTo(1);
+    }
+
+    @Test void restrictionAndV3MinimumBothApplyAndExistingEditsRemainAllowed() {
+        long product = v3Products.create(seller, json.readTree(body(10_000))).id().transform(Long::parseLong);
+        long admin = insert("INSERT INTO members(email,password_hash,display_name,role,created_at,updated_at) VALUES (?,'fixture','관리자','ADMIN',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))", UUID.randomUUID() + "@test.invalid");
+        jdbc.update("INSERT INTO member_sanctions(member_id,kind,reason,applied_by,request_key,starts_at,ends_at) VALUES (?,'GENERAL_RESTRICTION','통합 검사',?,?,UTC_TIMESTAMP(6)-INTERVAL 1 MINUTE,UTC_TIMESTAMP(6)+INTERVAL 1 DAY)", seller, admin, UUID.randomUUID().toString());
+        assertThatThrownBy(() -> v3Products.create(seller, json.readTree(body(10_000))))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.code()).isEqualTo("MEMBER_RESTRICTED"));
+        assertThat(v3Products.patch(seller, String.valueOf(product), json.readTree("{\"title\":\"기존 상품 수정\",\"expectedVersion\":0}")).version()).isEqualTo(1);
+        jdbc.update("UPDATE member_sanctions SET ends_at=UTC_TIMESTAMP(6)-INTERVAL 1 SECOND WHERE member_id=?", seller);
+        assertThatThrownBy(() -> v3Products.create(seller, json.readTree(body(9_999))))
+                .isInstanceOfSatisfying(BusinessException.class, e -> assertThat(e.code()).isEqualTo("PRODUCT_PRICE_BELOW_ORDER_MINIMUM"));
+        assertThat(v3Products.create(seller, json.readTree(body(10_000))).priceAmount()).isEqualTo(10_000);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM products WHERE seller_id=?", Long.class, seller)).isEqualTo(2);
     }
 
     @Test void stoppedCheapProductCanBeEditedButNotResumedUntilPriceIsRaised() {

@@ -32,6 +32,9 @@ const messages: Record<string, string> = {
   ORDER_DELIVERY_DUE_NOTIFIED: '결제가 완료되어 납기가 정해졌습니다. 주문 상세에서 납기를 확인해 주세요.',
   ORDER_REDELIVERY_DUE_NOTIFIED:
     '수정 요청으로 재납품 기한이 정해졌습니다. 주문 상세에서 기한을 확인해 주세요.',
+  // 회원 알림(주문과 무관)
+  PASSWORD_CHANGE_RECOMMENDED:
+    '비밀번호를 바꾼 지 6개월이 지났습니다. 계정 보호를 위해 내 정보에서 비밀번호 변경을 권장합니다.',
 }
 
 /** 서버가 새 유형을 먼저 배포해도 화면이 깨지지 않도록 일반 문구로 대신한다. */
@@ -39,9 +42,18 @@ export function notificationMessage(type: string) {
   return messages[type] ?? '거래 상태가 변경되었습니다.'
 }
 
-/** 주문 알림만 주문 상세로 이동한다. ID 형식이 올바르지 않으면 링크를 만들지 않는다. */
-export function notificationTarget(item: Pick<NotificationItem, 'orderId'>) {
-  return item.orderId && /^[1-9][0-9]{0,18}$/.test(item.orderId) ? `/orders/${item.orderId}` : null
+/** 회원 알림 중 이동할 화면이 정해진 유형. 주문과 연결되지 않는다. */
+const memberTargets: Record<string, string> = {
+  PASSWORD_CHANGE_RECOMMENDED: '/mypage/profile',
+}
+
+/**
+ * 주문 알림은 주문 상세로, 정해진 회원 알림은 해당 화면으로 이동한다.
+ * 주문 ID 형식이 올바르지 않거나 이동할 곳이 없는 유형이면 링크를 만들지 않는다.
+ */
+export function notificationTarget(item: Pick<NotificationItem, 'orderId'> & { type?: string }) {
+  if (item.orderId) return /^[1-9][0-9]{0,18}$/.test(item.orderId) ? `/orders/${item.orderId}` : null
+  return (item.type && Object.hasOwn(memberTargets, item.type) && memberTargets[item.type]) || null
 }
 
 /** 헤더 배지는 99를 넘으면 99+로 줄인다. 0 이하·비정상 값은 표시하지 않는다. */

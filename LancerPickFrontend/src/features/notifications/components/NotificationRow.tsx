@@ -35,6 +35,7 @@ export function NotificationRow({ item, onNavigate }: { item: NotificationItem; 
 export function NotificationReadError({ target, onNavigate }: { target: string | null; onNavigate?: () => void }) {
   return <p role="alert" className={styles.error}>
     읽음 처리 결과를 확인하지 못했어요. 목록을 다시 확인하거나 다시 눌러 주세요.
-    {target && <> <Link to={target} onClick={onNavigate}>읽음 처리 없이 주문 보기</Link></>}
+    {target && <> <Link to={target} onClick={onNavigate}>
+      {target.startsWith('/orders/') ? '읽음 처리 없이 주문 보기' : '읽음 처리 없이 바로 가기'}</Link></>}
   </p>
 }

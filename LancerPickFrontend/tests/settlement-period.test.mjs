@@ -14,6 +14,48 @@ const { SettlementPage } = await server.ssrLoadModule('/src/features/settlements
 const { getSettlements, getSettlementSummary } = await server.ssrLoadModule('/src/features/settlements/api.ts')
 after(async () => { await server.close() })
 
+test('keyword survives URL pagination and is shared by list and summary requests', async () => {
+  const filters = readSettlementFilters(new URLSearchParams('q=%2050%25_%20&page=2&sort=oldest'))
+  assert.equal(filters.q, '50%_')
+  assert.equal(readSettlementFilters(settlementSearch(filters)).q, '50%_')
+  const original = globalThis.fetch, urls = []
+  globalThis.fetch = async (url, init) => {
+    urls.push(new URL(url, 'http://localhost'))
+    assert.equal(init.cache, 'no-store')
+    return new Response('{}', { headers: { 'Content-Type': 'application/json' } })
+  }
+  try {
+    await getSettlements(2, 20, undefined, filters, filters.sort)
+    await getSettlementSummary(undefined, filters)
+    assert.deepEqual(urls.map(url => url.searchParams.get('q')), ['50%_', '50%_'])
+    assert.equal(urls[0].searchParams.get('page'), '2')
+    assert.ok(urls.every(url => !url.searchParams.has('memberId')))
+  } finally { globalThis.fetch = original }
+})
+
+test('searched earnings show escaped snapshot/buyer and distinguish actual credit from records', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const items = ['CREDITED', 'RECORD_ONLY', 'UNCONFIRMED'].map((payoutStatus, i) => ({
+    id: String(i+1), orderId: String(i+10), productTitle: '<img src=x onerror=alert(1)> 로고',
+    buyerId: '7', buyerDisplayName: '<script>buyer</script>', policyVersion: 'CONTRACT_V3',
+    grossAmount: 10000, feeAmount: 1000, sellerAmount: 9000, createdAt: '2026-11-09T00:00:00Z', payoutStatus,
+  }))
+  client.setQueryData(['wallet','settlements',0,'','','latest','로고'], {
+    items,page:0,size:20,totalElements:3,totalPages:1,
+  })
+  client.setQueryData(['wallet','settlement-summary','','','로고'], {
+    completedCount:3,grossAmount:30000,feeAmount:3000,sellerAmount:27000,
+  })
+  try {
+    const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/mypage/settlements?q=로고'] },
+      createElement(QueryClientProvider,{client},createElement(SettlementPage))))
+    for (const text of ['적립금 지급 완료','기존 거래 · 수익 기록만 보관','적립금 지급 기록 확인 필요','27,000원']) assert.ok(html.includes(text))
+    assert.match(html,/type="search"[^>]*value="로고"/)
+    assert.ok(html.includes('&lt;script&gt;buyer&lt;/script&gt;'))
+    assert.doesNotMatch(html,/<img src=x|<script>buyer/)
+  } finally { client.clear() }
+})
+
 test('period URL validates dates and sort without losing pagination or applying invalid ranges', () => {
   const filters = readSettlementFilters(new URLSearchParams('from=2026-11-01&to=2026-11-09&sort=oldest&page=2'))
   assert.deepEqual(filters, { from: '2026-11-01', to: '2026-11-09', sort: 'oldest', page: 2 })
