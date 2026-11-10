@@ -4,8 +4,15 @@
 
 ## 기록 해석
 
+<a id="wallet-topup-page-split"></a>
+### 테스트 충전 화면에서 결제 위젯 흐름·요약 분리(리팩터링 5-4) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/wallet-topup-page-split`, main `a1575e0`(#176) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 네 번째 파일이다. `WalletTopupPage.tsx`(476줄 → 272줄)에서 결제 위젯 준비·정리와 결제 요청 흐름(단계·로딩·약관 동의·오류·제출 ID 상태, 위젯 runtime·언마운트·중복 실행 참조, `prepare`·`changeAmount`·`requestPayment`)을 `features/wallet/useTopupCheckout.ts`로, 오른쪽 충전 요약을 `components/TopupSummary.tsx`로 옮겼다. 코드는 그대로 옮겼고 이전 위젯의 늦은 이벤트 무시, 신청 생성 후 금액 변경 금지·상태 조회 이동, 자동 재시도 없음, 훅 호출 순서는 같다. 화면 문구·버튼 상태 변경 없음. 영향 영역: wallet(황준범). API·서버 변경 없음.
+
+검증: typecheck·lint·build 통과, `test:api` **327건 통과**(`account-navigation.test.mjs`에 미리보기 충전 화면이 금액 단계·요약을 그리고 결제 위젯은 그리지 않는지 확인하는 렌더 테스트 1건 추가, 2026-11-10). 토스 결제 위젯을 띄운 실제 브라우저 확인은 하지 않았고 원격 CI는 PR에서 확인한다.
+
 <a id="review-timer-views-split"></a>
-### 자동 구매 확정 타이머 조회·판단 분리(리팩터링 5-3) — 2026-11-10, 로컬 구현
+### 자동 구매 확정 타이머 조회·판단 분리(리팩터링 5-3) — 2026-11-10, main 반영(#176)
 
 정은찬, `refactor/review-timer-query-split`, main `c163008`(#175) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 세 번째 파일이다. `ReviewTimerService`(420줄 → 348줄)에서 타이머 상태 응답(`view`)·기산점(`basisAt`)·현재 납품·관리자 해제 이후 여부와 응답 변환을 order 내부 `ReviewTimerViews`로 옮겼다. 시작·관리자 해제·만료·사전 안내·보안 잠금 중단 명령과 그 트랜잭션(`@Transactional`, 건별 `TransactionTemplate` READ_COMMITTED)·구매자 → 주문 잠금 순서는 서비스에 그대로 있고, 새 클래스는 잠금·상태 변경 없이 호출자의 트랜잭션 안에서 읽기만 한다. 공개 메서드·응답·오류 코드 변경 없음. 영향 영역: order(정은찬). API·DB 변경 없음.
 

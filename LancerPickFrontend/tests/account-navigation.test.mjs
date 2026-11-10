@@ -9,6 +9,7 @@ import { createServer } from 'vite'
 const server = await createServer({ configFile: false, cacheDir: 'node_modules/.vite-test-account-navigation',
   server: { middlewareMode: true, ws: false, watch: null }, appType: 'custom' })
 const { WalletPreviewPage, ConnectedWalletPage } = await server.ssrLoadModule('/src/features/wallet/pages/WalletPage.tsx')
+const { WalletTopupPreviewPage } = await server.ssrLoadModule('/src/features/wallet/pages/WalletTopupPage.tsx')
 const { SettlementPage } = await server.ssrLoadModule('/src/features/settlements/pages/SettlementPage.tsx')
 const { OrderListPage } = await server.ssrLoadModule('/src/features/orders/pages/OrderListPage.tsx')
 const { OrderDetailPage } = await server.ssrLoadModule('/src/features/orders/pages/OrderDetailPage.tsx')
@@ -285,4 +286,15 @@ test('delivery result display does not link non-HTTPS schemes', () => {
   for (const url of ['http://example.com/result', 'javascript:alert(1)', 'data:text/html,example', '//example.com/result', 'httpsx://example.com']) {
     assert.doesNotMatch(renderDeliveryLink(url), /결과물 확인/)
   }
+})
+
+test('wallet topup preview renders amount step and summary without payment widgets', () => {
+  const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(WalletTopupPreviewPage)))
+  assert.match(html, /화면 미리보기/)
+  assert.match(html, /aria-label="충전 단계"/)
+  assert.match(html, /value="50000"/)
+  assert.match(html, /aria-label="충전 요약"/)
+  assert.match(html, /1원 = 1 적립금/)
+  assert.match(html, /50,000원/)
+  assert.doesNotMatch(html, /id="topup-payment-methods"|테스트 결제하기/)
 })
