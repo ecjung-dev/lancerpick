@@ -39,7 +39,8 @@ public class OrderCommandLocks {
   /**
    * 실행 회원이 현재 보안 잠금 중이면 403 MEMBER_LOCKED(로그인 거절과 같은 코드·문구). 반드시 {@link #lockActor} 계열로 회원을
    * 공유 잠금한 뒤 부른다. 제재 적용의 회원 배타 잠금과 직렬화되므로, 인증 필터를 이미 통과한 요청도 잠금 커밋 뒤에는 막힌다.
-   * 구매 확정처럼 판매자에게 돈이 나가는 구매자 명령만 쓴다(환불·문의·계약 내부 처리 등은 대상이 아니다).
+   * 구매자의 구매 확정과 판매자의 거래 진전 명령(계약 작성·서명, 납품·재납품, 취소 요청 거절, 자동 확정 타이머 시작)만 쓴다.
+   * 구매자 지갑으로만 반환하는 취소·환불, 결제 전 거절, 문의, 계약 PDF 내부 처리는 대상이 아니다.
    */
   public void requireNotSecurityLocked(long memberId) {
     if (sanctions.restriction(memberId).securityLocked()) {

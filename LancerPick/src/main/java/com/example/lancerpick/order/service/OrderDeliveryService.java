@@ -57,6 +57,8 @@ public class OrderDeliveryService {
     var order = locks.lockFulfillmentOrder(memberId, orderId);
     if (!order.getSellerId().equals(memberId))
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 납품할 수 있습니다.");
+    // 보안 잠금 판매자의 거래 진전 명령은 회원 잠금 아래 재검사한다(인증 필터를 통과한 진행 중 요청 포함).
+    locks.requireNotSecurityLocked(memberId);
     int sequence = request.expectedSequenceNo();
     // 이미 제출한 회차는 현재 상태·취소 요청 검사보다 먼저 확인한다. 재전송은 항상 충돌이다.
     if (deliveries.existsByOrderIdAndSequenceNo(orderId, sequence))

@@ -124,6 +124,8 @@ public class ReviewTimerService {
       throw conflict("ORDER_POLICY_NOT_READY", "결제 금액 보관 정책 주문이 아닙니다.");
     if (order.getSellerId() != memberId)
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 타이머를 시작할 수 있습니다.");
+    // 보안 잠금 판매자의 거래 진전 명령은 회원 잠금 아래 재검사한다(인증 필터를 통과한 진행 중 요청 포함).
+    locks.requireNotSecurityLocked(memberId);
     var at = now();
     // 재전송·동시 요청: 주문 잠금 아래 이미 활성 타이머가 있으면 새로 만들지 않고 현재 상태를 돌려준다.
     if (timers.existsByOrderIdAndStatus(orderId, OrderResponseTimer.ACTIVE))

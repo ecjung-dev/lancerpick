@@ -90,6 +90,8 @@ public class OrderContractService {
     var order = lock(memberId, orderId, OrderStatus.AWAITING_CONTRACT);
     if (!order.getSellerId().equals(memberId))
       throw error(HttpStatus.FORBIDDEN, "FORBIDDEN", "판매자만 초안을 작성할 수 있습니다.");
+    // 보안 잠금 판매자의 거래 진전 명령은 회원 잠금 아래 재검사한다(인증 필터를 통과한 진행 중 요청 포함).
+    locks.requireNotSecurityLocked(memberId);
     if (specialTerms == null
         || specialTerms.codePointCount(0, specialTerms.length()) > 5000
         || expectedVersion < 0)
@@ -159,6 +161,7 @@ public class OrderContractService {
         || !java.security.MessageDigest.isEqual(contract.getFileHash(), expectedFile))
       throw conflict("서명할 문서가 변경되었습니다.");
     String role = order.getBuyerId().equals(memberId) ? "BUYER" : "SELLER";
+    if ("SELLER".equals(role)) locks.requireNotSecurityLocked(memberId);
     var existing = signatures.findByContractIdOrderByIdAsc(contract.getId());
     if (existing.stream().anyMatch(s -> s.getMemberId() == memberId)) return response(contract);
     if (order.getStatus() != OrderStatus.AWAITING_CONTRACT || !"READY".equals(contract.getStatus()))

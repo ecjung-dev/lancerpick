@@ -908,6 +908,43 @@ class ReviewTimerIntegrationTests {
   }
 
   @Test
+  void securityLockedSellerCannotAdvanceTradeButCanApproveRefund() {
+    // 인증 필터를 통과한 진행 중 요청을 서비스 직접 호출로 재현한다.
+    payments.pay(buyer, str(), true);
+    long sanction = lock(seller);
+    error(() -> deliver(1), "MEMBER_LOCKED");
+    assertThat(orderStatus()).isEqualTo("IN_PROGRESS");
+    assertThat(count("deliveries")).isZero();
+
+    unlock(seller, sanction);
+    deliver(1);
+    reviewWindowPassed();
+    sanction = lock(seller);
+    error(() -> timers.start(seller, id), "MEMBER_LOCKED");
+    assertThat(count("order_response_timers")).isZero();
+
+    // 취소 요청 거절은 막고, 구매자에게 전액 반환하는 승인은 허용한다.
+    requests.create(
+        buyer, str(), new CreateCancellationRequest("취소 요청", UUID.randomUUID().toString()));
+    long request =
+        jdbc.queryForObject(
+            "SELECT id FROM cancellation_requests WHERE order_id=?", Long.class, id);
+    error(
+        () ->
+            requests.resolve(
+                seller,
+                str(),
+                Long.toString(request),
+                OrderCancellationRequestService.Resolution.REJECTED,
+                "작업 계속"),
+        "MEMBER_LOCKED");
+    requests.resolve(
+        seller, str(), Long.toString(request), OrderCancellationRequestService.Resolution.APPROVED, null);
+    assertThat(orderStatus()).isEqualTo("CANCELLED");
+    assertThat(balance(seller)).isEqualTo(1000000);
+  }
+
+  @Test
   void retryAfterStopBeforeDeliveryMarkerDoesNotDuplicateTimerHistoryNotificationsOrPayout() {
     paidAndDelivered();
     startTimer();

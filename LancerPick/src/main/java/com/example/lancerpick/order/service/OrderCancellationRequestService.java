@@ -110,6 +110,8 @@ public class OrderCancellationRequestService {
     var order = lock(orderId, memberId);
     boolean buyer = order.getBuyerId().equals(memberId);
     requireRole(resolution == Resolution.WITHDRAWN ? buyer : !buyer);
+    // 판매자 거절은 검수 기산점을 다시 열어 거래를 진전시키므로 보안 잠금 판매자를 막는다. 승인(전액 반환)은 허용한다.
+    if (resolution == Resolution.REJECTED) locks.requireNotSecurityLocked(memberId);
     var request =
         requests.byOrder(orderId, targetId).orElseThrow(OrderCancellationRequestService::notFound);
     if (request.requestedBy() != order.getBuyerId()) throw integrity();
