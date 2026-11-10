@@ -10,21 +10,16 @@ import com.example.lancerpick.notification.repository.OutboxEventRepository;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.ReviewTimerResponse;
 import com.example.lancerpick.order.entity.CancellationRequestStatus;
-import com.example.lancerpick.order.entity.Delivery;
 import com.example.lancerpick.order.entity.Order;
 import com.example.lancerpick.order.entity.OrderHistory;
 import com.example.lancerpick.order.entity.OrderResponseTimer;
 import com.example.lancerpick.order.entity.OrderStatus;
 import com.example.lancerpick.order.repository.CancellationRequestRepository;
-import com.example.lancerpick.order.repository.DeliveryRepository;
-import com.example.lancerpick.order.repository.OrderClosureRepository;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
 import com.example.lancerpick.order.repository.OrderResponseTimerRepository;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -54,9 +49,7 @@ public class ReviewTimerService {
 
   private final OrderRepository orders;
   private final OrderResponseTimerRepository timers;
-  private final DeliveryRepository deliveries;
   private final CancellationRequestRepository cancellations;
-  private final OrderClosureRepository closures;
   private final OrderHistoryRepository histories;
   private final OrderEventPublisher events;
   private final OrderFundingGuard funding;
@@ -67,13 +60,12 @@ public class ReviewTimerService {
   private final Clock clock;
   private final OrderCommandLocks locks;
   private final MemberSanctionQuery sanctions;
+  private final ReviewTimerViews views;
 
   public ReviewTimerService(
       OrderRepository orders,
       OrderResponseTimerRepository timers,
-      DeliveryRepository deliveries,
       CancellationRequestRepository cancellations,
-      OrderClosureRepository closures,
       OrderHistoryRepository histories,
       OrderEventPublisher events,
       OrderFundingGuard funding,
@@ -83,12 +75,11 @@ public class ReviewTimerService {
       PlatformTransactionManager transactionManager,
       Clock clock,
       OrderCommandLocks locks,
-      MemberSanctionQuery sanctions) {
+      MemberSanctionQuery sanctions,
+      ReviewTimerViews views) {
     this.orders = orders;
     this.timers = timers;
-    this.deliveries = deliveries;
     this.cancellations = cancellations;
-    this.closures = closures;
     this.histories = histories;
     this.events = events;
     this.funding = funding;
@@ -100,6 +91,7 @@ public class ReviewTimerService {
     this.clock = clock;
     this.locks = locks;
     this.sanctions = sanctions;
+    this.views = views;
   }
 
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -111,7 +103,7 @@ public class ReviewTimerService {
                 (candidate.getBuyerId() == memberId || candidate.getSellerId() == memberId)
                     && candidate.isFullFunding())
             .orElseThrow(ReviewTimerService::notFound);
-    return view(order, memberId, now());
+    return views.view(order, memberId, now());
   }
 
   @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -129,7 +121,7 @@ public class ReviewTimerService {
     var at = now();
     // 재전송·동시 요청: 주문 잠금 아래 이미 활성 타이머가 있으면 새로 만들지 않고 현재 상태를 돌려준다.
     if (timers.existsByOrderIdAndStatus(orderId, OrderResponseTimer.ACTIVE))
-      return view(order, memberId, at);
+      return views.view(order, memberId, at);
     if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION)
       throw conflict("ORDER_STATE_CONFLICT", "검수 대기 주문에서만 자동 구매 확정 타이머를 시작할 수 있습니다.");
     if (!cancellations.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING).isEmpty())
@@ -138,11 +130,11 @@ public class ReviewTimerService {
       throw conflict(
           "BUYER_SECURITY_LOCKED", "구매자 계정 보호 조치 중에는 자동 구매 확정 타이머를 시작할 수 없습니다.");
     funding.requireHeldForWork(order);
-    var delivery = currentDelivery(order);
-    var basis = basisAt(order, delivery);
+    var delivery = views.currentDelivery(order);
+    var basis = views.basisAt(order, delivery);
     if (at.isBefore(OrderResponseTimer.eligibleAt(basis)))
       throw conflict("TIMER_NOT_ELIGIBLE", "납품 또는 취소 요청 처리 후 48시간이 지나야 타이머를 시작할 수 있습니다.");
-    if (adminStoppedSince(orderId, basis))
+    if (views.adminStoppedSince(orderId, basis))
       throw conflict(
           "TIMER_ADMIN_STOPPED", "관리자가 해제한 타이머는 새 납품이나 취소 요청 처리 이후에 다시 시작할 수 있습니다.");
     int cycle =
@@ -157,7 +149,7 @@ public class ReviewTimerService {
     events.publish(
         order,
         histories.saveAndFlush(OrderHistory.timerStarted(orderId, memberId, at, timer.getId())));
-    return view(order, memberId, at);
+    return views.view(order, memberId, at);
   }
 
   /**
@@ -190,7 +182,7 @@ public class ReviewTimerService {
         order,
         histories.saveAndFlush(
             OrderHistory.timerAdminStopped(orderId, adminId, at, timer.getId(), reason)));
-    return view(order, adminId, at);
+    return views.view(order, adminId, at);
   }
 
   /**
@@ -332,72 +324,8 @@ public class ReviewTimerService {
     return true;
   }
 
-  private ReviewTimerResponse view(Order order, long memberId, LocalDateTime now) {
-    long orderId = order.getId();
-    var active = timers.findByOrderIdAndStatus(orderId, OrderResponseTimer.ACTIVE);
-    if (active.isPresent()) return response("ACTIVE", active.get(), false);
-    if (order.getStatus() == OrderStatus.COMPLETED) {
-      var closure = closures.findByOrderId(orderId).orElse(null);
-      if (closure != null
-          && "AUTO_CONFIRMED".equals(closure.getReason())
-          && closure.getSourceTimerId() != null) {
-        var timer =
-            timers.findById(closure.getSourceTimerId()).orElseThrow(ReviewTimerService::integrity);
-        return response("AUTO_CONFIRMED", timer, false);
-      }
-      return empty("NOT_IN_REVIEW");
-    }
-    if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION) return empty("NOT_IN_REVIEW");
-    if (!cancellations.findByOrderIdAndStatus(orderId, CancellationRequestStatus.PENDING).isEmpty())
-      return empty("CANCELLATION_PENDING");
-    var basis = basisAt(order, currentDelivery(order));
-    var eligible = OrderResponseTimer.eligibleAt(basis);
-    if (adminStoppedSince(orderId, basis))
-      return new ReviewTimerResponse("ADMIN_STOPPED", utc(basis), utc(eligible), null, null, false);
-    if (now.isBefore(eligible))
-      return new ReviewTimerResponse("WAITING", utc(basis), utc(eligible), null, null, false);
-    boolean canStart =
-        order.getSellerId() == memberId
-            && !sanctions.restriction(order.getBuyerId()).securityLocked();
-    return new ReviewTimerResponse("STARTABLE", utc(basis), utc(eligible), null, null, canStart);
-  }
-
-  private Delivery currentDelivery(Order order) {
-    return deliveries
-        .findFirstByOrderIdOrderBySequenceNoDesc(order.getId())
-        .orElseThrow(ReviewTimerService::integrity);
-  }
-
-  private LocalDateTime basisAt(Order order, Delivery delivery) {
-    var basis = delivery.getSubmittedAt();
-    var reopened = cancellations.latestReopenedAt(order.getId()).orElse(null);
-    return reopened != null && reopened.isAfter(basis) ? reopened : basis;
-  }
-
-  private boolean adminStoppedSince(long orderId, LocalDateTime basis) {
-    return timers.latestAdminStopAt(orderId).map(at -> !at.isBefore(basis)).orElse(false);
-  }
-
   private LocalDateTime now() {
     return UtcTimes.nowMicros(clock);
-  }
-
-  private static ReviewTimerResponse response(String status, OrderResponseTimer timer, boolean canStart) {
-    return new ReviewTimerResponse(
-        status,
-        utc(timer.getBasisAt()),
-        utc(timer.getEligibleAt()),
-        utc(timer.getStartedAt()),
-        utc(timer.getExpiresAt()),
-        canStart);
-  }
-
-  private static ReviewTimerResponse empty(String status) {
-    return new ReviewTimerResponse(status, null, null, null, null, false);
-  }
-
-  private static OffsetDateTime utc(LocalDateTime value) {
-    return value == null ? null : value.atOffset(ZoneOffset.UTC);
   }
 
   private static BusinessException unauthorized() {

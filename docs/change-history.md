@@ -4,8 +4,15 @@
 
 ## 기록 해석
 
+<a id="review-timer-views-split"></a>
+### 자동 구매 확정 타이머 조회·판단 분리(리팩터링 5-3) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/review-timer-query-split`, main `c163008`(#175) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 세 번째 파일이다. `ReviewTimerService`(420줄 → 348줄)에서 타이머 상태 응답(`view`)·기산점(`basisAt`)·현재 납품·관리자 해제 이후 여부와 응답 변환을 order 내부 `ReviewTimerViews`로 옮겼다. 시작·관리자 해제·만료·사전 안내·보안 잠금 중단 명령과 그 트랜잭션(`@Transactional`, 건별 `TransactionTemplate` READ_COMMITTED)·구매자 → 주문 잠금 순서는 서비스에 그대로 있고, 새 클래스는 잠금·상태 변경 없이 호출자의 트랜잭션 안에서 읽기만 한다. 공개 메서드·응답·오류 코드 변경 없음. 영향 영역: order(정은찬). API·DB 변경 없음.
+
+검증: 전체 `clean build` **1,146건 통과**(실패·오류·건너뜀 0, 3분 40초, 로컬 테스트 DB, 2026-11-10). DB 없는 `DefaultCatalogApiTests` 컨텍스트에는 다른 타이머 빈처럼 `ReviewTimerViews` 대역을 추가했다. 원격 CI는 PR에서 확인한다.
+
 <a id="order-chat-panel-split"></a>
-### 주문 대화 화면에서 발송 흐름·목록 분리(리팩터링 5-2) — 2026-11-10, 로컬 구현
+### 주문 대화 화면에서 발송 흐름·목록 분리(리팩터링 5-2) — 2026-11-10, main 반영(#175)
 
 정은찬, `refactor/order-chat-panel-split`, main `b8b74ae`(#174) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 두 번째 파일이다. `OrderChatPanel.tsx`(408줄 → 222줄)에서 입력·발송·복구 흐름(초안·미확정 발송 상태, 이력에서 발송 확인, 발송 전후 계정 확인, 새로고침, 소켓/HTTP 발송)을 `features/order-chat/useChatSend.ts`로, 메시지 목록을 `components/ChatMessages.tsx`로 옮겼다. 코드는 그대로 옮겼고 같은 `clientMessageId` 재전송(멱등)·계정 확인·불명확 결과 처리·훅 호출 순서는 같다. 화면 문구·버튼 상태 변경 없음. 영향 영역: order-chat(정은찬). API·서버 변경 없음.
 
