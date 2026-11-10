@@ -35,11 +35,12 @@ public class ProductSearchService {
         String normalizedKeyword = normalizeKeyword(keyword);
         Long parsedCategoryId = parseCategoryId(categoryId);
 
-        long total = queries.count(normalizedKeyword, parsedCategoryId, options);
+        Long minimumOrderAmount = NewOrderPolicy.minimumAmount(newOrderPolicy.current());
+        long total = queries.count(normalizedKeyword, parsedCategoryId, options, minimumOrderAmount);
         long offset = (long) page * size;
 
         var items = offset >= total ? List.<ProductSummaryResponse>of() : queries.find(
-                normalizedKeyword, parsedCategoryId, options, size, offset
+                normalizedKeyword, parsedCategoryId, options, minimumOrderAmount, size, offset
         );
 
         long pages = total / size + (total % size == 0 ? 0 : 1);

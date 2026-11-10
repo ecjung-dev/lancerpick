@@ -46,7 +46,8 @@ export function AdminFinancePage() {
   </section>
 }
 
-function Pager({ page, totalPages, busy, onPage, label }: { page: number; totalPages: number; busy: boolean; onPage: (page: number) => void; label: string }) {
+/** 관리자 조회 목록 공통 이전/다음 페이지. 알림 처리 화면도 같이 쓴다. */
+export function Pager({ page, totalPages, busy, onPage, label }: { page: number; totalPages: number; busy: boolean; onPage: (page: number) => void; label: string }) {
   return <nav className={styles.pager} aria-label={label}>
     <button disabled={busy || page === 0} onClick={() => onPage(page - 1)}>이전</button>
     <span>{page + 1}페이지</span>

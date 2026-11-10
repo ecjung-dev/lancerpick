@@ -236,7 +236,8 @@ test('header shows the admin link only for an ADMIN session', () => {
     try {
       const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(QueryClientProvider, { client },
         createElement(MemberNav, { signupClassName: 's', buttonClassName: 'b' }))))
-      assert.equal(/href="\/admin\/products"/.test(html), shown, role)
+      // 관리자 링크는 운영 현황(/admin)으로 들어간다(K3).
+      assert.equal(/href="\/admin"/.test(html), shown, role)
       assert.match(html, /회원님/)
     } finally { client.clear() }
   }

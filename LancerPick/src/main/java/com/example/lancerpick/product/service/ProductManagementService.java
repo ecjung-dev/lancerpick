@@ -3,6 +3,7 @@ package com.example.lancerpick.product.service;
 import com.example.lancerpick.common.exception.BusinessException;
 import com.example.lancerpick.member.entity.Member;
 import com.example.lancerpick.member.service.MemberSanctionQuery;
+import com.example.lancerpick.order.service.NewOrderPolicy;
 import com.example.lancerpick.product.dto.*;
 import com.example.lancerpick.product.entity.Category;
 import com.example.lancerpick.product.entity.Product;
@@ -27,8 +28,13 @@ public class ProductManagementService {
     private final EntityManager em;
     private final Clock clock;
     private final MemberSanctionQuery sanctions;
-    public ProductManagementService(EntityManager em, Clock clock, MemberSanctionQuery sanctions) {
-        this.em = em; this.clock = clock; this.sanctions = sanctions;
+    private final NewOrderPolicy newOrderPolicy;
+    public ProductManagementService(EntityManager em, Clock clock, MemberSanctionQuery sanctions,
+            NewOrderPolicy newOrderPolicy) {
+        this.em = em;
+        this.clock = clock;
+        this.sanctions = sanctions;
+        this.newOrderPolicy = newOrderPolicy;
     }
 
     public OwnedProductResponse getMine(long memberId, String id) { return response(owned(memberId, id, false)); }
@@ -44,6 +50,7 @@ public class ProductManagementService {
         if (em.find(SellerProfile.class, memberId) == null)
             throw new BusinessException(HttpStatus.FORBIDDEN, "SELLER_PROFILE_REQUIRED", "판매자 프로필을 먼저 등록해 주세요.");
         category(input.categoryId());
+        requireOrderablePrice(input.priceAmount());
         Product product = Product.create(memberId, input, now());
         em.persist(product); em.flush();
         return response(product);
@@ -57,6 +64,7 @@ public class ProductManagementService {
             throw new BusinessException(HttpStatus.CONFLICT, "PRODUCT_VERSION_CONFLICT", "상품이 변경되었습니다. 최신 내용을 확인해 주세요.");
         var input = ProductWriteInput.parse(body, product);
         category(input.categoryId());
+        if ("ON_SALE".equals(product.getSaleStatus())) requireOrderablePrice(input.priceAmount());
         product.revise(input, now()); em.flush();
         return response(product);
     }
@@ -70,6 +78,7 @@ public class ProductManagementService {
             throw new BusinessException(HttpStatus.CONFLICT, "PRODUCT_VERSION_CONFLICT",
                     "상품이 변경되었습니다. 최신 내용을 확인해 주세요.");
         }
+        if ("ON_SALE".equals(input.saleStatus())) requireOrderablePrice(product.getPrice());
         product.changeSaleStatus(input.saleStatus(), now());
         em.flush();
         return response(product);
@@ -81,6 +90,17 @@ public class ProductManagementService {
         if (product == null || product.getSellerId() != memberId)
             throw new BusinessException(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "상품을 찾을 수 없습니다.");
         return product;
+    }
+    /**
+     * 판매 중인 상품은 현재 신규 주문 정책으로 주문할 수 있는 가격이어야 한다(CONTRACT_V3는 10,000원 이상).
+     * 판매 중지 상품은 가격을 고치기 전 상태로 수정할 수 있다. 하한은 생성 스위치를 따라 바뀌므로 DB CHECK가 아닌 여기서 검사한다.
+     */
+    private void requireOrderablePrice(long price) {
+        Long minimum = NewOrderPolicy.minimumAmount(newOrderPolicy.current());
+        if (minimum != null && price < minimum) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "PRODUCT_PRICE_BELOW_ORDER_MINIMUM",
+                    "판매 중인 상품 가격은 %,d원 이상이어야 합니다. 가격을 올리거나 판매를 중지해 주세요.".formatted(minimum));
+        }
     }
     private Category category(long id) {
         Category category = em.find(Category.class, id);

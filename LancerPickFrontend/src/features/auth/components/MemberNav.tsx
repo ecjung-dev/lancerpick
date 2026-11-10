@@ -39,7 +39,7 @@ export function MemberNav({ signupClassName, buttonClassName }: { signupClassNam
   if (member.data) {
     return <>
       {/* 메뉴 표시는 편의일 뿐이다. 실제 관리자 권한은 서버가 /api/admin/** 요청마다 다시 확인한다. */}
-      {member.data.role === 'ADMIN' && <NavLink to="/admin/products">관리자</NavLink>}
+      {member.data.role === 'ADMIN' && <NavLink to="/admin">관리자</NavLink>}
       <NotificationNavLink key={member.data.id} onOpen={chat?.minimize} />
       <ChatEntry />
       <NavLink to="/mypage">{member.data.displayName}님</NavLink>

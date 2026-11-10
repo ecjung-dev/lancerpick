@@ -28,6 +28,8 @@ import { AdminFinancePage } from '../features/admin/pages/AdminFinancePage'
 import { AdminMemberListPage } from '../features/admin/pages/AdminMemberListPage'
 import { AdminMemberDetailPage } from '../features/admin/pages/AdminMemberDetailPage'
 import { AdminOrderFinancePage } from '../features/admin/pages/AdminOrderFinancePage'
+import { AdminOutboxPage } from '../features/admin/pages/AdminOutboxPage'
+import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage'
 import { WalletPage, WalletPreviewPage } from '../features/wallet/pages/WalletPage'
 import { WalletTopupPage, WalletTopupPreviewPage } from '../features/wallet/pages/WalletTopupPage'
 import { WalletTopupResultPage } from '../features/wallet/pages/WalletTopupResultPage'
@@ -65,6 +67,7 @@ export const router = createBrowserRouter([
       { path: 'mypage/wallet/topup/:id/success', element: <WalletTopupResultPage outcome="success" /> },
       { path: 'mypage/wallet/topup/:id/fail', element: <WalletTopupResultPage outcome="fail" /> },
       { path: 'mypage/wallet/topup/:id/status', element: <WalletTopupResultPage outcome="status" /> },
+      { path: 'admin', element: <AdminDashboardPage /> },
       { path: 'admin/products', element: <AdminProductListPage /> },
       { path: 'admin/members', element: <AdminMemberListPage /> },
       { path: 'admin/members/:id', element: <AdminMemberDetailPage /> },
@@ -74,6 +77,7 @@ export const router = createBrowserRouter([
       { path: 'admin/review-timers', element: <AdminReviewTimerPage /> },
       { path: 'admin/finance', element: <AdminFinancePage /> },
       { path: 'admin/finance/orders/:id', element: <AdminOrderFinancePage /> },
+      { path: 'admin/outbox', element: <AdminOutboxPage /> },
       { path: '*', element: <h1>페이지를 찾을 수 없습니다.</h1> },
     ],
   },
