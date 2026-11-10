@@ -4,8 +4,15 @@
 
 ## 기록 해석
 
+<a id="full-funding-records-split"></a>
+### V3 보관금 서비스에서 기록 대사 분리(리팩터링 5-5) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/full-funding-checks-split`, main `ff4d517`(#177) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 마지막 파일이다. `FullFundingService`(598줄 → 461줄)에서 서명 계약·결제·보관금·원장(결제·환불·판매자 지급)·완료 종료/정산 기록 대사를 order 내부 `FullFundingRecords`로 옮겼다. 코드는 그대로 옮겼고 호출 위치·순서도 같아 원장 행 잠금(`findByEventKeyForUpdate`)이 걸리는 시점이 바뀌지 않는다. 실행 회원 → 주문 → 지갑 잠금 순서, 트랜잭션(READ_COMMITTED, 조회 REPEATABLE_READ), 지급·반환·종료 기록·이력 저장은 서비스에 그대로 있고 새 클래스는 상태를 바꾸지 않는다. 오류 코드·메시지(`DATA_INTEGRITY_ERROR`, `CONTRACT_NOT_SIGNED`)·공개 메서드 변경 없음. 영향 영역: order·payment·wallet·settlement·contract(정은찬·황준범). API·DB 변경 없음.
+
+검증: 관련 `FullFunding*`·`AdminCancellationReviewIntegrationTests`·`ReviewTimerIntegrationTests`·`DefaultCatalogApiTests` 통과, 전체 `clean build` **1,146건 통과**(실패·오류·건너뜀 0, 3분 49초, 로컬 테스트 DB, 2026-11-10). DB 없는 `DefaultCatalogApiTests` 컨텍스트에는 `FullFundingRecords` 대역을 추가했다. 원격 CI는 PR에서 확인한다.
+
 <a id="wallet-topup-page-split"></a>
-### 테스트 충전 화면에서 결제 위젯 흐름·요약 분리(리팩터링 5-4) — 2026-11-10, 로컬 구현
+### 테스트 충전 화면에서 결제 위젯 흐름·요약 분리(리팩터링 5-4) — 2026-11-10, main 반영(#177)
 
 정은찬, `refactor/wallet-topup-page-split`, main `a1575e0`(#176) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 네 번째 파일이다. `WalletTopupPage.tsx`(476줄 → 272줄)에서 결제 위젯 준비·정리와 결제 요청 흐름(단계·로딩·약관 동의·오류·제출 ID 상태, 위젯 runtime·언마운트·중복 실행 참조, `prepare`·`changeAmount`·`requestPayment`)을 `features/wallet/useTopupCheckout.ts`로, 오른쪽 충전 요약을 `components/TopupSummary.tsx`로 옮겼다. 코드는 그대로 옮겼고 이전 위젯의 늦은 이벤트 무시, 신청 생성 후 금액 변경 금지·상태 조회 이동, 자동 재시도 없음, 훅 호출 순서는 같다. 화면 문구·버튼 상태 변경 없음. 영향 영역: wallet(황준범). API·서버 변경 없음.
 

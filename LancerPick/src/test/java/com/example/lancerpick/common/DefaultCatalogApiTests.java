@@ -86,6 +86,8 @@ class DefaultCatalogApiTests extends CommonApiTests {
     @MockitoBean
     com.example.lancerpick.order.service.FullFundingService fullFundingService;
     @MockitoBean
+    com.example.lancerpick.order.service.FullFundingRecords fullFundingRecords;
+    @MockitoBean
     com.example.lancerpick.order.service.AdminCancellationReviewService adminCancellationReviewService;
     // 운영 문의(K4) 접수·관리자 조회도 DB를 사용하므로 대체한다. 실제 처리는 CancellationReviewInquiryIntegrationTests(MySQL).
     @MockitoBean

@@ -1,10 +1,7 @@
 package com.example.lancerpick.order.service;
 
 import com.example.lancerpick.common.exception.BusinessException;
-import com.example.lancerpick.common.policy.TradePolicyVersion;
 import com.example.lancerpick.common.time.UtcTimes;
-import com.example.lancerpick.contract.repository.ContractSignatureRepository;
-import com.example.lancerpick.contract.repository.OrderContractRepository;
 import com.example.lancerpick.notification.service.OrderEventPublisher;
 import com.example.lancerpick.order.dto.OrderDetailResponse;
 import com.example.lancerpick.order.dto.OrderFundsResponse;
@@ -22,7 +19,6 @@ import com.example.lancerpick.order.repository.OrderClosureRepository;
 import com.example.lancerpick.order.repository.OrderDetailQueries;
 import com.example.lancerpick.order.repository.OrderHistoryRepository;
 import com.example.lancerpick.order.repository.OrderRepository;
-import com.example.lancerpick.order.repository.OrderTradeTermsRepository;
 import com.example.lancerpick.payment.entity.OrderFunds;
 import com.example.lancerpick.payment.entity.OrderFundsStatus;
 import com.example.lancerpick.payment.entity.Payment;
@@ -34,15 +30,11 @@ import com.example.lancerpick.settlement.entity.Settlement;
 import com.example.lancerpick.settlement.repository.SettlementRepository;
 import com.example.lancerpick.wallet.entity.Wallet;
 import com.example.lancerpick.wallet.entity.WalletEntry;
-import com.example.lancerpick.wallet.entity.WalletEntryType;
 import com.example.lancerpick.wallet.repository.WalletEntryRepository;
 import com.example.lancerpick.wallet.repository.WalletRepository;
-import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.Objects;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -53,7 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * V3 주문의 결제 금액 보관·수동 구매 확정 지급·승인 환불을 조율한다. 실행 회원 공유 잠금 → 주문 배타 잠금 → 변경 대상 지갑 잠금 순서를 유지하며 외부 통신을
- * 포함하지 않는다.
+ * 포함하지 않는다. 계약·결제·보관금·원장·종료 기록 대사는 {@link FullFundingRecords}가 이 트랜잭션 안에서 맡는다.
  */
 @Service
 @Profile("!demo")
@@ -63,9 +55,6 @@ public class FullFundingService {
   private static final int FEE_RATE_BPS = FullFundingPolicy.FEE_RATE_BPS;
 
   private final OrderRepository orderRepository;
-  private final OrderTradeTermsRepository orderTradeTermsRepository;
-  private final OrderContractRepository orderContractRepository;
-  private final ContractSignatureRepository contractSignatureRepository;
   private final PaymentRepository paymentRepository;
   private final OrderFundsRepository orderFundsRepository;
   private final WalletRepository walletRepository;
@@ -75,6 +64,7 @@ public class FullFundingService {
   private final CancellationRequestRepository cancellationRequestRepository;
   private final DeliveryRepository deliveryRepository;
   private final ReviewTimers reviewTimers;
+  private final FullFundingRecords records;
   private final OrderHistoryRepository orderHistoryRepository;
   private final OrderEventPublisher orderEventPublisher;
   private final OrderDetailQueries orderDetailQueries;
@@ -97,8 +87,8 @@ public class FullFundingService {
       return new OrderFundsResponse(
           "NOT_PAID", order.getPriceAmount(), 0, 0, null, null, null, null);
     }
-    var payment = requirePayment(order);
-    var orderFunds = requireOrderFunds(order, payment);
+    var payment = records.requirePayment(order);
+    var orderFunds = records.requireOrderFunds(order, payment);
     var closure = orderClosureRepository.findByOrderId(orderId).orElse(null);
     if ((orderFunds.getStatus() == OrderFundsStatus.HELD) != (closure == null)) {
       throw integrityError();
@@ -120,9 +110,9 @@ public class FullFundingService {
     var order = lockOrder(memberId, orderId);
     requireRole(order.getBuyerId() == memberId);
     if (paymentRepository.findByOrderId(orderId).isPresent()) {
-      var payment = requirePayment(order);
-      var orderFunds = requireOrderFunds(order, payment);
-      requirePaymentEntry(order, payment);
+      var payment = records.requirePayment(order);
+      var orderFunds = records.requireOrderFunds(order, payment);
+      records.requirePaymentEntry(order, payment);
       if (payment.status() == PaymentStatus.REFUNDED) {
         throw conflict("PAYMENT_ALREADY_REFUNDED", "이미 반환된 결제입니다.");
       }
@@ -130,7 +120,7 @@ public class FullFundingService {
         throw integrityError();
       }
       if (order.getStatus() == OrderStatus.COMPLETED) {
-        requireCompletedRecords(order, payment, orderFunds);
+        records.requireCompletedRecords(order, payment, orderFunds);
       } else if (orderFunds.getStatus() != OrderFundsStatus.HELD
           || orderClosureRepository.findByOrderId(orderId).isPresent()
           || settlementRepository.findByOrderId(orderId).isPresent()) {
@@ -145,7 +135,7 @@ public class FullFundingService {
         || settlementRepository.findByOrderId(orderId).isPresent()) {
       throw invalidState();
     }
-    requireSignedContract(order);
+    records.requireSignedContract(order);
     requireNoPendingCancellation(order);
     reviewTimers.requireNoActive(order);
     var wallet =
@@ -175,11 +165,11 @@ public class FullFundingService {
     requireRole(order.getBuyerId() == memberId);
     // 인증 필터를 통과한 뒤 보안 잠금이 커밋된 확정 요청이 판매자 지급까지 가지 않게 회원 잠금 아래에서 다시 본다.
     commandLocks.requireNotSecurityLocked(memberId);
-    var payment = requirePayment(order);
-    var orderFunds = requireOrderFunds(order, payment);
-    requirePaymentEntry(order, payment);
+    var payment = records.requirePayment(order);
+    var orderFunds = records.requireOrderFunds(order, payment);
+    records.requirePaymentEntry(order, payment);
     if (order.getStatus() == OrderStatus.COMPLETED) {
-      requireCompletedRecords(order, payment, orderFunds);
+      records.requireCompletedRecords(order, payment, orderFunds);
       return orderResponse(order, memberId);
     }
     if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION
@@ -221,9 +211,9 @@ public class FullFundingService {
   public OrderDetailResponse refund(long memberId, long orderId, String reason) {
     var order = lockOrder(memberId, orderId);
     requireRole(order.getSellerId() == memberId);
-    var payment = requirePayment(order);
-    var orderFunds = requireOrderFunds(order, payment);
-    requirePaymentEntry(order, payment);
+    var payment = records.requirePayment(order);
+    var orderFunds = records.requireOrderFunds(order, payment);
+    records.requirePaymentEntry(order, payment);
     if (order.getStatus() == OrderStatus.CANCELLED) {
       var closure =
           orderClosureRepository
@@ -238,8 +228,7 @@ public class FullFundingService {
           || settlementRepository.findByOrderId(orderId).isPresent()) {
         throw integrityError();
       }
-      requireWalletEntry(
-          order.getBuyerId(), payment, WalletEntryType.REFUND, payment.amount(), "REFUND:");
+      records.requireRefundEntry(order, payment);
       return orderResponse(order, memberId);
     }
     if (!order.getStatus().isWorkOpen()
@@ -294,9 +283,9 @@ public class FullFundingService {
         || request.getStatus() != CancellationRequestStatus.PENDING) {
       throw integrityError();
     }
-    var payment = requirePayment(order);
-    var orderFunds = requireOrderFunds(order, payment);
-    requirePaymentEntry(order, payment);
+    var payment = records.requirePayment(order);
+    var orderFunds = records.requireOrderFunds(order, payment);
+    records.requirePaymentEntry(order, payment);
     if (!order.getStatus().isWorkOpen()
         || payment.status() != PaymentStatus.PAID
         || orderFunds.getStatus() != OrderFundsStatus.HELD) {
@@ -332,9 +321,9 @@ public class FullFundingService {
       throw integrityError();
     }
     long orderId = order.getId();
-    var payment = requirePayment(order);
-    var orderFunds = requireOrderFunds(order, payment);
-    requirePaymentEntry(order, payment);
+    var payment = records.requirePayment(order);
+    var orderFunds = records.requireOrderFunds(order, payment);
+    records.requirePaymentEntry(order, payment);
     if (order.getStatus() != OrderStatus.AWAITING_CONFIRMATION
         || payment.status() != PaymentStatus.PAID
         || orderFunds.getStatus() != OrderFundsStatus.HELD
@@ -435,131 +424,6 @@ public class FullFundingService {
     return order;
   }
 
-  private void requireSignedContract(Order order) {
-    var tradeTerms =
-        orderTradeTermsRepository
-            .findById(order.getId())
-            .orElseThrow(FullFundingService::integrityError);
-    if (!"FULL_HOLD".equals(tradeTerms.getFundingMode())) {
-      throw integrityError();
-    }
-    var contract =
-        orderContractRepository
-            .findByOrderIdAndActiveSlot(order.getId(), 1)
-            .orElseThrow(() -> conflict("CONTRACT_NOT_SIGNED", "계약 서명이 필요합니다."));
-    var contractSignatures =
-        contractSignatureRepository.findByContractIdOrderByIdAsc(contract.getId());
-    if (!"SIGNED".equals(contract.getStatus()) || contractSignatures.size() != 2) {
-      throw conflict("CONTRACT_NOT_SIGNED", "양측 계약 서명이 필요합니다.");
-    }
-    for (var signature : contractSignatures) {
-      if ((signature.getMemberId() == order.getBuyerId()
-              && !"BUYER".equals(signature.getPartyRole()))
-          || (signature.getMemberId() == order.getSellerId()
-              && !"SELLER".equals(signature.getPartyRole()))
-          || !MessageDigest.isEqual(signature.getSignedContentHash(), contract.getContentHash())
-          || !MessageDigest.isEqual(signature.getSignedFileHash(), contract.getFileHash())
-          || !(signature.getMemberId() == order.getBuyerId()
-              || signature.getMemberId() == order.getSellerId())) {
-        throw integrityError();
-      }
-    }
-  }
-
-  private Payment requirePayment(Order order) {
-    var payment =
-        paymentRepository
-            .findByOrderId(order.getId())
-            .orElseThrow(FullFundingService::integrityError);
-    if (!TradePolicyVersion.CONTRACT_V3.name().equals(payment.getOrderPolicyVersion())
-        || !"FULL".equals(payment.getInstallmentType())
-        || payment.amount() != order.getPriceAmount()
-        || payment.rate() != FEE_RATE_BPS
-        || order.getPaidAt() == null
-        || !order.getPaidAt().equals(payment.getPaidAt())) {
-      throw integrityError();
-    }
-    return payment;
-  }
-
-  private OrderFunds requireOrderFunds(Order order, Payment payment) {
-    var orderFunds =
-        orderFundsRepository
-            .findById(order.getId())
-            .orElseThrow(FullFundingService::integrityError);
-    if (!orderFunds.getHeldAt().equals(payment.getPaidAt())
-        || orderFunds.getPaymentId() != payment.id()
-        || orderFunds.getAmount() != payment.amount()
-        || (orderFunds.getStatus() == OrderFundsStatus.HELD
-            ? orderFunds.getRemainingAmount() != payment.amount()
-            : orderFunds.getRemainingAmount() != 0)) {
-      throw integrityError();
-    }
-    return orderFunds;
-  }
-
-  private void requirePaymentEntry(Order order, Payment payment) {
-    requireWalletEntry(
-        order.getBuyerId(), payment, WalletEntryType.PAYMENT, -payment.amount(), "PAYMENT:");
-  }
-
-  private void requireWalletEntry(
-      long memberId, Payment payment, WalletEntryType type, long amount, String prefix) {
-    var walletEntry =
-        walletEntryRepository
-            .findByEventKeyForUpdate(prefix + payment.id())
-            .orElseThrow(FullFundingService::integrityError);
-    if (walletEntry.getMemberId() != memberId
-        || walletEntry.getPaymentId() == null
-        || walletEntry.getPaymentId() != payment.id()
-        || walletEntry.getType() != type
-        || walletEntry.getAmountDelta() != amount) {
-      throw integrityError();
-    }
-  }
-
-  private void requireCompletedRecords(Order order, Payment payment, OrderFunds orderFunds) {
-    var closure =
-        orderClosureRepository
-            .findByOrderId(order.getId())
-            .orElseThrow(FullFundingService::integrityError);
-    var settlement =
-        settlementRepository
-            .findByOrderId(order.getId())
-            .orElseThrow(FullFundingService::integrityError);
-    var distribution = FullFundingPolicy.completed(payment.amount());
-    if (payment.status() != PaymentStatus.PAID
-        || orderFunds.getStatus() != OrderFundsStatus.RELEASED
-        || !isCompletionClosure(order, closure)
-        || !"NORMAL".equals(settlement.getSettlementType())
-        || closure.getFeeAmount() != distribution.fee()
-        || closure.getSellerNetAmount() != distribution.sellerPayout()
-        || closure.getBuyerRefundAmount() != 0
-        || !Arrays.equals(
-            settlement.amounts(),
-            new long[] {
-              payment.amount(), FEE_RATE_BPS, distribution.fee(), distribution.sellerPayout()
-            })) {
-      throw integrityError();
-    }
-    requireWalletEntry(
-        order.getSellerId(),
-        payment,
-        WalletEntryType.SELLER_PAYOUT,
-        distribution.sellerPayout(),
-        "SELLER_PAYOUT:");
-  }
-
-  private static boolean isCompletionClosure(Order order, OrderClosure closure) {
-    if ("COMPLETED".equals(closure.getReason()))
-      return "MEMBER".equals(closure.getActorType())
-          && Objects.equals(closure.getActorId(), order.getBuyerId());
-    return "AUTO_CONFIRMED".equals(closure.getReason())
-        && "SYSTEM".equals(closure.getActorType())
-        && closure.getActorId() == null
-        && closure.getSourceTimerId() != null;
-  }
-
   private void requireNoPendingCancellation(Order order) {
     if (!cancellationRequestRepository
         .findByOrderIdAndStatus(order.getId(), CancellationRequestStatus.PENDING)
@@ -592,7 +456,6 @@ public class FullFundingService {
   }
 
   private static BusinessException integrityError() {
-    return new BusinessException(
-        HttpStatus.INTERNAL_SERVER_ERROR, "DATA_INTEGRITY_ERROR", "거래 금액 기록을 확인해야 합니다.");
+    return FullFundingRecords.integrityError();
   }
 }
