@@ -1,7 +1,8 @@
+import { loginPath } from '../../auth/session'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { apiRequest, ApiError } from '../../../shared/api/client'
+import { apiRequest, ApiError, isUnauthorized } from '../../../shared/api/client'
 import { Button } from '../../../shared/components/Button'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { getCategories } from '../api'
@@ -14,7 +15,7 @@ export function ProductEditorPage() {
   const { id } = useParams()
   const location = useLocation()
   const member = useQuery({ queryKey: ['product-editor-session'], queryFn: ({ signal }) => apiRequest<{ id: string }>('/me', { signal }), retry: false, gcTime: 0 })
-  if (member.error instanceof ApiError && member.error.status === 401) return <section className={styles.page}><h1>로그인 후 상품을 관리해 주세요</h1><Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}>로그인</Link></section>
+  if (isUnauthorized(member.error)) return <section className={styles.page}><h1>로그인 후 상품을 관리해 주세요</h1><Link to={loginPath(location.pathname + location.search)}>로그인</Link></section>
   if (member.isError) return <AsyncState title="계정을 확인하지 못했어요" error={member.error} onRetry={() => { void member.refetch() }} />
   if (!member.data) return <AsyncState title="계정 확인 중" />
   return <div hidden={member.isFetching}><Editor key={`${member.data.id}:${id ?? 'new'}`} id={id} memberId={member.data.id} checking={member.isFetching} /></div>
@@ -72,7 +73,7 @@ function ProductForm({ initial, categories, memberId, checking }: { initial?: Ow
       navigate(`/mypage/products/${result.id}/edit`, { replace: true, state: { fromMyProducts: myProductsReturnPath(location.state?.fromMyProducts) } })
     } catch (cause) {
       if (!active.current) return
-      if (cause instanceof ApiError && cause.status === 401) setAccountInvalid(true)
+      if (isUnauthorized(cause)) setAccountInvalid(true)
       if (cause instanceof ApiError && cause.code === 'PRODUCT_VERSION_CONFLICT' && baseline) {
         try { setLatest(await getOwnedProduct(baseline.id)) } catch { setLocked(true) }
       } else if (!(cause instanceof ApiError) || cause.status === 0 || cause.status >= 500 || cause.status === 401) setLocked(true)

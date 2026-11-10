@@ -1,10 +1,11 @@
+import { adminBackPath } from '../navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
-import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { normalizedLength } from '../../../shared/lib/text'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
 import { captureAccountScope, isUnclearResult } from '../../auth/session'
 import { changeVisibility } from '../api'
@@ -16,14 +17,10 @@ import { AdminAccessNotice } from './AdminAccess'
 import styles from './Admin.module.css'
 
 /** 목록에서 넘겨준 돌아갈 주소. 관리자 목록 경로만 허용한다. */
-function backPath(from: unknown) {
-  return typeof from === 'string' && (from === '/admin/products' || from.startsWith('/admin/products?')) ? from : '/admin/products'
-}
-
 export function AdminProductDetailPage() {
   const { id = '' } = useParams()
   const location = useLocation()
-  const back = backPath(location.state?.from)
+  const back = adminBackPath(location.state?.from, '/admin/products')
   const product = useAdminProduct(id)
   const problem = accessProblem(product.error)
   const missing = !isValidProductId(id) || (product.error instanceof ApiError && product.error.status === 404)
@@ -141,7 +138,7 @@ function VisibilityForm({ product }: { product: AdminProductDetail }) {
       <label htmlFor="moderation-reason">사유 <span>필수</span></label>
       <textarea id="moderation-reason" rows={4} value={reason} aria-invalid={!!error} aria-describedby="moderation-reason-help moderation-reason-error"
         onChange={(e) => { setReason(e.target.value); setError(undefined) }} placeholder="운영 기록에 남는 사유예요." />
-      <p id="moderation-reason-help" className={styles.help}>{codePointLength(normalizeText(reason))} / {REASON_MAX.toLocaleString()}자</p>
+      <p id="moderation-reason-help" className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString()}자</p>
       <p id="moderation-reason-error" className={styles.fieldError}>{error}</p>
       <button type="submit">{save.isPending ? '처리 중…' : nextHidden ? '숨기기' : '복구하기'}</button>
     </fieldset>

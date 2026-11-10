@@ -4,8 +4,22 @@
 
 ## 기록 해석
 
+<a id="frontend-shared-helpers"></a>
+### 프런트 401 판별·로그인 주소·글자 수 정리(리팩터링 3단계) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/frontend-shared-helpers`, main `465908b`(#171) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 3단계로, 화면 동작을 바꾸지 않는 정리만 했다.
+
+- 401 판별: 24개 파일 34곳의 `instanceof ApiError && status === 401`(부정형 포함)을 `shared/api/client.ts`의 `isUnauthorized`로 바꿨다. 거짓 분기에서 `ApiError` 전체가 타입에서 빠지지 않도록 `ApiError & { status: 401 }`로 좁힌다. 세션 재확인·캐시 정리·안내 처리는 각 화면에 그대로 둔다.
+- 로그인 주소: `/login?next=${encodeURIComponent(...)}`를 직접 만들던 14곳을 `features/auth/session.ts`의 `loginPath(next)`로 바꿨다. `next` 없이 `/login`으로 가는 링크(판매자 프로필·지갑 등)는 로그인 후 이동이 바뀌므로 이번에 고치지 않았다.
+- 글자 수: `codePointLength(normalizeText(x))` 12곳 → `shared/lib/text.ts`의 `normalizedLength`. 필수·최대 길이·오류 문구는 각 화면 그대로다.
+- 관리자: 상품·문의·주문 금융 상세의 `backPath` 3개 → `features/admin/navigation.ts`의 `adminBackPath(from, 목록 경로, 기본값)`(허용 경로·기본값 동일). 회원 제재 입력의 한국 시간 변환 2곳 → `memberValidation.ts`의 `koreaInputValue`(불가능한 날짜 왕복 검사 유지).
+
+영향 영역: auth·admin(김창재), products·seller(박소현), wallet·settlements(황준범), orders·order-chat·notifications·inquiries(정은찬). API·서버 변경 없음.
+
+검증: typecheck·lint·build 통과, `test:api` **326건 통과**(신규 5건: `isUnauthorized`·`normalizedLength`·`loginPath`·`adminBackPath`·`koreaInputValue`, 2026-11-10). 실제 브라우저 확인은 하지 않았고 원격 CI는 PR에서 확인한다.
+
 <a id="backend-shared-helpers"></a>
-### 백엔드 공통 시각·UUID 입력 정리(리팩터링 2단계) — 2026-11-10, 로컬 구현
+### 백엔드 공통 시각·UUID 입력 정리(리팩터링 2단계) — 2026-11-10, main 반영(#171)
 
 정은찬, `refactor/backend-shared-helpers`, main `9123f88`(#170) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 2단계로, 동작을 바꾸지 않는 정리만 했다.
 

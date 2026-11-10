@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { ApiError } from '../../shared/api/client.ts'
+import { isUnauthorized } from '../../shared/api/client.ts'
 import { getMemberSession, updateMe } from './api.ts'
 import { memberQueryKey, resetAccountState } from './session.ts'
 import type { Member } from './types.ts'
@@ -26,7 +26,7 @@ export async function saveDisplayName(client: QueryClient, expectedMemberId: str
   try {
     current = await getMemberSession()
   } catch (error) {
-    if (!(error instanceof ApiError) || error.status !== 401) throw error
+    if (!isUnauthorized(error)) throw error
     await resetAccountState(client, null)
     return { kind: 'signedOut' }
   }

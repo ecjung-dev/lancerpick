@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime } from '../../../shared/lib/format'
-import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { normalizedLength } from '../../../shared/lib/text'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
 import { captureAccountScope, isUnclearResult } from '../../auth/session'
 import { stopReviewTimer, useActiveReviewTimers, type ActiveReviewTimer } from '../timerApi'
@@ -112,7 +112,7 @@ function StopForm({ timer, onDone }: { timer: ActiveReviewTimer; onDone: () => v
       <label htmlFor={fieldId}>해제 사유 <span>필수</span></label>
       <textarea id={fieldId} rows={3} value={reason} aria-invalid={!!error} aria-describedby={`${fieldId}-help ${fieldId}-error`}
         onChange={(e) => { setReason(e.target.value); setError(undefined) }} />
-      <p id={`${fieldId}-help`} className={styles.help}>{codePointLength(normalizeText(reason))} / {REASON_MAX.toLocaleString()}자</p>
+      <p id={`${fieldId}-help`} className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString()}자</p>
       <p id={`${fieldId}-error`} className={styles.fieldError}>{error}</p>
       <div className={styles.actions}>
         <button type="submit">{stop.isPending ? '처리 중…' : '해제'}</button>

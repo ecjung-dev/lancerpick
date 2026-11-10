@@ -1,7 +1,7 @@
 import { useWalletSession, useWallet, useWalletEntries } from '../queries'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
@@ -28,7 +28,7 @@ export function WalletPage() {
         <AsyncState title="로그인 상태를 확인하고 있어요" />
       </WalletLayout>
     )
-  if (session.error instanceof ApiError && session.error.status === 401)
+  if (isUnauthorized(session.error))
     return <WalletGuestPage />
   if (session.isError)
     return (
@@ -82,7 +82,7 @@ export function ConnectedWalletPage({ sessionKey }: { sessionKey: string }) {
   if (!sessionKey) return <WalletGuestPage />
   if (
     [balance.error, entries.error].some(
-      (error) => error instanceof ApiError && error.status === 401,
+      (error) => isUnauthorized(error),
     )
   ) {
     return (

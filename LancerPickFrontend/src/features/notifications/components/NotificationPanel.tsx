@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
-import { captureAccountScope } from '../../auth/session'
+import { isUnauthorized } from '../../../shared/api/client'
+import { captureAccountScope, loginPath } from '../../auth/session'
 import { notificationReadOptions, useNotifications } from '../queries'
 import { NotificationRow } from './NotificationRow'
 import styles from './NotificationPanel.module.css'
@@ -14,7 +14,7 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
   const query = useNotifications(page, unreadOnly)
   const client = useQueryClient()
   const readAll = useMutation(notificationReadOptions(client))
-  const expired = query.error instanceof ApiError && query.error.status === 401
+  const expired = isUnauthorized(query.error)
   return <>
     <div className={styles.heading}>
       <h2 id="header-notification-title">알림</h2>
@@ -30,7 +30,7 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
     </div>
     <div className={styles.content} aria-busy={query.isFetching}>
       {readAll.isError && readAll.variables?.() && <p role="alert">읽음 처리 결과를 확인하지 못했어요. 목록을 다시 확인해 주세요.</p>}
-      {expired ? <p>로그인 후 알림을 확인할 수 있습니다. <Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} onClick={onClose}>로그인</Link></p>
+      {expired ? <p>로그인 후 알림을 확인할 수 있습니다. <Link to={loginPath(location.pathname + location.search)} onClick={onClose}>로그인</Link></p>
         : query.isError ? <div role="alert"><p>알림을 불러오지 못했어요.</p><button type="button" onClick={() => void query.refetch()}>다시 조회</button></div>
         : !query.data ? <p role="status">알림을 불러오는 중입니다.</p>
         : <>

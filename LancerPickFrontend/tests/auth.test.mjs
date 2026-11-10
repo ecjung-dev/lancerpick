@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 import { QueryClient } from '@tanstack/react-query'
 import { getCurrentMember, login, logout, signup } from '../src/features/auth/api.ts'
-import { isUnclearResult, memberQueryKey, recheckAfterUnauthorized, recheckSession, resetAccountState, safeNextPath } from '../src/features/auth/session.ts'
+import { isUnclearResult, memberQueryKey, recheckAfterUnauthorized, recheckSession, resetAccountState, safeNextPath, loginPath } from '../src/features/auth/session.ts'
 import { validateLogin, validateSignup } from '../src/features/auth/validation.ts'
 import { ApiError, apiRequest, clearCsrfToken } from '../src/shared/api/client.ts'
 
@@ -280,4 +280,11 @@ test('a late recheck response after another login or logout does not overwrite t
     assert.deepEqual(client.getQueryData(['wallet', other.id, 'balance']), { balance: 7 }, `${label}: 새 계정 캐시 유지`)
     client.clear()
   }
+})
+
+test('loginPath는 돌아올 경로를 인코딩해 safeNextPath가 그대로 되돌릴 수 있게 한다', () => {
+  const next = '/orders/9007199254740993?side=BUY&page=2'
+  const path = loginPath(next)
+  assert.equal(path, `/login?next=${encodeURIComponent(next)}`)
+  assert.equal(safeNextPath(new URL(path, 'http://localhost').searchParams.get('next')), next)
 })

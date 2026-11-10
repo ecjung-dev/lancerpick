@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createServer } from 'vite'
 import { getAdminMember, getAdminMembers, getMemberSanctions, executeMemberSanction } from '../src/features/admin/memberApi.ts'
 import { pendingMemberCommandKey, submitMemberSanction } from '../src/features/admin/memberCommands.ts'
-import { koreaEndTime, readMemberFilter } from '../src/features/admin/memberValidation.ts'
+import { koreaEndTime, koreaInputValue, readMemberFilter } from '../src/features/admin/memberValidation.ts'
 import { captureAccountScope, memberQueryKey, resetAccountState } from '../src/features/auth/session.ts'
 import { clearCsrfToken } from '../src/shared/api/client.ts'
 
@@ -182,4 +182,11 @@ test('protected administrator detail is read-only and history states remain dist
   assert.match(html, /기간 만료/)
   assert.match(html, /&lt;b&gt;사유&lt;\/b&gt;/)
   assert.doesNotMatch(html, /member-sanction-end/)
+})
+
+test('koreaInputValue는 기기 시간대와 무관하게 한국 시간 입력값을 만들고 koreaEndTime과 왕복한다', () => {
+  assert.equal(koreaInputValue(Date.parse('2026-11-09T15:30:00Z')), '2026-11-10T00:30')
+  assert.equal(koreaInputValue(Date.parse('2026-12-31T15:00:00Z')), '2027-01-01T00:00')
+  const value = koreaInputValue(Date.parse('2026-11-20T03:15:00Z'))
+  assert.deepEqual(koreaEndTime(value, '2026-11-09T06:00:00Z'), { endsAt: '2026-11-20T03:15:00.000Z' })
 })

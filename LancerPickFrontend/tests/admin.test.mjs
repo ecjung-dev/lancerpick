@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createServer } from 'vite'
 import { changeVisibility, getAdminProduct, getAdminProducts, getModerationLogs } from '../src/features/admin/api.ts'
 import { accessProblem } from '../src/features/admin/access.ts'
+import { adminBackPath } from '../src/features/admin/navigation.ts'
 import { readFilter, validateReason } from '../src/features/admin/validation.ts'
 import { ApiError, clearCsrfToken } from '../src/shared/api/client.ts'
 
@@ -241,4 +242,14 @@ test('header shows the admin link only for an ADMIN session', () => {
       assert.match(html, /회원님/)
     } finally { client.clear() }
   }
+})
+
+test('adminBackPath는 같은 목록 경로(검색 조건 포함)만 되돌아갈 주소로 쓴다', () => {
+  assert.equal(adminBackPath('/admin/products?q=x&page=2', '/admin/products'), '/admin/products?q=x&page=2')
+  assert.equal(adminBackPath('/admin/products', '/admin/products'), '/admin/products')
+  assert.equal(adminBackPath('/admin/products-old', '/admin/products'), '/admin/products')
+  assert.equal(adminBackPath('/admin/finance', '/admin/products'), '/admin/products')
+  assert.equal(adminBackPath('https://evil.example/admin/products', '/admin/products'), '/admin/products')
+  assert.equal(adminBackPath(undefined, '/admin/inquiries', '/admin/inquiries?status=OPEN'), '/admin/inquiries?status=OPEN')
+  assert.equal(adminBackPath({ from: '/admin/inquiries' }, '/admin/inquiries', '/admin/inquiries?status=OPEN'), '/admin/inquiries?status=OPEN')
 })

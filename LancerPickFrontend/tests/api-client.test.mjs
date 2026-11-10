@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { ApiError, apiRequest, clearCsrfToken } from '../src/shared/api/client.ts'
-import { normalizeText, codePointLength } from '../src/shared/lib/text.ts'
+import { ApiError, apiRequest, clearCsrfToken, isUnauthorized } from '../src/shared/api/client.ts'
+import { normalizeText, codePointLength, normalizedLength } from '../src/shared/lib/text.ts'
 
 const originalFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = originalFetch; clearCsrfToken() })
@@ -121,4 +121,20 @@ test('late unauthorized and CSRF errors cannot discard a newer CSRF token', asyn
     await apiRequest('/new', { method: 'POST' })
     assert.equal(csrfCalls, 2)
   }
+})
+
+test('isUnauthorized는 401 ApiError만 참으로 본다', () => {
+  const error = (status) => new ApiError(status, { code: 'X', message: 'x', fieldErrors: [] })
+  assert.equal(isUnauthorized(error(401)), true)
+  assert.equal(isUnauthorized(error(403)), false)
+  assert.equal(isUnauthorized(error(0)), false)
+  assert.equal(isUnauthorized(new Error('401')), false)
+  assert.equal(isUnauthorized({ status: 401 }), false)
+  assert.equal(isUnauthorized(undefined), false)
+})
+
+test('normalizedLength는 앞뒤 공백을 정리한 뒤 코드 포인트로 센다', () => {
+  assert.equal(normalizedLength('  가😀나 \r\n'), 3)
+  assert.equal(normalizedLength('\u3000\u00a0'), 0)
+  assert.equal(normalizedLength('a\r\nb'), codePointLength(normalizeText('a\r\nb')))
 })

@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { Button } from '../../../shared/components/Button'
 import { Input } from '../../../shared/components/Input'
-import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { normalizedLength } from '../../../shared/lib/text'
 import { signup, verifySignupEmail } from '../api'
 import { useCurrentMember } from '../queries'
 import { signupFailureKind, verifyFailureKind } from '../signupEmail'
@@ -178,7 +178,7 @@ export function SignupVerifyPage() {
             onChange={(e) => change(setPasswordConfirm, 'passwordConfirm')(e.target.value)} />
         </Field>
         <Field id="signup-name" label="표시 이름" error={errors.displayName}
-          help={`다른 회원에게 보이는 이름이에요. ${codePointLength(normalizeText(displayName))} / 30자`}>
+          help={`다른 회원에게 보이는 이름이에요. ${normalizedLength(displayName)} / 30자`}>
           <Input id="signup-name" autoComplete="nickname" value={displayName} aria-invalid={!!errors.displayName}
             aria-describedby="signup-name-help signup-name-error" onChange={(e) => change(setDisplayName, 'displayName')(e.target.value)} />
         </Field>

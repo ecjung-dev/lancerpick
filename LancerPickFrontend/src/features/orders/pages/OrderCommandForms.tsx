@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { formatWon } from '../../../shared/lib/format'
-import { normalizeText, codePointLength } from '../../../shared/lib/text'
+import { normalizeText, codePointLength, normalizedLength } from '../../../shared/lib/text'
 import {
   payOrder,
   cancelOrder,
@@ -23,7 +23,7 @@ interface FormProps {
 }
 
 function textLength(value: string) {
-  return codePointLength(normalizeText(value))
+  return normalizedLength(value)
 }
 
 function deliverySequence(order: OrderDetail): 1 | 2 | null {

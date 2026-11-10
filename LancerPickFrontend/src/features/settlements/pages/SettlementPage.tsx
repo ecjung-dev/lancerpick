@@ -1,5 +1,6 @@
+import { loginPath } from '../../auth/session'
 import { Link, useLocation, useSearchParams } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { formatWon, formatDateTime } from '../../../shared/lib/format'
 import { readSettlementFilters, settlementSearch, type SettlementFilters } from '../filters'
 import { SettlementFiltersForm } from '../components/SettlementFiltersForm'
@@ -18,7 +19,7 @@ export function SettlementPage() {
   const summary = useSettlementSummary(filters)
   const error = list.error ?? summary.error
   const unauthorized = [list.error, summary.error].some(
-    error => error instanceof ApiError && error.status === 401,
+    error => isUnauthorized(error),
   )
 
   function retry() {
@@ -30,7 +31,7 @@ export function SettlementPage() {
     return <section className={styles.settlements}>
       <h1>판매 수익</h1>
       <p>로그인 후 본인의 판매 수익을 확인할 수 있습니다.</p>
-      <Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}>로그인</Link>
+      <Link to={loginPath(location.pathname + location.search)}>로그인</Link>
     </section>
   }
 

@@ -1272,6 +1272,8 @@ Docker가 없으면 Mailpit 공식 Windows 실행 파일(GitHub 릴리스 `mailp
 
 같은 조회를 여러 화면에서 사용하면 기능 queries.ts를 재사용한다. 변경 이벤트의 입력·진행 상태·화면 이동은 화면에서 관리할 수 있다. 변경 API와 검증 로직은 기능 파일에서 재사용하고, 필요한 경우 훅으로 분리한다. 사용하지 않는 components 폴더나 빈 공통화를 미리 추가하지 않는다.
 
+이미 있는 공통 판별·주소 함수를 쓴다: 401 판별은 `shared/api/client.ts`의 `isUnauthorized`(세션 재확인·캐시 정리·안내는 호출한 화면이 맡음), 로그인 후 돌아오는 주소는 `features/auth/session.ts`의 `loginPath(next)`, 공백 정리 후 글자 수는 `shared/lib/text.ts`의 `normalizedLength`, 관리자 상세의 목록 복귀 주소는 `features/admin/navigation.ts`의 `adminBackPath`.
+
 #### 실제 조회 흐름
 
 상품 목록은 products/api.ts와 queries.ts, 상품 상세는 useProductDetail을 사용한다. 주문 목록·상세·작성 진입은 orders/queries.ts, 판매자 프로필은 seller/queries.ts, 지갑은 wallet/queries.ts, 정산은 settlements/queries.ts를 사용한다. 화면에서 API 주소를 직접 작성하지 않는다.

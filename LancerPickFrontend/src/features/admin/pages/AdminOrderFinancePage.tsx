@@ -1,3 +1,4 @@
+import { adminBackPath } from '../navigation'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
@@ -13,9 +14,6 @@ import { AdminActionLogList } from '../components/AdminActionLogList'
 import styles from './Admin.module.css'
 
 /** 결제 목록에서 넘겨준 돌아갈 주소. 금융 조회 경로만 허용한다. */
-function backPath(from: unknown) {
-  return typeof from === 'string' && (from === '/admin/finance' || from.startsWith('/admin/finance?')) ? from : '/admin/finance'
-}
 const time = (value: string | null | undefined) => value ? formatDateTime(value) : '—'
 /** 기록이 없으면 0원으로 바꾸지 않고 "기록 없음"으로 보여 준다. */
 const NONE = <p>기록 없음</p>
@@ -23,7 +21,7 @@ const NONE = <p>기록 없음</p>
 /** /admin/finance/orders/:id. 한 주문의 결제·보관금·정산·종료 분배와 계약 PDF 상태를 조회하고, 후보인 PDF는 재생성을 요청할 수 있다(K6). */
 export function AdminOrderFinancePage() {
   const { id = '' } = useParams()
-  const back = backPath(useLocation().state?.from)
+  const back = adminBackPath(useLocation().state?.from, '/admin/finance')
   const finance = useOrderFinance(id)
   const problem = accessProblem(finance.error)
   const missing = !isValidId(id) || (finance.error instanceof ApiError && finance.error.status === 404)

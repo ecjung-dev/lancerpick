@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { formatDateTime } from '../../../shared/lib/format'
-import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { normalizedLength } from '../../../shared/lib/text'
 import { getMemberSession } from '../../auth/api'
 import {
   captureAccountScope,
   isUnclearResult,
+  loginPath,
   recheckSession,
 } from '../../auth/session'
 import { sendChatMessage } from '../api'
@@ -70,8 +71,8 @@ export function OrderChatPanel({
             void member.refetch()
           }}
         />
-        {member.error instanceof ApiError && member.error.status === 401 && (
-          <Link to={`/login?next=${encodeURIComponent(`/orders/${orderId}`)}`}>
+        {isUnauthorized(member.error) && (
+          <Link to={loginPath(`/orders/${orderId}`)}>
             로그인 후 대화 보기
           </Link>
         )}
@@ -124,7 +125,7 @@ function ChatConversation({
     }
   }, [])
   const messages = mergeChatMessages(query.data?.pages ?? [])
-  const length = codePointLength(normalizeText(content))
+  const length = normalizedLength(content)
   const canSend =
     Boolean(query.data?.pages[0]?.canSend) && chatStatusAllowsSend(orderStatus)
 
@@ -218,7 +219,7 @@ function ChatConversation({
         setFailure(
           error instanceof Error ? error.message : '전송하지 못했습니다.',
         )
-      if (error instanceof ApiError && error.status === 401)
+      if (isUnauthorized(error))
         await client.invalidateQueries({ queryKey: chatKeys.member })
       else await query.refetch()
     } finally {

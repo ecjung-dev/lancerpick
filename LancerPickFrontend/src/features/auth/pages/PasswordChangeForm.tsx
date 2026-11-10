@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { ApiError, isUnauthorized } from '../../../shared/api/client'
 import { Button } from '../../../shared/components/Button'
 import { Input } from '../../../shared/components/Input'
 import { submitPasswordChange } from '../password'
@@ -52,7 +52,7 @@ export function PasswordChangeForm({ member, onAccountChanged }: { member: Membe
       // signedOut: 로그인 상태가 null로 바뀌어 화면이 로그인 안내로 바뀐다.
     },
     onError: async (failure) => {
-      if (failure instanceof ApiError && failure.status === 401) {
+      if (isUnauthorized(failure)) {
         await resetAccountState(client, null)
         return
       }

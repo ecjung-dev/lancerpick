@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { createCancellationRequest, resolveCancellationRequest } from '../api'
 import type { OrderDetail } from '../types'
-import { normalizeText, codePointLength } from '../../../shared/lib/text'
+import { normalizeText, codePointLength, normalizedLength } from '../../../shared/lib/text'
 import { formatDateTime } from '../../../shared/lib/format'
 import { ApiError } from '../../../shared/api/client'
 import { cancellationStatusLabel } from '../status'
@@ -18,7 +18,7 @@ export function CancellationActions({ order, disabled, run }: Props) {
   const [approved, setApproved] = useState(false)
   const draft = useRef<{ reason: string; key: string } | null>(null)
   const [frozen, setFrozen] = useState(false)
-  const length = codePointLength(normalizeText(reason))
+  const length = normalizedLength(reason)
   const response = normalizeText(responseReason)
   const pending = order.cancellationRequests.filter(
     (item) => item.status === 'PENDING',

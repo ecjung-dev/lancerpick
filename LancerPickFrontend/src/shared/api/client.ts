@@ -27,6 +27,14 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * 서버가 401(로그인 필요·세션 만료)로 응답한 오류인지 판별한다. 세션 재확인·캐시 정리·안내는 호출한 쪽이 맡는다.
+ * 거짓 분기에서 ApiError 자체가 제외되지 않도록 status까지 포함한 타입으로 좁힌다.
+ */
+export function isUnauthorized(error: unknown): error is ApiError & { readonly status: 401 } {
+  return error instanceof ApiError && error.status === 401
+}
+
 interface CsrfToken { token: string; headerName: string }
 let csrf: CsrfToken | undefined
 let pendingCsrf: Promise<CsrfToken> | undefined

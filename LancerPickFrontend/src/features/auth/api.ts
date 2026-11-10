@@ -1,4 +1,4 @@
-import { ApiError, apiRequest } from '../../shared/api/client.ts'
+import { apiRequest, isUnauthorized } from '../../shared/api/client.ts'
 import type {
   ChangePasswordInput, LoginInput, Member, PasswordResetAccepted, PasswordResetInput, SignupEmailVerification,
   SignupInput, UpdateMeInput,
@@ -11,7 +11,7 @@ export async function getCurrentMember(
   try {
     return await getMemberSession(signal)
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) return null
+    if (isUnauthorized(error)) return null
     throw error
   }
 }

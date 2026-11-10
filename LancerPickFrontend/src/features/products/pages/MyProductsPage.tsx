@@ -1,5 +1,6 @@
+import { loginPath } from '../../auth/session'
 import { Link, useLocation } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
@@ -15,7 +16,7 @@ export function MyProductsPage() {
   return <section className={styles.page}>
     <Link to="/mypage">← 마이페이지</Link>
     <div className={styles.heading}><h1>내 상품 조회</h1><Link to="/mypage/products/new" state={{ fromMyProducts: listPath }}>상품 등록</Link></div>
-    {session.error instanceof ApiError && session.error.status === 401 ? <LoginNotice path={listPath} />
+    {isUnauthorized(session.error) ? <LoginNotice path={listPath} />
       : session.isError ? <AsyncState title="계정을 확인하지 못했어요" error={session.error} onRetry={() => { void session.refetch() }} />
         : !session.data ? <AsyncState title="계정 확인 중" />
           : <>
@@ -31,7 +32,7 @@ function MyProductsList({ memberId, page, path, checking, onPage }: {
   memberId: string; page: number; path: string; checking: boolean; onPage: (page: number) => void
 }) {
   const products = useMyProducts(memberId, page)
-  if (products.error instanceof ApiError && products.error.status === 401) return <LoginNotice path={path} />
+  if (isUnauthorized(products.error)) return <LoginNotice path={path} />
   if (products.isError) return <AsyncState title="내 상품을 불러오지 못했어요" error={products.error} onRetry={() => { void products.refetch() }} />
   if (!products.data) return <AsyncState title="내 상품을 불러오고 있어요" />
   if (products.data.items.some(product => product.seller.id !== memberId)) return <AsyncState title="로그인 계정을 다시 확인해 주세요" description="이전 계정의 상품을 표시하지 않습니다. 페이지를 다시 열어 주세요." />
@@ -63,5 +64,5 @@ function MyProductsList({ memberId, page, path, checking, onPage }: {
 }
 
 function LoginNotice({ path }: { path: string }) {
-  return <><AsyncState title="로그인 후 내 상품을 확인해 주세요" /><Link to={`/login?next=${encodeURIComponent(path)}`}>로그인</Link></>
+  return <><AsyncState title="로그인 후 내 상품을 확인해 주세요" /><Link to={loginPath(path)}>로그인</Link></>
 }

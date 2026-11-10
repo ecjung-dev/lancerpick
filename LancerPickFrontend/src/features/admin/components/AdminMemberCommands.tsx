@@ -4,7 +4,7 @@ import { captureAccountScope } from '../../auth/session'
 import { formatDateTime } from '../../../shared/lib/format'
 import { submitMemberSanction } from '../memberCommands'
 import { usePendingMemberCommand } from '../memberQueries'
-import { koreaEndTime, restrictionLabels } from '../memberValidation'
+import { koreaEndTime, koreaInputValue, restrictionLabels } from '../memberValidation'
 import { validateReason } from '../validation'
 import type {
   AdminMemberDetail,
@@ -14,8 +14,7 @@ import type {
 import styles from '../pages/Admin.module.css'
 import memberStyles from './AdminMemberCommands.module.css'
 
-const koreaInput = (iso: string) =>
-  new Date(Date.parse(iso) + 9 * 3_600_000).toISOString().slice(0, 16)
+const koreaInput = (iso: string) => koreaInputValue(Date.parse(iso))
 
 export function AdminMemberCommands({
   detail,

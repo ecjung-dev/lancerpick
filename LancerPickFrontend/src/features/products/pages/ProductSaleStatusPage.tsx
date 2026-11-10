@@ -1,8 +1,9 @@
+import { loginPath } from '../../auth/session'
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
 import { getMemberSession } from '../../auth/api'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { getOwnedProduct } from '../management'
@@ -15,9 +16,9 @@ export function ProductSaleStatusPage() {
   const { id = '' } = useParams()
   const session = useSaleStatusSession()
   const location = useLocation()
-  if (session.error instanceof ApiError && session.error.status === 401) {
+  if (isUnauthorized(session.error)) {
     return <section className={styles.page}><h1>로그인 후 판매 상태를 관리해 주세요</h1>
-      <Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}>로그인</Link></section>
+      <Link to={loginPath(location.pathname + location.search)}>로그인</Link></section>
   }
   if (session.isError) return <AsyncState title="계정을 확인하지 못했어요" error={session.error} onRetry={() => { void session.refetch() }} />
   if (!session.data) return <AsyncState title="계정 확인 중" />
@@ -74,7 +75,7 @@ function SaleStatusPanel({ memberId, id, checking }: { memberId: string; id: str
       if (!active.current) return
       setError(cause instanceof Error ? cause.message : '판매 상태를 확인해 주세요.')
       setNeedsReview(true)
-      if (cause instanceof ApiError && cause.status === 401) setAccountInvalid(true)
+      if (isUnauthorized(cause)) setAccountInvalid(true)
       // 결과 불명확·버전 충돌 모두 변경 요청을 자동 재전송하지 않는다.
     } finally {
       inFlight.current = false
@@ -101,7 +102,7 @@ function SaleStatusPanel({ memberId, id, checking }: { memberId: string; id: str
     } catch (cause) {
       if (active.current) {
         setError(cause instanceof Error ? cause.message : '조회하지 못했어요.')
-        if (cause instanceof ApiError && cause.status === 401) setAccountInvalid(true)
+        if (isUnauthorized(cause)) setAccountInvalid(true)
       }
     } finally { inFlight.current = false; if (active.current) setPending(false) }
   }

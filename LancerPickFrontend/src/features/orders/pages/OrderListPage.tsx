@@ -1,7 +1,8 @@
+import { loginPath } from '../../auth/session'
 import { useOrders } from '../queries'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { useState, type FormEvent } from 'react'
-import { ApiError } from '../../../shared/api/client'
+import { ApiError, isUnauthorized } from '../../../shared/api/client'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import { orderStatuses, orderStatusNames, orderStatusLabel } from '../status'
 import {
@@ -166,12 +167,12 @@ function OrderList({
   const location = useLocation()
   const query = useOrders(filters)
   const { page } = filters
-  if (query.error instanceof ApiError && query.error.status === 401)
+  if (isUnauthorized(query.error))
     return (
       <p>
         로그인 후 거래 내역을 확인할 수 있습니다.{' '}
         <Link
-          to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}
+          to={loginPath(location.pathname + location.search)}
         >
           로그인
         </Link>

@@ -1,10 +1,11 @@
+import { adminBackPath } from '../navigation'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
-import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { normalizedLength } from '../../../shared/lib/text'
 import { captureAccountScope, isUnclearResult } from '../../auth/session'
 import { inquiryStatusLabel } from '../../inquiries/validation'
 import { orderStatusLabel } from '../../orders/status'
@@ -18,10 +19,6 @@ import { AdminNav } from './AdminNav'
 import styles from './Admin.module.css'
 
 /** 목록에서 넘겨준 돌아갈 주소. 관리자 문의 목록 경로만 허용한다. */
-function backPath(from: unknown) {
-  return typeof from === 'string' && (from === '/admin/inquiries' || from.startsWith('/admin/inquiries?')) ? from : '/admin/inquiries?status=OPEN'
-}
-
 const name = (party: Party) => party.displayName ?? `회원 #${party.id}`
 
 const cancellationLabel: Record<string, string> = {
@@ -31,7 +28,7 @@ const cancellationLabel: Record<string, string> = {
 export function AdminInquiryDetailPage() {
   const { id = '' } = useParams()
   const location = useLocation()
-  const back = backPath(location.state?.from)
+  const back = adminBackPath(location.state?.from, '/admin/inquiries', '/admin/inquiries?status=OPEN')
   const inquiry = useAdminInquiry(id)
   const problem = accessProblem(inquiry.error)
   const missing = !isValidId(id) || (inquiry.error instanceof ApiError && inquiry.error.status === 404)
@@ -164,7 +161,7 @@ function DecisionForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
       <label htmlFor="inquiry-reason">처리 사유 <span>필수</span></label>
       <textarea id="inquiry-reason" rows={4} value={reason} aria-invalid={!!error} aria-describedby="inquiry-reason-help inquiry-reason-error"
         onChange={(e) => { setReason(e.target.value); setError(undefined) }} />
-      <p id="inquiry-reason-help" className={styles.help}>{codePointLength(normalizeText(reason))} / {REASON_MAX.toLocaleString()}자</p>
+      <p id="inquiry-reason-help" className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString()}자</p>
       <p id="inquiry-reason-error" className={styles.fieldError}>{error}</p>
       <label><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> 승인 시 주문 취소와 전액 반환이 되돌릴 수 없음을 확인했어요.</label>
       <div className={styles.actions}>

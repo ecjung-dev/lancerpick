@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useSearchParams } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
-import { captureAccountScope } from '../../auth/session'
+import { ApiError, isUnauthorized } from '../../../shared/api/client'
+import { captureAccountScope, loginPath } from '../../auth/session'
 import { notificationReadOptions, useNotifications } from '../queries'
 import { NotificationRow } from '../components/NotificationRow'
 import styles from './Notifications.module.css'
@@ -53,11 +53,11 @@ function NotificationList({
 }) {
   const location = useLocation()
   const query = useNotifications(page, unreadOnly)
-  if (query.error instanceof ApiError && query.error.status === 401)
+  if (isUnauthorized(query.error))
     return (
       <p>
         로그인 후 알림을 확인할 수 있습니다.{' '}
-        <Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}>로그인</Link>
+        <Link to={loginPath(location.pathname + location.search)}>로그인</Link>
       </p>
     )
   if (query.isError)

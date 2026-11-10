@@ -1,7 +1,7 @@
 import { useTopupAccess } from '../queries'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { ApiError, isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { Input } from '../../../shared/components/Input'
@@ -36,7 +36,7 @@ export function WalletTopupPage() {
       <TopupFrame>
         <AsyncState
           title={
-            access.error instanceof ApiError && access.error.status === 401
+            isUnauthorized(access.error)
               ? '로그인이 필요해요'
               : '충전 화면을 준비하지 못했어요'
           }
@@ -430,7 +430,7 @@ function CheckoutForm({ preview = false }: { preview?: boolean }) {
               결제 수단 다시 불러오기
             </Button>
           )}
-          {error instanceof ApiError && error.status === 401 && (
+          {isUnauthorized(error) && (
             <Link className={styles.textLink} to="/login">
               다시 로그인하기 →
             </Link>

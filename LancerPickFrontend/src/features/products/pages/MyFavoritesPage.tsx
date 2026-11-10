@@ -1,6 +1,7 @@
+import { loginPath } from '../../auth/session'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { formatWon } from '../../../shared/lib/format'
@@ -16,7 +17,7 @@ export function MyFavoritesPage() {
   return <section className={styles.page}>
     <Link to="/mypage">← 마이페이지</Link>
     <h1>내 관심 상품</h1>
-    {session.error instanceof ApiError && session.error.status === 401 ? <LoginNotice path={path} />
+    {isUnauthorized(session.error) ? <LoginNotice path={path} />
       : session.isError ? <AsyncState title="계정을 확인하지 못했어요" error={session.error} onRetry={() => { void session.refetch() }} />
         : !session.data || session.isFetching ? <AsyncState title="계정을 확인하고 있어요" />
           : <FavoritesList key={session.data.id} memberId={session.data.id} path={path} />}
@@ -31,7 +32,7 @@ function FavoritesList({ memberId, path }: { memberId: string; path: string }) {
     retry: false,
     gcTime: 0,
   })
-  if (favorites.error instanceof ApiError && favorites.error.status === 401) return <LoginNotice path={path} />
+  if (isUnauthorized(favorites.error)) return <LoginNotice path={path} />
   if (favorites.isError) return <AsyncState title="관심 상품을 불러오지 못했어요" error={favorites.error} onRetry={() => { void favorites.refetch() }} />
   if (!favorites.data) return <AsyncState title="관심 상품을 불러오고 있어요" />
   const { items, totalElements, totalPages } = favorites.data
@@ -52,5 +53,5 @@ function FavoritesList({ memberId, path }: { memberId: string; path: string }) {
 }
 
 function LoginNotice({ path }: { path: string }) {
-  return <Link to={`/login?next=${encodeURIComponent(path)}`}>로그인하고 관심 상품 보기</Link>
+  return <Link to={loginPath(path)}>로그인하고 관심 상품 보기</Link>
 }

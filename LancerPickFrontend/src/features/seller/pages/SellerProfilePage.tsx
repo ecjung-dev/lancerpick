@@ -8,11 +8,11 @@ import {
 } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { ApiError, isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { Input } from '../../../shared/components/Input'
-import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { normalizedLength } from '../../../shared/lib/text'
 import { memberQueryKey } from '../../auth/session'
 import { getSellerSession, saveSellerProfile } from '../api'
 import type { SellerProfile, SellerProfileInput, SellerSession } from '../types'
@@ -20,7 +20,7 @@ import { validateSellerProfile, type ProfileErrors } from '../validation'
 import styles from './SellerProfilePage.module.css'
 
 const expired = (error: unknown) =>
-  error instanceof ApiError && error.status === 401
+  isUnauthorized(error)
 
 export function SellerProfilePage() {
   const session = useSellerSession()
@@ -228,7 +228,7 @@ function ProfileForm({
           <div id="seller-introduction-help" className={styles.help}>
             <span>소개는 공개 프로필에 표시돼요.</span>
             <span>
-              {codePointLength(normalizeText(introduction))} / 2,000자
+              {normalizedLength(introduction)} / 2,000자
             </span>
           </div>
           <p id="seller-introduction-error" className={styles.fieldError}>
@@ -251,7 +251,7 @@ function ProfileForm({
             placeholder="예: 로고 디자인, 웹 개발"
           />
           <p id="seller-specialty-help" className={styles.help}>
-            {codePointLength(normalizeText(specialty))} / 100자
+            {normalizedLength(specialty)} / 100자
           </p>
           <p id="seller-specialty-error" className={styles.fieldError}>
             {errors.specialty}

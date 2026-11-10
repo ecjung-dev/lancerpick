@@ -1,8 +1,9 @@
+import { loginPath } from '../../auth/session'
 import { useOrder } from '../queries'
 import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { ApiError, isUnauthorized } from '../../../shared/api/client'
 import { formatWon, formatDateTime } from '../../../shared/lib/format'
 import styles from './Orders.module.css'
 import { CancellationActions } from './CancellationActions'
@@ -75,13 +76,13 @@ function OrderDetail({ id }: { id: string }) {
       setResets((value) => ({ ...value, refresh: value.refresh + 1 }))
     }
   }
-  if (query.error instanceof ApiError && query.error.status === 401)
+  if (isUnauthorized(query.error))
     return (
       <section className={styles.orders}>
         <h1>주문 상세</h1>
         <p>로그인이 필요합니다.</p>
         <Link
-          to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}
+          to={loginPath(location.pathname + location.search)}
         >
           로그인
         </Link>

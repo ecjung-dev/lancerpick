@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, NavLink, useNavigate } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { logout } from '../api'
 import { useCurrentMember } from '../queries'
 import { NotificationNavLink } from '../../notifications/components/NotificationNavLink'
@@ -22,7 +22,7 @@ export function MemberNav({ signupClassName, buttonClassName }: { signupClassNam
     mutationFn: logout,
     onSettled: async (_data, error) => {
       // 401은 이미 세션이 끝난 것이므로 로그아웃 성공과 똑같이 정리한다.
-      if (error && !(error instanceof ApiError && error.status === 401)) {
+      if (error && !(isUnauthorized(error))) {
         // 서버는 로그아웃을 끝냈을 수도 있다. 실패로 단정하지 않고 실제 상태를 다시 확인한다.
         if (!isUnclearResult(error)) return
         // 서버는 로그아웃을 끝냈을 수도 있다. 다시 확인해서 로그인 상태가 아니면 개인 캐시를 지우고 보호 화면에서 벗어난다.
@@ -46,7 +46,7 @@ export function MemberNav({ signupClassName, buttonClassName }: { signupClassNam
       <button type="button" className={buttonClassName} disabled={out.isPending} onClick={() => out.mutate()}>
         {out.isPending ? '로그아웃 중…' : '로그아웃'}
       </button>
-      {out.isError && !(out.error instanceof ApiError && out.error.status === 401)
+      {out.isError && !(isUnauthorized(out.error))
         && <span role="alert">로그아웃하지 못했어요. 다시 시도해 주세요.</span>}
     </>
   }

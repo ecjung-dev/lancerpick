@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { formatWon } from '../../../shared/lib/format'
@@ -81,11 +81,11 @@ function ResultState({ id, outcome }: { id: string; outcome: Outcome }) {
       </>}
       {outcome === 'fail' && !complete && <p className={styles.help}>결제창 절차가 중단됐습니다. 이 안내만으로 서버의 결제 취소·환불을 확정하지 않습니다.</p>}
       {outcome === 'success' && !flow.confirmation && topup?.status === 'READY' && <p className={styles.help}>유효한 결제 복귀 정보를 찾지 못해 자동 승인하지 않았습니다.</p>}
-      {error !== undefined && <AsyncState title={error instanceof ApiError && error.status === 401 ? '다시 로그인해 주세요' : '충전 상태를 확인하지 못했어요'} error={error} description={error instanceof Error ? error.message : '잠시 후 상태를 다시 조회해 주세요.'} />}
+      {error !== undefined && <AsyncState title={isUnauthorized(error) ? '다시 로그인해 주세요' : '충전 상태를 확인하지 못했어요'} error={error} description={error instanceof Error ? error.message : '잠시 후 상태를 다시 조회해 주세요.'} />}
       <div className={styles.resultActions}>
         {isTopupId(id) && !complete && <Button disabled={loading} onClick={() => { void refresh(Boolean(pending)) }}>{loading ? '확인 중…' : pending ? '결제 결과 재확인' : '신청 상태 새로고침'}</Button>}
         <Link to="/mypage/wallet" className={styles.actionLink}>적립금 내역으로</Link>
-        {error instanceof ApiError && error.status === 401 && <Link to="/login">로그인</Link>}
+        {isUnauthorized(error) && <Link to="/login">로그인</Link>}
         {topup && !pending && <Link to="/mypage/wallet/topup" onClick={() => { if (topup.status === 'READY') forgetPendingCheckout(id) }}>충전 화면으로</Link>}
       </div>
     </>}

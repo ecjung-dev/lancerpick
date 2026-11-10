@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query'
-import { ApiError, clearCsrfToken } from '../../shared/api/client.ts'
+import { ApiError, clearCsrfToken, isUnauthorized } from '../../shared/api/client.ts'
 import { clearWalletCache } from '../wallet/cache.ts'
 import { clearAccountQueries } from '../../shared/api/accountCache.ts'
 import { getCurrentMember } from './api.ts'
@@ -107,7 +107,7 @@ const lastRecheckedAt = new WeakMap<QueryClient, number>()
  * 변경 요청(mutation)의 401은 각 화면이 결과를 안내하며 정리하므로 여기서 다루지 않는다.
  */
 export function recheckAfterUnauthorized(queryClient: QueryClient, error: unknown): Promise<RecheckOutcome | undefined> {
-  if (!(error instanceof ApiError) || error.status !== 401) return Promise.resolve(undefined)
+  if (!isUnauthorized(error)) return Promise.resolve(undefined)
   const pending = pendingRechecks.get(queryClient)
   if (pending) return pending
   if (!queryClient.getQueryData<Member | null>(memberQueryKey)) return Promise.resolve(undefined)
@@ -117,6 +117,11 @@ export function recheckAfterUnauthorized(queryClient: QueryClient, error: unknow
   const recheck = recheckSession(queryClient).finally(() => pendingRechecks.delete(queryClient))
   pendingRechecks.set(queryClient, recheck)
   return recheck
+}
+
+/** 로그인 후 `next`로 돌아오는 로그인 화면 주소. 받는 쪽(LoginPage)이 safeNextPath로 다시 검사한다. */
+export function loginPath(next: string) {
+  return `/login?next=${encodeURIComponent(next)}`
 }
 
 /**

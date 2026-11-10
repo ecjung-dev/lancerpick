@@ -1,7 +1,8 @@
+import { loginPath } from '../../auth/session'
 import { useOrderEntryMember } from '../queries'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { ApiError, isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { formatWon } from '../../../shared/lib/format'
@@ -28,12 +29,12 @@ export function OrderCreatePage() {
   const location = useLocation()
   const member = useOrderEntryMember()
   const product = useProductDetail(id)
-  if (member.error instanceof ApiError && member.error.status === 401)
+  if (isUnauthorized(member.error))
     return (
       <section className={styles.page}>
         <h1>로그인이 필요해요</h1>
         <Link
-          to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}
+          to={loginPath(location.pathname + location.search)}
         >
           로그인으로 이동
         </Link>

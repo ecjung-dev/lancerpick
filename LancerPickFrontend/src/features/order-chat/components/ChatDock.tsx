@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { formatDateTime } from '../../../shared/lib/format'
 import { useOrder } from '../../orders/queries'
 import { orderStatusLabel } from '../../orders/status'
@@ -157,7 +157,7 @@ function ThreadList({
         {query.isError ? (
           <div role="alert">
             <p>
-              {query.error instanceof ApiError && query.error.status === 401
+              {isUnauthorized(query.error)
                 ? '로그인 상태를 다시 확인해 주세요.'
                 : '대화 목록을 불러오지 못했어요.'}
             </p>

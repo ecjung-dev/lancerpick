@@ -7,15 +7,15 @@ import {
 } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { ApiError, isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { Input } from '../../../shared/components/Input'
-import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { normalizedLength } from '../../../shared/lib/text'
 import { formatDateTime } from '../../../shared/lib/format'
 import { saveDisplayName } from '../profile'
 import { useCurrentMember } from '../queries'
-import { isUnclearResult, memberQueryKey, resetAccountState } from '../session'
+import { isUnclearResult, memberQueryKey, resetAccountState, loginPath } from '../session'
 import type { Member } from '../types'
 import { DISPLAY_NAME_MAX, validateDisplayName } from '../validation'
 import { useDisplayNameCooldown } from '../useDisplayNameCooldown'
@@ -129,7 +129,7 @@ function ProfileForm({
       setSaved(true)
     },
     onError: async (failure) => {
-      if (failure instanceof ApiError && failure.status === 401) {
+      if (isUnauthorized(failure)) {
         await resetAccountState(client, null)
         return
       }
@@ -217,7 +217,7 @@ function ProfileForm({
             괜찮아요.
           </span>
           <span>
-            {codePointLength(normalizeText(name))} / {DISPLAY_NAME_MAX}자
+            {normalizedLength(name)} / {DISPLAY_NAME_MAX}자
           </span>
         </p>
         <p id="profile-display-name-error" className={styles.fieldError}>
@@ -252,7 +252,7 @@ function LoginNotice() {
       />
       <Link
         className={styles.link}
-        to={`/login?next=${encodeURIComponent(PROFILE_PATH)}`}
+        to={loginPath(PROFILE_PATH)}
       >
         로그인으로 이동 →
       </Link>

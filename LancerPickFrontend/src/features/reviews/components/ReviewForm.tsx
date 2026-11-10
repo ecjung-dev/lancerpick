@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../shared/api/client'
-import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { normalizedLength } from '../../../shared/lib/text'
 import { writeReview } from '../api'
 import { getOrder } from '../../orders/api'
 import styles from './Reviews.module.css'
@@ -14,7 +14,7 @@ export function ReviewForm({ orderId, productId }: { orderId: string; productId:
   const [busy, setBusy] = useState(false)
   const [blocked, setBlocked] = useState(false)
   const [message, setMessage] = useState('')
-  const length = codePointLength(normalizeText(content))
+  const length = normalizedLength(content)
 
   async function submit() {
     if (lock.current || blocked || length > 2000) return

@@ -1,7 +1,8 @@
+import { loginPath } from '../../auth/session'
 import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation } from 'react-router'
-import { ApiError } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { Button } from '../../../shared/components/Button'
 import { getMemberSession } from '../../auth/api'
 import { getFavorite, setFavorite } from '../favoritesApi'
@@ -10,8 +11,8 @@ import { useMyProductsSession } from '../queries'
 export function ProductFavoriteButton({ productId }: { productId: string }) {
   const session = useMyProductsSession()
   const location = useLocation()
-  if (session.error instanceof ApiError && session.error.status === 401) {
-    return <Link to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}>로그인하고 관심 상품 등록</Link>
+  if (isUnauthorized(session.error)) {
+    return <Link to={loginPath(location.pathname + location.search)}>로그인하고 관심 상품 등록</Link>
   }
   if (session.isError) return <Button variant="secondary" onClick={() => { void session.refetch() }}>로그인 상태 다시 확인</Button>
   if (!session.data || session.isFetching) return <p role="status">로그인 상태를 확인하고 있어요.</p>

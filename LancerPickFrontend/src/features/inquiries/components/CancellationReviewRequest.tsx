@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../shared/api/client'
 import { formatDateTime } from '../../../shared/lib/format'
-import { codePointLength, normalizeText } from '../../../shared/lib/text'
+import { normalizedLength } from '../../../shared/lib/text'
 import { captureAccountScope, isUnclearResult } from '../../auth/session'
 import type { OrderDetail } from '../../orders/types'
 import { requestCancellationReview } from '../api'
@@ -108,7 +108,7 @@ export function CancellationReviewRequest({ order, disabled }: Props) {
                 placeholder="예: 판매자가 사흘째 응답이 없습니다"
               />
             </label>
-            <p>{codePointLength(normalizeText(subject))} / {SUBJECT_MAX}자</p>
+            <p>{normalizedLength(subject)} / {SUBJECT_MAX}자</p>
             {error && <p role="alert">{error}</p>}
             <button type="submit">{send.isPending ? '요청 중…' : '관리자 검토 요청'}</button>
           </fieldset>
