@@ -90,6 +90,7 @@ fieldErrors의 각 항목은 field(요청 필드 경로 문자열), code(검증 
 | PATCH /me | 회원; displayName | Member |
 | POST /me/password | 회원+CSRF; currentPassword,newPassword | 204; 현재 비밀번호 재확인 후 변경, auth_version 증가로 모든 세션 폐기. 자동 로그인 없음 |
 | POST /auth/password-reset-requests | 비로그인 가능+CSRF; email | 202 `{message}`; 가입 여부·요청 제한·발송 결과와 무관하게 같은 응답 |
+| POST /auth/account-guide-requests | 비로그인 가능+CSRF; email | 202 `{message}`(아이디 안내, 2026-11-10). 가입한 이메일이면 그 주소로 "이 주소가 아이디" 안내 메일(로그인·재설정 링크, 토큰 없음). 가입 여부·요청 제한(이메일별 60초·1시간 5회, 재설정과 별도)·발송 결과와 무관하게 같은 응답. 이메일 형식 오류 400 `VALIDATION_FAILED` |
 | POST /auth/password-resets | 비로그인 가능+CSRF; token,newPassword | 204; 일회용 토큰으로 비밀번호 변경, auth_version 증가로 모든 세션·다른 재설정 링크 폐기. 자동 로그인 없음 |
 
 Member: id,email,displayName,role,hasSellerProfile(email_verified_at은 응답에 넣지 않는다). 이메일은 공백 제거·소문자 정규화 후 중복 확인한다. 가입 후 로그인 화면으로 이동하며 자동 로그인하지 않는다. 로그인·로그아웃 후 CSRF 토큰을 다시 획득한다.
