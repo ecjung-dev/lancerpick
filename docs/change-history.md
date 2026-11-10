@@ -4,6 +4,13 @@
 
 ## 기록 해석
 
+<a id="auth-error-code-unify"></a>
+### 관리자 경로 401 오류 코드 통일 — 2026-11-10, 로컬 수정
+
+정은찬, `fix/auth-error-code-unify`, main `c0ae56e`(#169) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)에서 관리자 실행 회원이 없을 때 401 응답의 `code`가 [오류 코드 표](architecture.md#api)의 `AUTHENTICATION_REQUIRED`가 아니라 `UNAUTHORIZED`인 곳 3개를 찾아 맞췄다: `AdminActionAuditService.requireAdmin`, `AdminActionExecutionGuard.require`(#167), `ContractDocumentTransactions.adminOwned`(관리자 PDF 경로). HTTP 상태·문구·잠금은 그대로이고 응답 `code`만 바뀐다. 프런트는 이 경로에서 HTTP 상태로만 분기해 화면 영향이 없다. 일반 계약 문서 경로의 회원 없음→404 은닉은 유지했다. 영향 영역: admin(김창재·황준범), contract(황준범).
+
+검증: 관련 `admin.*`·`contract.*` 180건 통과, 전체 `clean build` **1,141건 통과**(실패·오류·건너뜀 0, 3분 35초, 로컬 테스트 DB, 2026-11-10). `AdminActionAuditIntegrationTests`의 기대 코드를 함께 고쳤다. 프런트는 바꾸지 않아 검사하지 않았고, 원격 CI는 PR에서 확인한다.
+
 <a id="admin-reprocessing-api-history"></a>
 ### K6 관리자 재처리 실행 API·화면 — 2026-11-10, 로컬 구현
 

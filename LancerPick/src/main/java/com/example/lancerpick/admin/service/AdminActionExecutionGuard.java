@@ -36,7 +36,7 @@ public class AdminActionExecutionGuard {
         members
             .findByIdForShare(adminId)
             .orElseThrow(() ->
-                new BusinessException(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다."));
+                new BusinessException(HttpStatus.UNAUTHORIZED, "AUTHENTICATION_REQUIRED", "로그인이 필요합니다."));
     if (member.getRole() != MemberRole.ADMIN)
       throw new BusinessException(HttpStatus.FORBIDDEN, "FORBIDDEN", "관리자 권한이 필요합니다.");
     var log = logs.findByIdForUpdate(logId).orElseThrow(() -> rejected());

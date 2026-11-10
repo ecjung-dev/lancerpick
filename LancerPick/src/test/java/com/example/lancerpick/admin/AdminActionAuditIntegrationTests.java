@@ -182,7 +182,7 @@ class AdminActionAuditIntegrationTests {
   @Test
   void unauthorizedOrInvalidRequestsNeverReachTargetLookup() {
     fails(() -> begin(user, 123, "확인", UUID.randomUUID()), "FORBIDDEN");
-    fails(() -> begin(0, 123, "확인", UUID.randomUUID()), "UNAUTHORIZED");
+    fails(() -> begin(0, 123, "확인", UUID.randomUUID()), "AUTHENTICATION_REQUIRED");
     fails(() -> begin(admin, 123, " ", UUID.randomUUID()), "INVALID_ADMIN_ACTION");
     fails(() -> begin(admin, 0, "확인", UUID.randomUUID()), "INVALID_ADMIN_ACTION");
     fails(() -> begin(admin, 123, "확인", null), "INVALID_ADMIN_ACTION");
