@@ -37,7 +37,7 @@ PDF는 생성 시도 키·문서 버전·해시·짧은 DB 트랜잭션·비공�
 
 보안 잠금 전달 재시도 로컬 후속은 `SECURITY_LOCK_RETRY_ENABLED=true`(기본), `SECURITY_LOCK_RETRY_DELAY_MS=30000`, `SECURITY_LOCK_RETRY_BATCH_SIZE=50`이다. 전용 스케줄러로 기존 전달 서비스를 호출하며 공통 test 프로필과 demo는 자동 실행하지 않는다. [재시도 계약·제한](features.md#members-sanctions)을 따른다. 신규 테이블이나 Batch Job은 추가하지 않는다.
 
-아래에는 현재 저장소의 실행·개발 환경을 정리했다. 초기 프로젝트 생성 예시는 변경 이력으로 분리했다. [루트 실행 안내](../README.md)와 실제 빌드·설정 파일을 함께 확인하고, 테스트는 TEST_DB_*로 격리한다. SMTP 메모리 큐 유실·관리자 재처리 미연결 등 한계는 [남은 작업](project-progress.md#remaining)에 유지한다. 오래된 PENDING의 UNKNOWN 정리 로컬 후속은 아래 메일 인프라와 기능 명세를 따른다.
+아래에는 현재 저장소의 실행·개발 환경을 정리했다. 초기 프로젝트 생성 예시는 변경 이력으로 분리했다. [루트 실행 안내](../README.md)와 실제 빌드·설정 파일을 함께 확인하고, 테스트는 TEST_DB_*로 격리한다. SMTP 메모리 큐 유실 등 한계는 [남은 작업](project-progress.md#remaining)에 유지한다. 오래된 PENDING의 UNKNOWN 정리(#166)는 아래 메일 인프라와 기능 명세를 따른다.
 
 ## 주제별 목차
 

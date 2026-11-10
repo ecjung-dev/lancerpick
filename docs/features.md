@@ -151,7 +151,7 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 로그인 상태 변경·비로그인 재설정·이메일 인증 가입을 구분한다. 자격 증명 변경은 인증 버전을 증가시켜 기존 HTTP/소켓 인증을 폐기한다. 복구 요청은 가입 여부를 드러내지 않는 응답·요청 제한·토큰 수명/일회성을 적용한다. 메일은 커밋 뒤 메모리 큐로 보내며 SMTP 기본 비활성을 유지한다. 아래 로컬 후속은 오래된 PENDING의 결과 상태만 정리하고 자동 재발송은 하지 않는다.
 
 <a id="mail-delivery-reconciliation"></a>
-#### 오래된 메일 대기 결과 정리 — 2026-11-10, 로컬 구현
+#### 오래된 메일 대기 결과 정리 — 2026-11-10, main 반영(#166)
 
 사용자 합의 범위는 ‘결과 미확인 상태 정리 + 기존 사용자 재요청’이다. `feature/mail-delivery-reconciliation`(황준범, main `a7236ef` 기준)에서 발급 시각이 기본 30분 이상 지난 PENDING을 UNKNOWN / MAIL_RESULT_UNCONFIRMED로 바꾼다. 미발송·메일 유실을 확정하는 상태가 아니다. 메모리 큐의 본문을 복원하거나 SMTP를 재호출하지 않으며, 수신자·토큰 원문·메일 본문을 새로 보관하지 않는다.
 
@@ -942,7 +942,7 @@ canonicalContent는 정책별로 고정한 원문이다. V2의 선금/잔금과 
 - 관리자 권한 확인 후 잘못된 주문 ID·버전: 400 `VALIDATION_FAILED`.
 - 없는 주문·계약·버전 또는 LEGACY_V1 주문: 404 `RESOURCE_NOT_FOUND`.
 - 향후 관리자 Controller는 세션에서 얻은 관리자 ID로 호출하고 관리자 접근 통제·`Cache-Control: no-store`를 적용한다. 요청의 관리자 ID를 신뢰하지 않는다.
-- 관리자 PDF 실행 내부 입구는 [AdminReprocessingService](#admin-reprocessing)로 로컬 구현했다. 감사 요청에 연결된 별도 관리자 경로에서 권한·주문 잠금·현재 계약 버전·취소 요청·시각·처리권을 재검사한다. 기존 구매자/판매자 ID를 대신 넣어 당사자 API를 호출하지 않는다. 관리자 실행 API·화면은 김창재가 [로컬 연결](#admin-reprocessing-api)했다.
+- 관리자 PDF 실행 내부 입구는 [AdminReprocessingService](#admin-reprocessing)로 구현했다(#167). 감사 요청에 연결된 별도 관리자 경로에서 권한·주문 잠금·현재 계약 버전·취소 요청·시각·처리권을 재검사한다. 기존 구매자/판매자 ID를 대신 넣어 당사자 API를 호출하지 않는다. 관리자 실행 API·화면은 김창재가 [연결](#admin-reprocessing-api)했다(#168).
 
 ##### API·화면 연결
 
@@ -1790,7 +1790,7 @@ OrderPaymentController는 인증 ID·입력을 확인하고 OrderPaymentService�
 
 <a id="finance-settlement"></a>
 
-### 판매 수익 검색·지급 구분 후속 — 2026-11-10, 로컬 구현
+### 판매 수익 검색·지급 구분 후속 — 2026-11-10, main 반영(#159)
 
 `feature/settlement-query-details`(황준범, main `3353e57` 기준). GET `/api/me/settlements`와 `/summary`에 선택 검색어 `q`를 추가한다. 공백 정리 후 100 코드 포인트 이하, 숫자만이면 주문번호 정확 일치(0/범위 초과는 빈 결과), 나머지는 주문 당시 보관 상품명 부분 일치다. `%`, `_`, `!`는 문자 그대로 검색한다. 기간·정렬·페이지와 기존 금액 필드는 유지하며 목록·총건수·합계가 동일한 판매자/기간/검색 조건을 사용한다. 상품 원본 수정은 검색 결과의 보관 상품명을 바꾸지 않는다.
 
@@ -1804,7 +1804,7 @@ OrderPaymentController는 인증 ID·입력을 확인하고 OrderPaymentService�
 
 실제 지급 여부를 계약 버전만으로 단정하지 않으며 다른 회원의 원장·금액 불일치는 지급 근거로 쓰지 않는다. 원장 EXISTS로 판정해 목록/합계 행 수를 늘리지 않는다. 합계는 조회 조건의 정산 기록 합계이며 사용 가능 잔액이나 지급 완료 금액 합계가 아니다. 금액 지급/환불 명령·DB·Flyway는 바꾸지 않는다.
 
-판매 수익 화면은 검색·기간·정렬을 URL에 보존하고 페이지·새로고침과 계정 캐시 경계를 유지한다. 입력 초기화와 검색 조건이 목록/합계의 조회 키에 함께 반영된다. 새 화면 표시는 API 추가 필드를 사용하며 실제 서버 재시작이 필요하다. 검증 범위는 [이력](change-history.md#settlement-query-details)을 따른다. main 반영 전이며 PR·CI 상태는 GitHub에서 확인한다.
+판매 수익 화면은 검색·기간·정렬을 URL에 보존하고 페이지·새로고침과 계정 캐시 경계를 유지한다. 입력 초기화와 검색 조건이 목록/합계의 조회 키에 함께 반영된다. 새 화면 표시는 API 추가 필드를 사용하며 실제 서버 재시작이 필요하다. 검증 범위는 [이력](change-history.md#settlement-query-details)을 따른다. main 반영(#159)이며 원격 CI 결과는 PR 기록을 따른다.
 
 ### 구매 확정·판매 수익
 
@@ -1864,7 +1864,7 @@ POST /api/orders/{id}/confirm. 인증 구매자·CSRF 필요, 본문 없음. 검
 <a id="finance-batch"></a>
 ### 충전 복구 Batch·관리자 조회
 
-J5는 기존 PROCESSING/UNKNOWN 충전과 저장된 payment_key를 조회해 복구한다. 신규 승인·충전 생성·READY 자동 처리를 하지 않는다. 처리권/재시도·기존 지급 멱등·Spring Batch 영속 메타데이터를 사용한다. 관리자 금융/PDF 후보 조회는 실제 실행을 예약하지 않는다. K6 [감사 기반](#admin-action-audit)·[실행 내부 입구](#admin-reprocessing)는 로컬 구현했고 관리자 실행 API/화면은 후속이다.
+J5는 기존 PROCESSING/UNKNOWN 충전과 저장된 payment_key를 조회해 복구한다. 신규 승인·충전 생성·READY 자동 처리를 하지 않는다. 처리권/재시도·기존 지급 멱등·Spring Batch 영속 메타데이터를 사용한다. 관리자 금융/PDF 후보 조회는 실제 실행을 예약하지 않는다. K6 [감사 기반](#admin-action-audit)·[실행 내부 입구](#admin-reprocessing)(#167)와 [관리자 실행 API/화면](#admin-reprocessing-api)(#168)은 main 반영됐다.
 
 #### 업무 규칙·연결
 
@@ -1948,7 +1948,7 @@ Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Ste
 관리자 단건 재확인은 인증된 구매자용 API에 타인의 ID를 넣어 호출하는 방식으로 연결하지 않는다. 아래 관리자 명령 경계가 기존 지급 트랜잭션과 처리권을 재사용한다. 조회 후보·실제 실행 서비스·공개 API/화면의 구현 상태는 구분한다.
 
 <a id="admin-action-audit"></a>
-##### K6 감사 기반 — 로컬 구현, 실행 API는 미연결
+##### K6 감사 기반 — main 반영(#167)
 
 2026-11-10, 황준범. main `86ecba1` 기준 `feature/admin-action-audit`에서 V13과 JPA 내부 서비스를 추가했다. [기존 제안](change-history.md#b-19-0)의 요청 선행 커밋·멱등 키·결과 분리를 구현하며 실제 재처리 버튼이나 공개 API가 완성됐다는 의미는 아니다.
 
@@ -1966,10 +1966,10 @@ Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Ste
 - `lancerpick.admin.action-audit.pending-timeout` 기본 PT10M, 허용 1~30분. **업무 처리권/실행 제한 시간이 아니라 감사 결과 미확정 표시 기준**이다. 정확히 만료된 시각부터 다음 새 요청이 기존 요청을 UNKNOWN/LEASE_EXPIRED로 닫고 새 후보를 검사한다. 후보 검사 실패 시 그 트랜잭션도 롤백한다. 자동 정리·재실행 스케줄러는 없다.
 - 외부 응답 유실·DB 결과 유실은 UNKNOWN으로 보존한다. UNKNOWN 또는 기한 경과가 재실행 성공을 보장하지 않으며 지급/Batch/PDF의 고유 처리권과 멱등 검사가 별도로 필요하다. 과거 요청의 늦은 완료 결과가 UNKNOWN을 덮지 않는다.
 - 감사 기록은 삭제 API를 제공하지 않으며 기존 상품·문의·회원 제재 이력은 중복 기록하지 않는다. `reason`은 관리자가 입력한 사유라 API·화면에서도 관리자만 볼 수 있게 해야 한다. 서버가 결제 키·외부 응답·경로·예외 원문을 사유/결과에 자동 첨부하지 않는다.
-- 관리자용 충전 재확인·Batch 재시작·PDF 실행 조율자는 아래 로컬 구현을 따른다. 사유/UUID 입력·감사 목록/실행 API·화면은 [K6 실행 API·화면](#admin-reprocessing-api)(김창재)으로 연결했다. 알림 FAILED 재발송은 이번 공통 감사 대상 밖이다.
+- 관리자용 충전 재확인·Batch 재시작·PDF 실행 조율자는 아래 구현(#167)을 따른다. 사유/UUID 입력·감사 목록/실행 API·화면은 [K6 실행 API·화면](#admin-reprocessing-api)(김창재)으로 연결했다. 알림 FAILED 재발송은 이번 공통 감사 대상 밖이다.
 
 <a id="admin-reprocessing"></a>
-##### K6 관리자 재처리 실행 내부 입구 — 로컬 구현, 공개 API/화면 미연결
+##### K6 관리자 재처리 실행 내부 입구 — main 반영(#167)
 
 황준범, `feature/admin-action-audit`, 감사 기반 커밋 `7b53482` 후속. 김창재의 #141 설계에 맞춘 내부 호출 계약이다. **Controller는 아래 서비스만 호출하며 begin/complete를 따로 중복 호출하지 않는다.** 호출자는 세션의 관리자 ID를 전달하고 변경 요청의 CSRF·ADMIN·no-store를 적용한다.
 
@@ -2002,7 +2002,7 @@ Job 파라미터는 `run.id`와 `requestedAtMillis` 두 개만 허용한다. Ste
 - 새 테이블·컬럼·환경변수·공개 REST 경로는 추가하지 않았다. V13 감사 테이블만 사용한다. 관리자 화면/목록·실행 API, 원격 CI와 실제 제공자 브라우저 검증은 별도다.
 
 <a id="admin-reprocessing-api"></a>
-##### K6 관리자 재처리 실행 API·화면 — 로컬 구현(김창재, 2026-11-10)
+##### K6 관리자 재처리 실행 API·화면 — main 반영(#168, 김창재, 2026-11-10)
 
 `feature/admin-reprocessing-api`, main `c76b2eb`(#167) 기준. 위 내부 입구를 HTTP와 화면에 연결했다. 새 DDL·마이그레이션·환경변수는 없다. 경로·입력은 [API 표](architecture.md#b-204-1)를 따른다.
 
@@ -2288,7 +2288,7 @@ API는 [API 명세 7-1](architecture.md#api)을 따른다. 화면은 다음과 �
 ##### 읽지 않은 알림만 보기 (U4)
 
 <a id="b-647-0"></a>
-[화면 개편 결정 §16.1](change-history.md#b-993-0)의 U4 계약(로컬 구현). 기존 목록·읽지 않은 수·읽음·모두 읽음 API는 그대로 두고 목록에 `unreadOnly`만 추가했다(정은찬, 브랜치 `feature/notification-unread-filter`). DB·Flyway 변경 없음.
+[화면 개편 결정 §16.1](change-history.md#b-993-0)의 U4 계약(main 반영 #131). 기존 목록·읽지 않은 수·읽음·모두 읽음 API는 그대로 두고 목록에 `unreadOnly`만 추가했다(정은찬, 브랜치 `feature/notification-unread-filter`). DB·Flyway 변경 없음.
 
 - `GET /api/notifications?unreadOnly=true`: `read_at`이 없는 본인 알림만 기존과 같은 순서(생성 시각·ID 내림차순)로 반환한다. `totalElements`·`totalPages`도 같은 조건으로 센다(읽지 않은 수 API와 같은 값). 생략·`false`는 기존 전체 목록이고, 불리언이 아닌 값은 400 `VALIDATION_FAILED`. 읽음 처리한 항목은 다음 조회부터 빠진다.
 - `/notifications`: "전체"/"읽지 않음" 버튼(`aria-pressed`)으로 보기를 바꾸고 URL `?filter=unread`에 둔다. 바꾸면 첫 페이지로 간다. 알 수 없는 `filter` 값은 전체로 본다. 읽지 않음 보기의 빈 결과는 "읽지 않은 알림이 없습니다."로 구분한다. "모두 읽음" 뒤에는 기존처럼 알림 조회 전체를 다시 불러온다.

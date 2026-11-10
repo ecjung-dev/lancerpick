@@ -4,7 +4,7 @@
 
 ## 현재 스키마 기준
 
-실행 원본은 [백엔드 Flyway](../LancerPick/src/main/resources/db/migration)다. main `86ecba1`의 V1~V12와 K6 감사 기반 로컬 후속 V13을 구분한다. 연결된 개인/운영 DB의 실제 적용 이력은 확인 필요하며, V13 검증은 개인 DB와 분리된 테스트 DB에서만 진행한다.
+실행 원본은 [백엔드 Flyway](../LancerPick/src/main/resources/db/migration)다. main `cefd3e5` 기준 V1~V13(V13 K6 감사 기반은 #167)이다. 연결된 개인/운영 DB의 실제 적용 이력은 확인 필요하며, V13 검증은 개인 DB와 분리된 테스트 DB에서만 진행한다.
 
 | 단계 | 실제 파일의 범위 | 누적 업무 테이블 |
 | --- | --- | --- |
@@ -20,9 +20,9 @@
 | V10 | member_sanctions·제재 종류/기간/요청 키/인증·타이머 전달 경계 | 32 |
 | V11 | members.display_name_changed_at, password_changed_at, password_recommendation_base_at | 32 |
 | V12(#166) | account_challenges 상태 CHECK에 UNKNOWN 추가·대기 결과 조회 인덱스. 신규 테이블/컬럼 없음 | 32 |
-| V13(로컬) | admin_action_logs: K6 관리자 재처리 요청·결과·멱등 키·대상별 진행 중 UNIQUE | 33 |
+| V13(#167) | admin_action_logs: K6 관리자 재처리 요청·결과·멱등 키·대상별 진행 중 UNIQUE | 33 |
 
-V13 포함 업무 33개 + Batch 시스템 9개 = 42개이며 Flyway 이력 테이블은 제외한다(main V12까지는 41개). V11은 nullable 시각 2개와 UTC 기본값이 있는 NOT NULL 권고 기준일을 추가한다. 기존 회원의 과거 비밀번호 변경 시각은 알 수 없으므로 꾸며 넣지 않고 도입 시각부터 첫 6개월 권고 기준을 시작한다.
+V13 포함 업무 33개 + Batch 시스템 9개 = 42개이며 Flyway 이력 테이블은 제외한다(V12까지는 41개). V11은 nullable 시각 2개와 UTC 기본값이 있는 NOT NULL 권고 기준일을 추가한다. 기존 회원의 과거 비밀번호 변경 시각은 알 수 없으므로 꾸며 넣지 않고 도입 시각부터 첫 6개월 권고 기준을 시작한다.
 
 ## 관계·제약·서비스 책임
 
