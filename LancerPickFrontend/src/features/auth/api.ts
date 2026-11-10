@@ -66,6 +66,19 @@ export function requestAccountGuide(email: string) {
  * POST /api/auth/password-resets. 성공하면 204. 토큰은 한 번만 쓸 수 있으므로 절대 자동으로 다시 보내지 않는다.
  * 호출 순서와 캐시 처리는 passwordReset.ts의 submitPasswordReset을 쓴다.
  */
+/**
+ * POST /api/me/email-verification-requests(기존 회원 이메일 인증 메일). 로그인 필요, 본문 없음.
+ * 202면 요청을 받은 것(제한 중이면 메일이 다시 가지 않을 수 있음), 이미 인증됐으면 409 EMAIL_ALREADY_VERIFIED. 자동 재전송 없음.
+ */
+export function requestExistingEmailVerification(isCurrentAccount?: () => boolean) {
+  return apiRequest<PasswordResetAccepted>('/me/email-verification-requests', { method: 'POST', isCurrentAccount })
+}
+
+/** POST /api/me/email-verifications. 링크 토큰은 일회용이라 한 번만 보낸다. 성공 204, 실패는 400 EMAIL_VERIFICATION_INVALID. */
+export function verifyExistingEmail(token: string, isCurrentAccount?: () => boolean) {
+  return apiRequest<void>('/me/email-verifications', { method: 'POST', json: { token }, isCurrentAccount })
+}
+
 export function resetPassword(input: PasswordResetInput) {
   return apiRequest<void>('/auth/password-resets', {
     method: 'POST',

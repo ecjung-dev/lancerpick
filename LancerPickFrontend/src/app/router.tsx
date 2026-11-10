@@ -7,6 +7,7 @@ import { SignupVerifyPage } from '../features/auth/pages/SignupVerifyPage'
 import { PasswordResetPage } from '../features/auth/pages/PasswordResetPage'
 import { PasswordResetRequestPage } from '../features/auth/pages/PasswordResetRequestPage'
 import { AccountGuidePage } from '../features/auth/pages/AccountGuidePage'
+import { EmailVerificationPage } from '../features/auth/pages/EmailVerificationPage'
 import { ProductListPage } from '../features/products/pages/ProductListPage'
 import { ProductDetailPage } from '../features/products/pages/ProductDetailPage'
 import { ProductEditorPage } from '../features/products/pages/ProductEditorPage'
@@ -60,6 +61,7 @@ export const router = createBrowserRouter([
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'mypage', element: <WalletPage /> },
       { path: 'mypage/profile', element: <MyProfilePage /> },
+      { path: 'mypage/email-verification', element: <EmailVerificationPage /> },
       { path: 'mypage/seller-profile', element: <SellerProfilePage /> },
       { path: 'mypage/settlements', element: <SettlementPage /> },
       { path: 'mypage/wallet', element: <WalletPage /> },

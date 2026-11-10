@@ -71,7 +71,7 @@
 <a id="members-profile"></a>
 ### 내 정보·닉네임·비밀번호 기준일
 
-내 정보 응답은 id(문자열), email, displayName, role, hasSellerProfile, displayNameChangeAvailableAt다. 닉네임 첫 변경은 허용하며 변경 후 한국 달력 6개월 제한을 적용한다. null 가능일은 첫 변경 가능을 뜻한다. 비밀번호 권고 기준일부터 6개월마다 로그인한 회원에게 변경 권고 알림을 보낸다([권고 알림](#password-recommendation)).
+내 정보 응답은 id(문자열), email, displayName, role, hasSellerProfile, displayNameChangeAvailableAt, emailVerified(2026-11-10 추가, 인증 시각은 응답하지 않음)다. 닉네임 첫 변경은 허용하며 변경 후 한국 달력 6개월 제한을 적용한다. null 가능일은 첫 변경 가능을 뜻한다. 비밀번호 권고 기준일부터 6개월마다 로그인한 회원에게 변경 권고 알림을 보낸다([권고 알림](#password-recommendation)).
 
 #### 실행·환경
 
@@ -327,7 +327,23 @@ MVP 3절의 "표시 이름 수정"을 화면으로 연결했다. 서버 `PATCH /
 ##### 이메일 인증 가입
 
 <a id="b-239-0"></a>
-- 기존 회원 이메일 인증 전환(§5.2)과 재설정 성공 시 `email_verified_at` 기록은 하지 않았다(다음 작업). 기존 회원의 `email_verified_at`은 NULL 그대로다.
+- 기존 회원 이메일 인증 전환(§5.2)과 재설정 성공 시 `email_verified_at` 기록은 하지 않았다(다음 작업). 기존 회원의 `email_verified_at`은 NULL 그대로다. 후속: 기존 회원 전환은 2026-11-10 아래 [기존 회원 이메일 인증](#existing-email-verification)으로 구현했다. 재설정 성공 시 기록은 여전히 하지 않는다.
+
+##### 기존 회원 이메일 인증
+
+<a id="existing-email-verification"></a>
+이메일 인증 없이 가입한 기존 회원이 로그인한 뒤 자기 주소를 인증한다(3인 설계 §5.2). 검증 증거 없이 `email_verified_at`을 일괄로 채우지 않으며, 인증하지 않아도 로그인·기존 거래는 그대로다. 다른 계정과 합치거나 회원·지갑을 새로 만들지 않는다.
+
+| 경로 | 입력·권한 | 결과 |
+| --- | --- | --- |
+| POST /api/me/email-verification-requests | 회원 + CSRF; 본문 없음 | 202 `{message}` `no-store`. 로그인한 회원 본인 주소로 15분 일회용 링크 메일. 이미 인증됨 409 EMAIL_ALREADY_VERIFIED. 요청 제한 초과도 같은 202(메일 없음) |
+| POST /api/me/email-verifications | 회원 + CSRF; token | 204 `no-store`. 토큰 위조·만료·사용됨·다른 계정의 토큰·발급 후 비밀번호 변경(auth_version 불일치)·주소 불일치는 모두 400 EMAIL_VERIFICATION_INVALID. 세션·비밀번호·인증 버전은 그대로 |
+
+- 저장: `account_challenges` 목적 `EXISTING_EMAIL`(member_id·발급 당시 auth_version 필수, V5 CHECK 그대로), 토큰은 해시만 저장. 새 DDL 없음.
+- 처리: 요청은 제한 행 준비(별도 커밋) → 짧은 트랜잭션에서 제한 확인·회원 잠금·재확인(그사이 인증됐으면 발급 안 함)·토큰 저장 → 커밋 뒤 발송. 확인은 한 트랜잭션에서 로그인 회원 잠금 → 토큰 행 잠금(재설정과 같은 순서) → 재검사 → 인증 시각 기록·토큰 사용. 같은 링크 동시 사용은 한 번만 성공한다. 거절된 토큰은 소비하지 않는다.
+- 요청 제한: 이메일별 60초·1시간 5회(`EXISTING_EMAIL_INTERVAL`·`EXISTING_EMAIL_HOUR`), 가입 인증·재설정·아이디 안내와 별도.
+- 메일: 제목 "[랜서픽] 이메일 인증 안내", 링크 `{frontend}/mypage/email-verification#token=…`, 비밀번호 없음.
+- 화면: `/mypage/profile`의 "이메일 인증" 칸(미인증이면 "인증 메일 받기", 60초 다시 요청 잠금, 이미 인증 409면 내 정보 재조회). 링크 화면 `/mypage/email-verification`은 토큰을 주소에서 지워 메모리에만 두고, "이메일 인증하기"를 눌러야 POST 1회. 로그아웃 상태면 로그인 후 링크를 다시 열도록 안내한다(토큰을 저장소에 남기지 않음). 두 명령 모두 계정 전환 보호(`captureAccountScope`)를 쓴다.
 - 메일이 꺼진 기본 상태에서는 화면 가입이 불가하다(위 "우회 경로 없음").
 - 사용하지 않은 가입 인증 행·증명의 정리 작업은 없다. 테스트 도우미가 넣은 행도 각 테스트가 지우지 않으면 테스트 DB에 남는다(회원 FK가 없어 다른 테스트에 영향 없음).
 - 아이디 안내 메일 계약은 정했다(2026-11-06): challenge 행 없이 `AccountMail.untracked`로 보내며 발송 결과는 DB에 기록하지 않는다(작업표 C3 전달 4번). 화면·API는 2026-11-10 위 [아이디 안내](#account-guide)로 구현했다([기록](change-history.md#account-guide-20261110)).

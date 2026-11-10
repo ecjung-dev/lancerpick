@@ -9,6 +9,8 @@ export interface Member {
   hasSellerProfile: boolean
   /** null이면 가입 후 아직 표시 이름을 변경하지 않아 즉시 변경할 수 있다. */
   displayNameChangeAvailableAt: string | null
+  /** 이메일 수신을 확인했는지(가입 인증 또는 기존 회원 이메일 인증). 예전 응답에 없으면 미인증으로 본다. */
+  emailVerified?: boolean
 }
 
 export interface LoginInput {
