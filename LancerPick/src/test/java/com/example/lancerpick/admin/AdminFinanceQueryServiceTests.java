@@ -9,6 +9,7 @@ import com.example.lancerpick.admin.repository.AdminFinanceQueries;
 import com.example.lancerpick.admin.repository.AdminFinanceQueries.TopupRow;
 import com.example.lancerpick.admin.service.AdminAuthorization;
 import com.example.lancerpick.admin.service.AdminFinanceQueryService;
+import com.example.lancerpick.admin.service.AdminRecoveryJobQueries;
 import com.example.lancerpick.wallet.config.TopupRecoveryProperties;
 import com.example.lancerpick.wallet.entity.WalletTopupStatus;
 import com.example.lancerpick.wallet.gateway.TossPaymentGateway;
@@ -44,7 +45,7 @@ class AdminFinanceQueryServiceTests {
         new AdminFinanceQueryService(
             queries,
             mock(AdminAuthorization.class),
-            mock(JobRepository.class),
+            new AdminRecoveryJobQueries(mock(JobRepository.class), false),
             new TopupRecoveryProperties(120, 180, 8, 60),
             mock(TossPaymentGateway.class),
             Clock.fixed(now, ZoneOffset.UTC),

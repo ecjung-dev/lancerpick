@@ -4,8 +4,15 @@
 
 ## 기록 해석
 
+<a id="admin-finance-query-split"></a>
+### 관리자 금융 조회에서 복구 Batch 조회 분리(리팩터링 5-1) — 2026-11-10, 로컬 구현
+
+정은찬, `refactor/admin-finance-query-split`, main `634b283`(#173) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 5단계 첫 파일이다. `AdminFinanceQueryService`(394줄)에서 충전 복구 Batch 실행 조회·실행 파라미터 해석·재시작 가능 판단을 admin 내부 `AdminRecoveryJobQueries`로 옮겼다(서비스 252줄). 공개 메서드·권한 검사·입력 검사·페이지 응답·트랜잭션(읽기 전용, REPEATABLE_READ)은 기존 서비스에 그대로 있고, 새 클래스는 그 트랜잭션 안에서 호출된다. 판단은 여전히 화면 표시용 스냅샷이며 실제 재시작은 `AdminBatchRestartService`가 실행 시점에 다시 검사한다. 응답·404 조건은 같다. 영향 영역: admin·wallet(김창재·황준범). API·DB 변경 없음.
+
+검증: 관련 `admin.*`·`common.*` 통과, 전체 `clean build` **1,146건 통과**(실패·오류·건너뜀 0, 3분 29초, 로컬 테스트 DB, 2026-11-10). 프런트는 바꾸지 않았고, 원격 CI는 PR에서 확인한다.
+
 <a id="admin-check-paging"></a>
-### 관리자 권한 재검사·목록 페이지 범위 정리(리팩터링 4단계) — 2026-11-10, 로컬 구현
+### 관리자 권한 재검사·목록 페이지 범위 정리(리팩터링 4단계) — 2026-11-10, main 반영(#173)
 
 정은찬, `refactor/admin-check-paging`, main `c740953`(#172) 기준. 전체 리팩터링 검토(Codex 읽기 전용 검토 포함)의 4단계로, 응답·잠금 순서를 바꾸지 않는 정리만 했다.
 
