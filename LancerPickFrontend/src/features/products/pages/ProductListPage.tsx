@@ -155,10 +155,10 @@ export function ProductListPage({ view = 'home' }: { view?: 'home' | 'catalog' }
     {!catalog && <section className={styles.guide} aria-labelledby="guide-title">
       <div><span className={styles.sectionEyebrow}>HOW IT WORKS</span><h2 id="guide-title">시작부터 완료까지,<br />흐름은 간단하게.</h2></div>
       <ol>{[
-        ['01', '서비스 선택', '가격과 작업 범위를 확인하세요.'],
+        ['01', '서비스 선택', '가격과 작업 범위를 확인해 주세요.'],
         ['02', '요구사항 제출', '필요한 내용을 자세히 전해 주세요.'],
-        ['03', '판매자 수락·결제', '수락 후 적립금으로 결제하세요.'],
-        ['04', '납품·구매 확정', '결과물을 확인하고 거래를 완료하세요.'],
+        ['03', '판매자 수락·결제', '수락 후 적립금으로 결제해 주세요.'],
+        ['04', '납품·구매 확정', '결과물을 확인하고 거래를 완료해 주세요.'],
       ].map(([number, title, description]) => <li key={number}><span>{number}</span><strong>{title}</strong><p>{description}</p></li>)}</ol>
     </section>}
   </>

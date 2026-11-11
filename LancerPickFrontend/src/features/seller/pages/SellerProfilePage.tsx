@@ -314,7 +314,7 @@ function Layout({ children }: { children: ReactNode }) {
   return (
     <section className={styles.page}>
       <PageHeading eyebrow="SELLER PROFILE" title="판매자 프로필 관리">
-        <p>나의 전문성을 소개하고, 함께할 다음 일을 준비하세요.</p>
+        <p>나의 전문성을 소개하고, 함께할 다음 일을 준비해 보세요.</p>
       </PageHeading>
       <div className={styles.card}>{children}</div>
     </section>

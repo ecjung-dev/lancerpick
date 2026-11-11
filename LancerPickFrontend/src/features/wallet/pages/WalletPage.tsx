@@ -155,7 +155,7 @@ export function WalletPreviewPage() {
 function WalletLayout({ children, preview = false }: { children: ReactNode; preview?: boolean }) {
   return <section className={styles.page}>
     {preview && <div className={styles.notice} role="note"><strong>화면 미리보기</strong><span>아래 잔액과 내역은 예시예요. 실제 계정·결제 정보가 아니에요.</span><Link to="/mypage">미리보기 나가기</Link></div>}
-    <PageHeading eyebrow="MY WALLET" title="적립금 · 이용 내역"><p>사용 가능한 잔액과 적립금 변동을 확인하세요.</p></PageHeading>
+    <PageHeading eyebrow="MY WALLET" title="적립금 · 이용 내역"><p>사용 가능한 잔액과 적립금 변동을 확인할 수 있어요.</p></PageHeading>
     {children}
     <div className={styles.guide}><strong>적립금 이용 안내</strong><ul>
       <li>가입 시 적립금 1,000,000원이 한 번 지급돼요.</li>
@@ -181,7 +181,7 @@ function BalanceCard({
         </div>
         <p className={styles.amount}>{formatWon(balance.balance)}</p>
         <p className={styles.balanceHelp}>
-          마음에 드는 서비스를 만나면, 적립금으로 결제하세요.
+          마음에 드는 서비스를 만나면 적립금으로 결제할 수 있어요.
         </p>
       </div>
       <Link

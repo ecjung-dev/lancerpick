@@ -16,7 +16,7 @@ export function MyProductsPage() {
   const listPath = location.pathname + location.search
   return <section className={styles.page}>
     <header className={styles.heading}>
-      <div><p className={styles.eyebrow}>MY SERVICES</p><h1>내 상품 조회</h1><p className={styles.intro}>등록한 서비스를 확인하고 판매 상태를 관리하세요.</p></div>
+      <div><p className={styles.eyebrow}>MY SERVICES</p><h1>내 상품 조회</h1><p className={styles.intro}>등록한 서비스를 확인하고 판매 상태를 관리할 수 있어요.</p></div>
       <Link className={styles.create} to="/mypage/products/new" state={{ fromMyProducts: listPath }}><span aria-hidden="true">＋</span>상품 등록</Link>
     </header>
     {isUnauthorized(session.error) ? <LoginNotice path={listPath} />

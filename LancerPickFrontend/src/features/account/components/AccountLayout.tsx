@@ -35,7 +35,7 @@ export function AccountLayout({ children }: { children: ReactNode }) {
         <div className={styles.member}>
           <span aria-hidden="true" className={styles.avatar}>{currentMember?.displayName.slice(0, 1) ?? 'L'}</span>
           <strong>{currentMember?.displayName ?? '나의 공간'}</strong>
-          <span>적립금과 거래 내역을 확인하세요.</span>
+          <span>적립금과 거래 내역을 확인할 수 있어요.</span>
         </div>
         <nav className={styles.switcher} aria-label="마이페이지 구분">
           <Link to="/mypage" aria-current={!seller ? 'page' : undefined}>일반</Link>

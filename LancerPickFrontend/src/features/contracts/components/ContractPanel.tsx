@@ -135,7 +135,7 @@ export function ContractPanel({
 
   return (
     <section className={styles.panel} aria-label="전자계약서">
-<header className={styles.heading}><div><span className={styles.eyebrow}>ELECTRONIC CONTRACT</span><h2>전자계약서</h2><p>계약 내용과 서명 현황을 확인하세요.</p></div><Icon name="document" size={26} /></header>
+<header className={styles.heading}><div><span className={styles.eyebrow}>ELECTRONIC CONTRACT</span><h2>전자계약서</h2><p>계약 내용과 서명 현황을 확인할 수 있어요.</p></div><Icon name="document" size={26} /></header>
       {member.data?.id === sellerId &&
         orderStatus === 'AWAITING_CONTRACT' &&
         current.data?.status !== 'SIGNED' &&

@@ -1,6 +1,6 @@
 .page { padding: 0 0 48px; overflow-wrap: anywhere; color: var(--ink); }
 .heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 26px; }
-.eyebrow { margin: 0 0 8px; font-size: 10px; letter-spacing: .14em; color: #888; }
+.eyebrow { margin: 0 0 8px; font-size: 10px; letter-spacing: .14em; color: var(--muted); }
 .heading h1 { font-size: 28px; letter-spacing: -.04em; margin: 0 0 9px; }
 .heading div > p:last-child { font-size: 13px; color: #777; line-height: 1.7; margin: 0; }
 .back { font-size: 12px; color: #777; white-space: nowrap; }
@@ -13,8 +13,8 @@
 .sectionHeading > span { font-size: 11px; display: grid; place-items: center; background: #f3f3f3; border-radius: 6px; width: 30px; height: 30px; flex-shrink: 0; }
 .sectionHeading > div { flex: 1; min-width: 0; }
 .sectionHeading h2 { font-size: 16px; margin: 0 0 6px; letter-spacing: -.02em; }
-.sectionHeading p { font-size: 11px; color: #888; line-height: 1.7; margin: 0; }
-.sectionHeading > small { font-size: 10px; white-space: nowrap; color: #888; margin-left: auto; padding-top: 3px; }
+.sectionHeading p { font-size: 11px; color: var(--muted); line-height: 1.7; margin: 0; }
+.sectionHeading > small { font-size: 10px; white-space: nowrap; color: var(--muted); margin-left: auto; padding-top: 3px; }
 .field + .field { margin-top: 24px; }
 .field label { display: block; font-size: 13px; font-weight: 650; margin-bottom: 8px; }
 .form input, .form textarea, .form select { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid #dedede; padding: 11px 12px; border-radius: 6px; font: inherit; font-size: 13px; background: white; color: #171717; }
@@ -22,28 +22,28 @@
 .form textarea { display: block; resize: vertical; line-height: 1.8; min-height: 110px; }
 .form input::placeholder, .form textarea::placeholder { color: #999; }
 .form :is(input, textarea, select, button, a):focus-visible, .back:focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
-.hint { font-size: 11px; line-height: 1.7; color: #888; margin: -1px 0 10px; }
-.counter { display: block; text-align: right; margin-top: 7px; font-size: 10px; color: #888; }
+.hint { font-size: 11px; line-height: 1.7; color: var(--muted); margin: -1px 0 10px; }
+.counter { display: block; text-align: right; margin-top: 7px; font-size: 10px; color: var(--muted); }
 .over, .form [role='alert'] { color: #a12626; }
 .form [aria-invalid='true'] { border-color: #a12626; }
-.field > small:not(.counter) { display: block; font-size: 10px; line-height: 1.6; color: #888; margin-top: 8px; }
+.field > small:not(.counter) { display: block; font-size: 10px; line-height: 1.6; color: var(--muted); margin-top: 8px; }
 .termsGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .termsGrid > .field { margin-top: 0; min-width: 0; }
 .unitInput { display: flex; border: 1px solid #dedede; border-radius: 6px; background: white; align-items: center; padding-right: 12px; }
 .unitInput input { border: 0; background: transparent; }
 .unitInput > span { font-size: 12px; color: #777; flex-shrink: 0; }
 .summary { position: sticky; top: 22px; padding: 22px 18px; border: 1px solid #e4e4e4; border-radius: 12px; background: #fafafa; min-width: 0; }
-.summaryLabel { display: block; font-size: 9px; letter-spacing: .13em; color: #888; margin-bottom: 22px; }
+.summaryLabel { display: block; font-size: 9px; letter-spacing: .13em; color: var(--muted); margin-bottom: 22px; }
 .category { display: inline-block; font-size: 10px; color: #666; background: #eee; padding: 5px 8px; border-radius: 4px; }
 .summary h2 { font-size: 17px; line-height: 1.6; letter-spacing: -.03em; margin: 12px 0 22px; }
 .summary dl { margin: 0 0 22px; }
 .summary dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; padding: 9px 0; }
-.summary dt { font-size: 11px; color: #888; }
+.summary dt { font-size: 11px; color: var(--muted); }
 .summary dd { margin: 0; font-size: 15px; font-weight: 700; }
 .summary > p { display: flex; gap: 7px; align-items: center; font-size: 11px; padding-top: 18px; border-top: 1px solid #e7e7e7; margin: 0; }
 .summary ul { font-size: 10px; line-height: 1.9; color: #777; padding-left: 16px; margin: 12px 0 0; }
 .saveBar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; border-top: 1px solid #e5e5e5; }
-.saveBar p { font-size: 12px; line-height: 1.7; color: #888; margin: 0; }
+.saveBar p { font-size: 12px; line-height: 1.7; color: var(--muted); margin: 0; }
 .saveBar button { flex-shrink: 0; font-size: 13px; gap: 20px; }
 .version { margin: 0; padding: 12px 16px; border: 1px solid #e5e5e5; border-radius: 7px; color: #777; font-size: 12px; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
