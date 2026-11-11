@@ -82,7 +82,7 @@ tr:hover .cellLink { text-decoration: underline; text-underline-offset: 3px; }
   .table td[data-label=''], .table tr.detailRow td { display: block; text-align: left; }
   .table td[data-label='']::before, .table tr.detailRow td::before { content: none; }
   .table tr.detailRow { padding-top: 0; }
-  .table td { flex-wrap: wrap; row-gap: 0; }
+  .table td, .table tr.hasDetail td { flex-wrap: wrap; row-gap: 0; }
   /* 환불 금액·진행 시각 같은 보조 줄은 값 아래 오른쪽에 한 줄씩. */
   .cellSub { flex-basis: 100%; margin: 0; text-align: right; white-space: normal; }
 }
