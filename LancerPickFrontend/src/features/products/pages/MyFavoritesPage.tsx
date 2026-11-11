@@ -9,14 +9,16 @@ import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
 import { getFavorites } from '../favoritesApi'
 import { useMyProductsSession } from '../queries'
 import styles from './MyProductsPage.module.css'
+import { PageHeading } from '../../../shared/components/PageHeading'
 
 export function MyFavoritesPage() {
   const session = useMyProductsSession()
   const location = useLocation()
   const path = location.pathname + location.search
   return <section className={styles.page}>
-    <Link to="/mypage">← 마이페이지</Link>
-    <h1>내 관심 상품</h1>
+    <PageHeading eyebrow="FAVORITES" title="내 관심 상품">
+      <p>관심 상품으로 저장한 서비스 중 현재 공개·판매 중인 상품을 보여 줘요.</p>
+    </PageHeading>
     {isUnauthorized(session.error) ? <LoginNotice path={path} />
       : session.isError ? <AsyncState title="계정을 확인하지 못했어요" error={session.error} onRetry={() => { void session.refetch() }} />
         : !session.data || session.isFetching ? <AsyncState title="계정을 확인하고 있어요" />

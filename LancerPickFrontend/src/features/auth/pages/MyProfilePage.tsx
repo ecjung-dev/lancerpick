@@ -22,6 +22,7 @@ import { useDisplayNameCooldown } from '../useDisplayNameCooldown'
 import styles from './MyProfilePage.module.css'
 import { PasswordChangeForm } from './PasswordChangeForm'
 import { EmailVerificationCard } from '../components/EmailVerificationCard'
+import { PageHeading } from '../../../shared/components/PageHeading'
 
 const PROFILE_PATH = '/mypage/profile'
 
@@ -263,17 +264,9 @@ function LoginNotice() {
 function Layout({ children }: { children: ReactNode }) {
   return (
     <section className={styles.page}>
-      <nav className={styles.breadcrumb} aria-label="현재 위치">
-        <Link to="/">홈</Link>
-        <span>/</span>
-        <Link to="/mypage">마이페이지</Link>
-        <span>/ 내 정보</span>
-      </nav>
-      <header className={styles.heading}>
-        <p>MY ACCOUNT</p>
-        <h1>내 정보</h1>
-        <span>다른 회원에게 보이는 표시 이름과 비밀번호를 바꿀 수 있어요.</span>
-      </header>
+      <PageHeading eyebrow="PROFILE" title="내 정보">
+        <p>다른 회원에게 보이는 표시 이름과 비밀번호를 바꿀 수 있어요.</p>
+      </PageHeading>
       <div className={styles.card}>{children}</div>
     </section>
   )

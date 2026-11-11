@@ -1,10 +1,4 @@
 .page { max-width: 720px; margin: 0 auto; padding: 36px 0 80px; overflow-wrap: anywhere; }
-.breadcrumb { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; }
-.breadcrumb a { color: inherit; text-decoration: none; }
-.heading { margin: 38px 0 30px; }
-.heading p { font-size: 11px; letter-spacing: .14em; font-weight: 700; }
-.heading h1 { margin: 10px 0 14px; font-size: clamp(26px, 4vw, 36px); letter-spacing: -.04em; }
-.heading > span { color: var(--muted); font-size: 14px; line-height: 1.7; }
 .card { padding: 34px; border: 1px solid var(--line); border-radius: 16px; background: white; }
 .info { display: grid; gap: 14px; margin: 0 0 28px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
 .info div { display: flex; flex-wrap: wrap; gap: 6px 16px; }
@@ -25,4 +19,4 @@
 .sectionTitle { margin: 0 0 8px; font-size: 18px; letter-spacing: -.02em; }
 .sectionHelp { margin: 0 0 22px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .field { margin-bottom: 20px; }
-@media (max-width: 600px) { .page { padding: 24px 16px 60px; } .card { padding: 22px 16px; } .heading { margin-top: 28px; } .actions { align-items: stretch; flex-direction: column; } }
+@media (max-width: 600px) { .page { padding: 24px 16px 60px; } .card { padding: 22px 16px; } .actions { align-items: stretch; flex-direction: column; } }

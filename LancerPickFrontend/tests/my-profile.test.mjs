@@ -155,7 +155,7 @@ test('logged-out visitors get a login link that returns here, without a form', (
   } finally { client.clear() }
 })
 
-test('the form shows email and the current name, escapes text and keeps a route back to mypage', () => {
+test('the form shows email and the current name, escapes text and leaves the route back to the mypage layout', () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
   client.setQueryData(memberQueryKey, { ...member, displayName: '<b>굵게</b>' })
   try {
@@ -165,7 +165,8 @@ test('the form shows email and the current name, escapes text and keeps a route 
     assert.doesNotMatch(html, /<b>굵게/)
     assert.match(html, /표시 이름 저장/)
     assert.match(html, /\/ 30자/)
-    assert.match(html, /href="\/mypage"/)
+    assert.match(html, /<h1>내 정보<\/h1>/)
+    assert.doesNotMatch(html, /aria-label="현재 위치"/)
   } finally { client.clear() }
 })
 
