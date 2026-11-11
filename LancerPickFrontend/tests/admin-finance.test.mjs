@@ -174,3 +174,17 @@ test('상태 코드 라벨은 문맥별 표를 쓰고 코드를 괄호로 남기
   assert.equal(labels.codeLabel(labels.settlementTypeLabels, 'NEW_TYPE'), 'NEW_TYPE')
   assert.equal(labels.plainLabel(labels.topupStatusLabels, 'UNKNOWN'), '결과 확인 필요')
 })
+
+test('작업 이력 초기화는 읽기에서 버려진 잘못된 action도 주소에 있으면 열린다', () => {
+  const client = newClient()
+  try {
+    const html = render('/admin/finance?tab=logs&action=garbage', '/admin/finance', createElement(AdminFinancePage), client)
+    assert.match(html, /<button type="button"(?![^>]*disabled)[^>]*>초기화<\/button>/)
+  } finally { client.clear() }
+})
+
+test('복구 결과 키는 충전 건별 결과 라벨과 키를 함께 보여 준다', async () => {
+  const labels = await server.ssrLoadModule('/src/features/admin/statusLabels.ts')
+  assert.equal(labels.codeLabel(labels.jobOutcomeLabels, 'completed'), '충전 완료 (completed)')
+  assert.equal(labels.codeLabel(labels.jobOutcomeLabels, 'stale'), '처리 조건 변경·처리권 없음 (stale)')
+})

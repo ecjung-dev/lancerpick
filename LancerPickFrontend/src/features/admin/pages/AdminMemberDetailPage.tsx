@@ -13,12 +13,14 @@ import { AdminNav } from './AdminNav'
 import { adminReturnTo, type AdminReturnOrigin } from '../navigation'
 import styles from './Admin.module.css'
 
-/** 회원 상세로 들어오는 화면: 회원 목록, 결제 목록, 주문 금융 상세, 문의 상세. */
+/** 회원 상세로 들어오는 화면: 회원 목록, 결제 목록, 주문 금융 상세, 문의 상세, 상품 상세, 자동 확정 타이머. */
 const MEMBER_ORIGINS: readonly AdminReturnOrigin[] = [
   { path: '/admin/members', label: '회원 목록' },
   { path: '/admin/finance', label: '금융 조회' },
   { path: /\/admin\/finance\/orders\/[1-9]\d*/, label: '주문 금융' },
   { path: /\/admin\/inquiries\/[1-9]\d*/, label: '운영 문의' },
+  { path: /\/admin\/products\/[1-9]\d*/, label: '상품 운영' },
+  { path: '/admin/review-timers', label: '자동 확정 타이머' },
 ]
 
 export function AdminMemberDetailPage() {
@@ -84,13 +86,16 @@ export function AdminMemberDetailPage() {
                 현재 상태 새로고침
               </button>
             </div>
-            <p>
-              가입 {formatDateTime(query.data.member.createdAt)} · 이메일{' '}
-              {query.data.emailVerifiedAt ? '인증됨' : '인증 기록 없음'}
-            </p>
+            <dl className={styles.facts}>
+              <dt>가입</dt>
+              <dd>{formatDateTime(query.data.member.createdAt)}</dd>
+              <dt>이메일 인증</dt>
+              <dd>{query.data.emailVerifiedAt ? '인증됨' : '인증 기록 없음'}</dd>
+              <dt>조회 시각</dt>
+              <dd>{formatDateTime(query.data.serverTime)}</dd>
+            </dl>
             <p className={styles.help}>
-              조회 시각 {formatDateTime(query.data.serverTime)} · 30초마다
-              갱신합니다. 실제 접근은 서버가 현재 시각으로 판단합니다.
+              30초마다 갱신합니다. 실제 접근은 서버가 현재 시각으로 판단합니다.
             </p>
             {!query.data.activeSanctions.length ? (
               <p>현재 적용 중인 제재가 없습니다.</p>

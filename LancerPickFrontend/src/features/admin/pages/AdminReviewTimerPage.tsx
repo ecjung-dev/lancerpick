@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime } from '../../../shared/lib/format'
@@ -11,6 +12,7 @@ import { REASON_MAX, validateReason } from '../validation'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { MemberLink } from '../components/MemberLink'
 import styles from './Admin.module.css'
 
 const name = (party: { id: string; displayName: string | null }) => party.displayName ?? `회원 #${party.id}`
@@ -21,6 +23,8 @@ export function AdminReviewTimerPage() {
   const list = useActiveReviewTimers(page)
   const [selected, setSelected] = useState<string>()
   const problem = accessProblem(list.error)
+  /** 주문 금융·회원 상세의 "← 자동 확정 타이머"가 같은 페이지로 돌아오게 한다. */
+  const here = `/admin/review-timers${page > 0 ? `?page=${page}` : ''}`
 
   return <section className={styles.page}>
     <p className={styles.eyebrow}>ADMIN</p>
@@ -34,8 +38,9 @@ export function AdminReviewTimerPage() {
             <p className={styles.count}>진행 중 {list.data.totalElements}건</p>
             {list.data.items.length === 0 ? <p className={styles.empty}>진행 중인 타이머가 없어요.</p> : <ul className={styles.list}>
               {list.data.items.map((timer) => <li key={timer.timerId}>
-                <strong>주문 #{timer.orderId}</strong>
-                <p>구매자 {name(timer.buyer)} · 판매자 {name(timer.seller)} · {timer.cycleNo}회차</p>
+                <strong><Link className={styles.inlineLink} to={`/admin/finance/orders/${timer.orderId}`} state={{ from: here }}>주문 #{timer.orderId}</Link></strong>
+                {/* 역할과 이름을 한 링크에 넣어 "판매자 회원 #6" 같은 문구를 쪼개지 않는다. */}
+                <p><MemberLink id={timer.buyer.id} from={here}>구매자 {name(timer.buyer)}</MemberLink> · <MemberLink id={timer.seller.id} from={here}>판매자 {name(timer.seller)}</MemberLink> · {timer.cycleNo}회차</p>
                 <small>시작 {formatDateTime(timer.startedAt)} · 자동 확정 예정 {formatDateTime(timer.expiresAt)}</small>
                 {selected === timer.orderId
                   ? <StopForm key={timer.timerId} timer={timer} onDone={() => setSelected(undefined)} />

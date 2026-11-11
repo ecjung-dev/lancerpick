@@ -270,4 +270,11 @@ test('adminReturnTo는 호출 화면이 적은 출처만 허용하고, 정규식
   assert.deepEqual(adminReturnTo('/admin/products', origins, fallback), fallback, '적지 않은 관리자 화면은 거부')
   assert.deepEqual(adminReturnTo('https://evil.example/admin/members', origins, fallback), fallback)
   assert.deepEqual(adminReturnTo(undefined, origins, fallback), fallback)
+  const more = [...origins, { path: '/admin/outbox', label: '알림 처리' }, { path: '/admin/review-timers', label: '자동 확정 타이머' },
+    { path: /\/admin\/products\/[1-9]\d*/, label: '상품 운영' }]
+  assert.deepEqual(adminReturnTo('/admin/outbox?status=FAILED&page=2', more, fallback), { to: '/admin/outbox?status=FAILED&page=2', label: '알림 처리' })
+  assert.deepEqual(adminReturnTo('/admin/review-timers?page=1', more, fallback), { to: '/admin/review-timers?page=1', label: '자동 확정 타이머' })
+  assert.deepEqual(adminReturnTo('/admin/products/5', more, fallback), { to: '/admin/products/5', label: '상품 운영' })
+  assert.deepEqual(adminReturnTo('/admin/products/05', more, fallback), fallback, '0으로 시작하는 번호는 상세 경로로 보지 않는다')
+  assert.deepEqual(adminReturnTo('/admin/outbox-x', more, fallback), fallback)
 })

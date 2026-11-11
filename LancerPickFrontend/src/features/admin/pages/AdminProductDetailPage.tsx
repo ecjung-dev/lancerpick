@@ -15,6 +15,7 @@ import { REASON_MAX, isValidProductId, saleStatusLabel, validateReason } from '.
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { MemberLink } from '../components/MemberLink'
 import styles from './Admin.module.css'
 
 /** 목록에서 넘겨준 돌아갈 주소. 관리자 목록 경로만 허용한다. */
@@ -50,7 +51,7 @@ export function AdminProductDetailPage() {
 function ProductSummary({ product, refreshing }: { product: AdminProductDetail; refreshing: boolean }) {
   return <>
     <header className={styles.heading}>
-      <p>{product.category.name} · 판매자 {product.seller.displayName}</p>
+      <p>{product.category.name} · <MemberLink id={product.seller.id} from={`/admin/products/${product.id}`}>판매자 {product.seller.displayName}</MemberLink></p>
       <h1>{product.title}</h1>
       <p>
         <span className={product.isHidden ? styles.hidden : styles.visible}>{product.isHidden ? '숨김' : '공개'}</span>

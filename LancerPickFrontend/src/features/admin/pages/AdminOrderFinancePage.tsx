@@ -17,10 +17,12 @@ import {
 } from '../statusLabels'
 import styles from './Admin.module.css'
 
-/** 주문 금융 상세로 들어오는 화면: 금융 조회(결제 목록), 문의 상세. */
+/** 주문 금융 상세로 들어오는 화면: 금융 조회(결제 목록), 문의 상세, 알림 처리, 자동 확정 타이머. */
 const FINANCE_ORIGINS: readonly AdminReturnOrigin[] = [
   { path: '/admin/finance', label: '금융 조회' },
   { path: /\/admin\/inquiries\/[1-9]\d*/, label: '운영 문의' },
+  { path: '/admin/outbox', label: '알림 처리' },
+  { path: '/admin/review-timers', label: '자동 확정 타이머' },
 ]
 const time = (value: string | null | undefined) => value ? formatDateTime(value) : '—'
 /** 기록이 없으면 0원으로 바꾸지 않고 "기록 없음"으로 보여 준다. */

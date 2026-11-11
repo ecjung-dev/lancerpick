@@ -72,3 +72,44 @@ export const jobStatusLabels: Labels = {
   UNKNOWN: '상태 알 수 없음',
   NO_EXECUTION: '실행 기록 없음',
 }
+
+/**
+ * 충전 복구 작업 처리 결과 집계 키(AdminRecoveryJobQueries 고정 5개). 충전 건별 결과라 Job 실행 상태와 다르다.
+ * stale은 대상 없음·복구 조건 변경·처리권 불일치·만료를 모두 포함한다.
+ */
+export const jobOutcomeLabels: Labels = {
+  completed: '충전 완료',
+  failed: '충전 미완료 확정',
+  deferred: '재확인 대기',
+  exhausted: '자동 재시도 한도 도달',
+  stale: '처리 조건 변경·처리권 없음',
+}
+
+/** 알림 이벤트 유형의 관리자용 짧은 이름. 수신자 안내 문구(notifications/messages.ts)와는 목적이 달라 따로 둔다. */
+export const outboxTypeLabels: Labels = {
+  ORDER_CREATED: '주문 요청',
+  ORDER_ACCEPTED: '주문 수락',
+  ORDER_CONTRACT_CREATED: '계약 초안 작성',
+  ORDER_CONTRACT_SIGNATURE_REQUESTED: '계약 서명 요청',
+  ORDER_CONTRACT_SIGNED: '계약 성립',
+  ORDER_REJECTED: '주문 거절',
+  ORDER_PAID: '결제 완료',
+  ORDER_DELIVERED: '납품',
+  ORDER_REVISION_REQUESTED: '수정 요청',
+  ORDER_CANCELLATION_REQUESTED: '취소 요청',
+  ORDER_CANCELLATION_REJECTED: '취소 요청 거절',
+  ORDER_CANCELLATION_ADMIN_REJECTED: '관리자 취소 거절',
+  ORDER_CANCELLATION_WITHDRAWN: '취소 요청 철회',
+  ORDER_CANCELLED: '주문 취소',
+  ORDER_COMPLETED: '구매 확정',
+  ORDER_TIMER_STARTED: '자동 확정 타이머 시작',
+  ORDER_TIMER_ADMIN_STOPPED: '타이머 관리자 해제',
+  ORDER_AUTO_CONFIRMED: '자동 구매 확정',
+  ORDER_AUTO_CONFIRM_SOON: '자동 확정 임박',
+  ORDER_FUNDS_HELD: '대금 보관',
+  ORDER_FUNDS_RELEASED: '판매자 지급',
+  ORDER_FUNDS_REFUNDED: '구매자 전액 반환',
+  ORDER_DELIVERY_DUE_NOTIFIED: '납기 안내',
+  ORDER_REDELIVERY_DUE_NOTIFIED: '재납품 기한 안내',
+  PASSWORD_CHANGE_RECOMMENDED: '비밀번호 변경 권장',
+}

@@ -37,9 +37,15 @@ export function AdminMemberHistory({ memberId }: { memberId: string }) {
               {query.data.items.map((sanction) => (
                 <li key={sanction.id}>
                   <strong>
-                    #{sanction.id} · {restrictionLabels[sanction.kind]} ·{' '}
+                    #{sanction.id} · {restrictionLabels[sanction.kind]}
+                  </strong>{' '}
+                  <span
+                    className={
+                      sanction.state === 'ACTIVE' ? styles.toneWarn : styles.badge
+                    }
+                  >
                     {sanctionStateLabels[sanction.state]}
-                  </strong>
+                  </span>
                   <p className={styles.text}>{sanction.reason}</p>
                   <p>
                     적용 관리자 #{sanction.appliedBy} ·{' '}

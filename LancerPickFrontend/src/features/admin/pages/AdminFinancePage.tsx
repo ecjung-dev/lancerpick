@@ -16,7 +16,7 @@ import { AdminActionLogList } from '../components/AdminActionLogList'
 import { MemberLink } from '../components/MemberLink'
 import { ACTION_LABELS, type ReprocessAction } from '../reprocessApi'
 import { canResetFilter } from '../filterReset'
-import { codeLabel, jobStatusLabels, plainLabel, policyLabels, topupStatusLabels } from '../statusLabels'
+import { codeLabel, jobOutcomeLabels, jobStatusLabels, plainLabel, policyLabels, topupStatusLabels } from '../statusLabels'
 import styles from './Admin.module.css'
 
 type Tab = 'topups' | 'payments' | 'jobs' | 'logs'
@@ -55,7 +55,7 @@ export function AdminFinancePage() {
     {tab === 'payments' && <Payments key={params.toString()} filter={readPaymentFilter(params)} onApply={(f) => apply({ tab, ...f })} search={params.toString()} />}
     {tab === 'topups' && <Topups key={params.toString()} filter={readTopupFilter(params)} onApply={(f) => apply({ tab, ...f })} search={params.toString()} />}
     {tab === 'jobs' && <Jobs />}
-    {tab === 'logs' && <Logs key={params.toString()} action={readAction(params)} onApply={(action) => apply({ tab, action })} />}
+    {tab === 'logs' && <Logs key={params.toString()} action={readAction(params)} onApply={(action) => apply({ tab, action })} search={params.toString()} />}
   </section>
 }
 
@@ -167,8 +167,10 @@ function Jobs() {
       {list.data.items.map((job) => <li key={job.instanceId}>
         <strong>작업 #{job.instanceId}{job.executionId ? ` · 실행 #${job.executionId}` : ' · 실행 기록 없음'}</strong>
         <p><span className={job.status === 'FAILED' || job.status === 'STOPPED' ? styles.toneDanger : job.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{codeLabel(jobStatusLabels, job.status)}</span>
-          읽음 {job.readCount} · 지급 {job.creditedCount} · 제외 {job.filteredCount}
-          {Object.entries(job.outcomes).map(([key, count]) => <span key={key}> · {key} {count}</span>)}</p>
+          읽음 {job.readCount} · 지급 {job.creditedCount} · 제외 {job.filteredCount}</p>
+        {Object.keys(job.outcomes).length > 0 && <p className={styles.help}>
+          결과별 {Object.entries(job.outcomes).map(([key, count], index) => <span key={key}>{index > 0 && ' · '}{codeLabel(jobOutcomeLabels, key)} {count}</span>)}
+          <br />제외는 충전 완료가 아닌 결과를 모두 세므로 결과별 집계와 겹쳐요.</p>}
         <small>원래 스캔 요청 시각 {time(job.scanRequestedAt)}</small>
         <p>재시작: {decisionLabel(job.restart.eligible, job.restart.reason)}</p>
         {job.executionId && <AdminReprocessPanel action="TOPUP_RECOVERY_RESTART" target={job.executionId} eligible={job.restart.eligible} />}
@@ -184,13 +186,13 @@ function readAction(params: URLSearchParams): ReprocessAction | undefined {
   return (ACTIONS as string[]).includes(value) ? (value as ReprocessAction) : undefined
 }
 
-function Logs({ action, onApply }: { action?: ReprocessAction; onApply: (action: string) => void }) {
+function Logs({ action, onApply, search }: { action?: ReprocessAction; onApply: (action: string) => void; search: string }) {
   return <>
     <form className={styles.filters} role="search" onSubmit={(e: FormEvent) => e.preventDefault()}>
       <label>작업 종류 <select value={action ?? ''} onChange={(e) => onApply(e.target.value)}>
         <option value="">전체</option>{ACTIONS.map((a) => <option key={a} value={a}>{ACTION_LABELS[a]}</option>)}
       </select></label>
-      <button type="button" className={styles.secondary} disabled={!action} onClick={() => onApply('')}>초기화</button>
+      <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), ['action'])} onClick={() => onApply('')}>초기화</button>
     </form>
     <AdminActionLogList filter={{ action }} empty="관리자 작업 이력이 없어요." />
   </>
