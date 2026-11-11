@@ -5,7 +5,8 @@ import { getMemberSession } from '../../auth/api'
 import { downloadContract, generateContract, verifyContractPdf } from '../api'
 import { prepareContract, signContract } from '../api'
 import { useContract, useContractMember } from '../queries'
-import { contractFields } from '../document-view'
+import { Icon } from '../../../shared/components/Icon'
+import { contractSections } from '../document-view'
 import styles from './ContractPanel.module.css'
 
 const labels = {
@@ -65,6 +66,8 @@ export function ContractPanel({
     current.error instanceof ApiError &&
     current.error.status === 404 &&
     current.error.code === 'RESOURCE_NOT_FOUND'
+
+  const sections = document ? contractSections(document.canonicalContent) : []
 
   // 계약 주문 수락은 주문 상세의 공통 수락 버튼(POST /orders/{id}/accept)에서 한다.
   async function act(download: boolean | 'prepare' | 'sign') {
@@ -132,12 +135,12 @@ export function ContractPanel({
 
   return (
     <section className={styles.panel} aria-label="전자계약서">
-      <h2>전자계약서</h2>
+<header className={styles.heading}><div><span className={styles.eyebrow}>ELECTRONIC CONTRACT</span><h2>전자계약서</h2><p>계약 내용과 서명 현황을 확인하세요.</p></div><Icon name="document" size={26} /></header>
       {member.data?.id === sellerId &&
         orderStatus === 'AWAITING_CONTRACT' &&
         current.data?.status !== 'SIGNED' &&
         (current.isSuccess || contractNotCreated) && (
-          <div>
+          <div className={styles.draft}>
             <label>
               추가 특약
               <textarea
@@ -190,7 +193,8 @@ export function ContractPanel({
       )}
       {document && (
         <>
-          <label>
+          <div className={styles.overview}>
+          <label className={styles.version}>
             계약 버전{' '}
             <input
               type="number"
@@ -211,24 +215,17 @@ export function ContractPanel({
               }}
             />
           </label>
-          <p role="status">
+          <p className={styles.badge} role="status">
             {labels[document.status] ?? '계약 상태 확인 필요'}
           </p>
-          <p>서명 {document.signatures.length}/2</p>
-          <details>
-            <summary>계약 원문·특약 확인</summary>
-            {contractFields(document.canonicalContent).map((field) => (
-              <div key={field.label}>
-                <h3>{field.label}</h3>
-                <p className={styles.text}>{field.value || '없음'}</p>
-              </div>
-            ))}
-            {contractFields(document.canonicalContent).length === 0 && (
-              <p>
-                계약 원문 형식을 확인할 수 없습니다. PDF와 상태를 확인해 주세요.
-              </p>
-            )}
-          </details>
+          <p className={styles.signatureCount}>서명 <strong>{document.signatures.length}/2</strong></p>
+          </div>
+          <div className={styles.signatures} aria-label="서명 현황">
+            {(['BUYER', 'SELLER'] as const).map(role => {
+              const signature = document.signatures.find(item => item.role === role)
+              return <div key={role}><span>{role === 'BUYER' ? '구매자' : '판매자'}</span><strong>{signature ? '서명 완료' : '서명 대기'}</strong></div>
+            })}
+          </div>
           <div className={styles.actions}>
             {document.fileHash &&
               ['READY', 'SIGNED', 'SUPERSEDED'].includes(document.status) && (
@@ -238,7 +235,7 @@ export function ContractPanel({
                     void act(true)
                   }}
                 >
-                  PDF 다운로드
+                  <Icon name="document" size={16} />PDF 다운로드
                 </button>
               )}
             {member.data?.id === sellerId &&
@@ -255,6 +252,19 @@ export function ContractPanel({
                 </button>
               )}
           </div>
+          <details className={styles.document}>
+            <summary>계약 원문·특약 확인</summary>
+            <div className={styles.documentBody}>
+              {sections.map(section => <section key={section.title} className={styles.documentSection}>
+                <h3>{section.title}</h3>
+                <dl>{section.fields.map(field => <div key={field.key} className={field.long ? styles.longField : styles.field}>
+                  <dt>{field.label}</dt><dd className={styles.text}>{field.value || '없음'}</dd>
+                </div>)}</dl>
+              </section>)}
+              {sections.length === 0 && <p>계약 원문 형식을 확인할 수 없습니다. PDF와 상태를 확인해 주세요.</p>}
+            </div>
+          </details>
+
           {document.status === 'GENERATING' && (
             <p>
               생성 중에는 5초마다 확인합니다. 작업이 중단됐다면 기본 설정에서
@@ -267,7 +277,7 @@ export function ContractPanel({
             !document.signatures.some(
               (s) => s.memberId === member.data?.id,
             ) && (
-              <div>
+              <div className={styles.signing}>
                 <label>
                   <input
                     type="checkbox"
@@ -288,7 +298,7 @@ export function ContractPanel({
               </div>
             )}
           {document.status === 'SIGNED' && (
-            <p>
+            <p className={styles.notice}>
               계약이 성립했습니다.
               {/* 결제 안내는 결제 대기 중에만 보인다. 결제 후·완료·취소 주문에는 남기지 않는다. */}
               {orderStatus === 'AWAITING_PAYMENT' &&
@@ -300,6 +310,7 @@ export function ContractPanel({
         </>
       )}
       <button
+        className={styles.refresh}
         disabled={busy || chosen.isFetching}
         onClick={() => {
           void member
@@ -309,7 +320,7 @@ export function ContractPanel({
             )
         }}
       >
-        상태 새로고침
+        <Icon name="refresh" size={15} />상태 새로고침
       </button>
       {message && <p role="alert">{message}</p>}
     </section>

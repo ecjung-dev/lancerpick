@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { isUnauthorized } from '../../shared/api/client'
 import { normalizedLength } from '../../shared/lib/text'
 import { getMemberSession } from '../auth/api'
@@ -36,11 +36,17 @@ export function useChatSend({
 }) {
   const client = useQueryClient()
   const draftKey = ['order-chat', 'draft', memberId, orderId] as const
-  const { data: draft = '' } = useQuery<string>({
-    queryKey: draftKey, queryFn: skipToken, initialData: '',
-    gcTime: Infinity, staleTime: Infinity,
-  })
-  const setDraft = (value: string) => client.setQueryData(draftKey, value)
+  // Controlled input must update synchronously. Query observer notifications are
+  // batched asynchronously and can restore an older value during IME composition.
+  // The conversation is keyed by order/member; cache is only for room restoration.
+  const [draft, setLocalDraft] = useState(
+    () => client.getQueryData<string>(draftKey) ?? '',
+  )
+  const setDraft = (value: string) => {
+    setLocalDraft(value)
+    client.setQueryDefaults(['order-chat', 'draft'], { gcTime: Infinity })
+    client.setQueryData(draftKey, value)
+  }
   const [preparing, setPreparing] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
   const pending = usePendingChatSend(memberId, orderId)

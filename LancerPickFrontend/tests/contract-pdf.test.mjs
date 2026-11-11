@@ -33,6 +33,26 @@ const { ContractPanel } = await server.ssrLoadModule(
   '/src/features/contracts/components/ContractPanel.tsx',
 )
 const { ApiError: RenderApiError } = await server.ssrLoadModule('/src/shared/api/client.ts')
+const { contractSections } = await server.ssrLoadModule('/src/features/contracts/document-view.ts')
+
+test('contract presentation formats money and units without rounding IDs or altering canonical text', () => {
+  const canonical = JSON.stringify({ orderId: '9007199254740993', total: 950000, feeRateBps: 1000, durationDays: 30, specialTerms: '  특약\n둘째 줄  ' })
+  const fields = contractSections(canonical).flatMap(section => section.fields)
+  assert.equal(fields.find(field => field.key === 'orderId').value, '9007199254740993')
+  assert.equal(fields.find(field => field.key === 'total').value, '950,000원')
+  assert.equal(fields.find(field => field.key === 'feeRateBps').value, '10% (1000 bps)')
+  assert.equal(fields.find(field => field.key === 'durationDays').value, '30일')
+  assert.equal(fields.find(field => field.key === 'specialTerms').value, '  특약\n둘째 줄  ')
+  assert.equal(JSON.parse(canonical).total, 950000)
+})
+
+test('contract presentation preserves unsafe numeric strings and rejects malformed documents', () => {
+  assert.equal(contractSections('{broken').length, 0)
+  assert.equal(contractSections('[]').length, 0)
+  const fields = contractSections(JSON.stringify({ total: '9007199254740993', standardBody: '<script>text</script>' })).flatMap(section => section.fields)
+  assert.equal(fields.find(field => field.key === 'total').value, '9007199254740993')
+  assert.equal(fields.find(field => field.key === 'standardBody').value, '<script>text</script>')
+})
 after(async () => {
   await server.close()
 })

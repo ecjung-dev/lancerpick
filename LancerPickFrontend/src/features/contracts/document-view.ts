@@ -45,3 +45,35 @@ export function contractFields(
     return []
   }
 }
+
+
+const groups = [
+  { title: '거래 정보', keys: ['orderId', 'templateVersion', 'productTitle'] },
+  { title: '계약 당사자', keys: ['buyerName', 'buyerId', 'sellerName', 'sellerId'] },
+  { title: '금액 및 작업 기간', keys: ['total', 'fundingMode', 'feeRateBps', 'deposit', 'balance', 'durationDays'] },
+  { title: '서비스 및 요청사항', keys: ['description', 'scope', 'preparation', 'requirements'] },
+  { title: '계약 본문 및 특약', keys: ['originalTerms', 'standardBody', 'specialTerms'] },
+]
+
+/** Display only. Canonical text and hashes sent to the server are never changed. */
+export function contractSections(canonical: string) {
+  const fields = contractFields(canonical)
+  return groups.flatMap(group => {
+    const items = group.keys.flatMap(key => {
+      const field = fields.find(item => item.label === labels[key])
+      if (!field) return []
+      let { label, value } = field
+      if (['total', 'deposit', 'balance'].includes(key) && /^\d+$/.test(value) && Number.isSafeInteger(Number(value))) {
+        label = label.replace('(원)', '')
+        value = `${Number(value).toLocaleString('ko-KR')}원`
+      }
+      if (key === 'durationDays' && /^\d+$/.test(value)) { label = '작업 기간'; value += '일' }
+      if (key === 'feeRateBps' && /^\d+$/.test(value) && Number.isSafeInteger(Number(value))) {
+        label = '정상 수수료율'
+        value = `${Number(value) / 100}% (${value} bps)`
+      }
+      return [{ key, label, value, long: ['description', 'scope', 'preparation', 'requirements', 'originalTerms', 'standardBody', 'specialTerms'].includes(key) }]
+    })
+    return items.length ? [{ title: group.title, fields: items }] : []
+  })
+}
