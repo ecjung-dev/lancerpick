@@ -8,7 +8,7 @@ export function OrderDeliveries({ order }: { order: OrderDetail }) {
   const deadlines = orderDeadlineView(order)
   return <section className={styles.card} aria-labelledby="order-deliveries-title">
     <h2 id="order-deliveries-title">납품 내역 <span className={styles.count}>{order.deliveries.length}건</span></h2>
-    {order.deliveries.length === 0 ? <p className={styles.empty}>아직 등록된 납품이 없습니다.</p>
+    {order.deliveries.length === 0 ? <p className={styles.empty}>아직 등록된 납품이 없어요.</p>
       : order.deliveries.map(delivery => {
         const deadline = deadlines.deliveries.find(item => item.id === delivery.id)
         return <article className={styles.delivery} key={delivery.id}>
@@ -28,7 +28,7 @@ export function OrderDeliveries({ order }: { order: OrderDetail }) {
 export function OrderConditions({ order }: { order: OrderDetail }) {
   return <section className={styles.card} aria-labelledby="order-conditions-title">
     <h2 id="order-conditions-title">보관된 거래 조건</h2>
-    <p className={styles.meta}>현재 상품이 변경되어도 주문 당시 확정한 조건은 유지됩니다.</p>
+    <p className={styles.meta}>현재 상품이 변경되어도 주문 당시 확정한 조건은 유지돼요.</p>
     <dl className={styles.conditions}>
       <div><dt>상품 설명</dt><dd>{order.productSnapshot.description}</dd></div>
       <div><dt>작업 범위</dt><dd>{order.productSnapshot.scopeDescription}</dd></div>
@@ -50,7 +50,7 @@ export function OrderRecords({ order }: { order: OrderDetail }) {
           : order.payment.status === 'PAID' ? '결제 완료' : order.payment.status}</p>
         <p className={styles.meta}>결제 {formatDateTime(order.payment.paidAt)}
           {order.payment.refundedAt && ` · 환불 ${formatDateTime(order.payment.refundedAt)}`}</p>
-      </> : <p className={styles.empty}>아직 결제 기록이 없습니다.</p>}
+      </> : <p className={styles.empty}>아직 결제 기록이 없어요.</p>}
     </section>
     <div className={`${styles.card} ${styles.history}`}><OrderHistoryList order={order} /></div>
   </>

@@ -42,10 +42,10 @@ export function AccountLayout({ children }: { children: ReactNode }) {
           <Link to="/mypage/seller-profile" aria-current={seller ? 'page' : undefined}>판매자</Link>
         </nav>
         {seller && !canSell && <p className={styles.notice} role="status">
-          {member.isPending ? '판매자 정보를 확인하고 있습니다.'
-            : member.isError ? '회원 정보를 확인하지 못했습니다. 페이지를 새로고침해 주세요.'
-              : !member.data ? '로그인 후 판매자 프로필을 등록할 수 있습니다.'
-                : '판매자 프로필을 등록하면 판매 기능을 사용할 수 있습니다.'}
+          {member.isPending ? '판매자 정보를 확인하고 있어요.'
+            : member.isError ? '회원 정보를 확인하지 못했어요. 페이지를 새로고침해 주세요.'
+              : !member.data ? '로그인 후 판매자 프로필을 등록할 수 있어요.'
+                : '판매자 프로필을 등록하면 판매 기능을 사용할 수 있어요.'}
         </p>}
         <nav className={styles.menu} aria-label={seller ? '판매자 활동' : '일반 활동'}>
           {(seller ? sellerLinks : generalLinks).map(([to, label], index) =>

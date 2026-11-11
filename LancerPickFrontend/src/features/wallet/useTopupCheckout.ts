@@ -67,7 +67,7 @@ export function useTopupCheckout({
     try {
       const storage = getCheckoutStorage()
       if (!storage)
-        throw new Error('브라우저의 세션 저장소를 사용할 수 없습니다.')
+        throw new Error('브라우저의 세션 저장소를 사용할 수 없어요.')
       // 신청 저장 전에 저장소 사용 가능 여부를 확인한다. 토큰/시크릿은 저장하지 않는다.
       storage.setItem('lancerpick.wallet.storage-check', '1')
       storage.removeItem('lancerpick.wallet.storage-check')
@@ -100,7 +100,7 @@ export function useTopupCheckout({
           failure instanceof Error && !isTossTestClientKey(clientKey)
             ? failure
             : new Error(
-                '결제 수단을 불러오지 못했습니다. 테스트 키와 토스 결제 UI 설정을 확인해 주세요.',
+                '결제 수단을 불러오지 못했어요. 테스트 키와 토스 결제 UI 설정을 확인해 주세요.',
               ),
         )
     } finally {
@@ -127,7 +127,7 @@ export function useTopupCheckout({
       if (alive.current)
         setError(
           new Error(
-            '결제 화면을 정리하지 못했습니다. 충전 금액 변경을 다시 눌러 주세요.',
+            '결제 화면을 정리하지 못했어요. 충전 금액 변경을 다시 눌러 주세요.',
           ),
         )
     } finally {
@@ -203,7 +203,7 @@ export function useTopupCheckout({
               failure.message.startsWith('이번 테스트'))
             ? failure
             : new Error(
-                '결제 절차가 중단됐습니다. 신청이 만들어졌다면 먼저 충전 상태를 확인해 주세요.',
+                '결제 절차가 중단됐어요. 신청이 만들어졌다면 먼저 충전 상태를 확인해 주세요.',
               ),
         )
     } finally {

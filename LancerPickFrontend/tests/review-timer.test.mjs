@@ -63,7 +63,7 @@ test('timer lookup keeps large IDs, bypasses cache; start sends POST without bod
 test('timer text hides outside review and explains each state to the right party', () => {
   assert.equal(reviewTimerView(timer('NOT_IN_REVIEW'), true), null)
   assert.match(reviewTimerView(timer('WAITING'), false).detail, /검수 결과/)
-  assert.match(reviewTimerView(timer('WAITING'), true).detail, /시작할 수 있습니다/)
+  assert.match(reviewTimerView(timer('WAITING'), true).detail, /시작할 수 있어요/)
   assert.match(reviewTimerView(timer('CANCELLATION_PENDING'), true).title, /취소 요청/)
   assert.match(reviewTimerView(timer('STARTABLE', { canStart: true }), true).title, /시작 가능/)
   // 서버가 시작을 막은 판매자(구매자 보안 잠금)는 시작 가능으로 안내하지 않는다.

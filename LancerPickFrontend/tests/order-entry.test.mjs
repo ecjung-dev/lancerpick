@@ -44,7 +44,7 @@ test('expired session returns to this product order form after login', () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
   const query = client.getQueryCache().build(client, { queryKey: ['order-entry-session'], queryFn: async () => undefined })
   query.setState({ status: 'error', fetchStatus: 'idle', error: new ApiError(401, {
-    code: 'UNAUTHORIZED', message: '로그인이 필요합니다.', fieldErrors: [],
+    code: 'UNAUTHORIZED', message: '로그인이 필요해요.', fieldErrors: [],
   }) })
   try {
     const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/products/1/order'] },

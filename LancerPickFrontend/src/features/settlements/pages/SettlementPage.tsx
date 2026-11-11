@@ -39,17 +39,17 @@ export function SettlementPage() {
     <h1>판매 수익</h1>
     {!unauthorized && <>
       <p>
-        구매 확정된 거래의 수익 기록입니다. 새 전자계약 거래의 수익은
-        수수료를 제외하고 구매 적립금으로 지급됩니다.
+        구매 확정된 거래의 수익 기록이에요. 새 전자계약 거래의 수익은
+        수수료를 제외하고 구매 적립금으로 지급돼요.
       </p>
-      <p>기존 거래의 수익은 별도 기록으로 유지하며, 출금 기능은 제공하지 않습니다.</p>
+      <p>기존 거래의 수익은 별도 기록으로 유지하며, 출금 기능은 제공하지 않아요.</p>
     </>}
   </header>
 
   if (unauthorized) {
     return <section className={styles.settlements}>
       {heading}
-      <p className={styles.notice}>로그인 후 본인의 판매 수익을 확인할 수 있습니다.{' '}
+      <p className={styles.notice}>로그인 후 본인의 판매 수익을 확인할 수 있어요.{' '}
         <Link to={loginPath(location.pathname + location.search)}>로그인</Link></p>
     </section>
   }
@@ -58,16 +58,16 @@ export function SettlementPage() {
     {heading}
     <SettlementFiltersForm key={JSON.stringify([filters.from, filters.to, filters.sort, filters.q])} filters={filters} onApply={apply} />
     {error ? <div role="alert" className={styles.notice}>
-      <p>판매 수익을 불러오지 못했습니다.</p>
+      <p>판매 수익을 불러오지 못했어요.</p>
       <button type="button" className={styles.primary} onClick={retry}>다시 조회</button>
     </div>
-      : !list.data || !summary.data ? <p role="status" className={styles.notice}>판매 수익을 불러오는 중입니다.</p>
+      : !list.data || !summary.data ? <p role="status" className={styles.notice}>판매 수익을 불러오는 중이에요.</p>
       : <>
         <div className={styles.sectionHead}>
           <h2>조회 조건 합계</h2>
           <p className={styles.period}>
             {filters.q && <>검색: {filters.q} · </>}
-            {filters.from || filters.to ? `${filters.from || '시작 제한 없음'} ~ ${filters.to || '종료 제한 없음'}` : '전체 기간'} · 사용 가능한 적립금 잔액과 다른 금액입니다.
+            {filters.from || filters.to ? `${filters.from || '시작 제한 없음'} ~ ${filters.to || '종료 제한 없음'}` : '전체 기간'} · 사용 가능한 적립금 잔액과 다른 금액이에요.
           </p>
         </div>
         <dl className={styles['settlement-summary']}>
@@ -80,7 +80,7 @@ export function SettlementPage() {
           <h2>정산 내역 <small>총 {list.data.totalElements}건</small></h2>
         </div>
         {list.data.items.length === 0 ? <div className={styles.empty}>
-          <strong>조회 조건에 맞는 정산 내역이 없습니다.</strong>
+          <strong>조회 조건에 맞는 정산 내역이 없어요.</strong>
           <p>검색어나 정산 기록일 기간을 변경해 보세요.</p>
         </div>
           : <ul className={styles['settlement-list']}>

@@ -123,7 +123,7 @@ function ProductForm({ initial, categories, memberId, checking }: { initial?: Ow
             {textField('title')}
           </section>
           <section className={styles.section} aria-labelledby="product-service">
-            <div className={styles.sectionHeading}><span>02</span><div><h2 id="product-service">서비스 안내</h2><p>구매자가 확인할 작업 내용과 준비사항입니다.</p></div></div>
+            <div className={styles.sectionHeading}><span>02</span><div><h2 id="product-service">서비스 안내</h2><p>구매자가 확인할 작업 내용과 준비사항이에요.</p></div></div>
             {textField('description')}
             {textField('scopeDescription')}
             {textField('preparationDescription')}
@@ -148,7 +148,7 @@ function ProductForm({ initial, categories, memberId, checking }: { initial?: Ow
       <div className={styles.saveBar}><p>입력한 내용을 확인한 후 저장해 주세요.</p><Button type="submit" disabled={pending || locked || checking || !!latest}>{pending ? '저장 중…' : '상품 저장'}<Icon name="arrow" size={17} /></Button></div>
     </fieldset>
     {error && <p role="alert">{error}</p>}
-    {locked && <p>결과나 계정을 다시 확인해 주세요. 저장 요청을 자동 재전송하지 않습니다.</p>}
+    {locked && <p>결과나 계정을 다시 확인해 주세요. 저장 요청을 자동 재전송하지 않아요.</p>}
     <Link to="/mypage/seller-profile">판매자 프로필 관리</Link>
   </form>
 }

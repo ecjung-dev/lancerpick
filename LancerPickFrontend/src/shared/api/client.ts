@@ -78,7 +78,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (!path.startsWith('/') || path.startsWith('//')) throw new Error('API 상대 경로를 사용해 주세요.')
   const { json, responseType, isCurrentAccount, ...init } = options
   const assertCurrentAccount = () => {
-    if (isCurrentAccount && !isCurrentAccount()) throw new DOMException('계정이 변경되어 요청을 중단했습니다.', 'AbortError')
+    if (isCurrentAccount && !isCurrentAccount()) throw new DOMException('계정이 변경되어 요청을 중단했어요.', 'AbortError')
   }
   assertCurrentAccount()
   const requestGeneration = csrfGeneration
@@ -100,7 +100,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new ApiError(0, { code: 'NETWORK_ERROR', message: '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.', fieldErrors: [] })
+    throw new ApiError(0, { code: 'NETWORK_ERROR', message: '서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.', fieldErrors: [] })
   }
 
   if (response.ok && responseType === 'pdf') {
@@ -112,7 +112,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (!response.ok) {
     // Vite/Nginx의 HTML 오류나 빈 응답도 화면에 원문을 노출하지 않는다.
     const error = isErrorResponse(body) ? body : {
-      code: 'HTTP_ERROR', message: '요청을 처리하지 못했습니다. 다시 시도해 주세요.', fieldErrors: [],
+      code: 'HTTP_ERROR', message: '요청을 처리하지 못했어요. 다시 시도해 주세요.', fieldErrors: [],
       traceId: response.headers.get('X-Trace-Id') ?? undefined,
     }
     if ((response.status === 401 || error.code === 'CSRF_INVALID')

@@ -13,12 +13,12 @@ export function getAdminProducts(filter: AdminProductFilter, page: number, signa
 }
 
 export function getAdminProduct(id: string, signal?: AbortSignal) {
-  if (!isValidProductId(id)) return Promise.reject(new Error('올바른 상품 번호가 아닙니다.'))
+  if (!isValidProductId(id)) return Promise.reject(new Error('올바른 상품 번호가 아니에요.'))
   return apiRequest<AdminProductDetail>(`/admin/products/${id}`, { signal })
 }
 
 export function getModerationLogs(id: string, page: number, signal?: AbortSignal) {
-  if (!isValidProductId(id)) return Promise.reject(new Error('올바른 상품 번호가 아닙니다.'))
+  if (!isValidProductId(id)) return Promise.reject(new Error('올바른 상품 번호가 아니에요.'))
   const params = new URLSearchParams({ page: String(page), size: '20' })
   return apiRequest<PageResponse<ModerationLog>>(`/admin/products/${id}/moderation-logs?${params}`, { signal })
 }
@@ -29,7 +29,7 @@ export function getModerationLogs(id: string, page: number, signal?: AbortSignal
  * isCurrentAccount: 클릭 때 captureAccountScope로 잡은 계정 경계. 그 사이 계정이 바뀌면 보내지 않는다.
  */
 export function changeVisibility(id: string, input: VisibilityInput, isCurrentAccount?: () => boolean) {
-  if (!isValidProductId(id)) return Promise.reject(new Error('올바른 상품 번호가 아닙니다.'))
+  if (!isValidProductId(id)) return Promise.reject(new Error('올바른 상품 번호가 아니에요.'))
   return apiRequest<AdminProductDetail>(`/admin/products/${id}/visibility`, {
     method: 'PATCH',
     isCurrentAccount,

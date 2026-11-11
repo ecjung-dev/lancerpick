@@ -26,7 +26,7 @@ export function ChatMessages({
       list.current.scrollTop = list.current.scrollHeight
     }
   }, [followLatest, lastId, lastSender, memberId])
-  if (!messages.length) return <p>아직 대화가 없습니다.</p>
+  if (!messages.length) return <p>아직 대화가 없어요.</p>
   return (
     <ol
       ref={list}

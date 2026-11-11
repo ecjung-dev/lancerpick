@@ -105,10 +105,10 @@ test('order detail returns to the filtered list and displays a Korean status', (
 
 test('direct cancellation explains whether a paid amount will be refunded', () => {
   for (const [status, payment, expected, absent] of [
-    ['REQUESTED', null, /결제 전 주문은 적립금 차감·환불 없이 취소됩니다/, /전액 적립금 환불과 함께 취소됩니다/],
-    ['AWAITING_PAYMENT', null, /결제 전 주문은 적립금 차감·환불 없이 취소됩니다/, /전액 적립금 환불과 함께 취소됩니다/],
+    ['REQUESTED', null, /결제 전 주문은 적립금 차감·환불 없이 취소돼요/, /전액 적립금 환불과 함께 취소돼요/],
+    ['AWAITING_PAYMENT', null, /결제 전 주문은 적립금 차감·환불 없이 취소돼요/, /전액 적립금 환불과 함께 취소돼요/],
     ['IN_PROGRESS', { status: 'PAID', amount: 1000, paidAt: '2026-11-04T00:00:00Z', refundedAt: null },
-      /결제된 주문은 전액 적립금 환불과 함께 취소됩니다/, /결제 전 주문은 적립금 차감·환불 없이 취소됩니다/],
+      /결제된 주문은 전액 적립금 환불과 함께 취소돼요/, /결제 전 주문은 적립금 차감·환불 없이 취소돼요/],
   ]) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     client.setQueryData(['wallet', 'order', '1'], {
@@ -167,7 +167,7 @@ test('settlements restore URL page and preserve large order IDs in detail links'
   assert.match(html, /3페이지/)
   assert.match(html, /href="\/orders\/9007199254740993"/)
   assert.match(html, /판매 수익 900원/)
-  assert.match(html, /구매 적립금으로 지급됩니다/)
+  assert.match(html, /구매 적립금으로 지급돼요/)
   assert.match(html, /기존 거래의 수익은 별도 기록으로 유지/)
   assert.doesNotMatch(html, /구매 적립금과 별도로 관리/)
 })
@@ -212,7 +212,7 @@ test('empty filtered order list explains that no orders match', () => {
   try {
     const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders?side=BUYER&status=COMPLETED'] },
       createElement(QueryClientProvider, { client }, createElement(OrderListPage))))
-    assert.match(html, /조회된 거래 내역이 없습니다/)
+    assert.match(html, /조회된 거래 내역이 없어요/)
     assert.match(html, /value="COMPLETED" selected=""/)
   } finally { client.clear() }
 })
@@ -221,13 +221,13 @@ test('order detail failure shows server error and a route back to the filtered l
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
   const query = client.getQueryCache().build(client, { queryKey: ['wallet', 'order', '1'], queryFn: async () => undefined })
   query.setState({ status: 'error', fetchStatus: 'idle', error: new ApiError(502, {
-    code: 'HTTP_ERROR', message: '요청을 처리하지 못했습니다. 다시 시도해 주세요.', fieldErrors: [],
+    code: 'HTTP_ERROR', message: '요청을 처리하지 못했어요. 다시 시도해 주세요.', fieldErrors: [],
   }) })
   try {
     const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders/1?side=SELLER&status=COMPLETED&page=2'] },
       createElement(QueryClientProvider, { client },
         createElement(Routes, null, createElement(Route, { path: '/orders/:id', element: createElement(OrderDetailPage) })))))
-    assert.match(html, /요청을 처리하지 못했습니다/)
+    assert.match(html, /요청을 처리하지 못했어요/)
     assert.match(html, /href="\/orders\?side=SELLER&amp;status=COMPLETED&amp;page=2"/)
     assert.doesNotMatch(html, /접근 권한이나 주문 상태/)
   } finally { client.clear() }
@@ -235,8 +235,8 @@ test('order detail failure shows server error and a route back to the filtered l
 
 test('order list separates expired login from server failure while keeping filters', () => {
   for (const [status, message, expected] of [
-    [401, '로그인이 필요합니다.', /로그인 후 거래 내역을 확인할 수 있습니다/],
-    [502, '요청을 처리하지 못했습니다. 다시 시도해 주세요.', /요청을 처리하지 못했습니다/],
+    [401, '로그인이 필요해요.', /로그인 후 거래 내역을 확인할 수 있어요/],
+    [502, '요청을 처리하지 못했어요. 다시 시도해 주세요.', /요청을 처리하지 못했어요/],
   ]) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
     const query = client.getQueryCache().build(client, { queryKey: ['wallet', 'orders', 'BUYER', 'COMPLETED', 0, '', '', '', 'latest'], queryFn: async () => undefined })
@@ -256,7 +256,7 @@ test('expired order detail session returns to the same order and list filters af
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
   const query = client.getQueryCache().build(client, { queryKey: ['wallet', 'order', '1'], queryFn: async () => undefined })
   query.setState({ status: 'error', fetchStatus: 'idle', error: new ApiError(401, {
-    code: 'UNAUTHORIZED', message: '로그인이 필요합니다.', fieldErrors: [],
+    code: 'UNAUTHORIZED', message: '로그인이 필요해요.', fieldErrors: [],
   }) })
   try {
     const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders/1?side=SELLER&status=COMPLETED&page=2'] },

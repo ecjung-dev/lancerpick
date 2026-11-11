@@ -304,7 +304,7 @@ export function createChatRealtime(
       if (!connected || stopped || blocked || !activeClient)
         return Promise.reject(new Error('실시간 연결을 확인해 주세요.'))
       if (pending.has(body.clientMessageId))
-        return Promise.reject(new Error('이미 전송 중입니다.'))
+        return Promise.reject(new Error('이미 전송 중이에요.'))
       return new Promise((resolve, reject) => {
         const timer = dependencies.delay(() => {
           pending.delete(body.clientMessageId)

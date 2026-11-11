@@ -18,7 +18,7 @@ export function ProductPreview({ product, onClose }: { product: ProductSummary |
         <h2 id="preview-title">{product.title}</h2>
         <p>{product.category.name} · {product.seller.displayName}</p>
         <div className={styles.amount}>{formatWon(product.priceAmount)} <small>고정 가격 · {product.durationDays}일</small></div>
-        <p className={styles.notice}>목록의 상품 정보를 표시합니다. 상세 조회와 이 화면에서의 주문은 준비 중입니다.</p>
+        <p className={styles.notice}>목록의 상품 정보를 표시해요. 상세 조회와 이 화면에서의 주문은 준비 중이에요.</p>
         <Button onClick={onClose}>확인</Button>
       </>}
     </dialog>

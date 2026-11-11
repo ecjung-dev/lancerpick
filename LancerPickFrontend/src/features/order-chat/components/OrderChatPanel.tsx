@@ -39,16 +39,16 @@ export function OrderChatPanel({
     if (changed) void recheckSession(client)
   }, [changed, client])
   if (changed)
-    return <AsyncState title="현재 계정으로 대화를 다시 확인하고 있습니다." />
+    return <AsyncState title="현재 계정으로 대화를 다시 확인하고 있어요." />
   // 배경 재확인으로 같은 계정의 입력을 지우지 않는다. 계정 변경은 아래 key로 입력·조회 모두 초기화한다.
   if (member.isPending)
-    return <AsyncState title="대화의 로그인 상태를 확인하고 있습니다." />
+    return <AsyncState title="대화의 로그인 상태를 확인하고 있어요." />
   if (member.isError)
     return (
       <section className={`${styles.panel} ${floating ? styles.floating : ''}`}>
         <h2>주문 대화</h2>
         <AsyncState
-          title="대화를 확인할 수 없습니다."
+          title="대화를 확인할 수 없어요."
           error={member.error}
           description={member.error.message}
           onRetry={() => {
@@ -115,7 +115,7 @@ function ChatConversation({
       <section className={`${styles.panel} ${floating ? styles.floating : ''}`}>
         <h2>주문 대화</h2>
         <p role="alert">
-          로그인 상태가 변경되었거나 연결 권한을 확인하지 못했습니다. 다시
+          로그인 상태가 변경되었거나 연결 권한을 확인하지 못했어요. 다시
           확인해 주세요.
         </p>
         <Button variant="secondary" onClick={realtime.reconnect}>
@@ -128,7 +128,7 @@ function ChatConversation({
       <section className={`${styles.panel} ${floating ? styles.floating : ''}`}>
         <h2>주문 대화</h2>
         <AsyncState
-          title="대화를 조회하지 못했습니다."
+          title="대화를 조회하지 못했어요."
           error={query.error}
           description={query.error.message}
           onRetry={() => {
@@ -137,7 +137,7 @@ function ChatConversation({
         />
       </section>
     )
-  if (!query.data) return <AsyncState title="대화를 불러오고 있습니다." />
+  if (!query.data) return <AsyncState title="대화를 불러오고 있어요." />
   return (
     <section
       className={`${styles.panel} ${floating ? styles.floating : ''}`}
@@ -146,8 +146,8 @@ function ChatConversation({
       {!floating && <h2>주문 대화</h2>}
       {!floating && (
         <p>
-          구매자와 판매자가 대화할 수 있습니다. 대화로 주문 조건이나 납기가 자동
-          변경되지는 않습니다.
+          구매자와 판매자가 대화할 수 있어요. 대화로 주문 조건이나 납기가 자동
+          변경되지는 않아요.
         </p>
       )}
       <div className={styles.toolbar}>
@@ -155,8 +155,8 @@ function ChatConversation({
           {realtime.state === 'connected'
             ? '실시간 연결됨'
             : realtime.state === 'offline'
-              ? '실시간 연결 중단 · 조회·전송은 계속할 수 있습니다.'
-              : '실시간 연결 중 · 누락된 대화를 확인합니다.'}
+              ? '실시간 연결 중단 · 조회·전송은 계속할 수 있어요.'
+              : '실시간 연결 중 · 누락된 대화를 확인해요.'}
         </span>
         {realtime.state === 'offline' && (
           <Button variant="secondary" onClick={realtime.reconnect}>
@@ -191,7 +191,7 @@ function ChatConversation({
         memberId={memberId}
         followLatest={floating && active}
       />
-      {!canSend && <p>종료된 주문의 대화는 조회만 할 수 있습니다.</p>}
+      {!canSend && <p>종료된 주문의 대화는 조회만 할 수 있어요.</p>}
       {failure && (
         <p className={styles.error} role="alert">
           {failure}
@@ -199,7 +199,7 @@ function ChatConversation({
       )}
       {uncertain && (
         <p className={styles.error} role="alert">
-          전송 결과를 확인하지 못했습니다. 대화를 새로고침하거나 같은 메시지를
+          전송 결과를 확인하지 못했어요. 대화를 새로고침하거나 같은 메시지를
           재전송해 주세요.
         </p>
       )}

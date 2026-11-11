@@ -177,14 +177,14 @@ function ThreadList({
             </button>
           </div>
         ) : !query.data ? (
-          <p role="status">대화 목록을 불러오는 중입니다.</p>
+          <p role="status">대화 목록을 불러오는 중이에요.</p>
         ) : (
           <>
             {!query.data.items.length ? (
               <p>
                 {q
-                  ? '검색 조건에 맞는 대화가 없습니다.'
-                  : '대화할 주문이 없습니다. 주문 후 구매자·판매자와 대화할 수 있어요.'}
+                  ? '검색 조건에 맞는 대화가 없어요.'
+                  : '대화할 주문이 없어요. 주문 후 구매자·판매자와 대화할 수 있어요.'}
               </p>
             ) : (
               <ul className={styles.threadList}>
@@ -206,7 +206,7 @@ function ThreadList({
                       <span>{thread.productTitle}</span>
                       <span className={styles.preview}>
                         {thread.lastMessagePreview === null
-                          ? '아직 대화가 없습니다. 대화를 시작해 보세요.'
+                          ? '아직 대화가 없어요. 대화를 시작해 보세요.'
                           : `${thread.lastSenderId === memberId ? '나: ' : ''}${thread.lastMessagePreview}`}
                       </span>
                       <small>
@@ -290,13 +290,13 @@ function Conversation({
       <div className={styles.conversationBody}>
         {query.isError ? (
           <div role="alert">
-            <p>주문 대화를 확인할 수 없습니다.</p>
+            <p>주문 대화를 확인할 수 없어요.</p>
             <button type="button" onClick={() => void query.refetch()}>
               다시 조회
             </button>
           </div>
         ) : !query.data ? (
-          <p role="status">주문을 확인하고 있습니다.</p>
+          <p role="status">주문을 확인하고 있어요.</p>
         ) : (
           <OrderChatPanel
             orderId={orderId}

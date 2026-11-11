@@ -28,7 +28,7 @@ export function getActiveReviewTimers(page: number, signal?: AbortSignal) {
  * isCurrentAccount: 클릭 때 captureAccountScope로 잡은 계정 경계. 그 사이 계정이 바뀌면 보내지 않는다.
  */
 export function stopReviewTimer(orderId: string, reason: string, isCurrentAccount?: () => boolean) {
-  if (!isValidId(orderId)) return Promise.reject(new Error('올바른 주문 번호가 아닙니다.'))
+  if (!isValidId(orderId)) return Promise.reject(new Error('올바른 주문 번호가 아니에요.'))
   return apiRequest<ReviewTimerStatus>(`/admin/orders/${orderId}/review-timer/stop`, { method: 'POST', json: { reason }, isCurrentAccount })
 }
 

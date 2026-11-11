@@ -63,7 +63,7 @@ test('signed out product links back after login and saved product shows the remo
   const signedOut = render(button, '/products/7?rating=5', client => {
     client.getQueryCache().build(client, { queryKey: ['my-products-session'] }).setState({
       status: 'error', fetchStatus: 'idle',
-      error: new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] }),
+      error: new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요해요.', fieldErrors: [] }),
     })
   })
   assert.match(signedOut, /\/login\?next=%2Fproducts%2F7%3Frating%3D5/)

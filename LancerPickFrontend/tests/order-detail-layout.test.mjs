@@ -62,7 +62,7 @@ test('tabs retain mounted condition and history panels while progress is initial
 
 test('failed order recheck hides cached product and financial data', () => {
   const html = render({ orderError: true })
-  assert.match(html, /주문을 확인할 수 없습니다/)
+  assert.match(html, /주문을 확인할 수 없어요/)
   assert.doesNotMatch(html, /보관된 상품명|100,001|90,001|mypage\/settlements/)
 })
 

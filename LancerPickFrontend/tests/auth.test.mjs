@@ -219,7 +219,7 @@ test('a query 401 while the header still shows a member rechecks the session onc
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   client.setQueryData(memberQueryKey, member)
   client.setQueryData(['notifications', member.id, 'unread-count'], { count: 3 })
-  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] })
+  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요해요.', fieldErrors: [] })
 
   await Promise.all([recheckAfterUnauthorized(client, expired), recheckAfterUnauthorized(client, expired)])
   assert.equal(meCalls, 1, '동시에 받은 401은 재확인 한 번으로 묶는다')
@@ -241,7 +241,7 @@ test('only a 401 rechecks the session after a query failure', async () => {
   }
   await recheckAfterUnauthorized(client, new Error('plain'))
   assert.equal(meCalls, 0)
-  await recheckAfterUnauthorized(client, new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] }))
+  await recheckAfterUnauthorized(client, new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요해요.', fieldErrors: [] }))
   assert.equal(meCalls, 1)
   assert.deepEqual(client.getQueryData(memberQueryKey), member, '같은 계정이 그대로면 유지한다')
   client.clear()
@@ -252,7 +252,7 @@ test('when the session recheck itself fails, later 401s do not keep asking with 
   globalThis.fetch = async () => { meCalls++; throw new TypeError('network failed') }
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   client.setQueryData(memberQueryKey, member)
-  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] })
+  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요해요.', fieldErrors: [] })
   assert.equal(await recheckAfterUnauthorized(client, expired), 'unknown')
   assert.equal(await recheckAfterUnauthorized(client, expired), undefined)
   assert.equal(meCalls, 1, '캐시 정리 뒤 재조회의 401로 /api/me를 반복 호출하지 않는다')
@@ -261,7 +261,7 @@ test('when the session recheck itself fails, later 401s do not keep asking with 
 
 test('a late recheck response after another login or logout does not overwrite the newer account state', async () => {
   const other = { ...member, id: '42', displayName: '다른 회원' }
-  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] })
+  const expired = new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요해요.', fieldErrors: [] })
   for (const [label, late] of [['로그인 안 함 응답', () => error('AUTHENTICATION_REQUIRED', 401)], ['통신 실패', () => { throw new TypeError('network failed') }]]) {
     let release
     const waiting = new Promise((resolve) => { release = resolve })

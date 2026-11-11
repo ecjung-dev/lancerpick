@@ -75,7 +75,7 @@ test('PDF errors stay structured and an HTML success cannot become a download', 
     new Response(
       JSON.stringify({
         code: 'AUTHENTICATION_REQUIRED',
-        message: '로그인이 필요합니다.',
+        message: '로그인이 필요해요.',
         fieldErrors: [],
         traceId: 'test',
       }),
@@ -149,7 +149,7 @@ function render(status, memberId = '7', fileHash = null, denied = false, panelPr
     signatures: [],
     specialTerms: '',
   })
-  if (denied) client.getQueryCache().find({ queryKey: ['wallet', 'contract', memberId, '11', 'current'] }).setState({ status: 'error', error: new Error('접근할 수 없습니다.') })
+  if (denied) client.getQueryCache().find({ queryKey: ['wallet', 'contract', memberId, '11', 'current'] }).setState({ status: 'error', error: new Error('접근할 수 없어요.') })
   try {
     return renderToStaticMarkup(
       createElement(
@@ -202,7 +202,7 @@ test('unwritten contracts in pre-contract states are normal notices, not alerts'
   for (const orderStatus of ['REQUESTED', 'AWAITING_CONTRACT', 'REJECTED', 'CANCELLED']) {
     const html = renderContractError(orderStatus)
     assert.match(html, /role="status"/)
-    assert.match(html, /아직 작성된 계약서가 없습니다/)
+    assert.match(html, /아직 작성된 계약서가 없어요/)
     assert.doesNotMatch(html, /role="alert"|PDF 다운로드/)
   }
   assert.match(renderContractError('AWAITING_CONTRACT'), /특약으로 계약 초안 저장/)
@@ -218,7 +218,7 @@ test('a missing expected or previously known contract stays an error without exp
   for (const options of [{ hasContractHistory: true }, { cached: true }]) {
     const html = renderContractError('AWAITING_CONTRACT', options)
     assert.match(html, /role="alert"/)
-    assert.doesNotMatch(html, /아직 작성된 계약서가 없습니다|cached-private-contract|PDF 다운로드|특약으로 계약 초안 저장/)
+    assert.doesNotMatch(html, /아직 작성된 계약서가 없어요|cached-private-contract|PDF 다운로드|특약으로 계약 초안 저장/)
   }
 })
 
@@ -226,7 +226,7 @@ test('authentication, server, network and unrecognized 404 failures never become
   for (const status of [0, 401, 403, 500, 503]) {
     const html = renderContractError('AWAITING_CONTRACT', { status, code: 'REQUEST_FAILED' })
     assert.match(html, /role="alert"/)
-    assert.doesNotMatch(html, /아직 작성된 계약서가 없습니다|특약으로 계약 초안 저장/)
+    assert.doesNotMatch(html, /아직 작성된 계약서가 없어요|특약으로 계약 초안 저장/)
   }
   assert.match(renderContractError('AWAITING_CONTRACT', { code: 'UNKNOWN_404' }), /role="alert"/)
 })
@@ -236,7 +236,7 @@ test('signed contract asks for payment only while the order is awaiting payment'
   assert.match(v3('AWAITING_PAYMENT'), /전액 적립금 결제를 진행해 주세요/)
   for (const orderStatus of ['IN_PROGRESS', 'AWAITING_CONFIRMATION', 'COMPLETED', 'CANCELLED']) {
     const html = v3(orderStatus)
-    assert.match(html, /계약이 성립했습니다/)
+    assert.match(html, /계약이 성립했어요/)
     assert.doesNotMatch(html, /결제를 진행해 주세요/, orderStatus)
   }
   const v2 = (orderStatus) => render('SIGNED', '8', 'a'.repeat(64), false, { orderStatus })
@@ -296,5 +296,5 @@ test('draft and signing commands send the expected version and fixed document ha
 test('a failed access recheck hides previously cached contract content and download', () => {
   const html = render('READY', '8', 'a'.repeat(64), true)
   assert.doesNotMatch(html, /PDF 다운로드|unsafe/)
-  assert.match(html, /접근할 수 없습니다/)
+  assert.match(html, /접근할 수 없어요/)
 })

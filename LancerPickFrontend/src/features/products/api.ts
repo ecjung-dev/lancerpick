@@ -10,7 +10,7 @@ export function getMyProducts(page: number, signal?: AbortSignal) {
 
 export function getProductDetail(id: string, signal?: AbortSignal) {
   if (!/^[0-9]{1,19}$/.test(id) || BigInt(id) <= 0n || BigInt(id) > 9223372036854775807n) {
-    return Promise.reject(new Error('올바른 상품 번호가 아닙니다.'))
+    return Promise.reject(new Error('올바른 상품 번호가 아니에요.'))
   }
   return apiRequest<ProductDetail>(`/products/${id}`, { signal })
 }

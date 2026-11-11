@@ -278,7 +278,7 @@ function renderPanel(status, denied = false) {
     client
       .getQueryCache()
       .find({ queryKey })
-      .setState({ status: 'error', error: new Error('접근할 수 없습니다.') })
+      .setState({ status: 'error', error: new Error('접근할 수 없어요.') })
   try {
     return renderToStaticMarkup(
       createElement(
@@ -304,7 +304,7 @@ test('closed order keeps history while hiding composition and failed access hide
   assert.match(renderPanel('IN_PROGRESS'), /<textarea/)
   const denied = renderPanel('IN_PROGRESS', true)
   assert.doesNotMatch(denied, /private|<textarea/)
-  assert.match(denied, /접근할 수 없습니다/)
+  assert.match(denied, /접근할 수 없어요/)
 })
 
 test('account switch cancels old chat requests and removes history and member caches', async () => {

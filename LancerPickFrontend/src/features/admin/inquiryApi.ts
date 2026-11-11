@@ -3,7 +3,7 @@ import type { PageResponse } from '../../shared/api/types.ts'
 import type { AdminCancellationReviewResult, AdminInquiryDetail, AdminInquiryFilter, AdminInquirySummary } from './inquiryTypes.ts'
 import { isValidProductId as isValidId } from './validation.ts'
 
-const invalid = () => Promise.reject(new Error('올바른 문의 번호가 아닙니다.'))
+const invalid = () => Promise.reject(new Error('올바른 문의 번호가 아니에요.'))
 
 /** 관리자 권한은 서버가 세션과 DB 역할로 판단한다. 화면은 관리자 여부를 요청값으로 보내지 않는다. */
 export function getAdminInquiries(filter: AdminInquiryFilter, page: number, signal?: AbortSignal) {

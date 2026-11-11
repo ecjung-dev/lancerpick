@@ -89,7 +89,7 @@ test('an unclear failure keeps the request and the retry resends the same key an
 
 test('a clear first rejection forgets the request; a rejected retry stays uncertain', async () => {
   const client = newClient()
-  const conflict = () => json({ code: 'ADMIN_ACTION_IN_PROGRESS', message: '진행 중인 재처리 요청이 있습니다.', fieldErrors: [], traceId: 't' }, 409)
+  const conflict = () => json({ code: 'ADMIN_ACTION_IN_PROGRESS', message: '진행 중인 재처리 요청이 있어요.', fieldErrors: [], traceId: 't' }, 409)
   globalThis.fetch = async (url) => csrf(url) ?? conflict()
   const command = { action: 'TOPUP_RECHECK', target: '9', reason: '확인', requestKey: KEY }
   await assert.rejects(submitReprocess(client, 'TOPUP_RECHECK', '9', command, () => true), /진행 중인 재처리 요청/)

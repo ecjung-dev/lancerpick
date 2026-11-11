@@ -61,7 +61,7 @@ function WalletGuestPage() {
       </Link>
       <AsyncState
         title="로그인 후 지갑을 확인할 수 있어요"
-        description="로그인한 계정의 적립금과 이용 내역을 표시합니다."
+        description="로그인한 계정의 적립금과 이용 내역을 표시해요."
       />
       <Link className={styles.previewLink} to="/login">
         로그인으로 이동 →
@@ -89,7 +89,7 @@ export function ConnectedWalletPage({ sessionKey }: { sessionKey: string }) {
       <WalletLayout>
         <AsyncState
           title="다시 로그인해 주세요"
-          description="로그인 상태를 확인할 수 없어 잔액과 내역을 표시하지 않습니다."
+          description="로그인 상태를 확인할 수 없어 잔액과 내역을 표시하지 않아요."
         />
         <Link className={styles.previewLink} to="/login">
           로그인으로 이동 →
@@ -153,13 +153,13 @@ export function WalletPreviewPage() {
 
 function WalletLayout({ children, preview = false }: { children: ReactNode; preview?: boolean }) {
   return <section className={styles.page}>
-    {preview && <div className={styles.notice} role="note"><strong>화면 미리보기</strong><span>아래 잔액과 내역은 예시입니다. 실제 계정·결제 정보가 아닙니다.</span><Link to="/mypage">미리보기 나가기</Link></div>}
+    {preview && <div className={styles.notice} role="note"><strong>화면 미리보기</strong><span>아래 잔액과 내역은 예시예요. 실제 계정·결제 정보가 아니에요.</span><Link to="/mypage">미리보기 나가기</Link></div>}
     <div className={styles.sectionHeading}><h1>적립금 · 이용 내역</h1><p>사용 가능한 잔액과 적립금 변동을 확인하세요.</p></div>
     {children}
     <div className={styles.guide}><strong>적립금 이용 안내</strong><ul>
-      <li>가입 시 적립금 1,000,000원이 한 번 지급됩니다.</li>
-      <li>적립금은 현금 가치가 없으며 출금을 지원하지 않습니다.</li>
-      <li>새 전자계약 거래의 판매 수익은 수수료를 제외하고 적립금으로 지급됩니다. 기존 거래의 수익은 별도 기록으로 유지됩니다.</li>
+      <li>가입 시 적립금 1,000,000원이 한 번 지급돼요.</li>
+      <li>적립금은 현금 가치가 없으며 출금을 지원하지 않아요.</li>
+      <li>새 전자계약 거래의 판매 수익은 수수료를 제외하고 적립금으로 지급돼요. 기존 거래의 수익은 별도 기록으로 유지돼요.</li>
     </ul></div>
   </section>
 }
@@ -216,7 +216,7 @@ function EntryList({
       {data.items.length === 0 ? (
         <AsyncState
           title="표시할 이용 내역이 없어요"
-          description="적립금의 지급·결제·환불 내역이 여기에 표시됩니다."
+          description="적립금의 지급·결제·환불 내역이 여기에 표시돼요."
         />
       ) : (
         <ul className={styles.entries}>

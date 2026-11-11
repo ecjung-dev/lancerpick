@@ -40,7 +40,7 @@ export function readPendingCheckout(storage = getCheckoutStorage(), now = Date.n
 }
 
 export function savePendingCheckout(value: PendingCheckout, storage = getCheckoutStorage()) {
-  if (!storage) throw new Error('결제 복귀 정보를 보관하려면 브라우저의 세션 저장소가 필요합니다.')
+  if (!storage) throw new Error('결제 복귀 정보를 보관하려면 브라우저의 세션 저장소가 필요해요.')
   storage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify({
     id: value.id, orderId: value.orderId, amount: value.amount, nonce: value.nonce, createdAt: value.createdAt,
   }))

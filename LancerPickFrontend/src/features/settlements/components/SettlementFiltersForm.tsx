@@ -23,7 +23,7 @@ export function SettlementFiltersForm({ filters, onApply }: {
       return
     }
     if (range.from && range.to && range.from > range.to) {
-      setError('시작일이 종료일보다 늦습니다.')
+      setError('시작일이 종료일보다 늦어요.')
       return
     }
     setError('')

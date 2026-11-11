@@ -76,8 +76,8 @@ test('public review markup escapes text, shows rating/null content and range rec
   assert.doesNotMatch(html, /<script>/)
   assert.match(html, /별점 5 \/ 5/)
   assert.match(html, /2페이지/)
-  assert.match(render(10, { items: [], totalElements: 1, totalPages: 1 }), /이 페이지에 후기가 없습니다/)
-  assert.match(render(0, { items: [], totalElements: 0, totalPages: 0 }), /아직 작성된 후기가 없습니다/)
+  assert.match(render(10, { items: [], totalElements: 1, totalPages: 1 }), /이 페이지에 후기가 없어요/)
+  assert.match(render(0, { items: [], totalElements: 0, totalPages: 0 }), /아직 작성된 후기가 없어요/)
   assert.match(render(0), /불러오고 있어요/)
 })
 test('filtered empty results keep the overall average and count', () => {
@@ -85,13 +85,13 @@ test('filtered empty results keep the overall average and count', () => {
     summary: { reviewCount: 3, averageRating: 10 / 3 } }, 5)
   assert.match(html, /전체 후기 3건 · 평균 3\.3 \/ 5/)
   assert.match(html, /5점 후기 0건/)
-  assert.match(html, /선택한 별점의 후기가 없습니다/)
+  assert.match(html, /선택한 별점의 후기가 없어요/)
 })
 test('write form explains one-time policy and optional text', () => {
   const client = new QueryClient()
   try {
     const html = renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(ReviewForm, { orderId: '1', productId: '7' })))
-    assert.match(html, /수정·삭제할 수 없습니다/)
+    assert.match(html, /수정·삭제할 수 없어요/)
     assert.match(html, /후기 글 \(선택\)/)
     assert.match(html, /후기 등록/)
   } finally { client.clear() }

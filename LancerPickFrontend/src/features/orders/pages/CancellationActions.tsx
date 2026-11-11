@@ -90,7 +90,7 @@ export function CancellationActions({ order, disabled, run }: Props) {
     <section>
       <h2>취소 요청 내역</h2>
       {order.cancellationRequests.length === 0 ? (
-        <p>취소 요청이 없습니다.</p>
+        <p>취소 요청이 없어요.</p>
       ) : (
         order.cancellationRequests.map((item) => (
           <article key={item.id}>
@@ -114,8 +114,8 @@ export function CancellationActions({ order, disabled, run }: Props) {
         <fieldset disabled={disabled}>
           <legend>구매자 취소 요청</legend>
           <p>
-            판매자가 승인하면 주문이 취소되고 전액 적립금으로 환불됩니다. 대기
-            중에는 납품·수정·구매 확정이 제한됩니다.
+            판매자가 승인하면 주문이 취소되고 전액 적립금으로 환불돼요. 대기
+            중에는 납품·수정·구매 확정이 제한돼요.
           </p>
           <label>
             취소 요청 사유
@@ -173,7 +173,7 @@ export function CancellationActions({ order, disabled, run }: Props) {
               </label>
               <p>
                 {codePointLength(response)} / 1,000자 · 거절 시 환불되지
-                않습니다.
+                않아요.
               </p>
               <button
                 disabled={codePointLength(response) > 1000}
@@ -187,7 +187,7 @@ export function CancellationActions({ order, disabled, run }: Props) {
           )}
           {order.allowedActions.includes('WITHDRAW_CANCELLATION') && (
             <>
-              <p>요청만 철회하며 주문과 결제는 유지됩니다.</p>
+              <p>요청만 철회하며 주문과 결제는 유지돼요.</p>
               <button
                 onClick={() => {
                   void resolve('withdraw')

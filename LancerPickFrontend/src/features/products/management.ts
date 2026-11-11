@@ -11,7 +11,7 @@ export function validateProduct(input: ProductInput): ProductInput {
   const normalized = { ...input }
   for (const field of Object.keys(textLimits) as (keyof typeof textLimits)[]) {
     normalized[field] = normalizeText(input[field])
-    if (codePointLength(normalized[field]) < 1 || codePointLength(normalized[field]) > textLimits[field]) throw new Error(`${fieldNames[field]}은 필수 입력이며 최대 ${textLimits[field]}자입니다.`)
+    if (codePointLength(normalized[field]) < 1 || codePointLength(normalized[field]) > textLimits[field]) throw new Error(`${fieldNames[field]}은 필수 입력이며 최대 ${textLimits[field]}자예요.`)
   }
   if (!Number.isInteger(input.priceAmount) || input.priceAmount < 1 || input.priceAmount > 1000000) throw new Error('가격은 1~1,000,000원 정수로 입력해 주세요.')
   if (!Number.isInteger(input.durationDays) || input.durationDays < 1 || input.durationDays > 30) throw new Error('작업 기간은 1~30일 정수로 입력해 주세요.')

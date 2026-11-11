@@ -65,7 +65,7 @@ export function AppLayout() {
             </div>
             <div>
               <p>학습용 팀 프로젝트</p>
-              <p>테스트 적립금만 사용하며 실제 현금 거래·출금은 없습니다.</p>
+              <p>테스트 적립금만 사용하며 실제 현금 거래·출금은 없어요.</p>
             </div>
             <small>© 2026 LancerPick Team</small>
           </div>

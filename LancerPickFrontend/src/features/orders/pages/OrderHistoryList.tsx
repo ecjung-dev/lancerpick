@@ -8,7 +8,7 @@ export function OrderHistoryList({ order }: { order: OrderDetail }) {
     <section aria-labelledby="order-history-title">
       <h2 id="order-history-title">거래 이력</h2>
       {order.histories.length === 0 ? (
-        <p>아직 기록된 이력이 없습니다.</p>
+        <p>아직 기록된 이력이 없어요.</p>
       ) : (
         <ol>
           {order.histories.map((history) => {

@@ -53,7 +53,7 @@ export const downloadContract = (
 
 export async function verifyContractPdf(blob: Blob, expectedHash: string) {
   if (!/^[0-9a-f]{64}$/.test(expectedHash))
-    throw new Error('계약서 해시를 확인할 수 없습니다.')
+    throw new Error('계약서 해시를 확인할 수 없어요.')
   const actual = Array.from(
     new Uint8Array(
       await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()),
@@ -61,5 +61,5 @@ export async function verifyContractPdf(blob: Blob, expectedHash: string) {
     (b) => b.toString(16).padStart(2, '0'),
   ).join('')
   if (actual !== expectedHash)
-    throw new Error('계약서 파일이 변경되었습니다. 상태를 다시 확인해 주세요.')
+    throw new Error('계약서 파일이 변경됐어요. 상태를 다시 확인해 주세요.')
 }

@@ -72,7 +72,7 @@ export function DeliveryForm({ orderId, order, disabled, run }: FormProps) {
       </label>
       <p>
         구매자가 열 수 있는 링크를 입력해 주세요. 제출 후 해당 회차를 덮어쓸
-        수 없습니다.
+        수 없어요.
       </p>
       <button disabled={!valid} onClick={submit}>
         {sequence}차 납품 제출
@@ -100,7 +100,7 @@ export function RevisionForm({ orderId, order, disabled, run }: FormProps) {
   return (
     <fieldset disabled={disabled}>
       <legend>최초 납품 수정 요청</legend>
-      <p>보관된 거래 범위 안에서 한 번 요청할 수 있습니다.</p>
+      <p>보관된 거래 범위 안에서 한 번 요청할 수 있어요.</p>
       <label>
         수정 사유
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} />
@@ -125,8 +125,8 @@ export function AcceptForm({ orderId, order, disabled, run }: FormProps) {
       <p>
         보관된 거래 조건과 구매자의 요구사항을 확인해 주세요. 수락하면{' '}
         {order.policyVersion === 'LEGACY_V1'
-          ? '구매자가 결제할 수 있습니다.'
-          : '계약 작성·양측 서명 후 전액 결제를 진행합니다.'}
+          ? '구매자가 결제할 수 있어요.'
+          : '계약 작성·양측 서명 후 전액 결제를 진행해요.'}
       </p>
       <button onClick={submit}>주문 수락</button>
     </fieldset>
@@ -151,7 +151,7 @@ export function RejectForm({ orderId, order, disabled, run }: FormProps) {
       </label>
       <p>{length} / 1,000자</p>
       <p>
-        거절하면 이 주문은 종료됩니다. 작성한 사유는 구매자에게 전달됩니다.
+        거절하면 이 주문은 종료돼요. 작성한 사유는 구매자에게 전달돼요.
       </p>
       <button disabled={!valid} onClick={submit}>
         주문 거절
@@ -199,8 +199,8 @@ export function CancelForm({ orderId, order, disabled, run }: FormProps) {
       <legend>직접 취소</legend>
       <p>
         {order.payment?.status === 'PAID'
-          ? '결제된 주문은 전액 적립금 환불과 함께 취소됩니다.'
-          : '결제 전 주문은 적립금 차감·환불 없이 취소됩니다.'}
+          ? '결제된 주문은 전액 적립금 환불과 함께 취소돼요.'
+          : '결제 전 주문은 적립금 차감·환불 없이 취소돼요.'}
       </p>
       <label>
         취소 사유 (필수, 최대 1,000자)
@@ -225,7 +225,7 @@ export function ConfirmForm({ orderId, order, disabled, run }: FormProps) {
     <fieldset disabled={disabled}>
       <legend>구매 확정</legend>
       <p>
-        납품을 확인한 후 확정해 주세요. 확정 후에는 취소·환불할 수 없습니다.
+        납품을 확인한 후 확정해 주세요. 확정 후에는 취소·환불할 수 없어요.
       </p>
       <label>
         <input

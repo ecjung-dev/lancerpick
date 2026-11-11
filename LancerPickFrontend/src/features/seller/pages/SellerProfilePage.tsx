@@ -122,7 +122,7 @@ function ConnectedProfile({
     return (
       <AsyncState
         title="로그인 계정을 다시 확인해 주세요"
-        description="계정이 바뀌었을 수 있어 프로필을 표시하지 않습니다. 페이지를 새로고침해 주세요."
+        description="계정이 바뀌었을 수 있어 프로필을 표시하지 않아요. 페이지를 새로고침해 주세요."
       />
     )
   if (profile.isPending)

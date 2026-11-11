@@ -87,7 +87,7 @@ export function useChatSend({
       await recheckSession(client)
       await client.invalidateQueries({ queryKey: chatKeys.member })
       throw new Error(
-        '계정이 변경되었습니다. 현재 계정으로 대화를 다시 확인해 주세요.',
+        '계정이 변경됐어요. 현재 계정으로 대화를 다시 확인해 주세요.',
       )
     }
   }
@@ -151,7 +151,7 @@ export function useChatSend({
         setDraft(attempt.input.content)
       if (!attempt || (!unclear && settled === 'cleared'))
         setFailure(
-          error instanceof Error ? error.message : '전송하지 못했습니다.',
+          error instanceof Error ? error.message : '전송하지 못했어요.',
         )
       if (isUnauthorized(error))
         await client.invalidateQueries({ queryKey: chatKeys.member })

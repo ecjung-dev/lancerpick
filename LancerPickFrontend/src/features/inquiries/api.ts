@@ -10,7 +10,7 @@ const ID = /^[1-9][0-9]{0,18}$/
  * isCurrentAccount: 클릭 때 captureAccountScope로 잡은 계정 경계. 그 사이 계정이 바뀌면 보내지 않는다.
  */
 export function requestCancellationReview(orderId: string, requestId: string, subject: string, isCurrentAccount?: () => boolean) {
-  if (!ID.test(orderId) || !ID.test(requestId)) return Promise.reject(new Error('올바른 주문·요청 번호가 아닙니다.'))
+  if (!ID.test(orderId) || !ID.test(requestId)) return Promise.reject(new Error('올바른 주문·요청 번호가 아니에요.'))
   return apiRequest<Inquiry>(`/orders/${orderId}/cancellation-requests/${requestId}/review-inquiries`, {
     method: 'POST',
     json: { subject },
@@ -20,7 +20,7 @@ export function requestCancellationReview(orderId: string, requestId: string, su
 
 /** 내 문의 목록. 주문 상세에서는 그 주문의 문의만 본다. */
 export function getMyInquiries(orderId: string, signal?: AbortSignal) {
-  if (!ID.test(orderId)) return Promise.reject(new Error('올바른 주문 번호가 아닙니다.'))
+  if (!ID.test(orderId)) return Promise.reject(new Error('올바른 주문 번호가 아니에요.'))
   const params = new URLSearchParams({ orderId, page: '0', size: '20' })
   return apiRequest<PageResponse<Inquiry>>(`/me/inquiries?${params}`, { signal })
 }

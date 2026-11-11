@@ -101,7 +101,7 @@ test('empty list, login requirement and server errors are shown differently', ()
 
   const unauthorized = render(createElement(NotificationsPage), (client) => {
     client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 'all', 0], queryFn: async () => undefined }).setState({
-      status: 'error', fetchStatus: 'idle', error: new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] }) })
+      status: 'error', fetchStatus: 'idle', error: new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요해요.', fieldErrors: [] }) })
   })
   assert.match(unauthorized, /로그인하면 알림을 확인할 수 있어요/)
   assert.match(unauthorized, /href="\/login\?next=%2Fnotifications"/)

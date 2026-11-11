@@ -82,7 +82,7 @@ export const router = createBrowserRouter([
       { path: 'admin/finance', element: <AdminFinancePage /> },
       { path: 'admin/finance/orders/:id', element: <AdminOrderFinancePage /> },
       { path: 'admin/outbox', element: <AdminOutboxPage /> },
-      { path: '*', element: <h1>페이지를 찾을 수 없습니다.</h1> },
+      { path: '*', element: <h1>페이지를 찾을 수 없어요.</h1> },
     ],
   },
 ])

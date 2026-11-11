@@ -24,11 +24,11 @@ export function ReviewForm({ orderId, productId }: { orderId: string; productId:
     try {
       await writeReview(orderId, { rating, content: length === 0 ? null : content })
       setBlocked(true)
-      setMessage('후기를 등록했습니다.')
+      setMessage('후기를 등록했어요.')
     } catch (error) {
       setBlocked(true)
       setMessage(error instanceof ApiError ? `${error.message} (${error.code})`
-        : '처리 결과가 불명확합니다. 다시 전송하기 전에 주문을 조회해 주세요.')
+        : '처리 결과가 불명확해요. 다시 전송하기 전에 주문을 조회해 주세요.')
     } finally {
       await Promise.allSettled([
         client.invalidateQueries({ queryKey: ['wallet', 'order', orderId] }),
@@ -47,14 +47,14 @@ export function ReviewForm({ orderId, productId }: { orderId: string; productId:
       await client.invalidateQueries({ queryKey: ['wallet', 'order', orderId] })
       if (order.allowedActions.includes('WRITE_REVIEW') && !order.review) {
         setBlocked(false)
-        setMessage('후기 미작성 상태를 확인했습니다. 내용을 확인하고 등록해 주세요.')
+        setMessage('후기 미작성 상태를 확인했어요. 내용을 확인하고 등록해 주세요.')
       }
-    } catch { setMessage('주문 상태를 확인하지 못했습니다. 로그인과 연결 상태를 확인해 주세요.') }
+    } catch { setMessage('주문 상태를 확인하지 못했어요. 로그인과 연결 상태를 확인해 주세요.') }
     finally { lock.current = false; setBusy(false) }
   }
   return <section>
     <h2>후기 작성</h2>
-    <p>구매 확정된 주문당 한 번 작성할 수 있어요. 등록 후 수정·삭제할 수 없습니다.</p>
+    <p>구매 확정된 주문당 한 번 작성할 수 있어요. 등록 후 수정·삭제할 수 없어요.</p>
     <form className={styles.form} onSubmit={event => { event.preventDefault(); void submit() }}>
       <label>별점<select value={rating} disabled={busy || blocked} onChange={event => setRating(Number(event.target.value))}>
         {[5, 4, 3, 2, 1].map(value => <option key={value} value={value}>{value}점</option>)}

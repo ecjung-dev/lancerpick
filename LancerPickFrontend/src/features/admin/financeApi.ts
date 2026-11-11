@@ -47,7 +47,7 @@ export interface PaymentFilter { orderId: string; buyerId: string; sellerId: str
 const POSITIVE = /^[1-9][0-9]{0,18}$/
 const TOPUP_STATUSES: TopupStatus[] = ['READY', 'PROCESSING', 'UNKNOWN', 'COMPLETED', 'FAILED']
 const POLICIES: PolicyVersion[] = ['LEGACY_V1', 'CONTRACT_V2', 'CONTRACT_V3']
-const invalid = () => Promise.reject(new Error('올바른 번호가 아닙니다.'))
+const invalid = () => Promise.reject(new Error('올바른 번호가 아니에요.'))
 
 /** URL에서 필터를 읽는다. 허용하지 않는 값은 "조건 없음"으로 바꿔 서버 400을 일으키지 않는다. */
 export function readTopupFilter(params: URLSearchParams): TopupFilter {

@@ -4,7 +4,7 @@ import type { ProductSummary } from './types'
 
 function favoritePath(productId: string) {
   if (!/^[0-9]{1,19}$/.test(productId) || BigInt(productId) <= 0n || BigInt(productId) > 9223372036854775807n) {
-    throw new Error('올바른 상품 번호가 아닙니다.')
+    throw new Error('올바른 상품 번호가 아니에요.')
   }
   return `/me/favorites/${productId}`
 }

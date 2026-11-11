@@ -76,11 +76,11 @@ function ResultState({ id, outcome }: { id: string; outcome: Outcome }) {
     <p className={styles.eyebrow}>MY WALLET</p>
     {loading && !topup ? <AsyncState title="서버에서 충전 상태를 확인하고 있어요" /> : <>
       <span className={styles.resultMark} aria-hidden="true">{complete ? '✓' : '· · ·'}</span><h1>{title}</h1>
-      {topup && <><p className={styles.subtitle}>{complete ? `${formatWon(topup.amount)}이 테스트 적립금에 반영됐습니다.` : pending ? '성공·실패가 아직 확정되지 않았습니다. 새 결제보다 결과 재확인을 먼저 진행해 주세요.' : '신청 저장과 결제창 이동만으로 적립금이 지급되지는 않습니다.'}</p>
+      {topup && <><p className={styles.subtitle}>{complete ? `${formatWon(topup.amount)}이 테스트 적립금에 반영됐어요.` : pending ? '성공·실패가 아직 확정되지 않았어요. 새 결제보다 결과 재확인을 먼저 진행해 주세요.' : '신청 저장과 결제창 이동만으로 적립금이 지급되지는 않아요.'}</p>
         <dl className={styles.resultDetails}><div><dt>충전 신청</dt><dd>#{topup.id}</dd></div><div><dt>신청 금액</dt><dd>{formatWon(topup.amount)}</dd></div><div><dt>처리 상태</dt><dd>{({ READY: '승인 전', PROCESSING: '처리 중', UNKNOWN: '결과 확인 필요', COMPLETED: '충전 완료', FAILED: '충전 미완료' })[topup.status]}</dd></div></dl>
       </>}
-      {outcome === 'fail' && !complete && <p className={styles.help}>결제창 절차가 중단됐습니다. 이 안내만으로 서버의 결제 취소·환불을 확정하지 않습니다.</p>}
-      {outcome === 'success' && !flow.confirmation && topup?.status === 'READY' && <p className={styles.help}>유효한 결제 복귀 정보를 찾지 못해 자동 승인하지 않았습니다.</p>}
+      {outcome === 'fail' && !complete && <p className={styles.help}>결제창 절차가 중단됐어요. 이 안내만으로 서버의 결제 취소·환불을 확정하지 않아요.</p>}
+      {outcome === 'success' && !flow.confirmation && topup?.status === 'READY' && <p className={styles.help}>유효한 결제 복귀 정보를 찾지 못해 자동 승인하지 않았어요.</p>}
       {error !== undefined && <AsyncState title={isUnauthorized(error) ? '다시 로그인해 주세요' : '충전 상태를 확인하지 못했어요'} error={error} description={error instanceof Error ? error.message : '잠시 후 상태를 다시 조회해 주세요.'} />}
       <div className={styles.resultActions}>
         {isTopupId(id) && !complete && <Button disabled={loading} onClick={() => { void refresh(Boolean(pending)) }}>{loading ? '확인 중…' : pending ? '결제 결과 재확인' : '신청 상태 새로고침'}</Button>}

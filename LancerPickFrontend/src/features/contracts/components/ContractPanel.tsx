@@ -84,7 +84,7 @@ export function ContractPanel({
     const startedAt = epoch.current
     try {
       if ((await getMemberSession()).id !== owner)
-        throw new Error('계정이 변경되었습니다. 새로고침 후 확인해 주세요.')
+        throw new Error('계정이 변경됐어요. 새로고침 후 확인해 주세요.')
       if (epoch.current !== startedAt) return
       if (download === 'prepare')
         await prepareContract(orderId, current.data?.version ?? 0, terms)
@@ -104,7 +104,7 @@ export function ContractPanel({
         )
         await verifyContractPdf(blob, document.fileHash ?? '')
         if ((await getMemberSession()).id !== owner)
-          throw new Error('계정이 변경되어 다운로드를 중단했습니다.')
+          throw new Error('계정이 변경되어 다운로드를 중단했어요.')
         if (controller.signal.aborted || epoch.current !== startedAt) return
         const url = URL.createObjectURL(blob)
         const anchor = window.document.createElement('a')
@@ -115,15 +115,15 @@ export function ContractPanel({
         setTimeout(() => URL.revokeObjectURL(url), 1000)
       } else if (document) {
         await generateContract(orderId, document.version)
-        setMessage('현재 계약 상태를 다시 확인합니다.')
+        setMessage('현재 계약 상태를 다시 확인해요.')
       }
     } catch (error) {
       setMessage(
         error instanceof ApiError && error.status === 0
-          ? '처리 결과가 불명확합니다. 상태 새로고침 후 확인해 주세요. 자동 재전송하지 않습니다.'
+          ? '처리 결과가 불명확해요. 상태 새로고침 후 확인해 주세요. 자동 재전송하지 않아요.'
           : error instanceof Error
             ? error.message
-            : '계약서를 확인하지 못했습니다.',
+            : '계약서를 확인하지 못했어요.',
       )
     } finally {
       await client.invalidateQueries({ queryKey: ['wallet', 'contract'] })
@@ -151,8 +151,8 @@ export function ContractPanel({
               />
             </label>
             <p>
-              표준 본문은 고정되며 특약만 추가됩니다. 변경하면 이전 서명은 새
-              버전에 적용되지 않습니다.
+              표준 본문은 고정되며 특약만 추가돼요. 변경하면 이전 서명은 새
+              버전에 적용되지 않아요.
             </p>
             <button
               disabled={busy || Array.from(terms).length > 5000}
@@ -166,28 +166,28 @@ export function ContractPanel({
         )}
       {member.isError && (
         <p role="alert">
-          로그인 상태를 확인하지 못했습니다. 페이지를 새로고침해 주세요.
+          로그인 상태를 확인하지 못했어요. 페이지를 새로고침해 주세요.
         </p>
       )}
       {(current.isPending || chosen.isPending) && !member.isError && (
-        <p role="status">계약서를 확인하고 있습니다.</p>
+        <p role="status">계약서를 확인하고 있어요.</p>
       )}
       {contractNotCreated && (
         <p role="status">
-          아직 작성된 계약서가 없습니다.
+          아직 작성된 계약서가 없어요.
           {orderStatus === 'REQUESTED'
-            ? ' 판매자 수락 후 계약을 작성합니다.'
+            ? ' 판매자 수락 후 계약을 작성해요.'
             : orderStatus === 'AWAITING_CONTRACT'
               ? member.data?.id === sellerId
                 ? ' 추가 특약을 입력해 계약 초안을 작성해 주세요.'
-                : ' 판매자가 계약 초안을 작성하면 확인할 수 있습니다.'
-              : ' 계약 작성 전에 종료된 주문입니다.'}
+                : ' 판매자가 계약 초안을 작성하면 확인할 수 있어요.'
+              : ' 계약 작성 전에 종료된 주문이에요.'}
         </p>
       )}
       {chosen.isError && !contractNotCreated && (
         <p role="alert">
           {chosen.error instanceof ApiError && chosen.error.status === 404
-            ? '계약서를 찾을 수 없거나 조회할 수 없습니다. 새로고침 후 다시 확인해 주세요.'
+            ? '계약서를 찾을 수 없거나 조회할 수 없어요. 새로고침 후 다시 확인해 주세요.'
             : chosen.error.message}
         </p>
       )}
@@ -261,14 +261,14 @@ export function ContractPanel({
                   <dt>{field.label}</dt><dd className={styles.text}>{field.value || '없음'}</dd>
                 </div>)}</dl>
               </section>)}
-              {sections.length === 0 && <p>계약 원문 형식을 확인할 수 없습니다. PDF와 상태를 확인해 주세요.</p>}
+              {sections.length === 0 && <p>계약 원문 형식을 확인할 수 없어요. PDF와 상태를 확인해 주세요.</p>}
             </div>
           </details>
 
           {document.status === 'GENERATING' && (
             <p>
-              생성 중에는 5초마다 확인합니다. 작업이 중단됐다면 기본 설정에서
-              생성 시작 2분 이후 재시도할 수 있습니다.
+              생성 중에는 5초마다 확인해요. 작업이 중단됐다면 기본 설정에서
+              생성 시작 2분 이후 재시도할 수 있어요.
             </p>
           )}
           {document.status === 'READY' &&
@@ -299,12 +299,12 @@ export function ContractPanel({
             )}
           {document.status === 'SIGNED' && (
             <p className={styles.notice}>
-              계약이 성립했습니다.
+              계약이 성립했어요.
               {/* 결제 안내는 결제 대기 중에만 보인다. 결제 후·완료·취소 주문에는 남기지 않는다. */}
               {orderStatus === 'AWAITING_PAYMENT' &&
                 (policyVersion === 'CONTRACT_V3'
-                  ? ' 주문 상세에서 전액 적립금 결제를 진행해 주세요. 결제 대금은 구매 확정까지 보관됩니다.'
-                  : ' 선금 결제 기능 연결 전까지 결제는 제공되지 않습니다.')}
+                  ? ' 주문 상세에서 전액 적립금 결제를 진행해 주세요. 결제 대금은 구매 확정까지 보관돼요.'
+                  : ' 선금 결제 기능 연결 전까지 결제는 제공되지 않아요.')}
             </p>
           )}
         </>

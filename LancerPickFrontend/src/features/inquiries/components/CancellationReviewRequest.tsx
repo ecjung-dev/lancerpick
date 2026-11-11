@@ -105,7 +105,7 @@ export function CancellationReviewRequest({ order, disabled }: Props) {
                 value={subject}
                 aria-invalid={!!error}
                 onChange={(e) => { setSubject(e.target.value); setError(undefined) }}
-                placeholder="예: 판매자가 사흘째 응답이 없습니다"
+                placeholder="예: 판매자가 사흘째 응답이 없어요"
               />
             </label>
             <p>{normalizedLength(subject)} / {SUBJECT_MAX}자</p>

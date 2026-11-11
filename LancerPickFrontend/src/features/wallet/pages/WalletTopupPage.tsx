@@ -79,8 +79,8 @@ function TopupFrame({
       </p>
       {preview && (
         <div className={styles.notice} role="note">
-          <strong>화면 미리보기</strong> 예시 화면입니다. API 요청이나 토스
-          결제를 실행하지 않습니다.
+          <strong>화면 미리보기</strong> 예시 화면이에요. API 요청이나 토스
+          결제를 실행하지 않아요.
         </div>
       )}
       {children}
@@ -124,7 +124,7 @@ function CheckoutForm({ preview = false }: { preview?: boolean }) {
           </p>
           {pending && (
             <div className={styles.notice}>
-              이전에 만든 충전 신청을 이어서 사용합니다.{' '}
+              이전에 만든 충전 신청을 이어서 사용해요.{' '}
               <Link to={`/mypage/wallet/topup/${pending.id}/status`}>
                 신청 상태 확인
               </Link>
@@ -191,14 +191,14 @@ function CheckoutForm({ preview = false }: { preview?: boolean }) {
                 결제 수단을 선택해 주세요
               </h2>
               <p className={styles.help}>
-                카드로 처리되는 테스트 결제를 지원합니다. 입금 대기 수단은
-                지원하지 않습니다.
+                카드로 처리되는 테스트 결제를 지원해요. 입금 대기 수단은
+                지원하지 않아요.
               </p>
               {preview ? (
                 <div className={styles.widgetPreview}>
                   <strong>카드 결제</strong>
-                  <p>실제 화면에서는 토스 결제 수단과 약관이 표시됩니다.</p>
-                  <span>미리보기에서는 결제를 실행할 수 없습니다.</span>
+                  <p>실제 화면에서는 토스 결제 수단과 약관이 표시돼요.</p>
+                  <span>미리보기에서는 결제를 실행할 수 없어요.</span>
                 </div>
               ) : (
                 <div inert={loading}>
@@ -227,7 +227,7 @@ function CheckoutForm({ preview = false }: { preview?: boolean }) {
           {!preview && !isTossTestClientKey(key) && (
             <p className={styles.help}>
               토스 테스트 클라이언트 키가 준비되면 결제 수단을 선택할 수
-              있습니다.
+              있어요.
             </p>
           )}
           {error !== undefined && (
@@ -236,7 +236,7 @@ function CheckoutForm({ preview = false }: { preview?: boolean }) {
               <p>
                 {error instanceof Error
                   ? error.message
-                  : '요청을 처리하지 못했습니다.'}
+                  : '요청을 처리하지 못했어요.'}
               </p>
             </div>
           )}

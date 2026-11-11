@@ -39,12 +39,12 @@ export function OrderFundsPanel({ orderId, orderStatus, compact = false, sellerV
   }
 
   if (!query.data) {
-    return <AsyncState title="거래 대금을 확인하고 있습니다." />
+    return <AsyncState title="거래 대금을 확인하고 있어요." />
   }
 
   const funds = query.data
   const stateLabel = funds.status === 'NOT_PAID' && ['CANCELLED', 'REJECTED'].includes(orderStatus)
-    ? '결제 없이 종료된 거래입니다.' : statusLabels[funds.status]
+    ? '결제 없이 종료된 거래예요.' : statusLabels[funds.status]
 
   if (compact) {
     // 예상 표시는 결제 응답에 보관된 수수료율만 사용한다. 실제 지급액은 funds API가 기준이다.
@@ -64,7 +64,7 @@ export function OrderFundsPanel({ orderId, orderStatus, compact = false, sellerV
         {funds.sellerPayout !== null && <div><dt>판매자 적립금 지급</dt><dd>{formatWon(funds.sellerPayout)}</dd></div>}
         {funds.refundedAmount > 0 && <div><dt>구매자 반환</dt><dd>{formatWon(funds.refundedAmount)}</dd></div>}
       </dl>
-      {funds.status === 'HELD' && <p><small>구매 확정 전까지 판매자에게 지급되지 않습니다. {estimatedFee !== null && '예상 금액은 실제 확정 결과와 구분됩니다.'}</small></p>}
+      {funds.status === 'HELD' && <p><small>구매 확정 전까지 판매자에게 지급되지 않아요. {estimatedFee !== null && '예상 금액은 실제 확정 결과와 구분돼요.'}</small></p>}
       {funds.resolvedAt && <p><small>처리 시각 {formatDateTime(funds.resolvedAt)}</small></p>}
     </section>
   }
@@ -73,15 +73,15 @@ export function OrderFundsPanel({ orderId, orderStatus, compact = false, sellerV
     <section aria-label="거래 대금">
       <h2>거래 대금</h2>
       <p>{funds.status === 'NOT_PAID' && ['CANCELLED', 'REJECTED'].includes(orderStatus)
-        ? '결제 없이 종료된 거래입니다.' : statusLabels[funds.status]}</p>
+        ? '결제 없이 종료된 거래예요.' : statusLabels[funds.status]}</p>
       <p>
         계약 총액 {formatWon(funds.amount)} · 현재 보관금{' '}
         {formatWon(funds.heldAmount)}
       </p>
       {funds.status === 'HELD' && (
         <p>
-          구매 확정 전까지 판매자에게 지급되지 않습니다. 확정 시 수수료 10%를
-          공제한 금액이 판매자의 구매용 적립금으로 지급됩니다.
+          구매 확정 전까지 판매자에게 지급되지 않아요. 확정 시 수수료 10%를
+          공제한 금액이 판매자의 구매용 적립금으로 지급돼요.
         </p>
       )}
       {funds.feeAmount !== null && (

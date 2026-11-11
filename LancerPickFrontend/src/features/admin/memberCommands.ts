@@ -22,7 +22,7 @@ export async function submitMemberSanction(
   isCurrentAccount = captureAccountScope(client),
 ) {
   if (!isCurrentAccount())
-    throw new DOMException('계정이 변경되었습니다.', 'AbortError')
+    throw new DOMException('계정이 변경됐어요.', 'AbortError')
   const key = pendingMemberCommandKey(id)
   const previous = client.getQueryData<PendingMemberCommand | null>(key)
   if (previous?.phase === 'sending')

@@ -90,7 +90,7 @@ export async function submitReprocess(
   client: QueryClient, action: ReprocessAction, target: string, input?: ReprocessCommand,
   isCurrentAccount = captureAccountScope(client),
 ) {
-  if (!isCurrentAccount()) throw new DOMException('계정이 변경되었습니다.', 'AbortError')
+  if (!isCurrentAccount()) throw new DOMException('계정이 변경됐어요.', 'AbortError')
   const key = pendingReprocessKey(action, target)
   const previous = client.getQueryData<PendingReprocess | null>(key)
   if (previous?.phase === 'sending') throw new Error('이미 처리 중인 요청이 있어요.')

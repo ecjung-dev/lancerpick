@@ -92,7 +92,7 @@ function SearchForm({
       return
     }
     if (next.from && next.to && next.from > next.to) {
-      setError('시작일이 종료일보다 늦습니다.')
+      setError('시작일이 종료일보다 늦어요.')
       return
     }
     setError('')
@@ -174,7 +174,7 @@ function OrderList({
   if (isUnauthorized(query.error))
     return (
       <p>
-        로그인 후 거래 내역을 확인할 수 있습니다.{' '}
+        로그인 후 거래 내역을 확인할 수 있어요.{' '}
         <Link
           to={loginPath(location.pathname + location.search)}
         >
@@ -188,7 +188,7 @@ function OrderList({
         <p>
           {query.error instanceof ApiError
             ? query.error.message
-            : '거래 내역을 불러오지 못했습니다.'}
+            : '거래 내역을 불러오지 못했어요.'}
         </p>
         <button
           onClick={() => {
@@ -199,12 +199,12 @@ function OrderList({
         </button>
       </div>
     )
-  if (!query.data) return <p role="status">거래 내역을 불러오는 중입니다.</p>
+  if (!query.data) return <p role="status">거래 내역을 불러오는 중이에요.</p>
   return (
     <>
       <p className={styles.count}>전체 거래 <strong>{query.data.totalElements.toLocaleString('ko-KR')}</strong>건</p>
       {query.data.items.length === 0 ? (
-        <div className={styles.empty}><strong>조회된 거래 내역이 없습니다.</strong><p>검색어나 조회 기간, 주문 상태를 변경해 보세요.</p></div>
+        <div className={styles.empty}><strong>조회된 거래 내역이 없어요.</strong><p>검색어나 조회 기간, 주문 상태를 변경해 보세요.</p></div>
       ) : (
         <ul className={styles.list}>
           {query.data.items.map((order) => (

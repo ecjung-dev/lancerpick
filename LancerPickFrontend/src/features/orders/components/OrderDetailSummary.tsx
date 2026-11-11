@@ -14,7 +14,7 @@ export function OrderDetailSummary({ order, isSeller }: { order: OrderDetail; is
     {order.policyVersion === 'CONTRACT_V3'
       ? <OrderFundsPanel orderId={order.id} orderStatus={order.status} compact
         sellerView={isSeller} feeRateBps={order.payment?.feeRateBps} />
-      : <p className={styles.meta}>결제·환불 내역은 거래 기록에서 확인할 수 있습니다.</p>}
+      : <p className={styles.meta}>결제·환불 내역은 거래 기록에서 확인할 수 있어요.</p>}
     <dl className={styles.summaryRows}>
       <div><dt>{isSeller ? '구매자' : '판매자'}</dt><dd>{isSeller ? order.buyer.displayName : order.seller.displayName}</dd></div>
       <div><dt>소요 기간</dt><dd>{order.durationDays}일</dd></div>
@@ -23,7 +23,7 @@ export function OrderDetailSummary({ order, isSeller }: { order: OrderDetail; is
     <div className={styles.chatEntry}><ChatEntry orderId={order.id} /></div>
     {isSeller && <div className={styles.earningsLink}>
       <Link to={earningsPath}>{order.status === 'COMPLETED' ? '이 주문의 판매 수익 보기' : '판매 수익 내역 보기'} <span aria-hidden="true">→</span></Link>
-      {order.status !== 'COMPLETED' && <small>이 주문의 수익은 구매 확정 후 기록됩니다.</small>}
+      {order.status !== 'COMPLETED' && <small>이 주문의 수익은 구매 확정 후 기록돼요.</small>}
     </div>}
   </aside>
 }

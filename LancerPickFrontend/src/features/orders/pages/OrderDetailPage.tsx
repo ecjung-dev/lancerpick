@@ -51,7 +51,7 @@ function OrderDetail({ id }: { id: string }) {
     try {
       const result = await command()
       // 변경 응답을 개인 캐시에 직접 넣지 않고 현재 세션으로 재조회한다.
-      setMessage(`주문 상태가 ${orderStatusLabel(result.status)}(으)로 확인됐습니다.`)
+      setMessage(`주문 상태가 ${orderStatusLabel(result.status)}(으)로 확인됐어요.`)
       setResets(value => ({ ...value, success: value.success + 1 }))
       return true
     } catch (error) {
@@ -75,17 +75,17 @@ function OrderDetail({ id }: { id: string }) {
   }
 
   if (isUnauthorized(query.error)) return <section className={styles.page}>
-    <h1>주문 상세</h1><p>로그인이 필요합니다.</p>
+    <h1>주문 상세</h1><p>로그인이 필요해요.</p>
     <Link to={loginPath(location.pathname + location.search)}>로그인</Link>
     <p><Link to={`/orders${location.search}`}>← 거래 내역</Link></p>
   </section>
   if (query.isError) return <section className={styles.page}>
-    <h1>주문을 확인할 수 없습니다.</h1>
-    <p role="alert">{query.error instanceof ApiError ? query.error.message : '주문을 불러오지 못했습니다.'}</p>
+    <h1>주문을 확인할 수 없어요.</h1>
+    <p role="alert">{query.error instanceof ApiError ? query.error.message : '주문을 불러오지 못했어요.'}</p>
     <Button variant="secondary" onClick={() => void refresh()}>다시 조회</Button>
     <p><Link to={`/orders${location.search}`}>← 거래 내역</Link></p>
   </section>
-  if (!query.data) return <p className={styles.page} role="status">주문을 불러오는 중입니다.</p>
+  if (!query.data) return <p className={styles.page} role="status">주문을 불러오는 중이에요.</p>
 
   const order = query.data
   const isSeller = member.isSuccess && member.data?.id === order.seller.id
@@ -123,7 +123,7 @@ function OrderDetail({ id }: { id: string }) {
           <p className={styles.eyebrow}>현재 진행 상황</p>
           <h2 id="order-current-title">{view.title}</h2><p>{view.description}</p>
           {order.currentDueAt && <p className={styles.meta}>현재 납기 {formatDateTime(order.currentDueAt)}</p>}
-          {deadlines.currentLate && <p className={styles.late} role="status">현재 작업 기한이 지났습니다. 최신 거래 상태를 확인해 주세요.</p>}
+          {deadlines.currentLate && <p className={styles.late} role="status">현재 작업 기한이 지났어요. 최신 거래 상태를 확인해 주세요.</p>}
           {order.status === 'AWAITING_CONTRACT' && <Button variant="secondary" onClick={() => setTab('conditions')}>계약 작성·서명 확인</Button>}
           {view.pendingCancellation && <a className={styles.inlineLink} href="#order-secondary-actions" onClick={() => setTab('progress')}>취소 요청 확인 →</a>}
         </section>
