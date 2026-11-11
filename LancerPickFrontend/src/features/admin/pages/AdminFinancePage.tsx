@@ -102,14 +102,17 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
                   <p className={styles.rowMeta}>{codeLabel(policyLabels, item.policyVersion)} · 주문 {orderStatusLabel(item.orderStatus)}</p>
                   <p className={styles.rowMeta}>
                     <MemberLink id={item.buyerId} role="구매자" from={`/admin/finance?${search}`} /> ·{' '}
-                    <MemberLink id={item.sellerId} role="판매자" from={`/admin/finance?${search}`} />
+                    <MemberLink id={item.sellerId} role="판매자" from={`/admin/finance?${search}`} /> · 결제 {time(item.paidAt)}
+                    {item.refundedAt && <> · 환불 {time(item.refundedAt)}</>}
                   </p>
                 </div>
+                {/* 환불만 배지로 두고 결제는 보통 글자. 금액과 같은 줄에 둬 행 높이를 줄인다. */}
                 <div className={styles.rowSide}>
-                  <span className={styles.rowBadges}><span className={item.status === 'REFUNDED' ? styles.toneWarn : styles.badge}>{item.status === 'PAID' ? '결제' : item.status === 'REFUNDED' ? '환불' : item.status}</span></span>
-                  <span className={styles.rowAmount}>{formatWon(item.amount)}</span>
+                  <span className={styles.rowLine}>
+                    <span className={item.status === 'PAID' ? styles.rowNote : styles.toneWarn}>{item.status === 'PAID' ? '결제' : item.status === 'REFUNDED' ? '환불' : item.status}</span>
+                    <span className={styles.rowAmount}>{formatWon(item.amount)}</span>
+                  </span>
                   {item.refundedAmount > 0 && <span>환불 {formatWon(item.refundedAmount)}</span>}
-                  <span className={styles.rowNote}>결제 {time(item.paidAt)}{item.refundedAt && <> · 환불 {time(item.refundedAt)}</>}</span>
                 </div>
               </li>)}
             </ul>}
@@ -138,15 +141,31 @@ function Topups({ filter, onApply, search }: { filter: TopupFilter; onApply: (ne
         : !list.data ? <AsyncState title="충전 목록을 불러오고 있어요" />
           : <>
             <p className={styles.count}>총 {list.data.totalElements}건</p>
-            {list.data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 충전이 없어요.</p> : <ul className={styles.list}>
-              {list.data.items.map((item) => <li key={item.id}>
-                <strong>충전 #{item.id}</strong>
-                <p><span className={item.status === 'FAILED' ? styles.toneDanger : item.status === 'UNKNOWN' || item.status === 'PROCESSING' ? styles.toneWarn : item.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{codeLabel(topupStatusLabels, item.status)}</span>
-                  {formatWon(item.amount)} · 회원 #{item.memberId} · 복구 시도 {item.recoveryAttemptCount}회{item.lastErrorCode && <> · 오류 {item.lastErrorCode}</>}</p>
-                <small>신청 {time(item.createdAt)} · 처리 시작 {time(item.processingStartedAt)} · 다음 복구 {time(item.nextRecoveryAt)} · 처리권 만료 {time(item.recoveryLeaseUntil)} · 완료 {time(item.completedAt)}</small>
-                <p>자동 복구: {decisionLabel(item.automaticRecovery.eligible, item.automaticRecovery.reason)}</p>
-                <p>관리자 재확인: {decisionLabel(item.manualRecheck.eligible, item.manualRecheck.reason)}</p>
-                <AdminReprocessPanel action="TOPUP_RECHECK" target={item.id} eligible={item.manualRecheck.eligible} />
+            {list.data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 충전이 없어요.</p> : <ul className={styles.rows}>
+              {list.data.items.map((item) => <li key={item.id} className={styles.row}>
+                <div className={styles.rowMain}>
+                  <strong className={styles.rowKey}>충전 #{item.id}</strong>
+                  <p className={styles.rowMeta}>
+                    <MemberLink id={item.memberId} from={`/admin/finance?${search}`} /> · 복구 시도 {item.recoveryAttemptCount}회{item.lastErrorCode && <> · 오류 {item.lastErrorCode}</>}
+                  </p>
+                  {/* 기록이 있는 시각만 보여 준다. 신청 시각은 항상 있다. */}
+                  <p className={styles.rowMeta}>
+                    신청 {time(item.createdAt)}
+                    {item.processingStartedAt && <> · 처리 시작 {time(item.processingStartedAt)}</>}
+                    {item.nextRecoveryAt && <> · 다음 복구 {time(item.nextRecoveryAt)}</>}
+                    {item.recoveryLeaseUntil && <> · 처리권 만료 {time(item.recoveryLeaseUntil)}</>}
+                    {item.completedAt && <> · 완료 {time(item.completedAt)}</>}
+                  </p>
+                  <p className={styles.rowMeta}>자동 복구: {decisionLabel(item.automaticRecovery.eligible, item.automaticRecovery.reason)}</p>
+                  <p className={styles.rowMeta}>관리자 재확인: {decisionLabel(item.manualRecheck.eligible, item.manualRecheck.reason)}</p>
+                  <AdminReprocessPanel action="TOPUP_RECHECK" target={item.id} eligible={item.manualRecheck.eligible} />
+                </div>
+                <div className={styles.rowSide}>
+                  <span className={styles.rowLine}>
+                    <span className={item.status === 'FAILED' ? styles.toneDanger : item.status === 'UNKNOWN' || item.status === 'PROCESSING' ? styles.toneWarn : item.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{codeLabel(topupStatusLabels, item.status)}</span>
+                    <span className={styles.rowAmount}>{formatWon(item.amount)}</span>
+                  </span>
+                </div>
               </li>)}
             </ul>}
             <Pager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="충전 목록 페이지" />

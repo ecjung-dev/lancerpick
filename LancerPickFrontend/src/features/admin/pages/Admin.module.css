@@ -7,6 +7,8 @@
 .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; padding: 18px; margin-bottom: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .filters label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 650; }
 .filters input, .filters select { height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: white; font-size: 14px; }
+/* 입력값·선택값은 보통 굵기. label의 650을 그대로 물려받아 "전체"가 굵게 보이던 것을 바로잡는다. */
+.filters input, .filters select { font-weight: 400; color: var(--ink); }
 .filters input { min-width: 240px; }
 /* 번호만 받는 칸(주문·회원 번호)은 좁게 둬 결제 필터 5칸과 버튼 2개가 한 줄에 들어가게 한다. */
 .filters input[inputmode='numeric'] { min-width: 0; width: 150px; }
@@ -41,13 +43,16 @@
 .rowBadges > span { margin-right: 0; }
 .rowAmount { font-size: 15px; font-weight: 700; }
 .rowNote { color: var(--muted); }
+/* 오른쪽 열 한 줄: 상태(배지 또는 보통 글자)와 금액을 같은 줄에 둬 행 높이를 줄인다. */
+.rowLine { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 10px; }
+.rowLine > span[class] { margin-right: 0; }
 /* 문장 안 회원·주문 번호 링크. 본문과 같은 색이라 밑줄로 링크임을 보인다. */
 .inlineLink { text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 2px; }
 .inlineLink:hover { text-decoration-color: var(--ink); }
 @media (max-width: 600px) {
   .row { grid-template-columns: minmax(0, 1fr); padding: 14px 4px; }
   .rowSide { max-width: none; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 12px; text-align: left; }
-  .rowBadges { justify-content: flex-start; }
+  .rowBadges, .rowLine { justify-content: flex-start; }
 }
 .badge, .hidden, .visible, .toneWarn, .toneDanger, .toneOk { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid var(--line); }
 .hidden { background: var(--ink); color: white; border-color: var(--ink); }

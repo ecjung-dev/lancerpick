@@ -77,12 +77,13 @@ function ProductTable({ filter, page, onPage, search }: { filter: AdminProductFi
           <Link className={styles.rowTitle} to={`/admin/products/${item.id}`} state={{ from: `/admin/products${search ? `?${search}` : ''}` }}>{item.title}</Link>
           <p className={styles.rowMeta}>{item.category.name} · 판매자 {item.seller.displayName} · 등록 {formatDateTime(item.createdAt)}</p>
         </div>
+        {/* 숨김·판매 중지만 배지로 두고 공개·판매 중은 보통 글자로 낮춰, 운영자가 확인할 상품이 눈에 띄게 한다. */}
         <div className={styles.rowSide}>
-          <span className={styles.rowBadges}>
-            <span className={item.isHidden ? styles.hidden : styles.visible}>{item.isHidden ? '숨김' : '공개'}</span>
-            <span className={styles.badge}>{saleStatusLabel(item.saleStatus)}</span>
+          <span className={styles.rowLine}>
+            <span className={item.isHidden ? styles.hidden : styles.rowNote}>{item.isHidden ? '숨김' : '공개'}</span>
+            <span className={item.saleStatus === 'ON_SALE' ? styles.rowNote : styles.toneWarn}>{saleStatusLabel(item.saleStatus)}</span>
+            <span className={styles.rowAmount}>{formatWon(item.priceAmount)}</span>
           </span>
-          <span className={styles.rowAmount}>{formatWon(item.priceAmount)}</span>
         </div>
       </li>)}
     </ul>}
