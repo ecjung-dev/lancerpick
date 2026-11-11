@@ -1,0 +1,42 @@
+.reviews { margin-top: 40px; padding-top: 30px; border-top: 1px solid #e5e5e5; min-width: 0; }
+.heading { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 22px; }
+.heading h2 { font-size: 23px; letter-spacing: -.04em; margin: 0 0 8px; }
+.heading p { font-size: 12px; color: #888; line-height: 1.7; margin: 0; }
+.heading label { display: flex; align-items: center; gap: 9px; font-size: 11px; color: #777; flex-shrink: 0; }
+.heading select { font: inherit; color: #333; padding: 9px 30px 9px 10px; border: 1px solid #ddd; border-radius: 6px; background: white; }
+.summary { display: flex; align-items: center; gap: 24px; padding: 24px; background: #fafafa; border: 1px solid #e7e7e7; border-radius: 10px; margin-bottom: 20px; }
+.score { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+.score > svg { fill: #171717; }
+.score strong { font-size: 32px; letter-spacing: -.04em; }
+.score > span { font-size: 13px; color: #999; }
+.summary p { margin: 0; font-size: 12px; color: #777; line-height: 1.8; }
+.filtered { font-size: 12px; margin: 20px 0 12px; color: #666; }
+.empty { display: grid; justify-items: center; text-align: center; padding: 42px 18px; border: 1px dashed #ddd; border-radius: 10px; color: #999; }
+.empty p { font-size: 14px; font-weight: 600; color: #555; margin: 16px 0 8px; }
+.empty > span { font-size: 11px; line-height: 1.8; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { padding: 24px 0; border-bottom: 1px solid #eee; }
+.reviewHeading { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+.reviewHeading strong { display: block; font-size: 13px; margin-bottom: 8px; }
+.reviewHeading time { font-size: 10px; color: #888; line-height: 1.7; text-align: right; }
+.stars { display: inline-flex; gap: 2px; color: #ccc; }
+.stars > span { display: flex; }
+.stars .filled { color: #171717; }
+.filled svg { fill: currentColor; }
+.content { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.9; color: #444; margin: 16px 0 0; }
+.ratingOnly { color: #999; font-size: 12px; margin: 16px 0 0; }
+.reviews nav { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 24px; }
+.reviews nav button { border: 1px solid #ddd; border-radius: 6px; background: white; color: #444; padding: 8px 13px; font: inherit; font-size: 11px; cursor: pointer; }
+.reviews nav button:disabled { opacity: .35; cursor: default; }
+.reviews nav span { font-size: 11px; color: #777; }
+.reviews :is(button, select):focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
+@media (max-width: 540px) {
+  .heading { align-items: start; flex-direction: column; gap: 15px; }
+  .heading h2 { font-size: 21px; }
+  .heading label { align-self: flex-end; }
+  .summary { padding: 20px 16px; flex-direction: column; align-items: start; gap: 10px; }
+  .reviewHeading { flex-direction: column; gap: 7px; }
+  .reviewHeading time { text-align: left; }
+  .reviews nav { gap: 7px; }
+  .reviews nav button { padding: 8px 10px; }
+}

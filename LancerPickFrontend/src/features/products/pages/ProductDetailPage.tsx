@@ -3,6 +3,7 @@ import { orderMinimumNotice } from '../orderMinimum'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
+import { Icon } from '../../../shared/components/Icon'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import styles from './ProductDetailPage.module.css'
 import { ProductReviews } from '../../reviews/components/ProductReviews'
@@ -84,12 +85,15 @@ export function ProductDetailPage() {
                 <dt>판매 상태</dt>
                 <dd>판매 중</dd>
               </dl>
-              {minimumNotice ? <p>{minimumNotice}</p> : (
-                <Link to={`/products/${product.data.id}/order`}>
-                  주문 요청 작성하기 →
+              {minimumNotice && <p>{minimumNotice}</p>}
+              <div className={styles.summaryActions}>
+              {!minimumNotice && (
+                <Link className={styles.orderAction} to={`/products/${product.data.id}/order`}>
+                  주문 요청 작성하기 <Icon name="arrow" size={17} />
                 </Link>
               )}
               <ProductFavoriteButton productId={product.data.id} />
+              </div>
             </aside>
           </div>
           <footer className={styles.dates}>

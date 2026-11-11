@@ -14,5 +14,10 @@
 .summary dl { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 28px 0; }
 .summary dd { margin: 0; text-align: right; }
 .summary > p { color: #666; font-size: 14px; line-height: 1.7; }
+.summaryActions { display: flex; flex-wrap: wrap; align-items: start; gap: 8px; }
+.orderAction { display: flex; flex: 1 1 145px; min-width: 0; min-height: 44px; box-sizing: border-box; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; background: #171717; color: white; border-radius: 7px; font-size: 12px; font-weight: 650; }
+.orderAction:hover { background: #333; text-decoration: none; }
+.orderAction svg { flex-shrink: 0; }
+.orderAction:focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
 .dates { color: #666; font-size: 13px; }
 @media (max-width: 720px) { .grid { grid-template-columns: 1fr; gap: 16px; } .summary { grid-row: 1; } }

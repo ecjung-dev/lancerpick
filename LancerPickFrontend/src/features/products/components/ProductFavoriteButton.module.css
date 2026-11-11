@@ -1,0 +1,7 @@
+.heart { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; flex: 0 0 44px; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1px solid #ddd; border-radius: 7px; background: white; color: #555; cursor: pointer; }
+.heart:hover { color: #171717; background: #f6f6f6; text-decoration: none; }
+.heart[aria-pressed='true'] { color: #171717; border-color: #aaa; }
+.heart[aria-pressed='true'] svg { fill: currentColor; }
+.heart:focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
+.heart:disabled { opacity: .4; cursor: default; }
+.error { flex-basis: 100%; color: #a12626; font-size: 12px; line-height: 1.7; margin: 8px 0 0; }
