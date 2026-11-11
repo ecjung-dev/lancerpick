@@ -87,7 +87,8 @@ export function SettlementPage() {
             {list.data.items.map(item => <li key={item.id}>
               <div className={styles.cardMeta}>
                 <time dateTime={item.createdAt}>정산 기록일 {formatDateTime(item.createdAt)}</time>
-                <span className={item.payoutStatus === 'CREDITED' ? styles.badge : styles.badgeMuted}>
+                <span className={item.payoutStatus === 'CREDITED' ? styles.badge
+                  : item.payoutStatus === 'RECORD_ONLY' ? styles.badgeMuted : styles.badgeWarning}>
                   {payoutLabel(item.payoutStatus)}
                 </span>
               </div>

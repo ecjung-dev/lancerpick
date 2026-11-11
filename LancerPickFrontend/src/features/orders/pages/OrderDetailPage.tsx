@@ -88,11 +88,11 @@ function OrderDetail({ id }: { id: string }) {
   if (!query.data) return <p className={styles.page} role="status">주문을 불러오는 중입니다.</p>
 
   const order = query.data
-  const view = orderDetailPresentation(order)
+  const isSeller = member.isSuccess && member.data?.id === order.seller.id
+  const view = orderDetailPresentation(order, isSeller)
   const deadlines = orderDeadlineView(order)
   const disabled = busy || !!failure || query.isFetching
   const forms = { orderId: id, order, disabled, run }
-  const isSeller = member.isSuccess && member.data?.id === order.seller.id
   const hasContract = order.policyVersion !== 'LEGACY_V1'
   const hasPrimaryAction = ['DELIVER', 'REQUEST_REVISION', 'ACCEPT', 'PAY', 'CONFIRM']
     .some(action => order.allowedActions.includes(action))

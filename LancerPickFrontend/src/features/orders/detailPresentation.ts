@@ -8,8 +8,11 @@ export const orderDetailTabs: { id: OrderDetailTab; label: string }[] = [
   { id: 'records', label: '거래 기록' },
 ]
 
-/** 화면 안내일 뿐 명령 허용 여부를 정하지 않는다. 버튼은 계속 서버 allowedActions를 따른다. */
-export function orderDetailPresentation(order: OrderDetail) {
+/**
+ * 화면 안내일 뿐 명령 허용 여부를 정하지 않는다. 버튼은 계속 서버 allowedActions를 따른다.
+ * isSeller는 현재 회원 조회로 확인된 경우에만 true다(URL의 side로 판단하지 않는다).
+ */
+export function orderDetailPresentation(order: OrderDetail, isSeller = false) {
   const steps = ['요청', order.policyVersion === 'LEGACY_V1' ? '수락' : '계약', '결제', '작업', '검수', '완료']
   const stages: Record<string, number> = {
     REQUESTED: 0, AWAITING_CONTRACT: 1, AWAITING_PAYMENT: 2,
@@ -24,7 +27,9 @@ export function orderDetailPresentation(order: OrderDetail) {
     REVISION_IN_PROGRESS: ['요청한 수정을 진행하고 있어요', '수정 요청 내용과 재납품 기한을 확인해 주세요.'],
     AWAITING_CONFIRMATION: ['납품을 확인하고 있어요', '구매자는 결과물을 확인한 뒤 구매 확정 또는 허용된 수정 요청을 진행해 주세요.'],
     AWAITING_BALANCE: ['잔금 결제 대기 중이에요', '보관된 계약 조건과 현재 거래 상태를 확인해 주세요.'],
-    COMPLETED: ['거래가 완료됐어요', '납품과 거래 기록을 확인할 수 있습니다. 판매 수익은 판매자의 수익 내역에서 확인해 주세요.'],
+    COMPLETED: ['거래가 완료됐어요', isSeller
+      ? '납품과 거래 기록을 확인할 수 있습니다. 이 주문의 판매 수익은 거래 요약의 판매 수익 링크에서 확인할 수 있습니다.'
+      : '납품과 거래 기록을 확인할 수 있습니다. 결과물과 거래 대금 처리 내역은 거래 기록에서 확인해 주세요.'],
     CANCELLED: ['취소된 거래예요', '결제와 반환 여부는 거래 대금 및 거래 기록에서 확인해 주세요.'],
     REJECTED: ['거절된 주문이에요', '거래 기록에서 처리 사유를 확인할 수 있습니다.'],
     TERMINATED: ['종료된 계약이에요', '계약 조건과 처리 결과는 계약·조건 및 거래 기록에서 확인해 주세요.'],

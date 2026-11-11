@@ -81,3 +81,13 @@ test('pending cancellation remains prominent even if order is in inspection', ()
   assert.match(render({ change: value }), /<details[^>]*open/)
   assert.match(orderDetailPresentation(value).title, /취소 요청/)
 })
+
+test('completed banner copy depends on the verified viewer role', () => {
+  const done = { ...order, status: 'COMPLETED', cancellationRequests: [] }
+  const seller = orderDetailPresentation(done, true).description
+  const buyer = orderDetailPresentation(done, false).description
+  const unknown = orderDetailPresentation(done).description
+  assert.match(seller, /이 주문의 판매 수익/)
+  assert.doesNotMatch(buyer, /판매 수익/)
+  assert.equal(unknown, buyer)
+})
