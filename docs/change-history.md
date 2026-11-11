@@ -3421,7 +3421,7 @@ API를 기준으로 작업표·물리 설계 설명·ERD 설명·문서 안내·
 
 > 정리(2026-11-11, 정은찬): #186~#196 동안 기능 명세·변경 이력 맨 위에 쌓인 로컬 후속 절을 도메인 절(`products-catalog`·`products-manage`·`products-reviews`·`orders-query`·`orders-contract`·`communication-chat`·`communication-notifications`)과 이 접기 블록으로 옮겼다. 내용은 바꾸지 않고 제목에 병합 PR을 붙였으며, 병합 뒤 사실과 어긋나는 “push·PR 미진행”·개인 자료 문구만 당시 상태로 고쳤다. 같은 변경에서 `NotificationNavLink`의 덮어써져 쓰이지 않던 `top`·`maxHeight` 상태를 제거했다(동작 변경 없음).
 
-### 화면 일관성 점검과 알림 화면 정리 — 2026-11-11
+### 화면 일관성 점검과 알림 화면 정리 — 2026-11-11, main 반영(#199)
 
 정은찬, `feature/ui-consistency`(main `854b8bb` 기준). 사용자 화면 15개(판매자 계정)와 관리자 화면 9개(관리자 계정)를 실서버 1280px로 캡처하고 코드에서 말투·버튼·페이지 이동 구현을 집계했다. 관리자 화면은 해요체·제목 영역·필터 상자·`AdminPager`·주 버튼 40px/8px로 일관됐고, 사용자 화면은 말투(orders 해요 47/합니다 41, notifications 15/22, order-chat 17/15, contracts 9/11, wallet 32/17, settlements 3/5), 마이페이지 제목 영역 네 가지, 버튼 높이 38~48px·모서리 6~10px, 사용자 페이지 이동 구현 10가지가 섞여 있었다.
 
@@ -3431,7 +3431,7 @@ API를 기준으로 작업표·물리 설계 설명·ERD 설명·문서 안내·
 
 ### 화면 일관성 후속: 해요체·제목 영역·Pager·버튼 — 2026-11-11
 
-정은찬, `feature/ui-consistency-all`(`feature/ui-consistency` 위, 로컬 커밋만, Codex 검토 생략). 위 점검의 후속 항목을 한 브랜치에 담았다.
+정은찬, `feature/ui-consistency-all`(#199 위, Codex 검토 생략, PR 대기). 위 점검의 후속 항목을 한 브랜치에 담았다.
 
 - 해요체: 사용자·관리자 화면 문구 48개 파일의 합니다체 어미를 해요체로 바꾸고 테스트 13개 파일의 단언을 맞췄다. 계약·취소·납품 동의 문장(“동의합니다”), 상품 등록 placeholder, 주석, 서버가 내려준 오류 `message`는 그대로 둔다.
 - 제목 영역: `shared/components/PageHeading`을 만들어 내 정보·판매자 프로필·적립금·관심 상품 화면에 적용하고, 마이페이지 레이아웃과 겹치던 경로 표시·“← 마이페이지” 링크와 쓰지 않게 된 스타일을 지웠다. 내 정보 테스트의 마이페이지 링크 단언은 제목·경로 표시 없음 단언으로 바꿨다.

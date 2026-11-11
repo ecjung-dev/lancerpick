@@ -583,7 +583,7 @@ MVP 기능과 운영 정책은 MVP 명세서를 따른다.
 <a id="ui-consistency"></a>
 #### 화면 문구·스타일 일관성 (2026-11-11 기준안)
 
-2026-11-11 사용자·관리자 화면 전수 점검 결과 관리자 화면(해요체·제목 영역·회색 필터 상자·`AdminPager`·주 버튼 40px/8px)이 일관되어 이를 기준으로 삼는다. 2026-11-11 `feature/ui-consistency-all`(로컬 커밋, 아직 main 미반영)에서 사용자·관리자 화면 문구 해요체 전환, 마이페이지 하위 화면 제목 영역(`shared/components/PageHeading`), 사용자 목록 페이지 이동(`shared/components/Pager`), 관리자 버튼 높이를 이 기준에 맞췄다. 남은 차이: 관리자 화면은 아직 `.page button` 넓은 선택자를 쓰고, 서버 오류 `message` 말투는 백엔드 결정 전이라 그대로다.
+2026-11-11 사용자·관리자 화면 전수 점검 결과 관리자 화면(해요체·제목 영역·회색 필터 상자·`AdminPager`·주 버튼 40px/8px)이 일관되어 이를 기준으로 삼는다. 2026-11-11 `feature/ui-consistency-all`(PR 대기)에서 사용자·관리자 화면 문구 해요체 전환, 마이페이지 하위 화면 제목 영역(`shared/components/PageHeading`), 사용자 목록 페이지 이동(`shared/components/Pager`), 관리자 버튼 높이를 이 기준에 맞췄다. 남은 차이: 관리자 화면은 아직 `.page button` 넓은 선택자를 쓰고, 서버 오류 `message` 말투는 백엔드 결정 전이라 그대로다.
 
 | 항목 | 기준 |
 | --- | --- |
