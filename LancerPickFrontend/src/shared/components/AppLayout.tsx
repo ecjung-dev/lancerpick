@@ -28,7 +28,7 @@ export function AppLayout() {
         <a href="#main-content" className={styles.skip}>
           본문으로 이동
         </a>
-        <header className={styles.header}>
+        <header className={styles.header} data-app-header>
           <div className={styles.headerInner}>
             <Link to="/" className={styles.brand} aria-label="랜서픽 홈">
               <span className={styles.brandMark} aria-hidden="true" />

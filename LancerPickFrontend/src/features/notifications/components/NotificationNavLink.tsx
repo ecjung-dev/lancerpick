@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation } from 'react-router'
 import { Icon } from '../../../shared/components/Icon'
+import { useHeaderBottom } from '../../../shared/lib/useHeaderBottom'
 import { unreadBadge } from '../messages'
 import { useUnreadNotificationCount } from '../queries'
 import { NotificationPanel } from './NotificationPanel'
@@ -14,6 +15,7 @@ export function NotificationNavLink({ onOpen }: { onOpen?: () => void }) {
 }
 
 function NotificationMenu({ onOpen }: { onOpen?: () => void }) {
+  const headerBottom = useHeaderBottom()
   const unread = useUnreadNotificationCount()
   const badge = unreadBadge(unread.isError ? undefined : unread.data?.count)
   const [position, setPosition] = useState<{ left: number; top: number; maxHeight: number } | null>(null)
@@ -78,7 +80,7 @@ function NotificationMenu({ onOpen }: { onOpen?: () => void }) {
     </button>
     {position && createPortal(
       <div ref={panel} id="header-notification-panel" role="dialog" aria-labelledby="header-notification-title"
-        tabIndex={-1} className={styles.panel} style={position}>
+        tabIndex={-1} className={styles.panel} style={{ ...position, top: headerBottom, height: `calc(100dvh - ${headerBottom}px)`, maxHeight: `calc(100dvh - ${headerBottom}px)` }}>
         <NotificationPanel onClose={() => close(true)} />
       </div>, document.body,
     )}

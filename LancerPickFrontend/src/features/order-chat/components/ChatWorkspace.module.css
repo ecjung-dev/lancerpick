@@ -234,7 +234,7 @@
 /* Header inbox uses a right sidebar; the selected conversation stays alongside it. */
 .dock { top: 0; bottom: 0; right: 0; max-width: 100vw; }
 .panes { height: 100%; gap: 0; }
-.inbox, .conversation { height: 100dvh; border-radius: 0; }
+.inbox, .conversation { height: 100%; border-radius: 0; }
 .inbox { width: 360px; max-width: 100vw; }
 .restore {
   position: fixed;

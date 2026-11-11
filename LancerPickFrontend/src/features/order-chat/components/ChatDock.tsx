@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
+import { useHeaderBottom } from '../../../shared/lib/useHeaderBottom'
 import { Icon } from '../../../shared/components/Icon'
 import { isUnauthorized } from '../../../shared/api/client'
 import { formatDateTime } from '../../../shared/lib/format'
@@ -26,6 +27,7 @@ export function ChatDock({
   onMinimize,
   onRestore,
 }: Props) {
+  const headerBottom = useHeaderBottom()
   const list = useRef<HTMLDivElement>(null)
   const conversation = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -45,7 +47,7 @@ export function ChatDock({
     return () => document.removeEventListener('keydown', escape)
   }, [state.minimized, state.orderId, onSelect, onClose])
   return createPortal(
-    <div className={styles.dock}>
+    <div className={styles.dock} style={{ top: headerBottom }}>
       {state.minimized && (
         <button
           type="button"
