@@ -253,3 +253,21 @@ test('adminBackPath는 같은 목록 경로(검색 조건 포함)만 되돌아�
   assert.equal(adminBackPath(undefined, '/admin/inquiries', '/admin/inquiries?status=OPEN'), '/admin/inquiries?status=OPEN')
   assert.equal(adminBackPath({ from: '/admin/inquiries' }, '/admin/inquiries', '/admin/inquiries?status=OPEN'), '/admin/inquiries?status=OPEN')
 })
+
+test('adminReturnTo는 호출 화면이 적은 출처만 허용하고, 정규식은 경로 전체·쿼리 없음으로 비교한다', async () => {
+  const { adminReturnTo } = await import('../src/features/admin/navigation.ts')
+  const origins = [
+    { path: '/admin/members', label: '회원 목록' },
+    { path: '/admin/finance', label: '금융 조회' },
+    { path: /\/admin\/finance\/orders\/[1-9]\d*/, label: '주문 금융' },
+  ]
+  const fallback = { to: '/admin/members', label: '회원 목록' }
+  assert.deepEqual(adminReturnTo('/admin/finance?tab=payments&buyerId=5', origins, fallback), { to: '/admin/finance?tab=payments&buyerId=5', label: '금융 조회' })
+  assert.deepEqual(adminReturnTo('/admin/finance/orders/58', origins, fallback), { to: '/admin/finance/orders/58', label: '주문 금융' })
+  assert.deepEqual(adminReturnTo('/admin/finance/orders/58/x', origins, fallback), fallback, '정규식 뒤에 더 붙은 경로는 거부')
+  assert.deepEqual(adminReturnTo('/admin/finance/orders/58?x=1', origins, fallback), fallback, '상세 경로에는 쿼리를 받지 않는다')
+  assert.deepEqual(adminReturnTo('/admin/finance-old', origins, fallback), fallback)
+  assert.deepEqual(adminReturnTo('/admin/products', origins, fallback), fallback, '적지 않은 관리자 화면은 거부')
+  assert.deepEqual(adminReturnTo('https://evil.example/admin/members', origins, fallback), fallback)
+  assert.deepEqual(adminReturnTo(undefined, origins, fallback), fallback)
+})

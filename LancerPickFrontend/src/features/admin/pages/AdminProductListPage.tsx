@@ -71,15 +71,19 @@ function ProductTable({ filter, page, onPage, search }: { filter: AdminProductFi
   const data = list.data
   return <>
     <p className={styles.count}>총 {data.totalElements}개</p>
-    {data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 상품이 없어요.</p> : <ul className={styles.list}>
-      {data.items.map((item) => <li key={item.id}>
-        <Link to={`/admin/products/${item.id}`} state={{ from: `/admin/products${search ? `?${search}` : ''}` }}>{item.title}</Link>
-        <p>
-          <span className={item.isHidden ? styles.hidden : styles.visible}>{item.isHidden ? '숨김' : '공개'}</span>
-          <span className={styles.badge}>{saleStatusLabel(item.saleStatus)}</span>
-          {item.category.name} · {item.seller.displayName} · {formatWon(item.priceAmount)}
-        </p>
-        <small>등록 {formatDateTime(item.createdAt)} · 버전 {item.version}</small>
+    {data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 상품이 없어요.</p> : <ul className={styles.rows}>
+      {data.items.map((item) => <li key={item.id} className={styles.row}>
+        <div className={styles.rowMain}>
+          <Link className={styles.rowTitle} to={`/admin/products/${item.id}`} state={{ from: `/admin/products${search ? `?${search}` : ''}` }}>{item.title}</Link>
+          <p className={styles.rowMeta}>{item.category.name} · 판매자 {item.seller.displayName} · 등록 {formatDateTime(item.createdAt)}</p>
+        </div>
+        <div className={styles.rowSide}>
+          <span className={styles.rowBadges}>
+            <span className={item.isHidden ? styles.hidden : styles.visible}>{item.isHidden ? '숨김' : '공개'}</span>
+            <span className={styles.badge}>{saleStatusLabel(item.saleStatus)}</span>
+          </span>
+          <span className={styles.rowAmount}>{formatWon(item.priceAmount)}</span>
+        </div>
       </li>)}
     </ul>}
     {data.items.length === 0 && page > 0 && <button className={styles.secondary} disabled={list.isFetching} onClick={() => onPage(0)}>첫 페이지로</button>}

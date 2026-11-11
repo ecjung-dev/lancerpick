@@ -53,15 +53,20 @@ function InquiryTable({ filter, page, onPage, search }: { filter: AdminInquiryFi
   const data = list.data
   return <>
     <p className={styles.count}>총 {data.totalElements}건</p>
-    {data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 문의가 없어요.</p> : <ul className={styles.list}>
-      {data.items.map((item) => <li key={item.id}>
-        <Link to={`/admin/inquiries/${item.id}`} state={{ from: `/admin/inquiries${search ? `?${search}` : ''}` }}>{item.subject}</Link>
-        <p>
-          <span className={item.status === 'CLOSED' ? styles.visible : styles.hidden}>{inquiryStatusLabel(item.status)}</span>
-          <span className={styles.badge}>{inquiryTypeLabel(item.type)}</span>
-          {item.orderId && <>주문 #{item.orderId} · </>}신청 {item.requester.displayName ?? `회원 #${item.requester.id}`}
-        </p>
-        <small>접수 {formatDateTime(item.createdAt)}{item.resolvedAt && <> · 처리 {formatDateTime(item.resolvedAt)}</>}</small>
+    {data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 문의가 없어요.</p> : <ul className={styles.rows}>
+      {data.items.map((item) => <li key={item.id} className={styles.row}>
+        <div className={styles.rowMain}>
+          {/* 취소 검토 문의는 제목이 대부분 같아 주문 번호를 제목 앞에 둬 구분한다. */}
+          {item.orderId && <span className={styles.rowKey}>주문 #{item.orderId}</span>}
+          <Link className={styles.rowTitle} to={`/admin/inquiries/${item.id}`} state={{ from: `/admin/inquiries${search ? `?${search}` : ''}` }}>{item.subject}</Link>
+          <p className={styles.rowMeta}>신청 {item.requester.displayName ?? `회원 #${item.requester.id}`} · 접수 {formatDateTime(item.createdAt)}{item.resolvedAt && <> · 처리 {formatDateTime(item.resolvedAt)}</>}</p>
+        </div>
+        <div className={styles.rowSide}>
+          <span className={styles.rowBadges}>
+            <span className={item.status === 'CLOSED' ? styles.visible : styles.hidden}>{inquiryStatusLabel(item.status)}</span>
+            <span className={styles.badge}>{inquiryTypeLabel(item.type)}</span>
+          </span>
+        </div>
       </li>)}
     </ul>}
     {data.items.length === 0 && page > 0 && <button className={styles.secondary} disabled={list.isFetching} onClick={() => onPage(0)}>첫 페이지로</button>}

@@ -57,35 +57,50 @@ export function AdminMemberListPage() {
           {!query.data.items.length ? (
             <p className={styles.empty}>조건에 맞는 회원이 없습니다.</p>
           ) : (
-            <ul className={styles.list}>
+            <ul className={styles.rows}>
               {query.data.items.map((member) => (
-                <li key={member.id}>
-                  <Link
-                    to={`/admin/members/${member.id}`}
-                    state={{
-                      from: `/admin/members${params.size ? `?${params}` : ''}`,
-                    }}
-                  >
-                    {member.displayName} · 회원 #{member.id}
-                  </Link>
-                  <p>
-                    {member.email} ·{' '}
-                    {member.role === 'ADMIN' ? '관리자' : '일반 회원'}
-                  </p>
-                  <p>
-                    <span
-                      className={
-                        member.restriction === 'SECURITY_LOCK'
-                          ? styles.toneDanger
-                          : member.restriction === 'GENERAL_RESTRICTION'
-                            ? styles.toneWarn
-                            : styles.badge
-                      }
+                <li key={member.id} className={styles.row}>
+                  <div className={styles.rowMain}>
+                    <Link
+                      className={styles.rowTitle}
+                      to={`/admin/members/${member.id}`}
+                      state={{
+                        from: `/admin/members${params.size ? `?${params}` : ''}`,
+                      }}
                     >
-                      {restrictionLabels[member.restriction]}
+                      {member.displayName} · 회원 #{member.id}
+                    </Link>
+                    <p className={styles.rowMeta}>
+                      {member.email} ·{' '}
+                      {member.role === 'ADMIN' ? '관리자' : '일반 회원'}
+                    </p>
+                  </div>
+                  <div className={styles.rowSide}>
+                    {/* 제한이 있을 때만 배지. "제한 없음"도 글자로 남겨 배지가 없는 이유를 알 수 있게 한다. */}
+                    <span className={styles.rowBadges}>
+                      {member.role === 'ADMIN' && (
+                        <span className={styles.hidden}>관리자</span>
+                      )}
+                      {member.restriction === 'NONE' ? (
+                        <span className={styles.rowNote}>
+                          {restrictionLabels.NONE}
+                        </span>
+                      ) : (
+                        <span
+                          className={
+                            member.restriction === 'SECURITY_LOCK'
+                              ? styles.toneDanger
+                              : styles.toneWarn
+                          }
+                        >
+                          {restrictionLabels[member.restriction]}
+                        </span>
+                      )}
                     </span>
-                    가입 {formatDateTime(member.createdAt)}
-                  </p>
+                    <span className={styles.rowNote}>
+                      가입 {formatDateTime(member.createdAt)}
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>

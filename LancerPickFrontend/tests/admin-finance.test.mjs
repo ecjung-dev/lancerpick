@@ -115,6 +115,8 @@ test('finance page defaults to payments, restores filters from the URL and links
     assert.match(html, /value="5"/)
     assert.match(html, /value="PAID" selected=""/)
     assert.match(html, new RegExp(`href="/admin/finance/orders/${orderId}"`))
+    assert.match(html, /href="\/admin\/members\/5"[^>]*>구매자 #5<\/a>/, '구매자·판매자 번호는 문구 전체가 회원 상세 링크')
+    assert.match(html, /href="\/admin\/members\/6"[^>]*>판매자 #6<\/a>/)
     assert.match(html, /총 1건/)
     assert.match(html, /주문 진행 중/)
     assert.doesNotMatch(html, /주문 IN_PROGRESS/)

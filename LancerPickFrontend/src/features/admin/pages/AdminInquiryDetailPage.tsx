@@ -16,6 +16,7 @@ import { REASON_MAX, isValidProductId as isValidId, validateReason } from '../va
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { MemberLink } from '../components/MemberLink'
 import styles from './Admin.module.css'
 
 /** 목록에서 넘겨준 돌아갈 주소. 관리자 문의 목록 경로만 허용한다. */
@@ -55,6 +56,7 @@ export function AdminInquiryDetailPage() {
 
 function InquirySummary({ inquiry, refreshing }: { inquiry: AdminInquiryDetail; refreshing: boolean }) {
   const { order, cancellationRequest: request } = inquiry
+  const here = `/admin/inquiries/${inquiry.id}`
   return <>
     <header className={styles.heading}>
       <p>{inquiryTypeLabel(inquiry.type)} · 신청 {name(inquiry.requester)}</p>
@@ -69,17 +71,18 @@ function InquirySummary({ inquiry, refreshing }: { inquiry: AdminInquiryDetail; 
     {order && <section className={styles.block}>
       <h2>주문</h2>
       <dl className={styles.facts}>
-        <dt>주문 번호</dt><dd>#{order.id}</dd>
+        <dt>주문 번호</dt><dd><Link className={styles.inlineLink} to={`/admin/finance/orders/${order.id}`} state={{ from: here }}>#{order.id}</Link></dd>
         <dt>상태</dt><dd>{orderStatusLabel(order.status)}</dd>
         <dt>결제 금액</dt><dd>{formatWon(order.priceAmount)}{order.paidAt && <> · 결제 {formatDateTime(order.paidAt)}</>}</dd>
-        <dt>구매자</dt><dd>{name(order.buyer)}</dd>
-        <dt>판매자</dt><dd>{name(order.seller)}</dd>
+        <dt>구매자</dt><dd><MemberLink id={order.buyer.id} from={here}>{name(order.buyer)}</MemberLink></dd>
+        <dt>판매자</dt><dd><MemberLink id={order.seller.id} from={here}>{name(order.seller)}</MemberLink></dd>
       </dl>
     </section>}
     {request && <section className={styles.block}>
       <h2>구매자 취소 요청</h2>
       <p>{cancellationLabel[request.status] ?? request.status} · 요청 {formatDateTime(request.requestedAt)}
         {request.resolvedAt && <> · 처리 {formatDateTime(request.resolvedAt)}{request.resolutionSource === 'ADMIN' ? ' (관리자)' : ''}</>}</p>
+      <p className={styles.help}>구매자 취소 사유</p>
       <p className={styles.text}>{request.reason}</p>
       {request.responseReason && <p className={styles.text}>처리 사유: {request.responseReason}</p>}
     </section>}

@@ -1,4 +1,5 @@
-import { adminBackPath } from '../navigation'
+import { adminReturnTo, type AdminReturnOrigin } from '../navigation'
+import { MemberLink } from '../components/MemberLink'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
@@ -16,7 +17,11 @@ import {
 } from '../statusLabels'
 import styles from './Admin.module.css'
 
-/** 결제 목록에서 넘겨준 돌아갈 주소. 금융 조회 경로만 허용한다. */
+/** 주문 금융 상세로 들어오는 화면: 금융 조회(결제 목록), 문의 상세. */
+const FINANCE_ORIGINS: readonly AdminReturnOrigin[] = [
+  { path: '/admin/finance', label: '금융 조회' },
+  { path: /\/admin\/inquiries\/[1-9]\d*/, label: '운영 문의' },
+]
 const time = (value: string | null | undefined) => value ? formatDateTime(value) : '—'
 /** 기록이 없으면 0원으로 바꾸지 않고 "기록 없음"으로 보여 준다. */
 const NONE = <p>기록 없음</p>
@@ -26,14 +31,14 @@ const FACTS = `${styles.facts} ${styles.factsAligned}`
 /** /admin/finance/orders/:id. 한 주문의 결제·보관금·정산·종료 분배와 계약 PDF 상태를 조회하고, 후보인 PDF는 재생성을 요청할 수 있다(K6). */
 export function AdminOrderFinancePage() {
   const { id = '' } = useParams()
-  const back = adminBackPath(useLocation().state?.from, '/admin/finance')
+  const back = adminReturnTo(useLocation().state?.from, FINANCE_ORIGINS, { to: '/admin/finance', label: '금융 조회' })
   const finance = useOrderFinance(id)
   const problem = accessProblem(finance.error)
   const missing = !isValidId(id) || (finance.error instanceof ApiError && finance.error.status === 404)
   return <section className={styles.page}>
     <p className={styles.eyebrow}>ADMIN</p>
     <AdminNav />
-    <Link to={back}>← 금융 조회</Link>
+    <Link to={back.to}>← {back.label}</Link>
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="주문을 찾을 수 없어요" description="주문 번호를 다시 확인해 주세요." />
         : finance.isError ? <AsyncState title="주문 금액을 불러오지 못했어요" error={finance.error} onRetry={() => { void finance.refetch() }} />
@@ -46,11 +51,12 @@ export function AdminOrderFinancePage() {
 
 function FinanceSummary({ data }: { data: OrderFinance }) {
   const { payment, funds, settlement, closure } = data
+  const here = `/admin/finance/orders/${data.orderId}`
   return <>
     <header className={styles.heading}>
       <p>{codeLabel(policyLabels, data.policyVersion)} · 주문 {orderStatusLabel(data.orderStatus)}</p>
       <h1>주문 #{data.orderId}</h1>
-      <p>주문 금액 {formatWon(data.orderAmount)} · 구매자 #{data.buyerId} · 판매자 #{data.sellerId}</p>
+      <p>주문 금액 {formatWon(data.orderAmount)} · <MemberLink id={data.buyerId} role="구매자" from={here} /> · <MemberLink id={data.sellerId} role="판매자" from={here} /></p>
     </header>
     <section className={styles.block}><h2>결제·환불</h2>{payment ? <dl className={FACTS}>
       <dt>상태</dt><dd>{codeLabel(paymentStatusLabels, payment.status)}</dd>

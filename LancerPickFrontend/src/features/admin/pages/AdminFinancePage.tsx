@@ -13,6 +13,7 @@ import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
 import { AdminReprocessPanel } from '../components/AdminReprocessPanel'
 import { AdminActionLogList } from '../components/AdminActionLogList'
+import { MemberLink } from '../components/MemberLink'
 import { ACTION_LABELS, type ReprocessAction } from '../reprocessApi'
 import { canResetFilter } from '../filterReset'
 import { codeLabel, jobStatusLabels, plainLabel, policyLabels, topupStatusLabels } from '../statusLabels'
@@ -94,12 +95,22 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
         : !list.data ? <AsyncState title="결제 목록을 불러오고 있어요" />
           : <>
             <p className={styles.count}>총 {list.data.totalElements}건</p>
-            {list.data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 결제가 없어요.</p> : <ul className={styles.list}>
-              {list.data.items.map((item) => <li key={item.id}>
-                <Link to={`/admin/finance/orders/${item.orderId}`} state={{ from: `/admin/finance?${search}` }}>주문 #{item.orderId}</Link>
-                <p><span className={styles.badge}>{item.status === 'PAID' ? '결제' : item.status === 'REFUNDED' ? '환불' : item.status}</span>
-                  {formatWon(item.amount)}{item.refundedAmount > 0 && <> · 환불 {formatWon(item.refundedAmount)}</>} · {codeLabel(policyLabels, item.policyVersion)} · 주문 {orderStatusLabel(item.orderStatus)}</p>
-                <small>구매자 #{item.buyerId} · 판매자 #{item.sellerId} · 결제 {time(item.paidAt)}{item.refundedAt && <> · 환불 {time(item.refundedAt)}</>}</small>
+            {list.data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 결제가 없어요.</p> : <ul className={styles.rows}>
+              {list.data.items.map((item) => <li key={item.id} className={styles.row}>
+                <div className={styles.rowMain}>
+                  <Link className={styles.rowTitle} to={`/admin/finance/orders/${item.orderId}`} state={{ from: `/admin/finance?${search}` }}>주문 #{item.orderId}</Link>
+                  <p className={styles.rowMeta}>{codeLabel(policyLabels, item.policyVersion)} · 주문 {orderStatusLabel(item.orderStatus)}</p>
+                  <p className={styles.rowMeta}>
+                    <MemberLink id={item.buyerId} role="구매자" from={`/admin/finance?${search}`} /> ·{' '}
+                    <MemberLink id={item.sellerId} role="판매자" from={`/admin/finance?${search}`} />
+                  </p>
+                </div>
+                <div className={styles.rowSide}>
+                  <span className={styles.rowBadges}><span className={item.status === 'REFUNDED' ? styles.toneWarn : styles.badge}>{item.status === 'PAID' ? '결제' : item.status === 'REFUNDED' ? '환불' : item.status}</span></span>
+                  <span className={styles.rowAmount}>{formatWon(item.amount)}</span>
+                  {item.refundedAmount > 0 && <span>환불 {formatWon(item.refundedAmount)}</span>}
+                  <span className={styles.rowNote}>결제 {time(item.paidAt)}{item.refundedAt && <> · 환불 {time(item.refundedAt)}</>}</span>
+                </div>
               </li>)}
             </ul>}
             <Pager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="결제 목록 페이지" />
