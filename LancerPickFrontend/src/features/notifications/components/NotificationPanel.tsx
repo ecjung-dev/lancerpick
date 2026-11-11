@@ -30,11 +30,11 @@ export function NotificationPanel({ onClose }: { onClose: () => void }) {
     </div>
     <div className={styles.content} aria-busy={query.isFetching}>
       {readAll.isError && readAll.variables?.() && <p role="alert">읽음 처리 결과를 확인하지 못했어요. 목록을 다시 확인해 주세요.</p>}
-      {expired ? <p>로그인 후 알림을 확인할 수 있습니다. <Link to={loginPath(location.pathname + location.search)} onClick={onClose}>로그인</Link></p>
+      {expired ? <p>로그인하면 알림을 확인할 수 있어요. <Link to={loginPath(location.pathname + location.search)} onClick={onClose}>로그인</Link></p>
         : query.isError ? <div role="alert"><p>알림을 불러오지 못했어요.</p><button type="button" onClick={() => void query.refetch()}>다시 조회</button></div>
-        : !query.data ? <p role="status">알림을 불러오는 중입니다.</p>
+        : !query.data ? <p role="status">알림을 불러오는 중이에요.</p>
         : <>
-          {query.data.items.length === 0 ? <p className={styles.empty}>{unreadOnly ? '읽지 않은 알림이 없습니다.' : '받은 알림이 없습니다.'}</p>
+          {query.data.items.length === 0 ? <p className={styles.empty}>{unreadOnly ? '읽지 않은 알림이 없어요.' : '받은 알림이 없어요.'}</p>
             : <ul className={styles.list}>{query.data.items.map((item) => <NotificationRow key={item.id} item={item} onNavigate={onClose} />)}</ul>}
           {(page > 0 || query.data.totalPages > 1) && <nav aria-label="알림 페이지" className={styles.pager}>
             <button type="button" disabled={page === 0 || query.isFetching} onClick={() => setPage(page - 1)}>이전</button>

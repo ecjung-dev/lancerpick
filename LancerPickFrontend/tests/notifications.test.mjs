@@ -26,7 +26,7 @@ test('every order event type has its own Korean message and unknown types fall b
   const messages = new Set(types.map((type) => notificationMessage(`ORDER_${type}`)))
   assert.equal(messages.size, types.length)
   assert.ok(!messages.has(fallback))
-  assert.equal(fallback, '거래 상태가 변경되었습니다.')
+  assert.equal(fallback, '거래 상태가 바뀌었어요.')
   // 관리자 거절(K4)은 판매자 거절과 다른 문구다.
   const adminRejected = notificationMessage('ORDER_CANCELLATION_ADMIN_REJECTED')
   assert.notEqual(adminRejected, fallback)
@@ -85,7 +85,7 @@ test('notification list distinguishes unread items and links to the order detail
     ],
     page: 1, size: 20, totalElements: 22, totalPages: 2,
   }), '/notifications?page=1')
-  assert.match(html, /판매자가 결과물을 납품했습니다/)
+  assert.match(html, /판매자가 결과물을 납품했어요/)
   assert.match(html, /로고 디자인/)
   assert.match(html, /href="\/orders\/9007199254740993"/)
   assert.match(html, /href="\/orders\/7"/)
@@ -97,13 +97,13 @@ test('notification list distinguishes unread items and links to the order detail
 test('empty list, login requirement and server errors are shown differently', () => {
   const empty = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 0],
     { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }))
-  assert.match(empty, /받은 알림이 없습니다/)
+  assert.match(empty, /받은 알림이 없어요/)
 
   const unauthorized = render(createElement(NotificationsPage), (client) => {
     client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 'all', 0], queryFn: async () => undefined }).setState({
       status: 'error', fetchStatus: 'idle', error: new ApiError(401, { code: 'AUTHENTICATION_REQUIRED', message: '로그인이 필요합니다.', fieldErrors: [] }) })
   })
-  assert.match(unauthorized, /로그인 후 알림을 확인할 수 있습니다/)
+  assert.match(unauthorized, /로그인하면 알림을 확인할 수 있어요/)
   assert.match(unauthorized, /href="\/login\?next=%2Fnotifications"/)
 
   const failed = render(createElement(NotificationsPage), (client) => {
@@ -112,7 +112,7 @@ test('empty list, login requirement and server errors are shown differently', ()
   })
   assert.match(failed, /role="alert"/)
   assert.match(failed, /잠시 후 다시 시도해 주세요/)
-  assert.doesNotMatch(failed, /받은 알림이 없습니다/)
+  assert.doesNotMatch(failed, /받은 알림이 없어요/)
 })
 
 test('unread filter comes from the URL, keeps its own cache entry and empty message', () => {
@@ -124,14 +124,14 @@ test('unread filter comes from the URL, keeps its own cache entry and empty mess
   }, '/notifications?filter=unread')
   assert.match(unread, /aria-pressed="true">읽지 않음/)
   assert.match(unread, /aria-pressed="false">전체/)
-  assert.match(unread, /읽지 않은 알림이 없습니다/)
+  assert.match(unread, /읽지 않은 알림이 없어요/)
   assert.doesNotMatch(unread, /href="\/orders\/7"/)
 
   // 알 수 없는 필터 값은 전체 목록으로 본다.
   const unknown = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 0],
     { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }), '/notifications?filter=READ')
   assert.match(unknown, /aria-pressed="true">전체/)
-  assert.match(unknown, /받은 알림이 없습니다/)
+  assert.match(unknown, /받은 알림이 없어요/)
 })
 
 test('list request adds unreadOnly only for the unread filter', async () => {
@@ -233,7 +233,7 @@ test('panel does not confuse a failed lookup with an empty list or leave read-al
   const empty = render(createElement(NotificationPanel, { onClose() {} }), (client) => {
     client.setQueryData(['notifications', 'list', 'all', 0], { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 })
   })
-  assert.match(empty, /받은 알림이 없습니다/)
+  assert.match(empty, /받은 알림이 없어요/)
   const failed = render(createElement(NotificationPanel, { onClose() {} }), (client) => {
     client.getQueryCache().build(client, { queryKey: ['notifications', 'list', 'all', 0] }).setState({
       status: 'error', fetchStatus: 'idle', error: new ApiError(500, { code: 'INTERNAL_ERROR', message: '오류', fieldErrors: [] }),
@@ -242,7 +242,7 @@ test('panel does not confuse a failed lookup with an empty list or leave read-al
   assert.match(failed, /role="alert"/)
   assert.match(failed, /다시 조회/)
   assert.match(failed, /disabled="">모두 읽음/)
-  assert.doesNotMatch(failed, /받은 알림이 없습니다/)
+  assert.doesNotMatch(failed, /받은 알림이 없어요/)
 })
 
 function deferred() {
@@ -336,4 +336,21 @@ test('offline read-all resumed after account change never starts a request', asy
     await client.resumePausedMutations()
     await rejected
   } finally { onlineManager.setOnline(true); client.clear(); globalThis.fetch = original; clearCsrfToken() }
+})
+
+test('notification page pager hides for a single page but stays for later or out-of-range pages', () => {
+  const item = { id: '1', type: 'ORDER_ACCEPTED', orderId: '7', productTitle: null, read: true, createdAt: '2026-11-04T01:00:00Z' }
+  const single = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 0],
+    { items: [item], page: 0, size: 20, totalElements: 1, totalPages: 1 }))
+  assert.doesNotMatch(single, /aria-label="알림 페이지"/)
+  const empty = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 0],
+    { items: [], page: 0, size: 20, totalElements: 0, totalPages: 0 }))
+  assert.doesNotMatch(empty, /aria-label="알림 페이지"/)
+  const multi = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 0],
+    { items: [item], page: 0, size: 20, totalElements: 30, totalPages: 2 }))
+  assert.match(multi, /aria-label="알림 페이지"/)
+  const outOfRange = render(createElement(NotificationsPage), (client) => client.setQueryData(['notifications', 'list', 'all', 3],
+    { items: [], page: 3, size: 20, totalElements: 1, totalPages: 1 }), '/notifications?page=3')
+  assert.match(outOfRange, /aria-label="알림 페이지"/)
+  assert.match(outOfRange, /첫 페이지로/)
 })
