@@ -32,7 +32,7 @@ export function AdminReviewTimerPage() {
         : !list.data ? <AsyncState title="타이머 목록을 불러오고 있어요" />
           : <>
             <p className={styles.count}>진행 중 {list.data.totalElements}건</p>
-            {list.data.items.length === 0 ? <p>진행 중인 타이머가 없어요.</p> : <ul className={styles.list}>
+            {list.data.items.length === 0 ? <p className={styles.empty}>진행 중인 타이머가 없어요.</p> : <ul className={styles.list}>
               {list.data.items.map((timer) => <li key={timer.timerId}>
                 <strong>주문 #{timer.orderId}</strong>
                 <p>구매자 {name(timer.buyer)} · 판매자 {name(timer.seller)} · {timer.cycleNo}회차</p>
@@ -42,7 +42,7 @@ export function AdminReviewTimerPage() {
                   : <div className={styles.actions}><button type="button" onClick={() => setSelected(timer.orderId)}>해제하기</button></div>}
               </li>)}
             </ul>}
-            {list.data.items.length === 0 && page > 0 && <button disabled={list.isFetching} onClick={() => setPage(0)}>첫 페이지로</button>}
+            {list.data.items.length === 0 && page > 0 && <button className={styles.secondary} disabled={list.isFetching} onClick={() => setPage(0)}>첫 페이지로</button>}
             {list.data.totalPages > 1 && <nav className={styles.pager} aria-label="타이머 목록 페이지">
               <button disabled={list.isFetching || page === 0} onClick={() => setPage(page - 1)}>이전</button>
               <span>{page + 1}페이지</span>
@@ -116,7 +116,7 @@ function StopForm({ timer, onDone }: { timer: ActiveReviewTimer; onDone: () => v
       <p id={`${fieldId}-error`} className={styles.fieldError}>{error}</p>
       <div className={styles.actions}>
         <button type="submit">{stop.isPending ? '처리 중…' : '해제'}</button>
-        <button type="button" onClick={onDone}>취소</button>
+        <button type="button" className={styles.secondary} onClick={onDone}>취소</button>
       </div>
     </fieldset>
   </form>

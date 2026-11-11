@@ -50,7 +50,7 @@ function InquiryTable({ filter, page, onPage, search }: { filter: AdminInquiryFi
   const data = list.data
   return <>
     <p className={styles.count}>총 {data.totalElements}건</p>
-    {data.items.length === 0 ? <p>조건에 맞는 문의가 없어요.</p> : <ul className={styles.list}>
+    {data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 문의가 없어요.</p> : <ul className={styles.list}>
       {data.items.map((item) => <li key={item.id}>
         <Link to={`/admin/inquiries/${item.id}`} state={{ from: `/admin/inquiries${search ? `?${search}` : ''}` }}>{item.subject}</Link>
         <p>
@@ -61,7 +61,7 @@ function InquiryTable({ filter, page, onPage, search }: { filter: AdminInquiryFi
         <small>접수 {formatDateTime(item.createdAt)}{item.resolvedAt && <> · 처리 {formatDateTime(item.resolvedAt)}</>}</small>
       </li>)}
     </ul>}
-    {data.items.length === 0 && page > 0 && <button disabled={list.isFetching} onClick={() => onPage(0)}>첫 페이지로</button>}
+    {data.items.length === 0 && page > 0 && <button className={styles.secondary} disabled={list.isFetching} onClick={() => onPage(0)}>첫 페이지로</button>}
     <nav className={styles.pager} aria-label="문의 목록 페이지">
       <button disabled={list.isFetching || page === 0} onClick={() => onPage(page - 1)}>이전</button>
       <span>{page + 1}페이지</span>

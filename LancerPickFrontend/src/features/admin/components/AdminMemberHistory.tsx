@@ -31,7 +31,7 @@ export function AdminMemberHistory({ memberId }: { memberId: string }) {
         <>
           <p>총 {query.data.totalElements}건 · 만료·해제 기록도 보존됩니다.</p>
           {!query.data.items.length ? (
-            <p>제재 이력이 없습니다.</p>
+            <p className={styles.empty}>제재 이력이 없습니다.</p>
           ) : (
             <ul className={styles.list}>
               {query.data.items.map((sanction) => (

@@ -84,7 +84,7 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
         : !list.data ? <AsyncState title="결제 목록을 불러오고 있어요" />
           : <>
             <p className={styles.count}>총 {list.data.totalElements}건</p>
-            {list.data.items.length === 0 ? <p>조건에 맞는 결제가 없어요.</p> : <ul className={styles.list}>
+            {list.data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 결제가 없어요.</p> : <ul className={styles.list}>
               {list.data.items.map((item) => <li key={item.id}>
                 <Link to={`/admin/finance/orders/${item.orderId}`} state={{ from: `/admin/finance?${search}` }}>주문 #{item.orderId}</Link>
                 <p><span className={styles.badge}>{item.status === 'PAID' ? '결제' : item.status === 'REFUNDED' ? '환불' : item.status}</span>
@@ -115,10 +115,10 @@ function Topups({ filter, onApply }: { filter: TopupFilter; onApply: (next: Topu
         : !list.data ? <AsyncState title="충전 목록을 불러오고 있어요" />
           : <>
             <p className={styles.count}>총 {list.data.totalElements}건</p>
-            {list.data.items.length === 0 ? <p>조건에 맞는 충전이 없어요.</p> : <ul className={styles.list}>
+            {list.data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 충전이 없어요.</p> : <ul className={styles.list}>
               {list.data.items.map((item) => <li key={item.id}>
                 <strong>충전 #{item.id}</strong>
-                <p><span className={item.status === 'UNKNOWN' || item.status === 'FAILED' ? styles.hidden : styles.badge}>{item.status}</span>
+                <p><span className={item.status === 'FAILED' ? styles.toneDanger : item.status === 'UNKNOWN' || item.status === 'PROCESSING' ? styles.toneWarn : item.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{item.status}</span>
                   {formatWon(item.amount)} · 회원 #{item.memberId} · 복구 시도 {item.recoveryAttemptCount}회{item.lastErrorCode && <> · 오류 {item.lastErrorCode}</>}</p>
                 <small>신청 {time(item.createdAt)} · 처리 시작 {time(item.processingStartedAt)} · 다음 복구 {time(item.nextRecoveryAt)} · 처리권 만료 {time(item.recoveryLeaseUntil)} · 완료 {time(item.completedAt)}</small>
                 <p>자동 복구: {decisionLabel(item.automaticRecovery.eligible, item.automaticRecovery.reason)}</p>
@@ -140,10 +140,10 @@ function Jobs() {
   if (!list.data) return <AsyncState title="복구 작업 목록을 불러오고 있어요" />
   return <>
     <p className={styles.count}>작업 {list.data.totalElements}개 (작업별 최신 실행만 표시)</p>
-    {list.data.items.length === 0 ? <p>실행된 충전 복구 작업이 없어요.</p> : <ul className={styles.list}>
+    {list.data.items.length === 0 ? <p className={styles.empty}>실행된 충전 복구 작업이 없어요.</p> : <ul className={styles.list}>
       {list.data.items.map((job) => <li key={job.instanceId}>
         <strong>작업 #{job.instanceId}{job.executionId ? ` · 실행 #${job.executionId}` : ' · 실행 기록 없음'}</strong>
-        <p><span className={job.status === 'FAILED' || job.status === 'STOPPED' ? styles.hidden : styles.badge}>{job.status}</span>
+        <p><span className={job.status === 'FAILED' || job.status === 'STOPPED' ? styles.toneDanger : job.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{job.status}</span>
           읽음 {job.readCount} · 지급 {job.creditedCount} · 제외 {job.filteredCount}
           {Object.entries(job.outcomes).map(([key, count]) => <span key={key}> · {key} {count}</span>)}</p>
         <small>원래 스캔 요청 시각 {time(job.scanRequestedAt)}</small>
