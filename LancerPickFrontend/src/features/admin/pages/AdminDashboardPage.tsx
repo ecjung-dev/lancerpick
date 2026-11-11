@@ -35,6 +35,8 @@ export function AdminDashboardPage() {
         : !summary.data ? <AsyncState title="운영 현황을 불러오고 있어요" />
           : <>
             {summary.isError && <p className={styles.notice} role="alert">최신 현황을 불러오지 못했어요. 아래는 마지막으로 확인한 값이에요.</p>}
+            {cards(summary.data).every((card) => card.count === 0) && <p className={styles.allClear} role="status">
+              집계된 확인 대상이 없어요. 아래 여섯 항목이 모두 0건이에요(조회 시각 기준).</p>}
             <ul className={styles.cards}>
               {cards(summary.data).map((card) => <li key={card.to + card.label} className={card.count > 0 ? styles.attention : undefined}>
                 <Link to={card.to}>

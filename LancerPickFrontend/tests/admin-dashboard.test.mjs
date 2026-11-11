@@ -64,3 +64,18 @@ test('admin menu marks the dashboard only on /admin itself', () => {
   assert.match(at('/admin'), /aria-current="page"[^>]*href="\/admin"|href="\/admin"[^>]*aria-current="page"/)
   assert.doesNotMatch(at('/admin/outbox'), /href="\/admin"[^>]*aria-current="page"|aria-current="page"[^>]*href="\/admin"/)
 })
+
+test('여섯 항목이 모두 0건일 때만 집계 기준 요약을 보여 주고, 카드와 조회 시각은 그대로 둔다', () => {
+  const zero = { inquiries: { open: 0, inReview: 0 }, reviewTimers: { active: 3, expiringWithin24Hours: 0 },
+    notifications: { failed: 0, retrying: 0 }, topups: { unknown: 0 }, checkedAt: '2026-11-09T03:00:00Z' }
+  const client = newClient()
+  try {
+    client.setQueryData(['admin', 'dashboard'], zero)
+    const html = render('/admin', createElement(AdminDashboardPage), client)
+    assert.match(html, /role="status">\s*집계된 확인 대상이 없어요/)
+    assert.equal(html.match(/0건<\/strong>/g)?.length, 6)
+    assert.match(html, /확인 2026/)
+    client.setQueryData(['admin', 'dashboard'], { ...zero, topups: { unknown: 1 } })
+    assert.doesNotMatch(render('/admin', createElement(AdminDashboardPage), client), /집계된 확인 대상이 없어요/)
+  } finally { client.clear() }
+})

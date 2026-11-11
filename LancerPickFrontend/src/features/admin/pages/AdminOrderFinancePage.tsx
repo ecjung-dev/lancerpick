@@ -58,35 +58,38 @@ function FinanceSummary({ data }: { data: OrderFinance }) {
       <h1>주문 #{data.orderId}</h1>
       <p>주문 금액 {formatWon(data.orderAmount)} · <MemberLink id={data.buyerId} role="구매자" from={here} /> · <MemberLink id={data.sellerId} role="판매자" from={here} /></p>
     </header>
-    <section className={styles.block}><h2>결제·환불</h2>{payment ? <dl className={FACTS}>
+    {/* 금액 네 묶음은 카드로, 1000px 이상에서 두 열. 카드가 좁으면 라벨 위·값 아래로 바뀐다(Admin.module.css @container). */}
+    <div className={styles.financeGrid}>
+    <section className={styles.card}><h2>결제·환불</h2>{payment ? <dl className={FACTS}>
       <dt>상태</dt><dd>{codeLabel(paymentStatusLabels, payment.status)}</dd>
       <dt>결제 금액</dt><dd>{formatWon(payment.amount)} · {time(payment.paidAt)}</dd>
       <dt>환불 금액</dt><dd>{formatWon(payment.refundedAmount)}{payment.refundedAt && <> · {time(payment.refundedAt)}</>}</dd>
     </dl> : NONE}</section>
-    <section className={styles.block}><h2>보관금</h2>{funds ? <dl className={FACTS}>
+    <section className={styles.card}><h2>보관금</h2>{funds ? <dl className={FACTS}>
       <dt>상태</dt><dd>{codeLabel(fundsStatusLabels, funds.status)}</dd>
       <dt>보관 금액</dt><dd>{formatWon(funds.amount)} · 남은 금액 {formatWon(funds.remainingAmount)}</dd>
       <dt>보관 시작</dt><dd>{time(funds.heldAt)}</dd><dt>처리</dt><dd>{time(funds.resolvedAt)}</dd>
     </dl> : NONE}</section>
-    <section className={styles.block}><h2>정산</h2>{settlement ? <dl className={FACTS}>
+    <section className={styles.card}><h2>정산</h2>{settlement ? <dl className={FACTS}>
       <dt>유형</dt><dd>{codeLabel(settlementTypeLabels, settlement.type)}</dd>
       <dt>총액</dt><dd>{formatWon(settlement.grossAmount)}</dd>
       <dt>수수료</dt><dd>{formatWon(settlement.feeAmount)} ({(settlement.feeRateBps / 100).toFixed(2)}%)</dd>
       <dt>판매자 수익</dt><dd>{formatWon(settlement.sellerAmount)}</dd><dt>시각</dt><dd>{time(settlement.createdAt)}</dd>
     </dl> : NONE}</section>
-    <section className={styles.block}><h2>종료 분배</h2>{closure ? <dl className={FACTS}>
+    <section className={styles.card}><h2>종료 분배</h2>{closure ? <dl className={FACTS}>
       <dt>사유</dt><dd>{codeLabel(closureReasonLabels, closure.reason)}</dd>
       <dt>결제 금액</dt><dd>{formatWon(closure.paidAmount)}</dd>
       <dt>구매자 반환</dt><dd>{formatWon(closure.buyerRefundAmount)}</dd>
       <dt>판매자 총액·수수료·순수익</dt><dd>{formatWon(closure.sellerGrossAmount)} · {formatWon(closure.feeAmount)} · {formatWon(closure.sellerNetAmount)}</dd>
     </dl> : NONE}</section>
+    </div>
   </>
 }
 
 function ContractPdfSection({ orderId }: { orderId: string }) {
   const pdf = useContractPdf(orderId)
   const problem = accessProblem(pdf.error)
-  return <section className={styles.block}>
+  return <section className={`${styles.card} ${styles.block}`}>
     <h2>계약 PDF</h2>
     {problem ? <AdminAccessNotice problem={problem} />
       : pdf.error instanceof ApiError && pdf.error.status === 404 ? <p>계약이 없는 주문이에요(기존 거래이거나 아직 계약을 만들지 않았어요).</p>

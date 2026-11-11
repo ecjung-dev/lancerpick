@@ -93,6 +93,15 @@
 .factsAligned { grid-template-columns: 13em minmax(0, 1fr); }
 /* 375px 등 좁은 화면: 라벨 위·값 아래 한 열로 바꿔 값 영역을 넓힌다(문의 상세 facts 포함). */
 @media (max-width: 600px) { .facts, .factsAligned { grid-template-columns: minmax(0, 1fr); gap: 2px; } .facts dd + dt { margin-top: 10px; } }
+/* 주문 금융 상세 금액 카드. 카드 폭 기준으로 facts를 한 열로 바꾼다(1000px 두 열에서 값 영역 확보). */
+.financeGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 24px 0; }
+@media (min-width: 1000px) { .financeGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.card { container-type: inline-size; min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+.card h2 { margin: 0 0 12px; font-size: 18px; }
+.card > p { margin: 0; color: var(--muted); font-size: 14px; }
+@container (max-width: 440px) { .factsAligned { grid-template-columns: minmax(0, 1fr); gap: 2px; } .factsAligned dd + dt { margin-top: 10px; } }
+/* 대시보드: 집계 대상 여섯 항목이 모두 0건일 때 한 줄 요약. */
+.allClear { margin: 0 0 16px; padding: 14px 16px; border-radius: 10px; background: #f1f6f2; color: #285333; font-size: 14px; }
 .statusHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 10px; }
 .statusHead h2 { margin: 0; }
 .statusCard { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
