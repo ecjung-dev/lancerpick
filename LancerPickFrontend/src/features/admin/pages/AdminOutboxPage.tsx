@@ -58,13 +58,13 @@ function Issues({ filter, onApply }: { filter: OutboxFilter; onApply: (next: Out
           : <>
             <p className={styles.count}>총 {list.data.totalElements}건</p>
             {list.data.items.length === 0
-              ? <p>{filter.status === 'FAILED' ? '처리가 중단된 알림이 없어요.' : '재시도를 기다리는 알림이 없어요.'}</p>
+              ? <p className={styles.empty}>{filter.status === 'FAILED' ? '처리가 중단된 알림이 없어요.' : '재시도를 기다리는 알림이 없어요.'}</p>
               : <ul className={styles.list}>
                 {list.data.items.map((item) => <li key={item.id}>
                   <strong>{item.aggregateType === 'ORDER'
                     ? <Link to={`/admin/finance/orders/${item.aggregateId}`}>주문 #{item.aggregateId}</Link>
                     : `${item.aggregateType} #${item.aggregateId}`} · {item.type}</strong>
-                  <p><span className={item.status === 'FAILED' ? styles.hidden : styles.badge}>{item.status === 'FAILED' ? '처리 중단' : '재시도 대기'}</span>
+                  <p><span className={item.status === 'FAILED' ? styles.toneDanger : styles.toneWarn}>{item.status === 'FAILED' ? '처리 중단' : '재시도 대기'}</span>
                     {outboxErrorLabel(item.lastErrorCode)} · 시도 {item.attemptCount}회</p>
                   <small>이벤트 #{item.id} · 생성 {formatDateTime(item.createdAt)}{item.nextAttemptAt && <> · 다음 시도 {formatDateTime(item.nextAttemptAt)}</>}</small>
                 </li>)}

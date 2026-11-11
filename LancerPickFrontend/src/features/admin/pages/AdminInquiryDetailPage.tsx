@@ -44,7 +44,7 @@ export function AdminInquiryDetailPage() {
             : <>
               {inquiry.isError && <div className={styles.notice} role="alert">
                 <p>최신 상태를 불러오지 못했어요. 아래 내용은 마지막으로 확인한 상태예요.</p>
-                <button type="button" disabled={inquiry.isFetching} onClick={() => { void inquiry.refetch() }}>다시 불러오기</button>
+                <button type="button" className={styles.secondary} disabled={inquiry.isFetching} onClick={() => { void inquiry.refetch() }}>다시 불러오기</button>
               </div>}
               <InquirySummary inquiry={inquiry.data} refreshing={inquiry.isFetching} />
               {inquiry.data.allowedActions.includes('APPROVE') && <DecisionForm key={`${inquiry.data.id}:${inquiry.data.status}`} inquiry={inquiry.data} />}

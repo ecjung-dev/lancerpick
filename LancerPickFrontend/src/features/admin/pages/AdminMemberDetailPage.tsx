@@ -63,6 +63,7 @@ export function AdminMemberDetailPage() {
           )}
           <button
             type="button"
+            className={styles.secondary}
             disabled={query.isFetching}
             onClick={() => {
               void query.refetch()
