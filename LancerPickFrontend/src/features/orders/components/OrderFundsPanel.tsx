@@ -7,6 +7,9 @@ import { Button } from '../../../shared/components/Button'
 interface OrderFundsPanelProps {
   orderId: string
   orderStatus: string
+  compact?: boolean
+  sellerView?: boolean
+  feeRateBps?: number
 }
 
 const statusLabels: Record<OrderFunds['status'], string> = {
@@ -16,7 +19,7 @@ const statusLabels: Record<OrderFunds['status'], string> = {
   REFUNDED: '구매자 전액 반환 완료',
 }
 
-export function OrderFundsPanel({ orderId, orderStatus }: OrderFundsPanelProps) {
+export function OrderFundsPanel({ orderId, orderStatus, compact = false, sellerView = false, feeRateBps }: OrderFundsPanelProps) {
   const query = useOrderFunds(orderId)
 
   if (query.isError) {
@@ -46,6 +49,31 @@ export function OrderFundsPanel({ orderId, orderStatus }: OrderFundsPanelProps) 
   }
 
   const funds = query.data
+  const stateLabel = funds.status === 'NOT_PAID' && ['CANCELLED', 'REJECTED'].includes(orderStatus)
+    ? '결제 없이 종료된 거래입니다.' : statusLabels[funds.status]
+
+  if (compact) {
+    // 예상 표시는 결제 응답에 보관된 수수료율만 사용한다. 실제 지급액은 funds API가 기준이다.
+    const estimatedFee = sellerView && funds.status === 'HELD' && feeRateBps !== undefined
+      && Number.isInteger(feeRateBps) && feeRateBps >= 0 && feeRateBps <= 10000
+      ? Math.floor(funds.amount * feeRateBps / 10000) : null
+    return <section aria-label="거래 대금">
+      <h3>대금 상태</h3>
+      <p>{stateLabel}</p>
+      <dl>
+        <div><dt>현재 보관금</dt><dd>{formatWon(funds.heldAmount)}</dd></div>
+        {estimatedFee !== null && <>
+          <div><dt>예상 수수료</dt><dd>{formatWon(estimatedFee)}</dd></div>
+          <div><dt>예상 판매 수익</dt><dd>{formatWon(funds.amount - estimatedFee)}</dd></div>
+        </>}
+        {funds.feeAmount !== null && <div><dt>확정 수수료</dt><dd>{formatWon(funds.feeAmount)}</dd></div>}
+        {funds.sellerPayout !== null && <div><dt>판매자 적립금 지급</dt><dd>{formatWon(funds.sellerPayout)}</dd></div>}
+        {funds.refundedAmount > 0 && <div><dt>구매자 반환</dt><dd>{formatWon(funds.refundedAmount)}</dd></div>}
+      </dl>
+      {funds.status === 'HELD' && <p><small>구매 확정 전까지 판매자에게 지급되지 않습니다. {estimatedFee !== null && '예상 금액은 실제 확정 결과와 구분됩니다.'}</small></p>}
+      {funds.resolvedAt && <p><small>처리 시각 {formatDateTime(funds.resolvedAt)}</small></p>}
+    </section>
+  }
 
   return (
     <section aria-label="거래 대금">

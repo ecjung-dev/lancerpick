@@ -87,7 +87,7 @@ test('direct filtered URL restores status and page while invalid status selects 
 test('order detail returns to the filtered list and displays a Korean status', () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   client.setQueryData(['wallet', 'order', '1'], {
-    id: '1', status: 'COMPLETED', priceAmount: 1000, requirements: '요구사항',
+    id: '1', policyVersion: 'LEGACY_V1', status: 'COMPLETED', priceAmount: 1000, requirements: '요구사항',
     buyer: { id: '2', displayName: '구매자' }, seller: { id: '3', displayName: '판매자' },
     productSnapshot: { title: '상품', description: '설명', scopeDescription: '범위', preparationDescription: '준비', productVersion: 0 },
     termsSnapshot: '거래 규칙', durationDays: 1, originalDueAt: null, revisionDueAt: null, currentDueAt: null,
@@ -98,7 +98,8 @@ test('order detail returns to the filtered list and displays a Korean status', (
       createElement(QueryClientProvider, { client },
         createElement(Routes, null, createElement(Route, { path: '/orders/:id', element: createElement(OrderDetailPage) })))))
     assert.match(html, /href="\/orders\?side=SELLER&amp;status=COMPLETED&amp;page=2"/)
-    assert.match(html, /주문 #1 · 구매 확정/)
+    assert.match(html, /주문 #1/)
+    assert.match(html, /<span[^>]*>구매 확정<\/span>/)
   } finally { client.clear() }
 })
 
