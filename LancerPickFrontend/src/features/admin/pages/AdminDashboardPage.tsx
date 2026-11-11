@@ -46,7 +46,7 @@ export function AdminDashboardPage() {
             </ul>
             <div className={styles.actions}>
               <small className={styles.count}>확인 {formatDateTime(summary.data.checkedAt)}</small>
-              <button type="button" disabled={summary.isFetching} onClick={() => { void summary.refetch() }}>{summary.isFetching ? '확인 중…' : '다시 확인'}</button>
+              <button type="button" className={styles.secondary} disabled={summary.isFetching} onClick={() => { void summary.refetch() }}>{summary.isFetching ? '확인 중…' : '다시 확인'}</button>
             </div>
           </>}
   </section>

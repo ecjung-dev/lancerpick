@@ -54,7 +54,7 @@ export function AdminMemberListPage() {
             총 {query.data.totalElements}명 · 최신 가입순 · 30초마다 상태 갱신
           </p>
           {!query.data.items.length ? (
-            <p>조건에 맞는 회원이 없습니다.</p>
+            <p className={styles.empty}>조건에 맞는 회원이 없습니다.</p>
           ) : (
             <ul className={styles.list}>
               {query.data.items.map((member) => (
@@ -72,7 +72,15 @@ export function AdminMemberListPage() {
                     {member.role === 'ADMIN' ? '관리자' : '일반 회원'}
                   </p>
                   <p>
-                    <span className={styles.badge}>
+                    <span
+                      className={
+                        member.restriction === 'SECURITY_LOCK'
+                          ? styles.toneDanger
+                          : member.restriction === 'GENERAL_RESTRICTION'
+                            ? styles.toneWarn
+                            : styles.badge
+                      }
+                    >
                       {restrictionLabels[member.restriction]}
                     </span>
                     가입 {formatDateTime(member.createdAt)}
@@ -145,6 +153,7 @@ function MemberFilter({
         <button type="submit">조회</button>
         <button
           type="button"
+          className={styles.secondary}
           onClick={() => {
             const empty = { q: '', restriction: '' } as const
             setDraft(empty)

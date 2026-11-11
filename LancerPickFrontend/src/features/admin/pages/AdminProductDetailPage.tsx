@@ -35,7 +35,7 @@ export function AdminProductDetailPage() {
               {/* 다시 조회만 실패했으면 입력 중인 사유를 잃지 않도록 화면은 두고 안내만 한다. */}
               {product.isError && <div className={styles.notice} role="alert">
                 <p>최신 상태를 불러오지 못했어요. 아래 내용은 마지막으로 확인한 상태예요.</p>
-                <button type="button" disabled={product.isFetching} onClick={() => { void product.refetch() }}>다시 불러오기</button>
+                <button type="button" className={styles.secondary} disabled={product.isFetching} onClick={() => { void product.refetch() }}>다시 불러오기</button>
               </div>}
               <ProductSummary product={product.data} refreshing={product.isFetching} />
               <VisibilityForm key={product.data.id} product={product.data} />
@@ -162,7 +162,7 @@ function ModerationLogs({ id }: { id: string }) {
               <p className={styles.text}>{log.reason}</p>
               <small>관리자 #{log.adminId}</small>
             </li>)}</ul>}
-    {logs.data && logs.data.items.length === 0 && page > 0 && <button onClick={() => setPage(0)}>첫 페이지로</button>}
+    {logs.data && logs.data.items.length === 0 && page > 0 && <button className={styles.secondary} onClick={() => setPage(0)}>첫 페이지로</button>}
     {logs.data && logs.data.totalPages > 1 && <nav className={styles.pager} aria-label="운영 이력 페이지">
       <button disabled={logs.isFetching || page === 0} onClick={() => setPage(page - 1)}>이전</button>
       <span>{page + 1}페이지</span>

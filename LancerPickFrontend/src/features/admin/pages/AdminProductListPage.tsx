@@ -68,7 +68,7 @@ function ProductTable({ filter, page, onPage, search }: { filter: AdminProductFi
   const data = list.data
   return <>
     <p className={styles.count}>총 {data.totalElements}개</p>
-    {data.items.length === 0 ? <p>조건에 맞는 상품이 없어요.</p> : <ul className={styles.list}>
+    {data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 상품이 없어요.</p> : <ul className={styles.list}>
       {data.items.map((item) => <li key={item.id}>
         <Link to={`/admin/products/${item.id}`} state={{ from: `/admin/products${search ? `?${search}` : ''}` }}>{item.title}</Link>
         <p>
@@ -79,7 +79,7 @@ function ProductTable({ filter, page, onPage, search }: { filter: AdminProductFi
         <small>등록 {formatDateTime(item.createdAt)} · 버전 {item.version}</small>
       </li>)}
     </ul>}
-    {data.items.length === 0 && page > 0 && <button disabled={list.isFetching} onClick={() => onPage(0)}>첫 페이지로</button>}
+    {data.items.length === 0 && page > 0 && <button className={styles.secondary} disabled={list.isFetching} onClick={() => onPage(0)}>첫 페이지로</button>}
     <nav className={styles.pager} aria-label="상품 목록 페이지">
       <button disabled={list.isFetching || page === 0} onClick={() => onPage(page - 1)}>이전</button>
       <span>{page + 1}페이지</span>
