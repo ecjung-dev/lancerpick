@@ -1,4 +1,4 @@
-.button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 20px; border: 1px solid var(--ink); border-radius: 9px; font-weight: 650; cursor: pointer; transition: background .15s; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 20px; border: 1px solid var(--ink); border-radius: 8px; font-weight: 650; cursor: pointer; transition: background .15s; }
 .primary { color: white; background: var(--ink); }
 .primary:hover { background: #333; }
 .secondary { color: var(--ink); background: white; border-color: var(--line); }
