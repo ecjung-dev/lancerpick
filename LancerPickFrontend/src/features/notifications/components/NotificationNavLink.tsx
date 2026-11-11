@@ -18,7 +18,7 @@ function NotificationMenu({ onOpen }: { onOpen?: () => void }) {
   const headerBottom = useHeaderBottom()
   const unread = useUnreadNotificationCount()
   const badge = unreadBadge(unread.isError ? undefined : unread.data?.count)
-  const [position, setPosition] = useState<{ left: number; top: number; maxHeight: number } | null>(null)
+  const [position, setPosition] = useState<{ left: number } | null>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
 
@@ -63,12 +63,7 @@ function NotificationMenu({ onOpen }: { onOpen?: () => void }) {
     if (!rect) return
     onOpen?.()
     const width = Math.min(420, window.innerWidth)
-    const top = 0
-    setPosition({
-      left: window.innerWidth - width,
-      top,
-      maxHeight: window.innerHeight,
-    })
+    setPosition({ left: window.innerWidth - width })
   }
 
   return <>
