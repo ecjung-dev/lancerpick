@@ -1,9 +1,11 @@
-import { useRef, useState, type PropsWithChildren } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useCallback, useRef, useState, type PropsWithChildren } from 'react'
+import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentMember } from '../../auth/queries'
 import { captureAccountScope } from '../../auth/session'
 import { ChatWorkspaceContext } from '../workspace'
 import { validChatSequence } from '../validation'
+import { activityKey, hasNewChat, type ChatActivity } from '../activity'
+import { useChatThreads } from '../queries'
 import { ChatDock } from './ChatDock'
 
 export interface ChatWorkspaceState {
@@ -26,6 +28,21 @@ export function ChatWorkspaceProvider({ children }: PropsWithChildren) {
     request.scope()
       ? request
       : null
+  const memberId = member.data?.id ?? ''
+  const activity = useQuery<ChatActivity>({
+    queryKey: activityKey(memberId), queryFn: skipToken,
+    initialData: () => ({ startedAt: new Date().toISOString(), seen: {} }),
+    staleTime: Infinity, gcTime: Infinity,
+  }).data!
+  const threads = useChatThreads(memberId, '', 0, available)
+  const newOrderIds = threads.isError ? [] : (threads.data?.items ?? [])
+    .filter((thread) => hasNewChat(thread, memberId, activity)).map((thread) => thread.orderId)
+  const acknowledge = useCallback((orderId: string, timestamp: string) => {
+    client.setQueryData<ChatActivity>(activityKey(memberId), (value) => {
+      if (!value || Date.parse(timestamp) <= Date.parse(value.seen[orderId] ?? value.startedAt)) return value
+      return { ...value, seen: { ...value.seen, [orderId]: timestamp } }
+    })
+  }, [client, memberId])
   function open(orderId: string | null) {
     if (
       !available ||
@@ -52,6 +69,8 @@ export function ChatWorkspaceProvider({ children }: PropsWithChildren) {
     <ChatWorkspaceContext.Provider
       value={{
         available,
+        newOrderIds,
+        acknowledge,
         expanded: !!visible && !visible.minimized,
         trigger,
         toggle: () => {

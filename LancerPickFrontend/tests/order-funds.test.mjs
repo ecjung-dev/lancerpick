@@ -46,7 +46,7 @@ test('invalid order IDs never reach the server', () => {
     assert.throws(() => getOrderFunds(id))
 })
 
-function render(status, denied = false, orderStatus = 'AWAITING_PAYMENT') {
+function render(status, denied = false, orderStatus = 'AWAITING_PAYMENT', props = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryOnMount: false } },
   })
@@ -71,7 +71,7 @@ function render(status, denied = false, orderStatus = 'AWAITING_PAYMENT') {
       createElement(
         QueryClientProvider,
         { client },
-        createElement(OrderFundsPanel, { orderId: '11', orderStatus }),
+        createElement(OrderFundsPanel, { orderId: '11', orderStatus, ...props }),
       ),
     )
   } finally {
@@ -87,6 +87,21 @@ test('held money is distinguished from completed seller income and buyer refund'
   assert.match(render('RELEASED'), /540,001/)
   assert.match(render('RELEASED'), /60,000/)
   assert.match(render('REFUNDED'), /구매자 전액 반환 완료/)
+})
+
+test('compact seller forecast uses stored fee rate and never substitutes for actual payout', () => {
+  const props = { compact: true, sellerView: true, feeRateBps: 1000 }
+  const held = render('HELD', false, 'IN_PROGRESS', props)
+  assert.match(held, /예상 수수료.*60,000/)
+  assert.match(held, /예상 판매 수익.*540,001/)
+  assert.doesNotMatch(held, /판매자 적립금 지급/)
+  assert.doesNotMatch(render('HELD', false, 'IN_PROGRESS', { ...props, sellerView: false }), /예상 판매 수익/)
+  assert.doesNotMatch(render('HELD', false, 'IN_PROGRESS', { ...props, feeRateBps: undefined }), /예상 판매 수익/)
+  assert.doesNotMatch(render('HELD', false, 'IN_PROGRESS', { ...props, feeRateBps: -1 }), /예상 판매 수익/)
+  const actual = render('RELEASED', false, 'COMPLETED', props)
+  assert.match(actual, /판매자 적립금 지급.*540,001/)
+  assert.doesNotMatch(actual, /예상 판매 수익/)
+  assert.doesNotMatch(render('REFUNDED', false, 'CANCELLED', props), /예상 판매 수익/)
 })
 
 test('failed permission recheck hides previously cached financial data', () => {

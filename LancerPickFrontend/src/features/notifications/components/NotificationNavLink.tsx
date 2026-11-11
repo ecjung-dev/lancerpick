@@ -60,12 +60,12 @@ function NotificationMenu({ onOpen }: { onOpen?: () => void }) {
     const rect = trigger.current?.getBoundingClientRect()
     if (!rect) return
     onOpen?.()
-    const width = Math.min(420, window.innerWidth - 32)
-    const top = Math.max(16, Math.min(rect.bottom + 12, window.innerHeight - 360))
+    const width = Math.min(420, window.innerWidth)
+    const top = 0
     setPosition({
-      left: Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16)),
+      left: window.innerWidth - width,
       top,
-      maxHeight: Math.min(600, window.innerHeight - top - 16),
+      maxHeight: window.innerHeight,
     })
   }
 
