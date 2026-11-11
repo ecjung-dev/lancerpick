@@ -127,7 +127,7 @@ function ConnectedProfile({
       />
     )
   if (profile.isPending)
-    return <AsyncState title="판매자 프로필을 불러오고 있어요" />
+    return <AsyncState title="판매자 프로필을 불러오는 중이에요" />
   if (profile.isError)
     return (
       <AsyncState

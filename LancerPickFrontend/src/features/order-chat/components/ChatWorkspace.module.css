@@ -171,7 +171,7 @@
 }
 .threadList small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 400;
 }
 .threadList strong small {
@@ -249,7 +249,7 @@
 }
 .headerIcon { position: relative; display: flex; }
 .newDot { position: absolute; top: -3px; right: -5px; width: 9px; height: 9px; border-radius: 50%; background: #111; border: 2px solid white; }
-.newLabel { display: inline-block; font-size: 10px; color: white; background: #111; padding: 1px 6px; border-radius: 8px; }
+.newLabel { display: inline-block; font-size: 11px; color: white; background: #111; padding: 1px 6px; border-radius: 8px; }
 @media (max-width: 860px) {
   .conversation, .inbox { width: min(420px, 100vw); max-width: 100vw; }
 }

@@ -10,8 +10,8 @@
 .search button { flex-shrink: 0; background: none; border: 0; padding: 7px; display: grid; place-items: center; cursor: pointer; }
 .nav { display: flex; align-items: center; justify-self: end; gap: 24px; font-size: 13px; white-space: nowrap; }
 .nav a[aria-current='page'] { text-decoration: underline; text-underline-offset: 6px; }
-.signup { background: var(--ink); color: white; padding: 10px 17px; border-radius: 7px; }
-.navButton { background: none; border: 1px solid var(--line); border-radius: 7px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+.signup { background: var(--ink); color: white; padding: 10px 17px; border-radius: 8px; }
+.navButton { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
 .navButton:hover { background: var(--surface); }
 .navButton:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
 .main { width: 100%; max-width: 1248px; margin: 0 auto; padding: 0 32px; flex: 1; }

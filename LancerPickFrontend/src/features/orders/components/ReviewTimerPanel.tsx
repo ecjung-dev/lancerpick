@@ -83,7 +83,7 @@ export function ReviewTimerPanel({ orderId, sellerId }: ReviewTimerPanelProps) {
       <p>{view.detail}</p>
       {query.data.canStart && (
         <Button disabled={busy || query.isFetching} onClick={() => void start()}>
-          {busy ? '시작하는 중' : '7일 자동 구매 확정 타이머 시작'}
+          {busy ? '시작하는 중…' : '7일 자동 구매 확정 타이머 시작'}
         </Button>
       )}
       {failure && <p role="alert">{failure}</p>}

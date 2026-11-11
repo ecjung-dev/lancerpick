@@ -14,19 +14,19 @@
 .cardTop { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 17px; }
 .category { font-size: 11px; color: var(--muted); padding-top: 4px; }
 .states { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; flex-shrink: 0; }
-.states > span { font-size: 10px; line-height: 1.4; background: #f2f2f2; border-radius: 4px; padding: 5px 8px; color: #777; }
+.states > span { font-size: 11px; line-height: 1.4; background: #f2f2f2; border-radius: 4px; padding: 5px 8px; color: #555; }
 .states > .onSale { background: #262626; color: white; }
 .states > .hidden { background: white; border: 1px solid #ccc; padding: 4px 7px; color: #555; }
 .card h2 { font-size: 16px; line-height: 1.65; letter-spacing: -.025em; margin: 0 0 20px; }
 .terms { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; margin-bottom: 20px; }
 .terms > span { font-size: 11px; color: var(--muted); }
 .terms strong { font-size: 21px; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
-.metadata { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; padding-top: 14px; border-top: 1px solid #f0f0f0; font-size: 10px; color: var(--muted); }
+.metadata { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; padding-top: 14px; border-top: 1px solid #f0f0f0; font-size: 11px; color: var(--muted); }
 .visibility { color: #666; }
-.date { font-size: 10px; color: var(--muted); margin: 8px 0 17px; line-height: 1.7; }
-.date time { margin-left: 5px; color: #777; }
+.date { font-size: 11px; color: var(--muted); margin: 8px 0 17px; line-height: 1.7; }
+.date time { margin-left: 5px; color: var(--muted); }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.actions a { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 11px; line-height: 1.5; text-align: center; color: #555; }
+.actions a { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 8px; border: 1px solid #ddd; min-height: 40px; border-radius: 8px; font-size: 12px; line-height: 1.5; text-align: center; color: #555; }
 .actions a:hover { text-decoration: none; background: #f6f6f6; border-color: #aaa; }
 .actions .edit { border-color: #aaa; color: #171717; font-weight: 650; }
 .actions .public { grid-column: 1 / -1; background: #fafafa; border-color: #eee; color: var(--muted); }

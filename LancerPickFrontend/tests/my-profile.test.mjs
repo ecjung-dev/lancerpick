@@ -177,7 +177,7 @@ test('a failed session check offers retry instead of a login form or stale data'
   try {
     const html = render(client)
     assert.match(html, /로그인 상태를 확인하지 못했어요/)
-    assert.match(html, /다시 불러오기/)
+    assert.match(html, /다시 조회/)
     assert.doesNotMatch(html, /profile-display-name/)
   } finally { client.clear() }
 })

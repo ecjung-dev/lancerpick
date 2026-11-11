@@ -46,7 +46,7 @@ export function AdminOrderFinancePage() {
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="주문을 찾을 수 없어요" description="주문 번호를 다시 확인해 주세요." />
         : finance.isError ? <AsyncState title="주문 금액을 불러오지 못했어요" error={finance.error} onRetry={() => { void finance.refetch() }} />
-          : !finance.data ? <AsyncState title="주문 금액을 불러오고 있어요" />
+          : !finance.data ? <AsyncState title="주문 금액을 불러오는 중이에요" />
             : <><FinanceSummary data={finance.data} /><ContractPdfSection orderId={id} />
               <section className={styles.block}><h2>관리자 작업 이력</h2>
                 <AdminActionLogList filter={{ orderId: id }} empty="이 주문의 계약 PDF 관리자 작업 이력이 없어요." /></section></>}
@@ -98,7 +98,7 @@ function ContractPdfSection({ orderId }: { orderId: string }) {
     {problem ? <AdminAccessNotice problem={problem} />
       : pdf.error instanceof ApiError && pdf.error.status === 404 ? <p>계약이 없는 주문이에요(기존 거래이거나 아직 계약을 만들지 않았어요).</p>
         : pdf.isError ? <AsyncState title="계약 PDF 상태를 불러오지 못했어요" error={pdf.error} onRetry={() => { void pdf.refetch() }} />
-          : !pdf.data ? <AsyncState title="계약 PDF 상태를 불러오고 있어요" />
+          : !pdf.data ? <AsyncState title="계약 PDF 상태를 불러오는 중이에요" />
             : <PdfFacts data={pdf.data} />}
   </section>
 }

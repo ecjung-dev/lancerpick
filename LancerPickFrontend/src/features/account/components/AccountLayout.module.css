@@ -17,7 +17,7 @@
 .menu a[aria-current] { background: var(--ink); color: white; font-weight: 700; }
 .menu a:hover:not([aria-current]) { background: var(--surface); }
 .disabled { color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
-.disabled small { font-size: 10px; }
+.disabled small { font-size: 11px; }
 .notice { padding: 12px; font-size: 12px; line-height: 1.7; background: var(--surface); border-radius: 6px; }
 .content { min-width: 0; }
 @media (max-width: 800px) {

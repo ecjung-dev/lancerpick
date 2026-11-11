@@ -14,7 +14,7 @@ export function AsyncState({ title, description, error, onRetry }: {
       <strong>{title}</strong>
       <p>{error instanceof ApiError ? error.message : description}</p>
       {error instanceof ApiError && error.traceId && <small>문의 코드: {error.traceId}</small>}
-      {onRetry && <Button variant="secondary" onClick={onRetry}>다시 불러오기</Button>}
+      {onRetry && <Button variant="secondary" onClick={onRetry}>다시 조회</Button>}
     </div>
   )
 }

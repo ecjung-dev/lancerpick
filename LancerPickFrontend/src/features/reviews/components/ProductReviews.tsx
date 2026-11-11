@@ -33,7 +33,7 @@ export function ProductReviews({ productId }: { productId: string }) {
         {[5, 4, 3, 2, 1].map(stars => <option key={stars} value={stars}>{stars}점</option>)}
       </select>
     </label></div>
-    {query.isPending ? <AsyncState title="후기를 불러오고 있어요" />
+    {query.isPending ? <AsyncState title="후기를 불러오는 중이에요" />
       : query.isError ? <AsyncState title={query.error instanceof ApiError && query.error.status === 404
         ? '현재 공개되지 않은 상품이에요' : '후기를 불러오지 못했어요'}
         error={query.error} onRetry={() => { void query.refetch() }} />

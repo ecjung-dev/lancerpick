@@ -78,7 +78,7 @@ test('public review markup escapes text, shows rating/null content and range rec
   assert.match(html, /2페이지/)
   assert.match(render(10, { items: [], totalElements: 1, totalPages: 1 }), /이 페이지에 후기가 없어요/)
   assert.match(render(0, { items: [], totalElements: 0, totalPages: 0 }), /아직 작성된 후기가 없어요/)
-  assert.match(render(0), /불러오고 있어요/)
+  assert.match(render(0), /불러오는 중이에요/)
 })
 test('filtered empty results keep the overall average and count', () => {
   const html = render(0, { items: [], totalElements: 0, totalPages: 0,

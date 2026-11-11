@@ -45,11 +45,11 @@ export function AdminInquiryDetailPage() {
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="문의를 찾을 수 없어요" description="문의 번호를 다시 확인해 주세요." />
         : !inquiry.data && inquiry.isError ? <AsyncState title="문의를 불러오지 못했어요" error={inquiry.error} onRetry={() => { void inquiry.refetch() }} />
-          : !inquiry.data ? <AsyncState title="문의를 불러오고 있어요" />
+          : !inquiry.data ? <AsyncState title="문의를 불러오는 중이에요" />
             : <>
               {inquiry.isError && <div className={styles.notice} role="alert">
                 <p>최신 상태를 불러오지 못했어요. 아래 내용은 마지막으로 확인한 상태예요.</p>
-                <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={inquiry.isFetching} onClick={() => { void inquiry.refetch() }}>다시 불러오기</button>
+                <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={inquiry.isFetching} onClick={() => { void inquiry.refetch() }}>다시 조회</button>
               </div>}
               <InquirySummary inquiry={inquiry.data} refreshing={inquiry.isFetching} />
               {inquiry.data.allowedActions.includes('APPROVE') && <DecisionForm key={`${inquiry.data.id}:${inquiry.data.status}`} inquiry={inquiry.data} />}
@@ -173,7 +173,7 @@ function DecisionForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
       <label htmlFor="inquiry-reason">처리 사유 <span>필수</span></label>
       <textarea id="inquiry-reason" rows={4} value={reason} aria-invalid={!!error} aria-describedby="inquiry-reason-help inquiry-reason-error"
         onChange={(e) => { setReason(e.target.value); setError(undefined) }} />
-      <p id="inquiry-reason-help" className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString()}자</p>
+      <p id="inquiry-reason-help" className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString('ko-KR')}자</p>
       <p id="inquiry-reason-error" className={styles.fieldError}>{error}</p>
       <label><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> 승인 시 주문 취소와 전액 반환이 되돌릴 수 없음을 확인했어요.</label>
       <div className={styles.actions}>

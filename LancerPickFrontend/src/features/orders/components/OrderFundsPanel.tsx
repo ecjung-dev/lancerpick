@@ -39,7 +39,7 @@ export function OrderFundsPanel({ orderId, orderStatus, compact = false, sellerV
   }
 
   if (!query.data) {
-    return <AsyncState title="거래 대금을 확인하고 있어요." />
+    return <AsyncState title="거래 대금을 확인하고 있어요" />
   }
 
   const funds = query.data

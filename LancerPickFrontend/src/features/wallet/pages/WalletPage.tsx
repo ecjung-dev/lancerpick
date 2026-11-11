@@ -111,7 +111,7 @@ export function ConnectedWalletPage({ sessionKey }: { sessionKey: string }) {
       ) : balance.data ? (
         <BalanceCard balance={balance.data} />
       ) : (
-        <AsyncState title="잔액을 불러오고 있어요" />
+        <AsyncState title="잔액을 불러오는 중이에요" />
       )}
       {entries.isError ? (
         <AsyncState
@@ -128,7 +128,7 @@ export function ConnectedWalletPage({ sessionKey }: { sessionKey: string }) {
           isFetching={entries.isFetching}
         />
       ) : (
-        <AsyncState title="이용 내역을 불러오고 있어요" />
+        <AsyncState title="이용 내역을 불러오는 중이에요" />
       )}
     </WalletLayout>
   )

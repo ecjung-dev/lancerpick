@@ -37,12 +37,12 @@ export function AdminProductDetailPage() {
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="상품을 찾을 수 없어요" description="상품 번호를 다시 확인해 주세요." />
         : !product.data && product.isError ? <AsyncState title="상품을 불러오지 못했어요" error={product.error} onRetry={() => { void product.refetch() }} />
-          : !product.data ? <AsyncState title="상품을 불러오고 있어요" />
+          : !product.data ? <AsyncState title="상품을 불러오는 중이에요" />
             : <>
               {/* 다시 조회만 실패했으면 입력 중인 사유를 잃지 않도록 화면은 두고 안내만 한다. */}
               {product.isError && <div className={styles.notice} role="alert">
                 <p>최신 상태를 불러오지 못했어요. 아래 내용은 마지막으로 확인한 상태예요.</p>
-                <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={product.isFetching} onClick={() => { void product.refetch() }}>다시 불러오기</button>
+                <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={product.isFetching} onClick={() => { void product.refetch() }}>다시 조회</button>
               </div>}
               <ProductSummary product={product.data} refreshing={product.isFetching} />
               <VisibilityForm key={product.data.id} product={product.data} />
@@ -154,7 +154,7 @@ function VisibilityForm({ product }: { product: AdminProductDetail }) {
       <label htmlFor="moderation-reason">사유 <span>필수</span></label>
       <textarea id="moderation-reason" rows={4} value={reason} aria-invalid={!!error} aria-describedby="moderation-reason-help moderation-reason-error"
         onChange={(e) => { setReason(e.target.value); setError(undefined) }} placeholder="운영 기록에 남는 사유예요." />
-      <p id="moderation-reason-help" className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString()}자</p>
+      <p id="moderation-reason-help" className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString('ko-KR')}자</p>
       <p id="moderation-reason-error" className={styles.fieldError}>{error}</p>
       <button className={styles.button} type="submit">{save.isPending ? '처리 중…' : nextHidden ? '숨기기' : '복구하기'}</button>
     </fieldset>
@@ -170,7 +170,7 @@ function ModerationLogs({ id }: { id: string }) {
     <h2>운영 이력</h2>
     {problem ? <AdminAccessNotice problem={problem} />
       : logs.isError ? <AsyncState title="운영 이력을 불러오지 못했어요" error={logs.error} onRetry={() => { void logs.refetch() }} />
-        : !logs.data ? <AsyncState title="운영 이력을 불러오고 있어요" />
+        : !logs.data ? <AsyncState title="운영 이력을 불러오는 중이에요" />
           : logs.data.items.length === 0 ? <p className={styles.empty}>{page > 0 ? '이 페이지에 이력이 없어요.' : '아직 운영 이력이 없어요.'}</p>
             : <div className={styles.tableWrap}><table className={styles.table}>
               <thead><tr><th scope="col">처리</th><th scope="col">사유</th><th scope="col">관리자</th><th scope="col">처리일</th></tr></thead>

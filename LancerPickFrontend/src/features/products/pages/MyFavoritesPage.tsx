@@ -36,7 +36,7 @@ function FavoritesList({ memberId, path }: { memberId: string; path: string }) {
   })
   if (isUnauthorized(favorites.error)) return <LoginNotice path={path} />
   if (favorites.isError) return <AsyncState title="관심 상품을 불러오지 못했어요" error={favorites.error} onRetry={() => { void favorites.refetch() }} />
-  if (!favorites.data) return <AsyncState title="관심 상품을 불러오고 있어요" />
+  if (!favorites.data) return <AsyncState title="관심 상품을 불러오는 중이에요" />
   const { items, totalElements, totalPages } = favorites.data
   return <>
     <p>총 {totalElements}개 · 현재 공개·판매 중인 상품을 표시해요.</p>

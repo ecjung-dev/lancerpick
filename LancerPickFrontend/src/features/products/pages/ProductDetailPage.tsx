@@ -30,7 +30,7 @@ export function ProductDetailPage() {
         {fromSeller ? '← 판매자 상품으로' : fromFavorites ? '← 내 관심 상품으로' : '← 상품 목록으로'}
       </Link>
       {product.isPending ? (
-        <AsyncState title="상품을 불러오고 있어요" />
+        <AsyncState title="상품을 불러오는 중이에요" />
       ) : product.isError ? (
         <AsyncState
           title={

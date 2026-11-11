@@ -28,7 +28,7 @@ export function AdminMemberHistory({ memberId }: { memberId: string }) {
           }}
         />
       ) : !query.data ? (
-        <p role="status">이력을 불러오고 있어요.</p>
+        <p role="status">이력을 불러오는 중이에요.</p>
       ) : (
         <>
           <p className={styles.count}>총 {query.data.totalElements}건 · 만료·해제 기록도 보존돼요.</p>

@@ -52,7 +52,7 @@ function InquiryTable({ filter, page, onPage, search }: { filter: AdminInquiryFi
   const problem = accessProblem(list.error)
   if (problem) return <AdminAccessNotice problem={problem} />
   if (list.isError) return <AsyncState title="문의 목록을 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
-  if (!list.data) return <AsyncState title="문의 목록을 불러오고 있어요" />
+  if (!list.data) return <AsyncState title="문의 목록을 불러오는 중이에요" />
   const data = list.data
   return <>
     <p className={styles.count}>총 {data.totalElements}건</p>

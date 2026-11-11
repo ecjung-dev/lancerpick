@@ -24,7 +24,7 @@ export function PublicSellerPage() {
       <Link className={styles.back} to={productPath ?? '/'} state={productPath ? location.state?.productState : undefined}>
         {productPath ? '← 상품 상세로' : '← 상품 목록으로'}
       </Link>
-      {profile.isPending ? <AsyncState title="판매자 소개를 불러오고 있어요." />
+      {profile.isPending ? <AsyncState title="판매자 소개를 불러오는 중이에요" />
         : profile.isError ? (
           <AsyncState
             title={missing ? '판매자 소개를 찾을 수 없어요.' : '판매자 소개를 불러오지 못했어요.'}
@@ -64,15 +64,15 @@ function SellerProducts({ sellerId }: { sellerId: string }) {
   return (
     <section aria-labelledby="seller-products-title" aria-busy={products.isFetching}>
       <h2 id="seller-products-title" className={styles.sectionTitle}>판매 중인 상품</h2>
-      {products.isPending ? <AsyncState title="상품을 불러오고 있어요." />
+      {products.isPending ? <AsyncState title="상품을 불러오는 중이에요" />
         : products.isError ? (
-          <AsyncState title="상품을 불러오지 못했어요." error={products.error} onRetry={() => void products.refetch()} />
+          <AsyncState title="상품을 불러오지 못했어요" error={products.error} onRetry={() => void products.refetch()} />
         ) : (
           <>
             {page > 0 && page >= products.data.totalPages ? (
-              <AsyncState title="요청한 페이지에 상품이 없어요." />
+              <AsyncState title="요청한 페이지에 상품이 없어요" />
             ) : products.data.items.length === 0 ? (
-              <AsyncState title="현재 판매 중인 상품이 없어요." />
+              <AsyncState title="현재 판매 중인 상품이 없어요" />
             ) : (
               <div className={styles.products}>
                 {products.data.items.map((product) => (

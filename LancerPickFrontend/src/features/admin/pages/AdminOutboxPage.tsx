@@ -61,7 +61,7 @@ function Issues({ filter, onApply, search }: { filter: OutboxFilter; onApply: (n
     </form>
     {problem ? <AdminAccessNotice problem={problem} />
       : list.isError ? <AsyncState title="알림 처리 상태를 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
-        : !list.data ? <AsyncState title="알림 처리 상태를 불러오고 있어요" />
+        : !list.data ? <AsyncState title="알림 처리 상태를 불러오는 중이에요" />
           : <>
             <p className={styles.count}>총 {list.data.totalElements}건</p>
             {list.data.items.length === 0

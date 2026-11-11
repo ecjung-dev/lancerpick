@@ -110,7 +110,7 @@ function SaleStatusPanel({ memberId, id, checking }: { memberId: string; id: str
   if (accountInvalid || (product.data && product.data.seller.id !== memberId)) {
     return <AsyncState title="로그인 계정을 다시 확인해 주세요" description="이전 계정의 상품 정보를 숨겼어요. 페이지를 다시 열어 주세요." />
   }
-  if (product.isPending) return <AsyncState title="상품 판매 상태를 불러오고 있어요" />
+  if (product.isPending) return <AsyncState title="상품 판매 상태를 불러오는 중이에요" />
   if (product.isError) return <AsyncState title="본인 상품을 조회하지 못했어요" error={product.error} onRetry={() => { void product.refetch() }} />
   const value = product.data
   return <div className={styles.panel}>

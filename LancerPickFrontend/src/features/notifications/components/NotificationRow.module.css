@@ -6,7 +6,7 @@
 .row strong { font-size: 13px; font-weight: 650; }
 .read strong { color: #626262; font-weight: 450; }
 .title { color: #555; font-size: 12px; }
-.row small { color: #737373; font-size: 11px; }
+.row small { color: var(--muted); font-size: 11px; }
 .row .plain:disabled { cursor: default; opacity: 1; }
 .error { margin: 6px 4px 0; font-size: 12px; line-height: 1.6; color: var(--ink); }
 .error a { text-decoration: underline; }

@@ -9,7 +9,7 @@
 .meta { color: #686868; font-size: 13px; margin: 8px 0; }
 .status { flex-shrink: 0; padding: 6px 12px; border-radius: 4px; background: #f1f1ef; font-size: 13px; font-weight: 650; margin-top: 26px; }
 .steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0 0 40px; }
-.steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 13px; color: #8a8a8a; }
+.steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
 .steps li:not(:last-child)::after { content: ''; position: absolute; height: 2px; background: #e2e2e2; left: calc(50% + 9px); right: calc(-50% + 9px); top: 8px; }
 .steps .stepReached { color: #171717; font-weight: 650; }
 .steps .stepReached:not([aria-current])::after { background: #171717; }
@@ -34,8 +34,8 @@
 .card { padding: 24px; border: 1px solid #dedede; border-radius: 12px; min-width: 0; background: #fff; }
 .card h2, .summary h2 { font-size: 19px; margin: 0 0 16px; letter-spacing: -.025em; }
 .card h3 { font-size: 15px; margin: 0; }
-.count { margin-left: 8px; color: #777; font-size: 13px; font-weight: 400; }
-.empty { color: #777; font-size: 14px; padding: 12px 0; margin: 0; }
+.count { margin-left: 8px; color: var(--muted); font-size: 13px; font-weight: 400; }
+.empty { color: var(--muted); font-size: 14px; padding: 12px 0; margin: 0; }
 .text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .delivery + .delivery { margin-top: 22px; padding-top: 22px; border-top: 1px solid #eee; }
 .deliveryHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -54,7 +54,7 @@
 .summary dl > div { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; font-size: 13px; margin: 12px 0; }
 .summary dt { color: #686868; flex-shrink: 0; }
 .summary dd { margin: 0; font-weight: 600; text-align: right; }
-.summary small { display: block; font-size: 12px; color: #777; line-height: 1.65; }
+.summary small { display: block; font-size: 12px; color: var(--muted); line-height: 1.65; }
 .summaryRows { border-top: 1px solid #e3e3e3; padding-top: 14px; }
 .chatEntry button { display: block; width: 100%; min-height: 44px; border: 1px solid #171717; border-radius: 8px; background: #fff; color: #171717; padding: 10px 12px; font: inherit; font-size: 14px; cursor: pointer; }
 .chatEntry button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }

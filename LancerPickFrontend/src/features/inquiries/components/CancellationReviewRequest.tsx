@@ -83,7 +83,7 @@ export function CancellationReviewRequest({ order, disabled }: Props) {
       {inquiries.isError && (
         <p role="alert">
           검토 요청 내역을 불러오지 못했어요.{' '}
-          <button type="button" onClick={() => { void inquiries.refetch() }}>다시 불러오기</button>
+          <button type="button" onClick={() => { void inquiries.refetch() }}>다시 조회</button>
         </p>
       )}
       {items.map((item) => (

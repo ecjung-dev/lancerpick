@@ -32,7 +32,7 @@ export function AdminDashboardPage() {
     <p className={styles.lead}>지금 확인할 일의 건수예요. 숫자를 누르면 해당 화면으로 이동해요. 각 숫자는 조회한 순간의 값이에요.</p>
     {problem ? <AdminAccessNotice problem={problem} />
       : !summary.data && summary.isError ? <AsyncState title="운영 현황을 불러오지 못했어요" error={summary.error} onRetry={() => { void summary.refetch() }} />
-        : !summary.data ? <AsyncState title="운영 현황을 불러오고 있어요" />
+        : !summary.data ? <AsyncState title="운영 현황을 불러오는 중이에요" />
           : <>
             {summary.isError && <p className={styles.notice} role="alert">최신 현황을 불러오지 못했어요. 아래는 마지막으로 확인한 값이에요.</p>}
             {cards(summary.data).every((card) => card.count === 0) && <p className={styles.allClear} role="status">
@@ -41,7 +41,7 @@ export function AdminDashboardPage() {
               {cards(summary.data).map((card) => <li key={card.to + card.label} className={card.count > 0 ? styles.attention : undefined}>
                 <Link to={card.to}>
                   <span>{card.label}</span>
-                  <strong>{card.count.toLocaleString()}건</strong>
+                  <strong>{card.count.toLocaleString('ko-KR')}건</strong>
                 </Link>
                 <small>{card.help}</small>
               </li>)}

@@ -84,7 +84,7 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
     </form>
     {problem ? <AdminAccessNotice problem={problem} />
       : list.isError ? <AsyncState title="결제 목록을 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
-        : !list.data ? <AsyncState title="결제 목록을 불러오고 있어요" />
+        : !list.data ? <AsyncState title="결제 목록을 불러오는 중이에요" />
           : <>
             <p className={styles.count}>총 {list.data.totalElements}건</p>
             {list.data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 결제가 없어요.</p> : <div className={styles.tableWrap}><table className={styles.table}>
@@ -127,7 +127,7 @@ function Topups({ filter, onApply, search }: { filter: TopupFilter; onApply: (ne
     </form>
     {problem ? <AdminAccessNotice problem={problem} />
       : list.isError ? <AsyncState title="충전 목록을 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
-        : !list.data ? <AsyncState title="충전 목록을 불러오고 있어요" />
+        : !list.data ? <AsyncState title="충전 목록을 불러오는 중이에요" />
           : <>
             <p className={styles.count}>총 {list.data.totalElements}건</p>
             {list.data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 충전이 없어요.</p> : <div className={styles.tableWrap}><table className={styles.table}>
@@ -172,7 +172,7 @@ function Jobs() {
   const problem = accessProblem(list.error)
   if (problem) return <AdminAccessNotice problem={problem} />
   if (list.isError) return <AsyncState title="복구 작업 목록을 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
-  if (!list.data) return <AsyncState title="복구 작업 목록을 불러오고 있어요" />
+  if (!list.data) return <AsyncState title="복구 작업 목록을 불러오는 중이에요" />
   return <>
     <p className={styles.count}>작업 {list.data.totalElements}개 (작업별 최신 실행만 표시)</p>
     {list.data.items.length === 0 ? <p className={styles.empty}>실행된 충전 복구 작업이 없어요.</p> : <ul className={styles.list}>

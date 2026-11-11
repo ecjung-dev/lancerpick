@@ -39,10 +39,10 @@ export function OrderChatPanel({
     if (changed) void recheckSession(client)
   }, [changed, client])
   if (changed)
-    return <AsyncState title="현재 계정으로 대화를 다시 확인하고 있어요." />
+    return <AsyncState title="현재 계정으로 대화를 다시 확인하고 있어요" />
   // 배경 재확인으로 같은 계정의 입력을 지우지 않는다. 계정 변경은 아래 key로 입력·조회 모두 초기화한다.
   if (member.isPending)
-    return <AsyncState title="대화의 로그인 상태를 확인하고 있어요." />
+    return <AsyncState title="대화의 로그인 상태를 확인하고 있어요" />
   if (member.isError)
     return (
       <section className={`${styles.panel} ${floating ? styles.floating : ''}`}>
@@ -137,7 +137,7 @@ function ChatConversation({
         />
       </section>
     )
-  if (!query.data) return <AsyncState title="대화를 불러오고 있어요." />
+  if (!query.data) return <AsyncState title="대화를 불러오는 중이에요" />
   return (
     <section
       className={`${styles.panel} ${floating ? styles.floating : ''}`}

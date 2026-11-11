@@ -38,7 +38,7 @@ function MyProductsList({ memberId, page, path, checking, onPage }: {
   const products = useMyProducts(memberId, page)
   if (isUnauthorized(products.error)) return <LoginNotice path={path} />
   if (products.isError) return <AsyncState title="내 상품을 불러오지 못했어요" error={products.error} onRetry={() => { void products.refetch() }} />
-  if (!products.data) return <AsyncState title="내 상품을 불러오고 있어요" />
+  if (!products.data) return <AsyncState title="내 상품을 불러오는 중이에요" />
   if (products.data.items.some(product => product.seller.id !== memberId)) return <AsyncState title="로그인 계정을 다시 확인해 주세요" description="이전 계정의 상품을 표시하지 않아요. 페이지를 다시 열어 주세요." />
   const outOfRange = page > 0 && page >= products.data.totalPages
   const busy = products.isFetching || checking

@@ -50,7 +50,7 @@ export function AdminMemberListPage() {
           }}
         />
       ) : !query.data ? (
-        <AsyncState title="회원 목록을 불러오고 있어요" />
+        <AsyncState title="회원 목록을 불러오는 중이에요" />
       ) : (
         <>
           <p className={styles.count}>

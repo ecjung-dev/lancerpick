@@ -34,7 +34,7 @@ export function AdminReviewTimerPage() {
     <p className={styles.lead}>판매자가 시작한 7일 타이머가 끝나면 구매가 자동 확정되고 판매자에게 대금이 지급돼요. 운영 확인이 필요하면 만료 전에 해제할 수 있어요. 해제한 타이머는 같은 납품으로 다시 시작할 수 없어요.</p>
     {problem ? <AdminAccessNotice problem={problem} />
       : list.isError ? <AsyncState title="타이머 목록을 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
-        : !list.data ? <AsyncState title="타이머 목록을 불러오고 있어요" />
+        : !list.data ? <AsyncState title="타이머 목록을 불러오는 중이에요" />
           : <>
             <p className={styles.count}>진행 중 {list.data.totalElements}건</p>
             {list.data.items.length === 0 ? <p className={styles.empty}>진행 중인 타이머가 없어요.</p> : <ul className={styles.list}>
@@ -113,7 +113,7 @@ function StopForm({ timer, onDone }: { timer: ActiveReviewTimer; onDone: () => v
       <label htmlFor={fieldId}>해제 사유 <span>필수</span></label>
       <textarea id={fieldId} rows={3} value={reason} aria-invalid={!!error} aria-describedby={`${fieldId}-help ${fieldId}-error`}
         onChange={(e) => { setReason(e.target.value); setError(undefined) }} />
-      <p id={`${fieldId}-help`} className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString()}자</p>
+      <p id={`${fieldId}-help`} className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString('ko-KR')}자</p>
       <p id={`${fieldId}-error`} className={styles.fieldError}>{error}</p>
       <div className={styles.actions}>
         <button className={styles.button} type="submit">{stop.isPending ? '처리 중…' : '해제'}</button>

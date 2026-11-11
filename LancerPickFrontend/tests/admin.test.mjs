@@ -208,7 +208,7 @@ test('a failed refetch keeps the last product and the form instead of replacing 
   try {
     const html = render(`/admin/products/${id}`, '/admin/products/:id', AdminProductDetailPage, client)
     assert.match(html, /최신 상태를 불러오지 못했어요/)
-    assert.match(html, /다시 불러오기/)
+    assert.match(html, /다시 조회/)
     assert.match(html, /로고 디자인/)
     assert.match(html, /moderation-reason/)
     assert.doesNotMatch(html, /상품을 불러오지 못했어요/)

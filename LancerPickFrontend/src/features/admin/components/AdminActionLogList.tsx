@@ -18,7 +18,7 @@ export function AdminActionLogList({ filter, empty }: { filter: ActionLogFilter;
   const problem = accessProblem(list.error)
   if (problem) return <AdminAccessNotice problem={problem} />
   if (list.isError) return <AsyncState title="작업 이력을 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
-  if (!list.data) return <AsyncState title="작업 이력을 불러오고 있어요" />
+  if (!list.data) return <AsyncState title="작업 이력을 불러오는 중이에요" />
   return <>
     <p className={styles.count}>총 {list.data.totalElements}건</p>
     {list.data.items.length === 0 ? <p className={styles.empty}>{empty}</p> : <div className={styles.tableWrap}><table className={styles.table}>
