@@ -11,6 +11,8 @@ import { AdminNav } from './AdminNav'
 import { AdminPager } from '../components/AdminPager'
 import { canResetFilter } from '../filterReset'
 import styles from './Admin.module.css'
+import { StatusBadge } from '../components/StatusBadge'
+import { inquiryTones, toneOf } from '../statusTone'
 
 /** /admin/inquiries. 필터·페이지를 URL에 두어 새로고침·뒤로가기·상세에서 돌아오기 때 그대로 복원한다. */
 export function AdminInquiryListPage() {
@@ -61,7 +63,7 @@ function InquiryTable({ filter, page, onPage, search }: { filter: AdminInquiryFi
       </tr></thead>
       <tbody>{data.items.map((item) => <tr key={item.id}>
         <td className={styles.cellId} data-label="번호">#{item.id}</td>
-        <td data-label="상태"><span className={item.status === 'CLOSED' ? styles.visible : styles.hidden}>{inquiryStatusLabel(item.status)}</span></td>
+        <td data-label="상태"><StatusBadge tone={toneOf(inquiryTones, item.status)}>{inquiryStatusLabel(item.status)}</StatusBadge></td>
         <td data-label="유형">{inquiryTypeLabel(item.type)}</td>
         {/* 취소 검토 문의는 제목이 대부분 같아 주문 번호 열로 구분한다. */}
         <td className={styles.cellId} data-label="주문">{item.orderId ? `#${item.orderId}` : '—'}</td>

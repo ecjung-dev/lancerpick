@@ -154,7 +154,8 @@ test('a finished request shows the receipt, not a success claim for an accepted 
       receipt: receipt({ action: 'TOPUP_RECOVERY_RESTART', targetType: 'BATCH_JOB_EXECUTION', targetId: '31', reason: '재시작',
         resultCode: 'BATCH_RESTART_ACCEPTED' }) })
     const html = render('/', '/', createElement(AdminReprocessPanel, { action: 'TOPUP_RECOVERY_RESTART', target: '31', eligible: true }), client)
-    assert.match(html, /충전 복구 작업 재시작 · 처리됨/)
+    // 재시작의 "처리됨"은 접수일 뿐이라 완료(초록) 배지를 쓰지 않는다.
+    assert.match(html, /<strong>충전 복구 작업 재시작<\/strong> <span [^>]*data-tone="neutral">처리됨<\/span>/)
     assert.match(html, /재시작을 접수했어요\. 작업이 끝났다는 뜻은 아니/)
     assert.match(html, /<button[^>]*type="button">새 요청 작성<\/button>/)
   } finally { client.clear() }

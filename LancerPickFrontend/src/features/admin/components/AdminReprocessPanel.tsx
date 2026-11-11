@@ -7,6 +7,8 @@ import {
 } from '../reprocessApi'
 import { REASON_MAX, validateReason } from '../validation'
 import styles from '../pages/Admin.module.css'
+import { StatusBadge } from './StatusBadge'
+import { actionTones, toneOf } from '../statusTone'
 
 const BUTTONS: Record<ReprocessAction, string> = {
   TOPUP_RECHECK: '재확인 요청', TOPUP_RECOVERY_RESTART: '재시작 요청', CONTRACT_PDF_REGENERATE: 'PDF 다시 만들기 요청',
@@ -66,7 +68,7 @@ export function AdminReprocessPanel({ action, target, eligible, version }: {
 
   if (receipt) {
     return <div className={styles.notice} role="status">
-      <p><strong>{ACTION_LABELS[action]} · {STATUS_LABELS[receipt.status] ?? receipt.status}</strong></p>
+      <p><strong>{ACTION_LABELS[action]}</strong> <StatusBadge tone={toneOf(actionTones, receipt.status)}>{STATUS_LABELS[receipt.status] ?? receipt.status}</StatusBadge></p>
       <p>{resultLabel(receipt)}</p>
       <small>요청 #{receipt.id} · 사유: {receipt.reason}</small>
       {eligible && <div className={styles.actions}>

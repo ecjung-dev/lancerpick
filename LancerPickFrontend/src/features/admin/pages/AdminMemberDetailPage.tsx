@@ -5,6 +5,8 @@ import { formatDateTime } from '../../../shared/lib/format'
 import { accessProblem } from '../access'
 import { AdminMemberCommands } from '../components/AdminMemberCommands'
 import { AdminMemberHistory } from '../components/AdminMemberHistory'
+import { StatusBadge } from '../components/StatusBadge'
+import { restrictionTones, toneOf } from '../statusTone'
 import { useAdminMember } from '../memberQueries'
 import { restrictionLabels } from '../memberValidation'
 import { isValidProductId as validId } from '../validation'
@@ -73,7 +75,10 @@ export function AdminMemberDetailPage() {
           <section className={`${styles.block} ${styles.statusCard}`}>
             <div className={styles.statusHead}>
               <h2>
-                현재 상태 · {restrictionLabels[query.data.member.restriction]}
+                현재 상태{' '}
+                <StatusBadge tone={toneOf(restrictionTones, query.data.member.restriction)}>
+                  {restrictionLabels[query.data.member.restriction]}
+                </StatusBadge>
               </h2>
               <button
                 type="button"

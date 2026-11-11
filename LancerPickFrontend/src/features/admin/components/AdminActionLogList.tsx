@@ -8,6 +8,8 @@ import {
   ACTION_LABELS, STATUS_LABELS, resultLabel, targetLabel, useActionLogs, type ActionLogFilter,
 } from '../reprocessApi'
 import styles from '../pages/Admin.module.css'
+import { StatusBadge } from './StatusBadge'
+import { actionTones, toneOf } from '../statusTone'
 
 /** K6 관리자 작업 이력(최신순). 금융 조회의 "작업 이력" 탭과 주문 금액 화면이 함께 쓴다. 조회만 한다. */
 export function AdminActionLogList({ filter, empty }: { filter: ActionLogFilter; empty: string }) {
@@ -30,7 +32,7 @@ export function AdminActionLogList({ filter, empty }: { filter: ActionLogFilter;
           <td className={styles.cellId} data-label="요청">#{log.id}</td>
           <td data-label="작업"><strong>{ACTION_LABELS[log.action] ?? log.action}</strong></td>
           <td data-label="대상">{targetLabel(log)}</td>
-          <td data-label="상태"><span className={log.status === 'SUCCEEDED' ? styles.badge : styles.hidden}>{STATUS_LABELS[log.status] ?? log.status}</span></td>
+          <td data-label="상태"><StatusBadge tone={toneOf(actionTones, log.status)}>{STATUS_LABELS[log.status] ?? log.status}</StatusBadge></td>
           <td data-label="결과">{resultLabel(log)}</td>
           <td className={styles.cellId} data-label="관리자">#{log.adminId}</td>
           <td className={styles.cellDate} data-label="요청일">{formatDateTime(log.requestedAt)}</td>

@@ -190,3 +190,48 @@ test('복구 결과 키는 충전 건별 결과 라벨과 키를 함께 보여 �
   assert.equal(labels.codeLabel(labels.jobOutcomeLabels, 'completed'), '충전 완료 (completed)')
   assert.equal(labels.codeLabel(labels.jobOutcomeLabels, 'stale'), '처리 조건 변경·처리권 없음 (stale)')
 })
+
+test('상태 톤은 뜻별로 정하고, 표에 없는 코드는 neutral이다', async () => {
+  const t = await server.ssrLoadModule('/src/features/admin/statusTone.ts')
+  assert.equal(t.toneOf(t.paymentTones, 'PAID'), 'ok')
+  assert.equal(t.toneOf(t.paymentTones, 'REFUNDED'), 'neutral', '환불 완료는 남은 조치가 없어 주의가 아니다')
+  assert.equal(t.toneOf(t.fundsTones, 'REFUNDED'), 'neutral')
+  assert.equal(t.toneOf(t.fundsTones, 'RELEASED'), 'ok')
+  assert.equal(t.toneOf(t.topupTones, 'UNKNOWN'), 'warn')
+  assert.equal(t.toneOf(t.topupTones, 'FAILED'), 'danger')
+  assert.equal(t.toneOf(t.jobTones, 'ABANDONED'), 'danger')
+  assert.equal(t.toneOf(t.actionTones, 'REJECTED'), 'neutral', '반영 안 됨은 실패와 구분한다')
+  assert.equal(t.toneOf(t.actionTones, 'SUCCEEDED'), 'neutral', '처리됨은 접수일 수 있어 완료 색을 쓰지 않는다')
+  assert.equal(t.toneOf(t.actionTones, 'FAILED'), 'danger')
+  assert.equal(t.toneOf(t.closureTones, 'BALANCE_UNPAID'), 'neutral', '이미 끝난 거래의 종료 사유는 경고가 아니다')
+  assert.equal(t.toneOf(t.inquiryTones, 'OPEN'), 'warn')
+  assert.equal(t.toneOf(t.restrictionTones, 'SECURITY_LOCK'), 'danger')
+  assert.equal(t.toneOf(t.topupTones, 'NEW_STATUS'), 'neutral')
+  assert.equal(t.visibilityTone(true), 'strong')
+})
+
+test('결제 목록은 결제·환불을 같은 배지 모양으로 보여 주고, 상세의 결제 상태와 톤이 같다', () => {
+  const client = newClient()
+  try {
+    const filter = { orderId: '', buyerId: '', sellerId: '', status: '', policyVersion: '' }
+    const row = (id, status) => ({ id, orderId: id, buyerId: '5', sellerId: '6', policyVersion: 'CONTRACT_V3', orderStatus: 'COMPLETED', status,
+      amount: 1000, refundedAmount: status === 'REFUNDED' ? 1000 : 0, paidAt: '2026-11-09T00:00:00Z', refundedAt: null })
+    client.setQueryData(['admin', 'finance', 'payments', filter, 0], { ...empty, totalElements: 3, totalPages: 1,
+      items: [row('11', 'PAID'), row('12', 'REFUNDED'), row('13', 'NEW_STATUS')] })
+    const list = render('/admin/finance', '/admin/finance', createElement(AdminFinancePage), client)
+    const badge = (tone, text) => new RegExp(`data-label="상태"><span class="([^"]*)" data-tone="${tone}">${text}</span>`)
+    const paid = list.match(badge('ok', '결제'))
+    const refunded = list.match(badge('neutral', '환불'))
+    assert.ok(paid && refunded, '결제·환불 모두 배지')
+    assert.ok(list.match(badge('neutral', 'NEW_STATUS')), '모르는 상태도 원문 코드로 기본 배지')
+    const base = (cls) => cls.split(' ')[0]
+    assert.equal(base(paid[1]), base(refunded[1]), '배지 기본 클래스가 같다(색만 다름)')
+
+    client.setQueryData(['admin', 'finance', 'order', '11'], {
+      orderId: '11', buyerId: '5', sellerId: '6', policyVersion: 'CONTRACT_V3', orderStatus: 'COMPLETED', orderAmount: 1000,
+      payment: row('11', 'PAID'), funds: null, settlement: null, closure: null })
+    client.setQueryData(['admin', 'finance', 'pdf', '11'], null)
+    const detail = render('/admin/finance/orders/11', '/admin/finance/orders/:id', createElement(AdminOrderFinancePage), client)
+    assert.match(detail, /data-tone="ok">결제 완료 \(PAID\)</)
+  } finally { client.clear() }
+})

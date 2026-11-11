@@ -18,6 +18,8 @@ import { AdminNav } from './AdminNav'
 import { MemberLink } from '../components/MemberLink'
 import { AdminPager } from '../components/AdminPager'
 import styles from './Admin.module.css'
+import { StatusBadge } from '../components/StatusBadge'
+import { saleStatusTones, toneOf, visibilityTone } from '../statusTone'
 
 /** 목록에서 넘겨준 돌아갈 주소. 관리자 목록 경로만 허용한다. */
 export function AdminProductDetailPage() {
@@ -56,8 +58,8 @@ function ProductSummary({ product, refreshing }: { product: AdminProductDetail; 
       <h1>{product.title}</h1>
       {/* 목록과 같은 기준: 숨김·판매 중지만 배지, 공개·판매 중은 보통 글자. */}
       <p className={styles.statusLine}>
-        <span className={product.isHidden ? styles.hidden : styles.cellMuted}>{product.isHidden ? '숨김' : '공개'}</span>
-        <span className={product.saleStatus === 'ON_SALE' ? styles.cellMuted : styles.toneWarn}>{saleStatusLabel(product.saleStatus)}</span>
+        <StatusBadge tone={visibilityTone(product.isHidden)}>{product.isHidden ? '숨김' : '공개'}</StatusBadge>
+        <StatusBadge tone={toneOf(saleStatusTones, product.saleStatus)}>{saleStatusLabel(product.saleStatus)}</StatusBadge>
       </p>
       {refreshing && <p role="status">최신 상태를 확인하고 있어요.</p>}
     </header>
@@ -173,7 +175,7 @@ function ModerationLogs({ id }: { id: string }) {
             : <div className={styles.tableWrap}><table className={styles.table}>
               <thead><tr><th scope="col">처리</th><th scope="col">사유</th><th scope="col">관리자</th><th scope="col">처리일</th></tr></thead>
               <tbody>{logs.data.items.map((log) => <tr key={log.id}>
-                <td data-label="처리"><span className={log.action === 'HIDE' ? styles.hidden : styles.visible}>{log.action === 'HIDE' ? '숨김' : '복구'}</span></td>
+                <td data-label="처리"><StatusBadge tone={visibilityTone(log.action === 'HIDE')}>{log.action === 'HIDE' ? '숨김' : '복구'}</StatusBadge></td>
                 <td className={styles.cellText} data-label="사유">{log.reason}</td>
                 <td className={styles.cellId} data-label="관리자">관리자 #{log.adminId}</td>
                 <td className={styles.cellDate} data-label="처리일"><time dateTime={log.createdAt}>{formatDateTime(log.createdAt)}</time></td>

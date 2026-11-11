@@ -5,6 +5,8 @@ import { formatDateTime } from '../../../shared/lib/format'
 import { normalizeText } from '../../../shared/lib/text'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
 import { AdminPager } from '../components/AdminPager'
+import { StatusBadge } from '../components/StatusBadge'
+import { restrictionTones, toneOf } from '../statusTone'
 import { accessProblem } from '../access'
 import { useAdminMembers } from '../memberQueries'
 import { readMemberFilter, restrictionLabels } from '../memberValidation'
@@ -88,29 +90,15 @@ export function AdminMemberListPage() {
                       </td>
                       <td data-label="이메일">{member.email}</td>
                       <td data-label="구분">
-                        {member.role === 'ADMIN' ? (
-                          <span className={styles.hidden}>관리자</span>
-                        ) : (
-                          '일반 회원'
-                        )}
+                        <StatusBadge tone={member.role === 'ADMIN' ? 'strong' : 'neutral'}>
+                          {member.role === 'ADMIN' ? '관리자' : '일반 회원'}
+                        </StatusBadge>
                       </td>
-                      {/* 제한이 있을 때만 배지. "제한 없음"은 보통 글자로 둬 확인할 회원이 눈에 띄게 한다. */}
+                      {/* "제한 없음"은 기본 배지, 제한은 주의·위험 색이라 확인할 회원이 눈에 띈다. */}
                       <td data-label="제한 상태">
-                        {member.restriction === 'NONE' ? (
-                          <span className={styles.cellMuted}>
-                            {restrictionLabels.NONE}
-                          </span>
-                        ) : (
-                          <span
-                            className={
-                              member.restriction === 'SECURITY_LOCK'
-                                ? styles.toneDanger
-                                : styles.toneWarn
-                            }
-                          >
-                            {restrictionLabels[member.restriction]}
-                          </span>
-                        )}
+                        <StatusBadge tone={toneOf(restrictionTones, member.restriction)}>
+                          {restrictionLabels[member.restriction]}
+                        </StatusBadge>
                       </td>
                       <td className={styles.cellDate} data-label="가입일">
                         {formatDateTime(member.createdAt)}

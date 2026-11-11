@@ -19,6 +19,8 @@ import { ACTION_LABELS, type ReprocessAction } from '../reprocessApi'
 import { canResetFilter } from '../filterReset'
 import { codeLabel, jobOutcomeLabels, jobStatusLabels, plainLabel, policyLabels, topupStatusLabels } from '../statusLabels'
 import styles from './Admin.module.css'
+import { StatusBadge } from '../components/StatusBadge'
+import { jobTones, paymentTones, toneOf, topupTones } from '../statusTone'
 
 type Tab = 'topups' | 'payments' | 'jobs' | 'logs'
 const TABS: { key: Tab; label: string }[] = [
@@ -92,8 +94,7 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
               </tr></thead>
               <tbody>{list.data.items.map((item) => <tr key={item.id}>
                 <td data-label="주문"><Link className={styles.cellLink} to={`/admin/finance/orders/${item.orderId}`} state={{ from: `/admin/finance?${search}` }}>#{item.orderId}</Link></td>
-                {/* 환불만 배지로 두고 결제는 보통 글자로 둔다. */}
-                <td data-label="상태"><span className={item.status === 'PAID' ? styles.cellMuted : styles.toneWarn}>{item.status === 'PAID' ? '결제' : item.status === 'REFUNDED' ? '환불' : item.status}</span></td>
+                <td data-label="상태"><StatusBadge tone={toneOf(paymentTones, item.status)}>{item.status === 'PAID' ? '결제' : item.status === 'REFUNDED' ? '환불' : item.status}</StatusBadge></td>
                 <td data-label="정책">{codeLabel(policyLabels, item.policyVersion)}</td>
                 <td data-label="주문 상태">{orderStatusLabel(item.orderStatus)}</td>
                 <td data-label="구매자"><MemberLink id={item.buyerId} from={`/admin/finance?${search}`}><span className={styles.srOnly}>구매자 </span>#{item.buyerId}</MemberLink></td>
@@ -138,7 +139,7 @@ function Topups({ filter, onApply, search }: { filter: TopupFilter; onApply: (ne
               {list.data.items.map((item) => <tbody key={item.id}>
                 <tr className={styles.hasDetail}>
                   <td className={styles.cellId} data-label="충전"><strong>#{item.id}</strong></td>
-                  <td data-label="상태"><span className={item.status === 'FAILED' ? styles.toneDanger : item.status === 'UNKNOWN' || item.status === 'PROCESSING' ? styles.toneWarn : item.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{codeLabel(topupStatusLabels, item.status)}</span></td>
+                  <td data-label="상태"><StatusBadge tone={toneOf(topupTones, item.status)}>{codeLabel(topupStatusLabels, item.status)}</StatusBadge></td>
                   <td data-label="회원"><MemberLink id={item.memberId} from={`/admin/finance?${search}`}><span className={styles.srOnly}>회원 </span>#{item.memberId}</MemberLink></td>
                   <td className={styles.cellNum} data-label="금액"><strong>{formatWon(item.amount)}</strong></td>
                   <td data-label="복구 시도">{item.recoveryAttemptCount}회{item.lastErrorCode && <span className={styles.cellSub}>오류 {item.lastErrorCode}</span>}</td>
@@ -177,7 +178,7 @@ function Jobs() {
     {list.data.items.length === 0 ? <p className={styles.empty}>실행된 충전 복구 작업이 없어요.</p> : <ul className={styles.list}>
       {list.data.items.map((job) => <li key={job.instanceId}>
         <strong>작업 #{job.instanceId}{job.executionId ? ` · 실행 #${job.executionId}` : ' · 실행 기록 없음'}</strong>
-        <p><span className={job.status === 'FAILED' || job.status === 'STOPPED' ? styles.toneDanger : job.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{codeLabel(jobStatusLabels, job.status)}</span>
+        <p><StatusBadge tone={toneOf(jobTones, job.status)}>{codeLabel(jobStatusLabels, job.status)}</StatusBadge>
           읽음 {job.readCount} · 지급 {job.creditedCount} · 제외 {job.filteredCount}</p>
         {Object.keys(job.outcomes).length > 0 && <p className={styles.help}>
           결과별 {Object.entries(job.outcomes).map(([key, count], index) => <span key={key}>{index > 0 && ' · '}{codeLabel(jobOutcomeLabels, key)} {count}</span>)}

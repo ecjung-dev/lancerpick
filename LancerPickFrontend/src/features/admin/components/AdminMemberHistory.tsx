@@ -6,6 +6,8 @@ import { useMemberSanctions } from '../memberQueries'
 import { restrictionLabels, sanctionStateLabels } from '../memberValidation'
 import { AdminAccessNotice } from '../pages/AdminAccess'
 import { AdminPager } from './AdminPager'
+import { StatusBadge } from './StatusBadge'
+import { sanctionStateTones, toneOf } from '../statusTone'
 import styles from '../pages/Admin.module.css'
 
 export function AdminMemberHistory({ memberId }: { memberId: string }) {
@@ -55,15 +57,9 @@ export function AdminMemberHistory({ memberId }: { memberId: string }) {
                       </td>
                       <td data-label="종류">{restrictionLabels[sanction.kind]}</td>
                       <td data-label="상태">
-                        <span
-                          className={
-                            sanction.state === 'ACTIVE'
-                              ? styles.toneWarn
-                              : styles.badge
-                          }
-                        >
+                        <StatusBadge tone={toneOf(sanctionStateTones, sanction.state)}>
                           {sanctionStateLabels[sanction.state]}
-                        </span>
+                        </StatusBadge>
                       </td>
                       <td className={styles.cellText} data-label="사유">
                         {sanction.reason}

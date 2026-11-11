@@ -13,6 +13,8 @@ import { AdminNav } from './AdminNav'
 import { AdminPager } from '../components/AdminPager'
 import { canResetFilter } from '../filterReset'
 import styles from './Admin.module.css'
+import { StatusBadge } from '../components/StatusBadge'
+import { saleStatusTones, toneOf, visibilityTone } from '../statusTone'
 
 /** /admin/products. 필터·페이지를 URL에 두어 새로고침·뒤로가기·상세에서 돌아오기 때 그대로 복원한다. */
 export function AdminProductListPage() {
@@ -83,8 +85,8 @@ function ProductTable({ filter, page, onPage, search }: { filter: AdminProductFi
         <td data-label="카테고리">{item.category.name}</td>
         <td data-label="판매자">{item.seller.displayName}</td>
         {/* 숨김·판매 중지만 배지로 두고 공개·판매 중은 보통 글자로 낮춰, 운영자가 확인할 상품이 눈에 띄게 한다. */}
-        <td data-label="노출"><span className={item.isHidden ? styles.hidden : styles.cellMuted}>{item.isHidden ? '숨김' : '공개'}</span></td>
-        <td data-label="판매 상태"><span className={item.saleStatus === 'ON_SALE' ? styles.cellMuted : styles.toneWarn}>{saleStatusLabel(item.saleStatus)}</span></td>
+        <td data-label="노출"><StatusBadge tone={visibilityTone(item.isHidden)}>{item.isHidden ? '숨김' : '공개'}</StatusBadge></td>
+        <td data-label="판매 상태"><StatusBadge tone={toneOf(saleStatusTones, item.saleStatus)}>{saleStatusLabel(item.saleStatus)}</StatusBadge></td>
         <td className={styles.cellNum} data-label="가격"><strong>{formatWon(item.priceAmount)}</strong></td>
         <td className={styles.cellDate} data-label="등록일">{formatDateTime(item.createdAt)}</td>
       </tr>)}</tbody>

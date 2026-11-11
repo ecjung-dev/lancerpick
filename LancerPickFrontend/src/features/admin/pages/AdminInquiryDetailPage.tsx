@@ -18,6 +18,8 @@ import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
 import { MemberLink } from '../components/MemberLink'
 import styles from './Admin.module.css'
+import { StatusBadge } from '../components/StatusBadge'
+import { cancellationTones, inquiryTones, toneOf } from '../statusTone'
 
 const FACTS = `${styles.facts} ${styles.factsAligned}`
 
@@ -64,7 +66,7 @@ function InquirySummary({ inquiry, refreshing }: { inquiry: AdminInquiryDetail; 
       <p>{inquiryTypeLabel(inquiry.type)} · 신청 {name(inquiry.requester)}</p>
       <h1>{inquiry.subject}</h1>
       <p className={styles.statusLine}>
-        <span className={inquiry.status === 'CLOSED' ? styles.visible : styles.hidden}>{inquiryStatusLabel(inquiry.status)}</span>
+        <StatusBadge tone={toneOf(inquiryTones, inquiry.status)}>{inquiryStatusLabel(inquiry.status)}</StatusBadge>
         <span>접수 {formatDateTime(inquiry.createdAt)}
           {inquiry.resolvedAt && <> · 처리 {formatDateTime(inquiry.resolvedAt)}{inquiry.assignedAdminId && <> (<MemberLink id={inquiry.assignedAdminId} role="관리자" from={here} />)</>}</>}</span>
       </p>
@@ -85,7 +87,7 @@ function InquirySummary({ inquiry, refreshing }: { inquiry: AdminInquiryDetail; 
     {request && <section className={styles.card}>
       <h2>구매자 취소 요청</h2>
       <dl className={FACTS}>
-        <dt>상태</dt><dd><span className={styles.badge}>{cancellationLabel[request.status] ?? request.status}</span></dd>
+        <dt>상태</dt><dd><StatusBadge tone={toneOf(cancellationTones, request.status)}>{cancellationLabel[request.status] ?? request.status}</StatusBadge></dd>
         <dt>요청</dt><dd>{formatDateTime(request.requestedAt)}</dd>
         {request.resolvedAt && <><dt>처리</dt><dd>{formatDateTime(request.resolvedAt)}{request.resolutionSource === 'ADMIN' ? ' (관리자)' : ''}</dd></>}
         <dt>취소 사유</dt><dd className={styles.text}>{request.reason}</dd>

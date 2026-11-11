@@ -11,6 +11,8 @@ import { AdminPager } from '../components/AdminPager'
 import { canResetFilter } from '../filterReset'
 import { codeLabel, outboxTypeLabels } from '../statusLabels'
 import styles from './Admin.module.css'
+import { StatusBadge } from '../components/StatusBadge'
+import { outboxTones, toneOf } from '../statusTone'
 
 const TABS: { key: OutboxIssueStatus; label: string }[] = [
   { key: 'FAILED', label: '처리 중단' }, { key: 'RETRYING', label: '재시도 대기' },
@@ -69,7 +71,7 @@ function Issues({ filter, onApply, search }: { filter: OutboxFilter; onApply: (n
                   <strong>{item.aggregateType === 'ORDER'
                     ? <Link to={`/admin/finance/orders/${item.aggregateId}`} state={{ from: `/admin/outbox?${search}` }}>주문 #{item.aggregateId}</Link>
                     : `${item.aggregateType} #${item.aggregateId}`} · {codeLabel(outboxTypeLabels, item.type)}</strong>
-                  <p><span className={item.status === 'FAILED' ? styles.toneDanger : styles.toneWarn}>{item.status === 'FAILED' ? '처리 중단' : '재시도 대기'}</span>
+                  <p><StatusBadge tone={toneOf(outboxTones, item.status)}>{item.status === 'FAILED' ? '처리 중단' : '재시도 대기'}</StatusBadge>
                     {outboxErrorLabel(item.lastErrorCode)} · 시도 {item.attemptCount}회</p>
                   <small>이벤트 #{item.id} · 생성 {formatDateTime(item.createdAt)}{item.nextAttemptAt && <> · 다음 시도 {formatDateTime(item.nextAttemptAt)}</>}</small>
                 </li>)}
