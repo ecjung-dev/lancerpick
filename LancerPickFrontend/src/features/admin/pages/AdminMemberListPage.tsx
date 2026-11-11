@@ -12,6 +12,7 @@ import type { AdminMemberFilter } from '../memberTypes'
 import { keywordError } from '../validation'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { canResetFilter } from '../filterReset'
 import styles from './Admin.module.css'
 
 export function AdminMemberListPage() {
@@ -35,7 +36,7 @@ export function AdminMemberListPage() {
         회원의 현재 제한 상태와 제재 이력을 확인하고 관리합니다. 보안 잠금과
         일반 이용 제한이 겹치면 보안 잠금이 우선 표시됩니다.
       </p>
-      <MemberFilter key={params.toString()} filter={filter} onApply={apply} />
+      <MemberFilter key={params.toString()} filter={filter} onApply={apply} params={params} />
       {problem ? (
         <AdminAccessNotice problem={problem} />
       ) : query.isError ? (
@@ -105,9 +106,11 @@ export function AdminMemberListPage() {
 function MemberFilter({
   filter,
   onApply,
+  params,
 }: {
   filter: AdminMemberFilter
   onApply: (next: AdminMemberFilter) => void
+  params: URLSearchParams
 }) {
   const [draft, setDraft] = useState(filter)
   const [error, setError] = useState<string>()
@@ -154,6 +157,9 @@ function MemberFilter({
         <button
           type="button"
           className={styles.secondary}
+          disabled={
+            !canResetFilter(params, ['q', 'restriction'], [draft.q, draft.restriction])
+          }
           onClick={() => {
             const empty = { q: '', restriction: '' } as const
             setDraft(empty)

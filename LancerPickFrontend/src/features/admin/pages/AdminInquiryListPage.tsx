@@ -8,6 +8,7 @@ import type { AdminInquiryFilter } from '../inquiryTypes'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { canResetFilter } from '../filterReset'
 import styles from './Admin.module.css'
 
 /** /admin/inquiries. 필터·페이지를 URL에 두어 새로고침·뒤로가기·상세에서 돌아오기 때 그대로 복원한다. */
@@ -36,6 +37,8 @@ export function AdminInquiryListPage() {
       <label>유형 <select value={filter.type} onChange={(e) => applyFilter({ ...filter, type: e.target.value as AdminInquiryFilter['type'] })}>
         <option value="">전체</option><option value="CANCELLATION_REVIEW">취소 검토</option><option value="GENERAL">일반 문의</option>
       </select></label>
+      <button type="button" className={styles.secondary} disabled={!canResetFilter(params, ['status', 'type'])}
+        onClick={() => applyFilter({ status: '', type: '' })}>초기화</button>
     </form>
     <InquiryTable filter={filter} page={page} onPage={setPage} search={params.toString()} />
   </section>

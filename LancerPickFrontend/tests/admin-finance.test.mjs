@@ -136,3 +136,29 @@ test('topup tab shows the decision and offers a recheck only for candidates', ()
     assert.match(html, /<button type="submit">재확인 요청<\/button>/)
   } finally { client.clear() }
 })
+
+// ---------- 필터 초기화 ----------
+
+test('canResetFilter는 주소의 필터 키·page(잘못된 값 포함)·입력 초안을 보고, 지정하지 않은 tab은 무시한다', async () => {
+  const { canResetFilter } = await import('../src/features/admin/filterReset.ts')
+  const keys = ['orderId', 'status']
+  assert.equal(canResetFilter(new URLSearchParams('tab=payments'), keys), false, 'tab만 있으면 지울 것이 없다')
+  assert.equal(canResetFilter(new URLSearchParams('tab=payments&page=2'), keys), true, 'page만 있어도 초기화 가능')
+  assert.equal(canResetFilter(new URLSearchParams('status=garbage'), keys), true, '읽기에서 버려진 잘못된 값도 주소에 남았으면 지운다')
+  assert.equal(canResetFilter(new URLSearchParams(''), keys, ['', '  ']), false)
+  assert.equal(canResetFilter(new URLSearchParams(''), keys, ['12']), true, '주소가 비어도 적용 전 입력이 있으면 지운다')
+})
+
+test('결제 필터 초기화 버튼은 조건이 없으면 막히고, 조건이 있으면 열린다(type=button, 탭 유지 대상 아님)', () => {
+  const client = newClient()
+  try {
+    const none = { orderId: '', buyerId: '', sellerId: '', status: '', policyVersion: '' }
+    client.setQueryData(['admin', 'finance', 'payments', none, 0], empty)
+    const idle = render('/admin/finance?tab=payments', '/admin/finance', createElement(AdminFinancePage), client)
+    assert.match(idle, /<button type="button"[^>]*disabled=""[^>]*>초기화<\/button>/)
+    const filtered = { ...none, status: 'PAID' }
+    client.setQueryData(['admin', 'finance', 'payments', filtered, 0], empty)
+    const active = render('/admin/finance?tab=payments&status=PAID', '/admin/finance', createElement(AdminFinancePage), client)
+    assert.match(active, /<button type="button"(?![^>]*disabled)[^>]*>초기화<\/button>/)
+  } finally { client.clear() }
+})

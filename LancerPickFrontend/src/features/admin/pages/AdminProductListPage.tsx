@@ -10,6 +10,7 @@ import { keywordError, readFilter, saleStatusLabel } from '../validation'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { canResetFilter } from '../filterReset'
 import styles from './Admin.module.css'
 
 /** /admin/products. 필터·페이지를 URL에 두어 새로고침·뒤로가기·상세에서 돌아오기 때 그대로 복원한다. */
@@ -33,13 +34,13 @@ export function AdminProductListPage() {
     <AdminNav />
     <h1>상품 운영</h1>
     <p className={styles.lead}>숨김은 판매 상태와 별개예요. 숨긴 상품은 공개 목록과 신규 주문에서 빠지고, 기존 거래는 그대로 유지돼요.</p>
-    <FilterForm key={params.toString()} filter={filter} onApply={applyFilter} />
+    <FilterForm key={params.toString()} filter={filter} onApply={applyFilter} params={params} />
     {tooLong ? <p className={styles.fieldError} role="alert">{tooLong}</p>
       : <ProductTable filter={filter} page={page} onPage={setPage} search={params.toString()} />}
   </section>
 }
 
-function FilterForm({ filter, onApply }: { filter: AdminProductFilter; onApply: (next: AdminProductFilter) => void }) {
+function FilterForm({ filter, onApply, params }: { filter: AdminProductFilter; onApply: (next: AdminProductFilter) => void; params: URLSearchParams }) {
   const [keyword, setKeyword] = useState(filter.keyword)
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -56,6 +57,8 @@ function FilterForm({ filter, onApply }: { filter: AdminProductFilter; onApply: 
       <option value="">전체</option><option value="ON_SALE">판매 중</option><option value="STOPPED">판매 중지</option>
     </select></label>
     <button type="submit">검색</button>
+    <button type="button" className={styles.secondary} disabled={!canResetFilter(params, ['keyword', 'isHidden', 'saleStatus'], [keyword])}
+      onClick={() => { setKeyword(''); onApply({ keyword: '', isHidden: '', saleStatus: '' }) }}>초기화</button>
   </form>
 }
 

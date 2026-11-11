@@ -14,6 +14,7 @@ import { AdminNav } from './AdminNav'
 import { AdminReprocessPanel } from '../components/AdminReprocessPanel'
 import { AdminActionLogList } from '../components/AdminActionLogList'
 import { ACTION_LABELS, type ReprocessAction } from '../reprocessApi'
+import { canResetFilter } from '../filterReset'
 import styles from './Admin.module.css'
 
 type Tab = 'topups' | 'payments' | 'jobs' | 'logs'
@@ -23,6 +24,10 @@ const TABS: { key: Tab; label: string }[] = [
 ]
 const ACTIONS = Object.keys(ACTION_LABELS) as ReprocessAction[]
 const time = (value: string | null) => value ? formatDateTime(value) : '—'
+/** 초기화 대상 주소 키. tab은 넣지 않아 초기화해도 같은 탭에 머문다. */
+const PAYMENT_KEYS = ['orderId', 'buyerId', 'sellerId', 'status', 'policyVersion'] as const
+const EMPTY_PAYMENT: PaymentFilter = { orderId: '', buyerId: '', sellerId: '', status: '', policyVersion: '' }
+const TOPUP_KEYS = ['memberId', 'status'] as const
 
 /** /admin/finance. 탭·필터·페이지를 URL에 두어 새로고침·뒤로가기·주문 금액 화면에서 돌아오기 때 그대로 복원한다. 조회만 한다. */
 export function AdminFinancePage() {
@@ -46,7 +51,7 @@ export function AdminFinancePage() {
       {TABS.map((item) => <Link key={item.key} to={`/admin/finance?tab=${item.key}`} aria-current={tab === item.key ? 'page' : undefined}>{item.label}</Link>)}
     </nav>
     {tab === 'payments' && <Payments key={params.toString()} filter={readPaymentFilter(params)} onApply={(f) => apply({ tab, ...f })} search={params.toString()} />}
-    {tab === 'topups' && <Topups key={params.toString()} filter={readTopupFilter(params)} onApply={(f) => apply({ tab, ...f })} />}
+    {tab === 'topups' && <Topups key={params.toString()} filter={readTopupFilter(params)} onApply={(f) => apply({ tab, ...f })} search={params.toString()} />}
     {tab === 'jobs' && <Jobs />}
     {tab === 'logs' && <Logs key={params.toString()} action={readAction(params)} onApply={(action) => apply({ tab, action })} />}
   </section>
@@ -80,6 +85,8 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
         <option value="">전체</option><option value="CONTRACT_V3">V3(전액 보관)</option><option value="CONTRACT_V2">V2</option><option value="LEGACY_V1">기존</option>
       </select></label>
       <button type="submit">조회</button>
+      <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), PAYMENT_KEYS, Object.values(draft))}
+        onClick={() => { setDraft(EMPTY_PAYMENT); onApply(EMPTY_PAYMENT) }}>초기화</button>
     </form>
     {problem ? <AdminAccessNotice problem={problem} />
       : list.isError ? <AsyncState title="결제 목록을 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
@@ -99,7 +106,7 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
   </>
 }
 
-function Topups({ filter, onApply }: { filter: TopupFilter; onApply: (next: TopupFilter) => void }) {
+function Topups({ filter, onApply, search }: { filter: TopupFilter; onApply: (next: TopupFilter) => void; search: string }) {
   const [page, setPage] = usePageSearchParam()
   const [memberId, setMemberId] = useState(filter.memberId)
   const list = useTopups(filter, page)
@@ -111,6 +118,8 @@ function Topups({ filter, onApply }: { filter: TopupFilter; onApply: (next: Topu
         <option value="">전체</option>{['READY', 'PROCESSING', 'UNKNOWN', 'COMPLETED', 'FAILED'].map((s) => <option key={s} value={s}>{s}</option>)}
       </select></label>
       <button type="submit">조회</button>
+      <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), TOPUP_KEYS, [memberId])}
+        onClick={() => { setMemberId(''); onApply({ memberId: '', status: '' }) }}>초기화</button>
     </form>
     {problem ? <AdminAccessNotice problem={problem} />
       : list.isError ? <AsyncState title="충전 목록을 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
@@ -169,6 +178,7 @@ function Logs({ action, onApply }: { action?: ReprocessAction; onApply: (action:
       <label>작업 종류 <select value={action ?? ''} onChange={(e) => onApply(e.target.value)}>
         <option value="">전체</option>{ACTIONS.map((a) => <option key={a} value={a}>{ACTION_LABELS[a]}</option>)}
       </select></label>
+      <button type="button" className={styles.secondary} disabled={!action} onClick={() => onApply('')}>초기화</button>
     </form>
     <AdminActionLogList filter={{ action }} empty="관리자 작업 이력이 없어요." />
   </>
