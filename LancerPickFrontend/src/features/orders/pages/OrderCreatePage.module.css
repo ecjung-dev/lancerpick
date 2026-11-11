@@ -30,7 +30,7 @@
   resize: vertical;
 }
 .form [role='alert'] {
-  color: #a12626;
+  color: var(--danger);
 }
 .actions {
   display: flex;

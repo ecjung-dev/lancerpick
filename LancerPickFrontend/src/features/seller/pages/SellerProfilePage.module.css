@@ -9,12 +9,12 @@
 .field textarea { width: 100%; resize: vertical; min-height: 160px; border: 1px solid var(--line); border-radius: 8px; padding: 13px; font: inherit; font-size: 14px; line-height: 1.7; }
 .field textarea[aria-invalid='true'] { border: 2px solid var(--ink); }
 .help { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
-.fieldError { margin: 6px 0 0; color: #9f2929; font-size: 12px; min-height: 0; }
+.fieldError { margin: 6px 0 0; color: var(--danger); font-size: 12px; min-height: 0; }
 .fieldError:empty { display: none; }
 .actions { border-top: 1px solid var(--line); padding-top: 23px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .actions p { color: var(--muted); font-size: 12px; }
-.success { background: #f1f6f2; color: #285333; padding: 14px; border-radius: 8px; font-size: 14px; }
-.error { background: #fff4f3; color: #9f2929; padding: 14px; border-radius: 8px; font-size: 14px; overflow-wrap: anywhere; }
+.success { background: var(--success-surface); color: var(--success); padding: 14px; border-radius: 8px; font-size: 14px; }
+.error { background: var(--danger-surface); color: var(--danger); padding: 14px; border-radius: 8px; font-size: 14px; overflow-wrap: anywhere; }
 .error small { display: block; margin-top: 6px; }
 .link { display: inline-block; margin-top: 20px; color: var(--ink); }
 @media (max-width: 600px) { .page { padding-top: 24px; } .card { padding: 22px 16px; } .actions { align-items: stretch; flex-direction: column; } .actions p { margin: 0; } }

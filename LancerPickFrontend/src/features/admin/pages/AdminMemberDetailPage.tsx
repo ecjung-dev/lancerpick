@@ -77,7 +77,7 @@ export function AdminMemberDetailPage() {
               </h2>
               <button
                 type="button"
-                className={styles.secondary}
+                className={`${styles.button} ${styles.secondary}`}
                 disabled={query.isFetching}
                 onClick={() => {
                   void query.refetch()

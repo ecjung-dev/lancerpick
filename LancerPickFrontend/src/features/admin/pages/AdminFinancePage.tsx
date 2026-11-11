@@ -76,8 +76,8 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
       <label>정책 <select value={draft.policyVersion} onChange={(e) => setDraft({ ...draft, policyVersion: e.target.value as PaymentFilter['policyVersion'] })}>
         <option value="">전체</option>{(["CONTRACT_V3", "CONTRACT_V2", "LEGACY_V1"] as const).map((p) => <option key={p} value={p}>{plainLabel(policyLabels, p)}</option>)}
       </select></label>
-      <button type="submit">조회</button>
-      <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), PAYMENT_KEYS, Object.values(draft))}
+      <button className={styles.button} type="submit">조회</button>
+      <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={!canResetFilter(new URLSearchParams(search), PAYMENT_KEYS, Object.values(draft))}
         onClick={() => { setDraft(EMPTY_PAYMENT); onApply(EMPTY_PAYMENT) }}>초기화</button>
     </form>
     {problem ? <AdminAccessNotice problem={problem} />
@@ -120,8 +120,8 @@ function Topups({ filter, onApply, search }: { filter: TopupFilter; onApply: (ne
       <label>상태 <select value={filter.status} onChange={(e) => onApply({ memberId, status: e.target.value as TopupFilter['status'] })}>
         <option value="">전체</option>{['READY', 'PROCESSING', 'UNKNOWN', 'COMPLETED', 'FAILED'].map((s) => <option key={s} value={s}>{plainLabel(topupStatusLabels, s)}</option>)}
       </select></label>
-      <button type="submit">조회</button>
-      <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), TOPUP_KEYS, [memberId])}
+      <button className={styles.button} type="submit">조회</button>
+      <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={!canResetFilter(new URLSearchParams(search), TOPUP_KEYS, [memberId])}
         onClick={() => { setMemberId(''); onApply({ memberId: '', status: '' }) }}>초기화</button>
     </form>
     {problem ? <AdminAccessNotice problem={problem} />
@@ -203,7 +203,7 @@ function Logs({ action, onApply, search }: { action?: ReprocessAction; onApply: 
       <label>작업 종류 <select value={action ?? ''} onChange={(e) => onApply(e.target.value)}>
         <option value="">전체</option>{ACTIONS.map((a) => <option key={a} value={a}>{ACTION_LABELS[a]}</option>)}
       </select></label>
-      <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), ['action'])} onClick={() => onApply('')}>초기화</button>
+      <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={!canResetFilter(new URLSearchParams(search), ['action'])} onClick={() => onApply('')}>초기화</button>
     </form>
     <AdminActionLogList filter={{ action }} empty="관리자 작업 이력이 없어요." />
   </>

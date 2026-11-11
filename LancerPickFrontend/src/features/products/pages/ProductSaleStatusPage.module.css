@@ -5,7 +5,7 @@
 .panel dl { display: grid; grid-template-columns: 140px 1fr; gap: 16px; }
 .panel dd { margin: 0; }
 .panel p { line-height: 1.8; }
-.panel [role=alert] { color: #a12626; }
+.panel [role=alert] { color: var(--danger); }
 .confirm { margin-top: 24px; padding-top: 16px; border-top: 1px solid #ddd; }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; }
 @media (max-width: 600px) { .panel { padding: 18px; } .panel dl { grid-template-columns: 1fr; gap: 8px; } }

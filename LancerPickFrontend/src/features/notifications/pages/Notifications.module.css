@@ -1,9 +1,5 @@
 /* 거래 내역과 같은 제목 영역·보조 버튼 규칙(docs/architecture.md#conventions). 알림 행 버튼에 걸리지 않도록 버튼마다 클래스를 붙인다. */
 .notifications { max-width: 760px; margin: 40px auto; padding: 0 20px; overflow-wrap: anywhere; color: var(--ink); }
-.heading { padding: 8px 0 26px; border-bottom: 2px solid var(--ink); }
-.heading h1 { margin: 6px 0 10px; font-size: 28px; letter-spacing: -.05em; }
-.heading p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
-.heading .eyebrow { font-size: 10px; letter-spacing: .16em; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin: 20px 0; }
 .filters { display: flex; gap: 6px; }
 .chip, .secondary { font: inherit; font-size: 12px; min-height: 40px; padding: 9px 14px; border-radius: 8px; cursor: pointer; }
@@ -19,5 +15,4 @@
 .list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 @media (max-width: 560px) {
   .notifications { margin-top: 24px; padding: 0 16px; }
-  .heading h1 { font-size: 24px; }
 }

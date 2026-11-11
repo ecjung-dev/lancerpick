@@ -9,13 +9,13 @@
 .field label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 650; }
 .field label span { margin-left: 7px; font-size: 11px; color: var(--muted); font-weight: 450; }
 .help { margin: 7px 0 0; font-size: 12px; color: var(--muted); line-height: 1.6; }
-.fieldError { margin: 6px 0 0; color: #9f2929; font-size: 12px; }
+.fieldError { margin: 6px 0 0; color: var(--danger); font-size: 12px; }
 .fieldError:empty { display: none; }
 .submit { width: 100%; margin-top: 6px; }
 .switch { margin: 22px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
 .switch a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-.success { background: #f1f6f2; color: #285333; padding: 13px; border-radius: 8px; font-size: 14px; margin: 0 0 20px; }
-.error { background: #fff4f3; color: #9f2929; padding: 13px; border-radius: 8px; font-size: 14px; margin: 0 0 20px; overflow-wrap: anywhere; }
+.success { background: var(--success-surface); color: var(--success); padding: 13px; border-radius: 8px; font-size: 14px; margin: 0 0 20px; }
+.error { background: var(--danger-surface); color: var(--danger); padding: 13px; border-radius: 8px; font-size: 14px; margin: 0 0 20px; overflow-wrap: anywhere; }
 .error small { display: block; margin-top: 6px; }
 .notice { margin: 0 0 18px; font-size: 15px; }
 .links { display: flex; gap: 18px; font-size: 14px; }

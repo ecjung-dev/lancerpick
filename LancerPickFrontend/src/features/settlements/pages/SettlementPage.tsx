@@ -9,6 +9,7 @@ import styles from './SettlementPage.module.css'
 
 import { useSettlements, useSettlementSummary } from '../queries'
 import { Pager } from '../../../shared/components/Pager'
+import { PageHeading } from '../../../shared/components/PageHeading'
 
 function payoutLabel(status: Settlement['payoutStatus']) {
   return status === 'CREDITED' ? '적립금 지급 완료'
@@ -35,9 +36,7 @@ export function SettlementPage() {
     void summary.refetch()
   }
 
-  const heading = <header className={styles.heading}>
-    <p className={styles.eyebrow}>SELLER EARNINGS</p>
-    <h1>판매 수익</h1>
+  const heading = <PageHeading eyebrow="SELLER EARNINGS" title="판매 수익">
     {!unauthorized && <>
       <p>
         구매 확정된 거래의 수익 기록이에요. 새 전자계약 거래의 수익은
@@ -45,7 +44,7 @@ export function SettlementPage() {
       </p>
       <p>기존 거래의 수익은 별도 기록으로 유지하며, 출금 기능은 제공하지 않아요.</p>
     </>}
-  </header>
+  </PageHeading>
 
   if (unauthorized) {
     return <section className={styles.settlements}>

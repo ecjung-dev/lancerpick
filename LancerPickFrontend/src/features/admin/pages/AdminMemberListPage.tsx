@@ -184,10 +184,10 @@ function MemberFilter({
             ))}
           </select>
         </label>
-        <button type="submit">조회</button>
+        <button className={styles.button} type="submit">조회</button>
         <button
           type="button"
-          className={styles.secondary}
+          className={`${styles.button} ${styles.secondary}`}
           disabled={
             !canResetFilter(params, ['q', 'restriction'], [draft.q, draft.restriction])
           }

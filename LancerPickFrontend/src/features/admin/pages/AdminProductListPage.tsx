@@ -57,8 +57,8 @@ function FilterForm({ filter, onApply, params }: { filter: AdminProductFilter; o
     <label>판매 상태 <select value={filter.saleStatus} onChange={(e) => onApply({ ...filter, keyword: typed(), saleStatus: e.target.value as AdminProductFilter['saleStatus'] })}>
       <option value="">전체</option><option value="ON_SALE">판매 중</option><option value="STOPPED">판매 중지</option>
     </select></label>
-    <button type="submit">검색</button>
-    <button type="button" className={styles.secondary} disabled={!canResetFilter(params, ['keyword', 'isHidden', 'saleStatus'], [keyword])}
+    <button className={styles.button} type="submit">검색</button>
+    <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={!canResetFilter(params, ['keyword', 'isHidden', 'saleStatus'], [keyword])}
       onClick={() => { setKeyword(''); onApply({ keyword: '', isHidden: '', saleStatus: '' }) }}>초기화</button>
   </form>
 }

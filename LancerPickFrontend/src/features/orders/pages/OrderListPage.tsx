@@ -15,6 +15,7 @@ import {
 } from '../listFilters'
 import styles from './OrderListPage.module.css'
 import { Pager } from '../../../shared/components/Pager'
+import { PageHeading } from '../../../shared/components/PageHeading'
 
 export function OrderListPage() {
   const [params, setParams] = useSearchParams()
@@ -27,12 +28,9 @@ export function OrderListPage() {
 
   return (
     <section className={styles.orders}>
-      <header className={styles.heading}>
-        <div><p className={styles.eyebrow}>MY TRANSACTIONS</p>
-          <h1>{filters.side === 'SELLER' ? '판매 내역' : '구매 내역'}</h1>
-          <p>{filters.side === 'SELLER' ? '받은 주문과 작업 진행 상황을 확인할 수 있어요.' : '주문한 서비스와 거래 진행 상황을 확인할 수 있어요.'}</p>
-        </div>
-      </header>
+      <PageHeading eyebrow="MY TRANSACTIONS" title={filters.side === 'SELLER' ? '판매 내역' : '구매 내역'}>
+        <p>{filters.side === 'SELLER' ? '받은 주문과 작업 진행 상황을 확인할 수 있어요.' : '주문한 서비스와 거래 진행 상황을 확인할 수 있어요.'}</p>
+      </PageHeading>
       <SearchForm
         key={`${filters.q}|${filters.from}|${filters.to}`}
         filters={filters}

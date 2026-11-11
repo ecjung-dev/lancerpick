@@ -13,6 +13,7 @@ import { createProduct, getOwnedProduct, patchProduct, validateProduct, textLimi
 import type { Category } from '../types'
 import styles from './ProductEditorPage.module.css'
 import { myProductsReturnPath } from '../myProductsNavigation'
+import { PageHeading } from '../../../shared/components/PageHeading'
 
 export function ProductEditorPage() {
   const { id } = useParams()
@@ -32,10 +33,10 @@ function Editor({ id, memberId, checking }: { id?: string; memberId: string; che
   if (product.isError || categories.isError) return <AsyncState title="상품 정보를 불러오지 못했어요" error={product.error ?? categories.error} onRetry={() => { if (id) void product.refetch(); void categories.refetch() }} />
   if (!categories.data || (id && !product.data)) return <AsyncState title="상품 정보 확인 중" />
   return <section className={styles.page}>
-    <header className={styles.heading}>
-      <div><p className={styles.eyebrow}>MY SERVICE</p><h1>{id ? '상품 수정' : '상품 등록'}</h1><p>서비스의 범위와 조건을 명확하게 안내해 주세요.</p></div>
-      <Link className={styles.back} to={listPath}>내 상품 조회 <span aria-hidden="true">↗</span></Link>
-    </header>
+    <PageHeading eyebrow="MY SERVICE" title={id ? '상품 수정' : '상품 등록'}
+      actions={<Link className={styles.back} to={listPath}>내 상품 조회 <span aria-hidden="true">↗</span></Link>}>
+      <p>서비스의 범위와 조건을 명확하게 안내해 주세요.</p>
+    </PageHeading>
     {id && <p><Link to={`/mypage/products/${id}/sale-status`} state={{ fromMyProducts: listPath }}>상품 판매 상태 관리 →</Link></p>}
     <ProductForm key={id ?? 'new'} initial={product.data} categories={categories.data} memberId={memberId} checking={checking} />
   </section>

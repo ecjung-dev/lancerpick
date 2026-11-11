@@ -6,6 +6,7 @@ import { notificationReadOptions, useNotifications } from '../queries'
 import { NotificationRow } from '../components/NotificationRow'
 import styles from './Notifications.module.css'
 import { Pager } from '../../../shared/components/Pager'
+import { PageHeading } from '../../../shared/components/PageHeading'
 
 export { NotificationReadError } from '../components/NotificationRow'
 
@@ -26,11 +27,9 @@ export function NotificationsPage() {
   const readAll = useMutation(notificationReadOptions(client))
   return (
     <section className={styles.notifications}>
-      <header className={styles.heading}>
-        <p className={styles.eyebrow}>NOTIFICATIONS</p>
-        <h1>알림</h1>
+      <PageHeading eyebrow="NOTIFICATIONS" title="알림">
         <p>거래 진행과 계정 관련 알림을 확인해요. 알림을 누르면 읽음으로 표시돼요.</p>
-      </header>
+      </PageHeading>
       <div className={styles.toolbar}>
         <div role="group" aria-label="알림 보기" className={styles.filters}>
           <button type="button" className={styles.chip} aria-pressed={!unreadOnly} onClick={() => showPage(0, false)}>전체</button>

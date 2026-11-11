@@ -70,7 +70,7 @@ export function AdminReprocessPanel({ action, target, eligible, version }: {
       <p>{resultLabel(receipt)}</p>
       <small>요청 #{receipt.id} · 사유: {receipt.reason}</small>
       {eligible && <div className={styles.actions}>
-        <button type="button" onClick={() => clearReprocessResult(client, action, target)}>새 요청 작성</button>
+        <button className={styles.button} type="button" onClick={() => clearReprocessResult(client, action, target)}>새 요청 작성</button>
       </div>}
     </div>
   }
@@ -87,7 +87,7 @@ export function AdminReprocessPanel({ action, target, eligible, version }: {
       <textarea id={`${id}-reason`} value={pending ? pending.command.reason : reason} disabled={!!pending}
         onChange={(event) => { setReason(event.target.value); setError(undefined) }} />
       <div className={styles.actions}>
-        <button type="submit" disabled={busy}>{busy ? '처리 중…' : uncertain ? '같은 요청으로 결과 확인' : BUTTONS[action]}</button>
+        <button className={styles.button} type="submit" disabled={busy}>{busy ? '처리 중…' : uncertain ? '같은 요청으로 결과 확인' : BUTTONS[action]}</button>
       </div>
     </form>
   </details>

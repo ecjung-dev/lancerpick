@@ -47,7 +47,7 @@ export function AdminInquiryDetailPage() {
             : <>
               {inquiry.isError && <div className={styles.notice} role="alert">
                 <p>최신 상태를 불러오지 못했어요. 아래 내용은 마지막으로 확인한 상태예요.</p>
-                <button type="button" className={styles.secondary} disabled={inquiry.isFetching} onClick={() => { void inquiry.refetch() }}>다시 불러오기</button>
+                <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={inquiry.isFetching} onClick={() => { void inquiry.refetch() }}>다시 불러오기</button>
               </div>}
               <InquirySummary inquiry={inquiry.data} refreshing={inquiry.isFetching} />
               {inquiry.data.allowedActions.includes('APPROVE') && <DecisionForm key={`${inquiry.data.id}:${inquiry.data.status}`} inquiry={inquiry.data} />}
@@ -175,8 +175,8 @@ function DecisionForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
       <p id="inquiry-reason-error" className={styles.fieldError}>{error}</p>
       <label><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> 승인 시 주문 취소와 전액 반환이 되돌릴 수 없음을 확인했어요.</label>
       <div className={styles.actions}>
-        <button type="button" disabled={!agree} onClick={() => submit('approve')}>{decide.isPending ? '처리 중…' : '승인 및 전액 반환'}</button>
-        <button type="button" onClick={() => submit('reject')}>{decide.isPending ? '처리 중…' : '거절'}</button>
+        <button className={styles.button} type="button" disabled={!agree} onClick={() => submit('approve')}>{decide.isPending ? '처리 중…' : '승인 및 전액 반환'}</button>
+        <button className={styles.button} type="button" onClick={() => submit('reject')}>{decide.isPending ? '처리 중…' : '거절'}</button>
       </div>
     </fieldset>
   </form>
@@ -218,6 +218,6 @@ function CloseForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
     <h2>문의 닫기</h2>
     <p>연결된 취소 요청이 이미 처리돼 승인·거절할 수 없어요. 문의만 처리 완료로 닫고 주문·대금은 바꾸지 않아요.</p>
     {notice && <p className={styles.notice} role="status">{notice}</p>}
-    <button type="submit" disabled={close.isPending}>{close.isPending ? '처리 중…' : '문의 닫기'}</button>
+    <button className={styles.button} type="submit" disabled={close.isPending}>{close.isPending ? '처리 중…' : '문의 닫기'}</button>
   </form>
 }

@@ -141,7 +141,7 @@ test('panel hides for non-candidates and shows only "same request" for an uncert
     assert.match(html, /<details[^>]*open=""/)
     assert.match(html, /서버가 이미 처리했을 수 있어요/)
     assert.match(html, /이전 사유/)
-    assert.match(html, /<button type="submit">같은 요청으로 결과 확인<\/button>/)
+    assert.match(html, /<button[^>]*type="submit">같은 요청으로 결과 확인<\/button>/)
     assert.doesNotMatch(html, /재시작 요청/)
   } finally { client.clear() }
 })
@@ -156,7 +156,7 @@ test('a finished request shows the receipt, not a success claim for an accepted 
     const html = render('/', '/', createElement(AdminReprocessPanel, { action: 'TOPUP_RECOVERY_RESTART', target: '31', eligible: true }), client)
     assert.match(html, /충전 복구 작업 재시작 · 처리됨/)
     assert.match(html, /재시작을 접수했어요\. 작업이 끝났다는 뜻은 아니/)
-    assert.match(html, /<button type="button">새 요청 작성<\/button>/)
+    assert.match(html, /<button[^>]*type="button">새 요청 작성<\/button>/)
   } finally { client.clear() }
 })
 

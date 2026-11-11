@@ -215,7 +215,7 @@ export function AdminMemberCommands({
           대상 회원과 처리 영향을 확인했어요.
         </label>
       </fieldset>
-      <button type="submit" disabled={busy || stale || (!stored && !confirmed)}>
+      <button className={styles.button} type="submit" disabled={busy || stale || (!stored && !confirmed)}>
         {busy
           ? '처리 중…'
           : stored

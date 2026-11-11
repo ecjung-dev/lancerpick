@@ -52,9 +52,9 @@ function Issues({ filter, onApply, search }: { filter: OutboxFilter; onApply: (n
   return <>
     <form className={styles.filters} role="search" onSubmit={(e: FormEvent) => { e.preventDefault(); onApply({ ...filter, orderId }) }}>
       <label>주문 번호 <input inputMode="numeric" value={orderId} onChange={(e) => setOrderId(e.target.value.replace(/[^0-9]/g, ''))} /></label>
-      <button type="submit">조회</button>
+      <button className={styles.button} type="submit">조회</button>
       {/* 상태 탭(status)은 유지하고 주문 번호·page만 지운다. */}
-      <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), ['orderId'], [orderId])}
+      <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={!canResetFilter(new URLSearchParams(search), ['orderId'], [orderId])}
         onClick={() => { setOrderId(''); onApply({ ...filter, orderId: '' }) }}>초기화</button>
     </form>
     {problem ? <AdminAccessNotice problem={problem} />

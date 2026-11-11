@@ -24,11 +24,11 @@ export function AdminPager({
   return (
     <nav className={styles.pager} aria-label={label}>
       {outOfRange && (
-        <button type="button" disabled={busy} onClick={() => onPage(0)}>
+        <button className={`${styles.button} ${styles.secondary}`} type="button" disabled={busy} onClick={() => onPage(0)}>
           첫 페이지로
         </button>
       )}
-      <button
+      <button className={`${styles.button} ${styles.secondary}`}
         type="button"
         disabled={busy || page === 0}
         onClick={() => onPage(page - 1)}
@@ -36,7 +36,7 @@ export function AdminPager({
         이전
       </button>
       <span>{page + 1}페이지</span>
-      <button
+      <button className={`${styles.button} ${styles.secondary}`}
         type="button"
         disabled={busy || page + 1 >= totalPages}
         onClick={() => onPage(page + 1)}

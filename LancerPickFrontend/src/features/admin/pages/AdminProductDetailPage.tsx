@@ -40,7 +40,7 @@ export function AdminProductDetailPage() {
               {/* 다시 조회만 실패했으면 입력 중인 사유를 잃지 않도록 화면은 두고 안내만 한다. */}
               {product.isError && <div className={styles.notice} role="alert">
                 <p>최신 상태를 불러오지 못했어요. 아래 내용은 마지막으로 확인한 상태예요.</p>
-                <button type="button" className={styles.secondary} disabled={product.isFetching} onClick={() => { void product.refetch() }}>다시 불러오기</button>
+                <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={product.isFetching} onClick={() => { void product.refetch() }}>다시 불러오기</button>
               </div>}
               <ProductSummary product={product.data} refreshing={product.isFetching} />
               <VisibilityForm key={product.data.id} product={product.data} />
@@ -154,7 +154,7 @@ function VisibilityForm({ product }: { product: AdminProductDetail }) {
         onChange={(e) => { setReason(e.target.value); setError(undefined) }} placeholder="운영 기록에 남는 사유예요." />
       <p id="moderation-reason-help" className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString()}자</p>
       <p id="moderation-reason-error" className={styles.fieldError}>{error}</p>
-      <button type="submit">{save.isPending ? '처리 중…' : nextHidden ? '숨기기' : '복구하기'}</button>
+      <button className={styles.button} type="submit">{save.isPending ? '처리 중…' : nextHidden ? '숨기기' : '복구하기'}</button>
     </fieldset>
     {save.isSuccess && <p className={styles.success} role="status">{save.data.isHidden ? '숨김 상태예요.' : '공개 상태예요.'} 처리 내역은 운영 이력에서 확인할 수 있어요.</p>}
   </form>

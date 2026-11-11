@@ -38,7 +38,7 @@ export function AdminInquiryListPage() {
       <label>유형 <select value={filter.type} onChange={(e) => applyFilter({ ...filter, type: e.target.value as AdminInquiryFilter['type'] })}>
         <option value="">전체</option><option value="CANCELLATION_REVIEW">취소 검토</option><option value="GENERAL">일반 문의</option>
       </select></label>
-      <button type="button" className={styles.secondary} disabled={!canResetFilter(params, ['status', 'type'])}
+      <button type="button" className={`${styles.button} ${styles.secondary}`} disabled={!canResetFilter(params, ['status', 'type'])}
         onClick={() => applyFilter({ status: '', type: '' })}>초기화</button>
     </form>
     <InquiryTable filter={filter} page={page} onPage={setPage} search={params.toString()} />

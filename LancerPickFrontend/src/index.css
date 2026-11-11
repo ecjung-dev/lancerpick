@@ -10,6 +10,13 @@
   --muted: #707070;
   --line: #e5e5e5;
   --surface: #f7f7f5;
+  /* 상태 색: 오류·완료·주의 안내의 글자색과 옅은 바탕. 흰 바탕 대비 4.5:1 이상. */
+  --danger: #9f2929;
+  --danger-surface: #fff4f3;
+  --success: #285333;
+  --success-surface: #f1f6f2;
+  --warning: #6b4a12;
+  --warning-surface: #fff8ec;
 }
 
 * { box-sizing: border-box; }

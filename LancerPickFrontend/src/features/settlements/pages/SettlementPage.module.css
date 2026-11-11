@@ -1,10 +1,6 @@
 /* 마이페이지 계정 레이아웃 안에서 거래 내역(OrderListPage)과 같은 제목·카드 체계를 쓴다. */
 .settlements { color: var(--ink); overflow-wrap: anywhere; }
 .settlements p { line-height: 1.7; }
-.heading { padding: 8px 0 26px; border-bottom: 2px solid var(--ink); }
-.heading h1 { margin: 6px 0 10px; font-size: 28px; letter-spacing: -.05em; }
-.heading p { margin: 0; color: var(--muted); font-size: 13px; }
-.heading .eyebrow { font-size: 10px; letter-spacing: .16em; }
 .notice { margin: 24px 0; font-size: 14px; }
 .notice a { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .settlements :is(button, a):focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
@@ -47,7 +43,6 @@
   .settlement-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) {
-  .heading h1 { font-size: 24px; }
   .settlement-summary div { padding: 14px 16px; }
   .settlement-summary dd { font-size: 16px; }
   .settlement-list li { padding: 16px; }

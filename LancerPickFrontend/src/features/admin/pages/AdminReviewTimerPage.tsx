@@ -45,7 +45,7 @@ export function AdminReviewTimerPage() {
                 <small>시작 {formatDateTime(timer.startedAt)} · 자동 확정 예정 {formatDateTime(timer.expiresAt)}</small>
                 {selected === timer.orderId
                   ? <StopForm key={timer.timerId} timer={timer} onDone={() => setSelected(undefined)} />
-                  : <div className={styles.actions}><button type="button" onClick={() => setSelected(timer.orderId)}>해제하기</button></div>}
+                  : <div className={styles.actions}><button className={styles.button} type="button" onClick={() => setSelected(timer.orderId)}>해제하기</button></div>}
               </li>)}
             </ul>}
             <AdminPager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="타이머 목록 페이지" />
@@ -116,8 +116,8 @@ function StopForm({ timer, onDone }: { timer: ActiveReviewTimer; onDone: () => v
       <p id={`${fieldId}-help`} className={styles.help}>{normalizedLength(reason)} / {REASON_MAX.toLocaleString()}자</p>
       <p id={`${fieldId}-error`} className={styles.fieldError}>{error}</p>
       <div className={styles.actions}>
-        <button type="submit">{stop.isPending ? '처리 중…' : '해제'}</button>
-        <button type="button" className={styles.secondary} onClick={onDone}>취소</button>
+        <button className={styles.button} type="submit">{stop.isPending ? '처리 중…' : '해제'}</button>
+        <button type="button" className={`${styles.button} ${styles.secondary}`} onClick={onDone}>취소</button>
       </div>
     </fieldset>
   </form>

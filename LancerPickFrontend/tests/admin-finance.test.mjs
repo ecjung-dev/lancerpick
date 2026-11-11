@@ -137,7 +137,7 @@ test('topup tab shows the decision and offers a recheck only for candidates', ()
     assert.match(html, /복구 기능 꺼짐 \(RECOVERY_DISABLED\)/)
     assert.match(html, /재처리 후보 · 실행 직전에 서버가 다시 확인해요/)
     assert.match(html, /<summary>충전 재확인<\/summary>/)
-    assert.match(html, /<button type="submit">재확인 요청<\/button>/)
+    assert.match(html, /<button[^>]*type="submit">재확인 요청<\/button>/)
   } finally { client.clear() }
 })
 
