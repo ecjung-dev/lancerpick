@@ -8,6 +8,7 @@ import type { Settlement } from '../types'
 import styles from './SettlementPage.module.css'
 
 import { useSettlements, useSettlementSummary } from '../queries'
+import { Pager } from '../../../shared/components/Pager'
 
 function payoutLabel(status: Settlement['payoutStatus']) {
   return status === 'CREDITED' ? '적립금 지급 완료'
@@ -107,13 +108,7 @@ export function SettlementPage() {
               </div>
             </li>)}
           </ul>}
-        {list.data.items.length === 0 && page > 0 &&
-          <button type="button" className={styles.secondary} disabled={list.isFetching} onClick={() => setPage(0)}>첫 페이지로</button>}
-        {page < list.data.totalPages && (page > 0 || list.data.totalPages > 1) && <nav aria-label="정산 내역 페이지">
-          <button type="button" className={styles.secondary} disabled={list.isFetching || page === 0} onClick={() => setPage(page - 1)}>이전</button>
-          <span>{page + 1}페이지</span>
-          <button type="button" className={styles.secondary} disabled={list.isFetching || page + 1 >= list.data.totalPages} onClick={() => setPage(page + 1)}>다음</button>
-        </nav>}
+        <Pager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="정산 내역 페이지" />
       </>}
   </section>
 }

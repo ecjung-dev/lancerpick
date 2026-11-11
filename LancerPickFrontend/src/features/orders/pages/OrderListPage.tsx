@@ -14,6 +14,7 @@ import {
   type OrderListFilters,
 } from '../listFilters'
 import styles from './OrderListPage.module.css'
+import { Pager } from '../../../shared/components/Pager'
 
 export function OrderListPage() {
   const [params, setParams] = useSearchParams()
@@ -228,24 +229,7 @@ function OrderList({
           ))}
         </ul>
       )}
-      {(page > 0 || query.data.totalPages > 1) && <nav aria-label="거래 내역 페이지">
-        <button
-          disabled={page === 0 || query.isFetching}
-          onClick={() => onPageChange(page - 1)}
-        >
-          이전
-        </button>
-        <span>{page + 1}페이지</span>
-        <button
-          disabled={page + 1 >= query.data.totalPages || query.isFetching}
-          onClick={() => onPageChange(page + 1)}
-        >
-          다음
-        </button>
-      </nav>}
-      {page > 0 && query.data.items.length === 0 && (
-        <button onClick={() => onPageChange(0)}>첫 페이지로</button>
-      )}
+      <Pager page={page} totalPages={query.data.totalPages} busy={query.isFetching} onPage={onPageChange} label="거래 내역 페이지" />
     </>
   )
 }

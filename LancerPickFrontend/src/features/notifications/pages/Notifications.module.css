@@ -17,8 +17,6 @@
 .notice a { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .empty { margin: 0; padding: 56px 20px; text-align: center; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; }
 .list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.pager { display: flex; justify-content: center; align-items: center; gap: 18px; margin: 28px 0; font-size: 12px; }
-.recover { display: block; margin: 0 auto; }
 @media (max-width: 560px) {
   .notifications { margin-top: 24px; padding: 0 16px; }
   .heading h1 { font-size: 24px; }

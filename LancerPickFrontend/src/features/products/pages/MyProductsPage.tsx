@@ -3,11 +3,11 @@ import { Link, useLocation } from 'react-router'
 import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Icon } from '../../../shared/components/Icon'
-import { Button } from '../../../shared/components/Button'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
 import { useMyProducts, useMyProductsSession } from '../queries'
 import styles from './MyProductsPage.module.css'
+import { Pager } from '../../../shared/components/Pager'
 
 export function MyProductsPage() {
   const session = useMyProductsSession()
@@ -59,12 +59,7 @@ function MyProductsList({ memberId, page, path, checking, onPage }: {
           {!product.isHidden && product.saleStatus === 'ON_SALE' && <Link className={styles.public} to={`/products/${product.id}`} aria-label={`${product.title} 공개 상세`}>공개 상세 <Icon name="arrow" size={14} /></Link>}
         </div>
       </li>)}</ul>}
-    {outOfRange && <Button variant="secondary" disabled={busy} onClick={() => onPage(0)}>첫 페이지로</Button>}
-    {(products.data.totalPages > 1 || page > 0) && <nav className={styles.pagination} aria-label="내 상품 페이지">
-      <Button variant="secondary" disabled={page === 0 || busy} onClick={() => onPage(page - 1)}>이전</Button>
-      <span>현재 요청 {page + 1}페이지 · 총 {products.data.totalPages}페이지</span>
-      <Button variant="secondary" disabled={page + 1 >= products.data.totalPages || busy} onClick={() => onPage(page + 1)}>다음</Button>
-    </nav>}
+    <Pager page={page} totalPages={products.data.totalPages} busy={busy} onPage={onPage} label="내 상품 페이지" />
   </>
 }
 

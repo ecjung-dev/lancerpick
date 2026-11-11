@@ -5,6 +5,7 @@ import { captureAccountScope, loginPath } from '../../auth/session'
 import { notificationReadOptions, useNotifications } from '../queries'
 import { NotificationRow } from '../components/NotificationRow'
 import styles from './Notifications.module.css'
+import { Pager } from '../../../shared/components/Pager'
 
 export { NotificationReadError } from '../components/NotificationRow'
 
@@ -80,21 +81,7 @@ function NotificationList({
           {query.data.items.map((item) => <NotificationRow key={item.id} item={item} />)}
         </ul>
       )}
-      {(page > 0 || query.data.totalPages > 1) && <nav aria-label="알림 페이지" className={styles.pager}>
-        <button type="button" className={styles.secondary} disabled={page === 0 || query.isFetching} onClick={() => onPageChange(page - 1)}>이전</button>
-        <span>{page + 1}페이지</span>
-        <button
-          type="button"
-          className={styles.secondary}
-          disabled={page + 1 >= query.data.totalPages || query.isFetching}
-          onClick={() => onPageChange(page + 1)}
-        >
-          다음
-        </button>
-      </nav>}
-      {page > 0 && query.data.items.length === 0 && (
-        <button type="button" className={`${styles.secondary} ${styles.recover}`} onClick={() => onPageChange(0)}>첫 페이지로</button>
-      )}
+      <Pager page={page} totalPages={query.data.totalPages} busy={query.isFetching} onPage={onPageChange} label="알림 페이지" />
     </>
   )
 }

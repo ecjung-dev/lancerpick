@@ -60,7 +60,7 @@ test('public seller shows the scoped product page and escapes profile text', () 
         createElement(Route, { path: '/sellers/:id', element: createElement(PublicSellerPage) })))))
     assert.match(html, /공개 판매자/)
     assert.match(html, /판매자 상품/)
-    assert.match(html, /2 \/ 2/)
+    assert.match(html, /2페이지 \/ 총 2페이지/)
     assert.match(html, /&lt;script&gt;소개&lt;\/script&gt;/)
     assert.doesNotMatch(html, /javascript:|<script>/)
   } finally { client.clear() }

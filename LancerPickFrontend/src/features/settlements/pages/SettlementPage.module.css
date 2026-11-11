@@ -42,7 +42,6 @@
 .empty { padding: 64px 20px; text-align: center; border: 1px solid var(--line); border-radius: 10px; }
 .empty strong { font-size: 15px; }
 .empty p { font-size: 12px; color: var(--muted); }
-.settlements nav { display: flex; justify-content: center; align-items: center; gap: 18px; margin: 28px 0; font-size: 12px; }
 .settlements > .secondary { display: block; margin: 20px auto 0; }
 @media (max-width: 720px) {
   .settlement-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }

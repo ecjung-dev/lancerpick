@@ -5,6 +5,5 @@
 .profile dd { margin: 4px 0 0; white-space: pre-wrap; }
 .profile a, .page > a { text-decoration: underline; text-underline-offset: 4px; }
 .products { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
-.pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; margin-top: 24px; }
 @media (max-width: 900px) { .products { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 480px) { .products { grid-template-columns: minmax(0, 1fr); } }

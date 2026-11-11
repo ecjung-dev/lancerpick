@@ -3,7 +3,6 @@ import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
-import { Button } from '../../../shared/components/Button'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
 import type { PageResponse } from '../../../shared/api/types'
@@ -11,6 +10,7 @@ import { previewBalance, previewEntries } from '../preview'
 import type { WalletBalance, WalletEntry, WalletEntryType } from '../types'
 import styles from './WalletPage.module.css'
 import { PageHeading } from '../../../shared/components/PageHeading'
+import { Pager } from '../../../shared/components/Pager'
 
 const labels: Record<WalletEntryType, string> = {
   INITIAL_GRANT: '가입 적립금',
@@ -257,36 +257,7 @@ function EntryList({
           ))}
         </ul>
       )}
-      {data.items.length === 0 && data.page > 0 && (
-        <Button
-          variant="secondary"
-          disabled={isFetching}
-          onClick={() => onPageChange(0)}
-        >
-          첫 페이지로
-        </Button>
-      )}
-      {data.totalPages > 1 && data.page < data.totalPages && (
-        <nav className={styles.pagination} aria-label="이용 내역 페이지">
-          <Button
-            variant="secondary"
-            disabled={isFetching || data.page === 0}
-            onClick={() => onPageChange(data.page - 1)}
-          >
-            이전
-          </Button>
-          <span aria-live="polite">
-            {data.page + 1} / {data.totalPages}
-          </span>
-          <Button
-            variant="secondary"
-            disabled={isFetching || data.page + 1 >= data.totalPages}
-            onClick={() => onPageChange(data.page + 1)}
-          >
-            다음
-          </Button>
-        </nav>
-      )}
+      <Pager page={data.page} totalPages={data.totalPages} busy={isFetching} onPage={onPageChange} label="이용 내역 페이지" />
     </section>
   )
 }

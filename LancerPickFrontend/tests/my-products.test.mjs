@@ -40,7 +40,7 @@ function render(url, page, items, totalPages = 3) {
 const item = { id: '9007199254740993', title: '내 숨김 상품', category: { id: '2', name: '분류' }, seller: { id: '3', displayName: '나' }, priceAmount: 50000, durationDays: 3, saleStatus: 'STOPPED', isHidden: true, version: 1, createdAt: '2026-11-04T00:00:00Z' }
 test('direct list page restores URL page and shows stopped/hidden state with private action links', () => {
   const html = render('/mypage/products?page=2', 2, [item])
-  assert.match(html, /현재 요청 3페이지/)
+  assert.match(html, /3페이지 \/ 총 3페이지/)
   assert.match(html, /관리자 숨김/)
   assert.match(html, /판매 중지/)
   assert.match(html, /\/mypage\/products\/9007199254740993\/edit/)

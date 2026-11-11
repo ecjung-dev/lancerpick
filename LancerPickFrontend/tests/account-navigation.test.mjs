@@ -155,7 +155,7 @@ function renderFinance(kind, url, page, empty = false, totalPages = 3) {
 
 test('wallet restores URL page and links only entries associated with orders', () => {
   const html = renderFinance('wallet', '/mypage?page=2', 2)
-  assert.match(html, /3 \/ 3/)
+  assert.match(html, /3페이지 \/ 총 3페이지/)
   assert.equal((html.match(/href="\/orders\/9007199254740993"/g) ?? []).length, 2)
   assert.doesNotMatch(html, /href="\/orders\/(null|undefined)"/)
   assert.match(html, /가입 적립금/)
@@ -177,7 +177,7 @@ test('finance lists reject invalid page values and keep the first page available
     for (const page of ['-1', '1.5', '2147483648', 'abc']) {
       const html = renderFinance(kind, `/mypage?page=${page}`, 0)
       assert.match(html, /주문 #9007199254740993 상세 보기/)
-      assert.match(html, kind === 'wallet' ? /1 \/ 3/ : /1페이지/)
+      assert.match(html, /1페이지 \/ 총 3페이지/)
     }
   }
 })
@@ -186,7 +186,7 @@ test('out-of-range empty finance pages provide a first-page recovery action', ()
   for (const kind of ['wallet', 'settlements']) {
     const html = renderFinance(kind, '/mypage?page=8', 8, true)
     assert.match(html, /첫 페이지로/)
-    assert.doesNotMatch(html, /9 \/ 3|9페이지/)
+    assert.doesNotMatch(html, /9페이지/)
   }
 })
 

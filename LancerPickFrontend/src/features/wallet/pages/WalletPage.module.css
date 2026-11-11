@@ -42,8 +42,6 @@
 .entryAmount { margin-left: auto; text-align: right; display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .entryAmount strong { font-size: 15px; }
 .entryAmount small { font-size: 10px; color: var(--muted); }
-.pagination { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 23px; font-size: 12px; }
-.pagination button { font-size: 12px; padding: 7px 12px; }
 .guide { margin-top: 32px; padding: 20px 23px; border-radius: 8px; background: #fafafa; font-size: 11px; color: var(--muted); }
 .guide strong { color: #444; font-size: 12px; }
 .guide ul { padding-left: 16px; margin: 9px 0 0; }

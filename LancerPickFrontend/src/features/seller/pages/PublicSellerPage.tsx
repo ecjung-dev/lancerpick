@@ -1,13 +1,13 @@
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
-import { Button } from '../../../shared/components/Button'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
 import { ProductCard } from '../../products/components/ProductCard'
 import { useProducts } from '../../products/queries'
 import { usePublicSellerProfile } from '../queries'
 import { isSafePortfolioUrl } from '../validation'
 import styles from './PublicSellerPage.module.css'
+import { Pager } from '../../../shared/components/Pager'
 
 export function PublicSellerPage() {
   const { id = '' } = useParams()
@@ -69,10 +69,7 @@ function SellerProducts({ sellerId }: { sellerId: string }) {
         ) : (
           <>
             {page > 0 && page >= products.data.totalPages ? (
-              <>
-                <AsyncState title="요청한 페이지에 상품이 없어요." />
-                <Button variant="secondary" onClick={() => setPage(0)}>첫 페이지로</Button>
-              </>
+              <AsyncState title="요청한 페이지에 상품이 없어요." />
             ) : products.data.items.length === 0 ? (
               <AsyncState title="현재 판매 중인 상품이 없어요." />
             ) : (
@@ -86,13 +83,7 @@ function SellerProducts({ sellerId }: { sellerId: string }) {
                 ))}
               </div>
             )}
-            {products.data.totalPages > 1 && page < products.data.totalPages && (
-              <nav className={styles.pagination} aria-label="판매자 상품 페이지">
-                <Button variant="secondary" disabled={page === 0 || products.isFetching} onClick={() => setPage(page - 1)}>이전</Button>
-                <span>{page + 1} / {products.data.totalPages}</span>
-                <Button variant="secondary" disabled={page + 1 >= products.data.totalPages || products.isFetching} onClick={() => setPage(page + 1)}>다음</Button>
-              </nav>
-            )}
+            <Pager page={page} totalPages={products.data.totalPages} busy={products.isFetching} onPage={setPage} label="판매자 상품 페이지" />
           </>
         )}
     </section>

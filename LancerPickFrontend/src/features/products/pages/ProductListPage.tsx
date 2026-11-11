@@ -7,6 +7,7 @@ import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
 import { Icon } from '../../../shared/components/Icon'
 import styles from './ProductListPage.module.css'
+import { Pager } from '../../../shared/components/Pager'
 
 const filterKeys = ['minPrice', 'maxPrice', 'maxDurationDays', 'sort'] as const
 
@@ -148,12 +149,8 @@ export function ProductListPage({ view = 'home' }: { view?: 'home' | 'catalog' }
         : products.isError ? <AsyncState title="서비스를 불러오지 못했어요." error={products.error} onRetry={() => void products.refetch()} />
         : products.data.items.length === 0 ? <AsyncState title={outOfRange ? '요청한 페이지에 서비스가 없어요.' : '조건에 맞는 서비스가 없어요.'} description={outOfRange ? '첫 페이지로 돌아가 서비스를 확인해 보세요.' : '검색어나 카테고리, 가격·기간 조건을 변경해 보세요.'} />
         : <div className={styles.products}>{products.data.items.map((product) => <ProductCard key={product.id} product={product} onSelect={() => navigate(`/products/${product.id}`, { state: { from: `${catalog ? '/products' : '/'}${params.size ? `?${params.toString()}` : ''}` } })} />)}</div>}
-      {!products.isError && products.data && (products.data.totalPages > 1 || page > 0) && <nav className={styles.pagination} aria-label="서비스 페이지">
-        <Button variant="secondary" disabled={page === 0 || products.isFetching} onClick={() => changeFilter('page', String(page - 1))}>이전</Button>
-        <span aria-live="polite">총 {products.data.totalPages}페이지 · 현재 요청 {page + 1}페이지</span>
-        <Button variant="secondary" disabled={page + 1 >= products.data.totalPages || products.isFetching} onClick={() => changeFilter('page', String(page + 1))}>다음</Button>
-      </nav>}
-      {outOfRange && <Button variant="secondary" onClick={() => changeFilter('page', '')}>첫 페이지로</Button>}
+      {!products.isError && products.data && <Pager page={page} totalPages={products.data.totalPages} busy={products.isFetching}
+        onPage={next => changeFilter('page', next === 0 ? '' : String(next))} label="서비스 페이지" />}
     </section>
     {!catalog && <section className={styles.guide} aria-labelledby="guide-title">
       <div><span className={styles.sectionEyebrow}>HOW IT WORKS</span><h2 id="guide-title">시작부터 완료까지,<br />흐름은 간단하게.</h2></div>

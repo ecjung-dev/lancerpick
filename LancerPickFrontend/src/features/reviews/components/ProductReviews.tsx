@@ -6,6 +6,7 @@ import { formatDateTime } from '../../../shared/lib/format'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
 import { useProductReviews } from '../queries'
 import styles from './ProductReviews.module.css'
+import { Pager } from '../../../shared/components/Pager'
 
 export function ProductReviews({ productId }: { productId: string }) {
   const [page, setPage] = usePageSearchParam()
@@ -51,12 +52,7 @@ export function ProductReviews({ productId }: { productId: string }) {
             <div className={styles.reviewHeading}><div><strong>{review.authorDisplayName}</strong><span className={styles.stars} role="img" aria-label={`별점 ${review.rating} / 5`}>{[1, 2, 3, 4, 5].map(star => <span key={star} className={star <= review.rating ? styles.filled : ''}><Icon name="star" size={14} /></span>)}</span></div><time dateTime={review.createdAt}>{formatDateTime(review.createdAt)}</time></div>
             {review.content !== null ? <p className={styles.content}>{review.content}</p> : <p className={styles.ratingOnly}>별점만 남긴 후기예요.</p>}
           </li>)}</ul>}
-        {(page > 0 || query.data.totalPages > 1) && <nav aria-label="후기 페이지">
-          <button disabled={page === 0 || query.isFetching} onClick={() => setPage(0)}>처음</button>
-          <button disabled={page === 0 || query.isFetching} onClick={() => setPage(page - 1)}>이전</button>
-          <span>{page + 1}페이지</span>
-          <button disabled={page + 1 >= query.data.totalPages || query.isFetching} onClick={() => setPage(page + 1)}>다음</button>
-        </nav>}
+        <Pager page={page} totalPages={query.data.totalPages} busy={query.isFetching} onPage={setPage} label="후기 페이지" />
       </>}
   </section>
 }
