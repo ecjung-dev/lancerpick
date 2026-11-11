@@ -2,6 +2,7 @@ import { loginPath } from '../../auth/session'
 import { Link, useLocation } from 'react-router'
 import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
+import { Icon } from '../../../shared/components/Icon'
 import { Button } from '../../../shared/components/Button'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
@@ -14,8 +15,10 @@ export function MyProductsPage() {
   const location = useLocation()
   const listPath = location.pathname + location.search
   return <section className={styles.page}>
-    <Link to="/mypage">← 마이페이지</Link>
-    <div className={styles.heading}><h1>내 상품 조회</h1><Link to="/mypage/products/new" state={{ fromMyProducts: listPath }}>상품 등록</Link></div>
+    <header className={styles.heading}>
+      <div><p className={styles.eyebrow}>MY SERVICES</p><h1>내 상품 조회</h1><p className={styles.intro}>등록한 서비스를 확인하고 판매 상태를 관리하세요.</p></div>
+      <Link className={styles.create} to="/mypage/products/new" state={{ fromMyProducts: listPath }}><span aria-hidden="true">＋</span>상품 등록</Link>
+    </header>
     {isUnauthorized(session.error) ? <LoginNotice path={listPath} />
       : session.isError ? <AsyncState title="계정을 확인하지 못했어요" error={session.error} onRetry={() => { void session.refetch() }} />
         : !session.data ? <AsyncState title="계정 확인 중" />
@@ -39,19 +42,21 @@ function MyProductsList({ memberId, page, path, checking, onPage }: {
   const outOfRange = page > 0 && page >= products.data.totalPages
   const busy = products.isFetching || checking
   return <>
-    <p>총 {products.data.totalElements}개 · 판매 중지·관리자 숨김 상품도 표시해요.</p>
+    <div className={styles.listHeading}><p>전체 상품 <strong>{products.data.totalElements.toLocaleString('ko-KR')}</strong>개</p><span>등록일 최신순</span></div>
+    <p className={styles.notice}><Icon name="document" size={16} />판매 중지·관리자 숨김 상품도 포함한 내 상품 목록입니다.</p>
     {products.data.items.length === 0 ? <AsyncState
       title={outOfRange ? '이 페이지에 상품이 없어요' : '아직 등록한 상품이 없어요'}
       description={outOfRange ? '첫 페이지에서 상품을 확인해 주세요.' : '첫 상품을 등록해 보세요.'} />
       : <ul className={styles.list}>{products.data.items.map(product => <li key={product.id} className={styles.card}>
+        <div className={styles.cardTop}><span className={styles.category}>{product.category.name}</span><div className={styles.states}><span className={product.saleStatus === 'ON_SALE' ? styles.onSale : ''}>{product.saleStatus === 'ON_SALE' ? '판매 중' : '판매 중지'}</span>{product.isHidden && <span className={styles.hidden}>관리자 숨김</span>}</div></div>
         <h2>{product.title}</h2>
-        <p>{product.category.name} · {formatWon(product.priceAmount)} · {product.durationDays}일</p>
-        <p className={styles.states}><span>{product.saleStatus === 'ON_SALE' ? '판매 중' : '판매 중지'}</span><span>{product.isHidden ? '관리자 숨김' : '공개'}</span></p>
-        <p className={styles.date}>등록 {formatDateTime(product.createdAt)}</p>
+        <div className={styles.terms}><span>{product.durationDays}일 작업</span><strong>{formatWon(product.priceAmount)}</strong></div>
+        <div className={styles.metadata}><span>상품 #{product.id}</span><span className={styles.visibility}>{product.isHidden ? '공개 목록에서 숨김' : '공개'}</span></div>
+        <p className={styles.date}>등록일 <time dateTime={product.createdAt}>{formatDateTime(product.createdAt)}</time></p>
         <div className={styles.actions}>
-          <Link to={`/mypage/products/${product.id}/edit`} state={{ fromMyProducts: path }} aria-label={`${product.title} 수정`}>수정</Link>
+          <Link className={styles.edit} to={`/mypage/products/${product.id}/edit`} state={{ fromMyProducts: path }} aria-label={`${product.title} 수정`}>상품 수정</Link>
           <Link to={`/mypage/products/${product.id}/sale-status`} state={{ fromMyProducts: path }} aria-label={`${product.title} 판매 상태 관리`}>판매 상태 관리</Link>
-          {!product.isHidden && product.saleStatus === 'ON_SALE' && <Link to={`/products/${product.id}`}>공개 상세</Link>}
+          {!product.isHidden && product.saleStatus === 'ON_SALE' && <Link className={styles.public} to={`/products/${product.id}`} aria-label={`${product.title} 공개 상세`}>공개 상세 <Icon name="arrow" size={14} /></Link>}
         </div>
       </li>)}</ul>}
     {outOfRange && <Button variant="secondary" disabled={busy} onClick={() => onPage(0)}>첫 페이지로</Button>}
