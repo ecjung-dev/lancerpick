@@ -7,7 +7,7 @@ import { outboxErrorLabel, readOutboxFilter, useOutboxIssues, type OutboxFilter,
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
-import { Pager } from './AdminFinancePage'
+import { AdminPager } from '../components/AdminPager'
 import { canResetFilter } from '../filterReset'
 import { codeLabel, outboxTypeLabels } from '../statusLabels'
 import styles from './Admin.module.css'
@@ -74,7 +74,7 @@ function Issues({ filter, onApply, search }: { filter: OutboxFilter; onApply: (n
                   <small>이벤트 #{item.id} · 생성 {formatDateTime(item.createdAt)}{item.nextAttemptAt && <> · 다음 시도 {formatDateTime(item.nextAttemptAt)}</>}</small>
                 </li>)}
               </ul>}
-            <Pager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="알림 처리 상태 페이지" />
+            <AdminPager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="알림 처리 상태 페이지" />
           </>}
   </>
 }

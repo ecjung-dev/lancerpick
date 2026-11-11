@@ -12,6 +12,7 @@ import { REASON_MAX, validateReason } from '../validation'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { AdminPager } from '../components/AdminPager'
 import { MemberLink } from '../components/MemberLink'
 import styles from './Admin.module.css'
 
@@ -47,12 +48,7 @@ export function AdminReviewTimerPage() {
                   : <div className={styles.actions}><button type="button" onClick={() => setSelected(timer.orderId)}>해제하기</button></div>}
               </li>)}
             </ul>}
-            {list.data.items.length === 0 && page > 0 && <button className={styles.secondary} disabled={list.isFetching} onClick={() => setPage(0)}>첫 페이지로</button>}
-            {list.data.totalPages > 1 && <nav className={styles.pager} aria-label="타이머 목록 페이지">
-              <button disabled={list.isFetching || page === 0} onClick={() => setPage(page - 1)}>이전</button>
-              <span>{page + 1}페이지</span>
-              <button disabled={list.isFetching || page + 1 >= list.data.totalPages} onClick={() => setPage(page + 1)}>다음</button>
-            </nav>}
+            <AdminPager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="타이머 목록 페이지" />
           </>}
   </section>
 }

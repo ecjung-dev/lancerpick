@@ -43,7 +43,7 @@ export function AdminMemberDetailPage() {
       {problem ? (
         <AdminAccessNotice problem={problem} />
       ) : missing ? (
-        <AsyncState title="회원을 찾을 수 없습니다" />
+        <AsyncState title="회원을 찾을 수 없어요" />
       ) : query.isError && !query.data ? (
         <AsyncState
           title="회원 정보를 불러오지 못했어요"
@@ -53,7 +53,7 @@ export function AdminMemberDetailPage() {
           }}
         />
       ) : !query.data ? (
-        <AsyncState title="회원 정보를 불러오는 중입니다" />
+        <AsyncState title="회원 정보를 불러오고 있어요" />
       ) : (
         <>
           <header className={styles.heading}>
@@ -67,7 +67,7 @@ export function AdminMemberDetailPage() {
           </header>
           {query.isError && (
             <p className={styles.notice} role="alert">
-              최신 상태 조회에 실패했습니다. 재조회 후 처리해 주세요.
+              최신 상태 조회에 실패했어요. 다시 조회한 뒤 처리해 주세요.
             </p>
           )}
           <section className={`${styles.block} ${styles.statusCard}`}>
@@ -95,10 +95,10 @@ export function AdminMemberDetailPage() {
               <dd>{formatDateTime(query.data.serverTime)}</dd>
             </dl>
             <p className={styles.help}>
-              30초마다 갱신합니다. 실제 접근은 서버가 현재 시각으로 판단합니다.
+              30초마다 갱신해요. 실제 접근은 서버가 현재 시각으로 판단해요.
             </p>
             {!query.data.activeSanctions.length ? (
-              <p>현재 적용 중인 제재가 없습니다.</p>
+              <p>현재 적용 중인 제재가 없어요.</p>
             ) : (
               <ul className={styles.list}>
                 {query.data.activeSanctions.map((sanction) => (
@@ -114,7 +114,7 @@ export function AdminMemberDetailPage() {
                     {sanction.kind === 'SECURITY_LOCK' &&
                       !sanction.timerStopDeliveredAt && (
                         <p className={styles.notice}>
-                          타이머 중단 전달이 완료되지 않았습니다. 진행 중 거래와
+                          타이머 중단 전달이 완료되지 않았어요. 진행 중 거래와
                           타이머를 확인해 주세요.
                         </p>
                       )}

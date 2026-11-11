@@ -63,26 +63,26 @@ function FinanceSummary({ data }: { data: OrderFinance }) {
     {/* 금액 네 묶음은 카드로, 1000px 이상에서 두 열. 카드가 좁으면 라벨 위·값 아래로 바뀐다(Admin.module.css @container). */}
     <div className={styles.financeGrid}>
     <section className={styles.card}><h2>결제·환불</h2>{payment ? <dl className={FACTS}>
-      <dt>상태</dt><dd>{codeLabel(paymentStatusLabels, payment.status)}</dd>
-      <dt>결제 금액</dt><dd>{formatWon(payment.amount)} · {time(payment.paidAt)}</dd>
-      <dt>환불 금액</dt><dd>{formatWon(payment.refundedAmount)}{payment.refundedAt && <> · {time(payment.refundedAt)}</>}</dd>
+      <dt>상태</dt><dd><span className={styles.badge}>{codeLabel(paymentStatusLabels, payment.status)}</span></dd>
+      <dt>결제 금액</dt><dd><span className={styles.amount}>{formatWon(payment.amount)}</span> · {time(payment.paidAt)}</dd>
+      <dt>환불 금액</dt><dd><span className={styles.amount}>{formatWon(payment.refundedAmount)}</span>{payment.refundedAt && <> · {time(payment.refundedAt)}</>}</dd>
     </dl> : NONE}</section>
     <section className={styles.card}><h2>보관금</h2>{funds ? <dl className={FACTS}>
-      <dt>상태</dt><dd>{codeLabel(fundsStatusLabels, funds.status)}</dd>
-      <dt>보관 금액</dt><dd>{formatWon(funds.amount)} · 남은 금액 {formatWon(funds.remainingAmount)}</dd>
+      <dt>상태</dt><dd><span className={styles.badge}>{codeLabel(fundsStatusLabels, funds.status)}</span></dd>
+      <dt>보관 금액</dt><dd><span className={styles.amount}>{formatWon(funds.amount)}</span> · 남은 금액 <span className={styles.amount}>{formatWon(funds.remainingAmount)}</span></dd>
       <dt>보관 시작</dt><dd>{time(funds.heldAt)}</dd><dt>처리</dt><dd>{time(funds.resolvedAt)}</dd>
     </dl> : NONE}</section>
     <section className={styles.card}><h2>정산</h2>{settlement ? <dl className={FACTS}>
-      <dt>유형</dt><dd>{codeLabel(settlementTypeLabels, settlement.type)}</dd>
-      <dt>총액</dt><dd>{formatWon(settlement.grossAmount)}</dd>
-      <dt>수수료</dt><dd>{formatWon(settlement.feeAmount)} ({(settlement.feeRateBps / 100).toFixed(2)}%)</dd>
-      <dt>판매자 수익</dt><dd>{formatWon(settlement.sellerAmount)}</dd><dt>시각</dt><dd>{time(settlement.createdAt)}</dd>
+      <dt>유형</dt><dd><span className={styles.badge}>{codeLabel(settlementTypeLabels, settlement.type)}</span></dd>
+      <dt>총액</dt><dd><span className={styles.amount}>{formatWon(settlement.grossAmount)}</span></dd>
+      <dt>수수료</dt><dd><span className={styles.amount}>{formatWon(settlement.feeAmount)}</span> ({(settlement.feeRateBps / 100).toFixed(2)}%)</dd>
+      <dt>판매자 수익</dt><dd><span className={styles.amount}>{formatWon(settlement.sellerAmount)}</span></dd><dt>시각</dt><dd>{time(settlement.createdAt)}</dd>
     </dl> : NONE}</section>
     <section className={styles.card}><h2>종료 분배</h2>{closure ? <dl className={FACTS}>
-      <dt>사유</dt><dd>{codeLabel(closureReasonLabels, closure.reason)}</dd>
-      <dt>결제 금액</dt><dd>{formatWon(closure.paidAmount)}</dd>
-      <dt>구매자 반환</dt><dd>{formatWon(closure.buyerRefundAmount)}</dd>
-      <dt>판매자 총액·수수료·순수익</dt><dd>{formatWon(closure.sellerGrossAmount)} · {formatWon(closure.feeAmount)} · {formatWon(closure.sellerNetAmount)}</dd>
+      <dt>사유</dt><dd><span className={styles.badge}>{codeLabel(closureReasonLabels, closure.reason)}</span></dd>
+      <dt>결제 금액</dt><dd><span className={styles.amount}>{formatWon(closure.paidAmount)}</span></dd>
+      <dt>구매자 반환</dt><dd><span className={styles.amount}>{formatWon(closure.buyerRefundAmount)}</span></dd>
+      <dt>판매자 총액·수수료·순수익</dt><dd><span className={styles.amount}>{formatWon(closure.sellerGrossAmount)}</span> · <span className={styles.amount}>{formatWon(closure.feeAmount)}</span> · <span className={styles.amount}>{formatWon(closure.sellerNetAmount)}</span></dd>
     </dl> : NONE}</section>
     </div>
   </>
@@ -104,7 +104,7 @@ function ContractPdfSection({ orderId }: { orderId: string }) {
 function PdfFacts({ data }: { data: ContractPdf }) {
   return <><dl className={FACTS}>
     <dt>버전</dt><dd>{data.version}{data.currentVersion ? ' (현재)' : ''} · 계약 #{data.contractId}</dd>
-    <dt>상태</dt><dd>{codeLabel(contractStatusLabels, data.status)}</dd>
+    <dt>상태</dt><dd><span className={styles.badge}>{codeLabel(contractStatusLabels, data.status)}</span></dd>
     <dt>파일 정보</dt><dd>{data.fileMetadataPresent ? 'DB에 파일 정보 있음(실제 파일 확인은 아님)' : 'DB에 파일 정보 없음'}</dd>
     <dt>생성·변경</dt><dd>{time(data.createdAt)} · {time(data.updatedAt)}</dd>
     <dt>판단</dt><dd>{decisionLabel(data.generationCandidate.eligible, data.generationCandidate.reason, data.generationCandidate.kind)} · 확인 {time(data.checkedAt)}</dd>

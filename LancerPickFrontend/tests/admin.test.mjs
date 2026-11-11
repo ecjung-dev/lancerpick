@@ -174,7 +174,7 @@ test('detail of a hidden product offers restore, escapes text and shows moderati
     assert.match(html, /판매 중지 상태는 판매자가 따로 관리/)
     assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
     assert.doesNotMatch(html, /<script>/)
-    assert.match(html, /버전 3/)
+    assert.match(html, /<dt>버전<\/dt><dd>3<\/dd>/)
     assert.match(html, /부적절한 내용/)
     assert.match(html, /관리자 #1/)
     assert.match(html, /href="\/admin\/products"/)

@@ -8,6 +8,7 @@ import type { AdminInquiryFilter } from '../inquiryTypes'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { AdminPager } from '../components/AdminPager'
 import { canResetFilter } from '../filterReset'
 import styles from './Admin.module.css'
 
@@ -53,27 +54,23 @@ function InquiryTable({ filter, page, onPage, search }: { filter: AdminInquiryFi
   const data = list.data
   return <>
     <p className={styles.count}>총 {data.totalElements}건</p>
-    {data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 문의가 없어요.</p> : <ul className={styles.rows}>
-      {data.items.map((item) => <li key={item.id} className={styles.row}>
-        <div className={styles.rowMain}>
-          {/* 취소 검토 문의는 제목이 대부분 같아 주문 번호를 제목 앞에 둬 구분한다. */}
-          {item.orderId && <span className={styles.rowKey}>주문 #{item.orderId}</span>}
-          <Link className={styles.rowTitle} to={`/admin/inquiries/${item.id}`} state={{ from: `/admin/inquiries${search ? `?${search}` : ''}` }}>{item.subject}</Link>
-          <p className={styles.rowMeta}>신청 {item.requester.displayName ?? `회원 #${item.requester.id}`} · 접수 {formatDateTime(item.createdAt)}{item.resolvedAt && <> · 처리 {formatDateTime(item.resolvedAt)}</>}</p>
-        </div>
-        <div className={styles.rowSide}>
-          <span className={styles.rowBadges}>
-            <span className={item.status === 'CLOSED' ? styles.visible : styles.hidden}>{inquiryStatusLabel(item.status)}</span>
-            <span className={styles.badge}>{inquiryTypeLabel(item.type)}</span>
-          </span>
-        </div>
-      </li>)}
-    </ul>}
-    {data.items.length === 0 && page > 0 && <button className={styles.secondary} disabled={list.isFetching} onClick={() => onPage(0)}>첫 페이지로</button>}
-    {(page > 0 || data.totalPages > 1) && <nav className={styles.pager} aria-label="문의 목록 페이지">
-      <button disabled={list.isFetching || page === 0} onClick={() => onPage(page - 1)}>이전</button>
-      <span>{page + 1}페이지</span>
-      <button disabled={list.isFetching || page + 1 >= data.totalPages} onClick={() => onPage(page + 1)}>다음</button>
-    </nav>}
+    {data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 문의가 없어요.</p> : <div className={styles.tableWrap}><table className={styles.table}>
+      <thead><tr>
+        <th scope="col">번호</th><th scope="col">상태</th><th scope="col">유형</th><th scope="col">주문</th>
+        <th scope="col">제목</th><th scope="col">신청자</th><th scope="col">접수일</th><th scope="col">처리일</th>
+      </tr></thead>
+      <tbody>{data.items.map((item) => <tr key={item.id}>
+        <td className={styles.cellId} data-label="번호">#{item.id}</td>
+        <td data-label="상태"><span className={item.status === 'CLOSED' ? styles.visible : styles.hidden}>{inquiryStatusLabel(item.status)}</span></td>
+        <td data-label="유형">{inquiryTypeLabel(item.type)}</td>
+        {/* 취소 검토 문의는 제목이 대부분 같아 주문 번호 열로 구분한다. */}
+        <td className={styles.cellId} data-label="주문">{item.orderId ? `#${item.orderId}` : '—'}</td>
+        <td data-label=""><Link className={styles.cellLink} to={`/admin/inquiries/${item.id}`} state={{ from: `/admin/inquiries${search ? `?${search}` : ''}` }}>{item.subject}</Link></td>
+        <td data-label="신청자">{item.requester.displayName ?? `회원 #${item.requester.id}`}</td>
+        <td className={styles.cellDate} data-label="접수일">{formatDateTime(item.createdAt)}</td>
+        <td className={styles.cellDate} data-label="처리일">{item.resolvedAt ? formatDateTime(item.resolvedAt) : '—'}</td>
+      </tr>)}</tbody>
+    </table></div>}
+    <AdminPager page={page} totalPages={data.totalPages} busy={list.isFetching} onPage={onPage} label="문의 목록 페이지" />
   </>
 }

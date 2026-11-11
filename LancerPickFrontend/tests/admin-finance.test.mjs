@@ -115,11 +115,13 @@ test('finance page defaults to payments, restores filters from the URL and links
     assert.match(html, /value="5"/)
     assert.match(html, /value="PAID" selected=""/)
     assert.match(html, new RegExp(`href="/admin/finance/orders/${orderId}"`))
-    assert.match(html, /href="\/admin\/members\/5"[^>]*>구매자 #5<\/a>/, '구매자·판매자 번호는 문구 전체가 회원 상세 링크')
-    assert.match(html, /href="\/admin\/members\/6"[^>]*>판매자 #6<\/a>/)
+    // 열이 바뀌어도 통과하지 않도록 역할 칸(data-label) 안의 링크 목적지를 확인한다.
+    // 보조기술에는 "구매자 #5"처럼 역할까지 링크 이름으로 읽히고, 화면에는 열 머리글이 역할을 대신한다.
+    assert.match(html, /data-label="구매자"><a [^>]*href="\/admin\/members\/5"[^>]*><span class="[^"]*">구매자 <\/span>#5<\/a>/)
+    assert.match(html, /data-label="판매자"><a [^>]*href="\/admin\/members\/6"[^>]*><span class="[^"]*">판매자 <\/span>#6<\/a>/)
     assert.match(html, /총 1건/)
-    assert.match(html, /주문 진행 중/)
-    assert.doesNotMatch(html, /주문 IN_PROGRESS/)
+    assert.match(html, /data-label="주문 상태">진행 중</)
+    assert.doesNotMatch(html, /IN_PROGRESS/)
   } finally { client.clear() }
 })
 
@@ -131,7 +133,7 @@ test('topup tab shows the decision and offers a recheck only for candidates', ()
       createdAt: '2026-11-09T00:00:00Z', processingStartedAt: '2026-11-09T00:01:00Z', nextRecoveryAt: null, recoveryLeaseUntil: null, completedAt: null,
       automaticRecovery: { eligible: false, reason: 'RECOVERY_DISABLED' }, manualRecheck: { eligible: true, reason: 'NONE' } }] })
     const html = render('/admin/finance?tab=topups&status=UNKNOWN', '/admin/finance', createElement(AdminFinancePage), client)
-    assert.match(html, /충전 #9/)
+    assert.match(html, /data-label="충전"><strong>#9<\/strong>/)
     assert.match(html, /복구 기능 꺼짐 \(RECOVERY_DISABLED\)/)
     assert.match(html, /재처리 후보 · 실행 직전에 서버가 다시 확인해요/)
     assert.match(html, /<summary>충전 재확인<\/summary>/)
