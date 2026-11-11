@@ -13,7 +13,7 @@ import {
   recentMonths,
   type OrderListFilters,
 } from '../listFilters'
-import styles from './Orders.module.css'
+import styles from './OrderListPage.module.css'
 
 export function OrderListPage() {
   const [params, setParams] = useSearchParams()
@@ -26,8 +26,12 @@ export function OrderListPage() {
 
   return (
     <section className={styles.orders}>
-      <Link to="/mypage">← 마이페이지</Link>
-      <h1>{filters.side === 'SELLER' ? '판매 내역' : '구매 내역'}</h1>
+      <header className={styles.heading}>
+        <div><p className={styles.eyebrow}>MY TRANSACTIONS</p>
+          <h1>{filters.side === 'SELLER' ? '판매 내역' : '구매 내역'}</h1>
+          <p>{filters.side === 'SELLER' ? '받은 주문과 작업 진행 상황을 확인하세요.' : '주문한 서비스와 거래 진행 상황을 확인하세요.'}</p>
+        </div>
+      </header>
       <SearchForm
         key={`${filters.q}|${filters.from}|${filters.to}`}
         filters={filters}
@@ -198,25 +202,28 @@ function OrderList({
   if (!query.data) return <p role="status">거래 내역을 불러오는 중입니다.</p>
   return (
     <>
-      <p>총 {query.data.totalElements.toLocaleString('ko-KR')}건</p>
+      <p className={styles.count}>전체 거래 <strong>{query.data.totalElements.toLocaleString('ko-KR')}</strong>건</p>
       {query.data.items.length === 0 ? (
-        <p>이 조건에 맞는 거래 내역이 없습니다.</p>
+        <div className={styles.empty}><strong>조회된 거래 내역이 없습니다.</strong><p>검색어나 조회 기간, 주문 상태를 변경해 보세요.</p></div>
       ) : (
-        <ul>
+        <ul className={styles.list}>
           {query.data.items.map((order) => (
             <li key={order.id}>
-              <Link to={`/orders/${order.id}${location.search}`}>
-                {order.productTitle}
-              </Link>
-              <p>
-                주문번호 {order.id} · {order.counterparty.displayName} ·{' '}
-                {formatWon(order.priceAmount)} · {orderStatusLabel(order.status)}
-              </p>
-              <p>
-                주문 {formatDateTime(order.createdAt)}
-                {order.currentDueAt &&
-                  ` · 현재 납기 ${formatDateTime(order.currentDueAt)}`}
-              </p>
+              <div className={styles.cardMeta}>
+                <span>주문번호 {order.id}</span>
+                <span className={styles.badge}>{orderStatusLabel(order.status)}</span>
+              </div>
+              <div className={styles.cardBody}>
+                <div><Link className={styles.productTitle} to={`/orders/${order.id}${location.search}`}>{order.productTitle}</Link>
+                  <p className={styles.counterparty}>{filters.side === 'SELLER' ? '구매자' : '판매자'} · {order.counterparty.displayName}</p>
+                </div>
+                <strong className={styles.price}>{formatWon(order.priceAmount)}</strong>
+              </div>
+              <div className={styles.cardFooter}>
+                <p>주문일 {formatDateTime(order.createdAt)}
+                  {order.currentDueAt && ` · 현재 납기 ${formatDateTime(order.currentDueAt)}`}</p>
+                <Link to={`/orders/${order.id}${location.search}`} aria-label={`${order.productTitle} 거래 상세 보기`}>상세 보기 →</Link>
+              </div>
             </li>
           ))}
         </ul>
