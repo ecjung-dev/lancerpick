@@ -11,6 +11,9 @@ import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
 import { AdminReprocessPanel } from '../components/AdminReprocessPanel'
 import { AdminActionLogList } from '../components/AdminActionLogList'
+import {
+  closureReasonLabels, codeLabel, contractStatusLabels, fundsStatusLabels, paymentStatusLabels, policyLabels, settlementTypeLabels,
+} from '../statusLabels'
 import styles from './Admin.module.css'
 
 /** 결제 목록에서 넘겨준 돌아갈 주소. 금융 조회 경로만 허용한다. */
@@ -45,28 +48,28 @@ function FinanceSummary({ data }: { data: OrderFinance }) {
   const { payment, funds, settlement, closure } = data
   return <>
     <header className={styles.heading}>
-      <p>{data.policyVersion} · 주문 {orderStatusLabel(data.orderStatus)}</p>
+      <p>{codeLabel(policyLabels, data.policyVersion)} · 주문 {orderStatusLabel(data.orderStatus)}</p>
       <h1>주문 #{data.orderId}</h1>
       <p>주문 금액 {formatWon(data.orderAmount)} · 구매자 #{data.buyerId} · 판매자 #{data.sellerId}</p>
     </header>
     <section className={styles.block}><h2>결제·환불</h2>{payment ? <dl className={FACTS}>
-      <dt>상태</dt><dd>{payment.status}</dd>
+      <dt>상태</dt><dd>{codeLabel(paymentStatusLabels, payment.status)}</dd>
       <dt>결제 금액</dt><dd>{formatWon(payment.amount)} · {time(payment.paidAt)}</dd>
       <dt>환불 금액</dt><dd>{formatWon(payment.refundedAmount)}{payment.refundedAt && <> · {time(payment.refundedAt)}</>}</dd>
     </dl> : NONE}</section>
     <section className={styles.block}><h2>보관금</h2>{funds ? <dl className={FACTS}>
-      <dt>상태</dt><dd>{funds.status}</dd>
+      <dt>상태</dt><dd>{codeLabel(fundsStatusLabels, funds.status)}</dd>
       <dt>보관 금액</dt><dd>{formatWon(funds.amount)} · 남은 금액 {formatWon(funds.remainingAmount)}</dd>
       <dt>보관 시작</dt><dd>{time(funds.heldAt)}</dd><dt>처리</dt><dd>{time(funds.resolvedAt)}</dd>
     </dl> : NONE}</section>
     <section className={styles.block}><h2>정산</h2>{settlement ? <dl className={FACTS}>
-      <dt>유형</dt><dd>{settlement.type}</dd>
+      <dt>유형</dt><dd>{codeLabel(settlementTypeLabels, settlement.type)}</dd>
       <dt>총액</dt><dd>{formatWon(settlement.grossAmount)}</dd>
       <dt>수수료</dt><dd>{formatWon(settlement.feeAmount)} ({(settlement.feeRateBps / 100).toFixed(2)}%)</dd>
       <dt>판매자 수익</dt><dd>{formatWon(settlement.sellerAmount)}</dd><dt>시각</dt><dd>{time(settlement.createdAt)}</dd>
     </dl> : NONE}</section>
     <section className={styles.block}><h2>종료 분배</h2>{closure ? <dl className={FACTS}>
-      <dt>사유</dt><dd>{closure.reason}</dd>
+      <dt>사유</dt><dd>{codeLabel(closureReasonLabels, closure.reason)}</dd>
       <dt>결제 금액</dt><dd>{formatWon(closure.paidAmount)}</dd>
       <dt>구매자 반환</dt><dd>{formatWon(closure.buyerRefundAmount)}</dd>
       <dt>판매자 총액·수수료·순수익</dt><dd>{formatWon(closure.sellerGrossAmount)} · {formatWon(closure.feeAmount)} · {formatWon(closure.sellerNetAmount)}</dd>
@@ -90,7 +93,7 @@ function ContractPdfSection({ orderId }: { orderId: string }) {
 function PdfFacts({ data }: { data: ContractPdf }) {
   return <><dl className={FACTS}>
     <dt>버전</dt><dd>{data.version}{data.currentVersion ? ' (현재)' : ''} · 계약 #{data.contractId}</dd>
-    <dt>상태</dt><dd>{data.status}</dd>
+    <dt>상태</dt><dd>{codeLabel(contractStatusLabels, data.status)}</dd>
     <dt>파일 정보</dt><dd>{data.fileMetadataPresent ? 'DB에 파일 정보 있음(실제 파일 확인은 아님)' : 'DB에 파일 정보 없음'}</dd>
     <dt>생성·변경</dt><dd>{time(data.createdAt)} · {time(data.updatedAt)}</dd>
     <dt>판단</dt><dd>{decisionLabel(data.generationCandidate.eligible, data.generationCandidate.reason, data.generationCandidate.kind)} · 확인 {time(data.checkedAt)}</dd>

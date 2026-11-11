@@ -93,10 +93,10 @@ test('order finance shows missing records as "기록 없음", not 0원, and PDF 
     })
     const html = render(`/admin/finance/orders/${orderId}`, '/admin/finance/orders/:id', createElement(AdminOrderFinancePage), client)
     assert.match(html, /주문 #9007199254740993/)
-    assert.match(html, /CONTRACT_V3 · 주문 진행 중/, '주문 상태는 한글 라벨')
+    assert.match(html, /전액 보관 계약 \(CONTRACT_V3\) · 주문 진행 중/, '정책·주문 상태는 한글 라벨, 정책 코드는 괄호로 남긴다')
     assert.match(html, /600,001원/)
     assert.equal(html.match(/기록 없음/g)?.length, 2, '정산·종료 분배가 없으면 0원 대신 기록 없음')
-    assert.match(html, /HELD/)
+    assert.match(html, /주문 대금 보관 중 \(HELD\)/)
     assert.match(html, /실제 파일 확인은 아님/)
     assert.match(html, /후보 아님: 지금 주문 상태에서는 생성 불가 \(ORDER_NOT_WRITABLE\)/)
     assert.doesNotMatch(html, /<button[^>]*>(재시도|재생성|재확인|재시작)/, '후보가 아니면 실행 버튼이 없다')
@@ -161,4 +161,14 @@ test('결제 필터 초기화 버튼은 조건이 없으면 막히고, 조건이
     const active = render('/admin/finance?tab=payments&status=PAID', '/admin/finance', createElement(AdminFinancePage), client)
     assert.match(active, /<button type="button"(?![^>]*disabled)[^>]*>초기화<\/button>/)
   } finally { client.clear() }
+})
+
+test('상태 코드 라벨은 문맥별 표를 쓰고 코드를 괄호로 남기며, 모르는 값은 원문 그대로 보여 준다', async () => {
+  const labels = await server.ssrLoadModule('/src/features/admin/statusLabels.ts')
+  assert.equal(labels.codeLabel(labels.topupStatusLabels, 'COMPLETED'), '충전 완료 (COMPLETED)')
+  assert.equal(labels.codeLabel(labels.jobStatusLabels, 'COMPLETED'), '완료 (COMPLETED)')
+  assert.equal(labels.codeLabel(labels.closureReasonLabels, 'COMPLETED'), '구매 확정 (COMPLETED)')
+  assert.equal(labels.codeLabel(labels.jobStatusLabels, 'NO_EXECUTION'), '실행 기록 없음 (NO_EXECUTION)')
+  assert.equal(labels.codeLabel(labels.settlementTypeLabels, 'NEW_TYPE'), 'NEW_TYPE')
+  assert.equal(labels.plainLabel(labels.topupStatusLabels, 'UNKNOWN'), '결과 확인 필요')
 })

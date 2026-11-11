@@ -15,6 +15,7 @@ import { AdminReprocessPanel } from '../components/AdminReprocessPanel'
 import { AdminActionLogList } from '../components/AdminActionLogList'
 import { ACTION_LABELS, type ReprocessAction } from '../reprocessApi'
 import { canResetFilter } from '../filterReset'
+import { codeLabel, jobStatusLabels, plainLabel, policyLabels, topupStatusLabels } from '../statusLabels'
 import styles from './Admin.module.css'
 
 type Tab = 'topups' | 'payments' | 'jobs' | 'logs'
@@ -82,7 +83,7 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
         <option value="">전체</option><option value="PAID">결제</option><option value="REFUNDED">환불</option>
       </select></label>
       <label>정책 <select value={draft.policyVersion} onChange={(e) => setDraft({ ...draft, policyVersion: e.target.value as PaymentFilter['policyVersion'] })}>
-        <option value="">전체</option><option value="CONTRACT_V3">V3(전액 보관)</option><option value="CONTRACT_V2">V2</option><option value="LEGACY_V1">기존</option>
+        <option value="">전체</option>{(["CONTRACT_V3", "CONTRACT_V2", "LEGACY_V1"] as const).map((p) => <option key={p} value={p}>{plainLabel(policyLabels, p)}</option>)}
       </select></label>
       <button type="submit">조회</button>
       <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), PAYMENT_KEYS, Object.values(draft))}
@@ -97,7 +98,7 @@ function Payments({ filter, onApply, search }: { filter: PaymentFilter; onApply:
               {list.data.items.map((item) => <li key={item.id}>
                 <Link to={`/admin/finance/orders/${item.orderId}`} state={{ from: `/admin/finance?${search}` }}>주문 #{item.orderId}</Link>
                 <p><span className={styles.badge}>{item.status === 'PAID' ? '결제' : item.status === 'REFUNDED' ? '환불' : item.status}</span>
-                  {formatWon(item.amount)}{item.refundedAmount > 0 && <> · 환불 {formatWon(item.refundedAmount)}</>} · {item.policyVersion} · 주문 {orderStatusLabel(item.orderStatus)}</p>
+                  {formatWon(item.amount)}{item.refundedAmount > 0 && <> · 환불 {formatWon(item.refundedAmount)}</>} · {codeLabel(policyLabels, item.policyVersion)} · 주문 {orderStatusLabel(item.orderStatus)}</p>
                 <small>구매자 #{item.buyerId} · 판매자 #{item.sellerId} · 결제 {time(item.paidAt)}{item.refundedAt && <> · 환불 {time(item.refundedAt)}</>}</small>
               </li>)}
             </ul>}
@@ -115,7 +116,7 @@ function Topups({ filter, onApply, search }: { filter: TopupFilter; onApply: (ne
     <form className={styles.filters} role="search" onSubmit={(e: FormEvent) => { e.preventDefault(); onApply({ ...filter, memberId }) }}>
       <label>회원 번호 <input inputMode="numeric" value={memberId} onChange={(e) => setMemberId(e.target.value.replace(/[^0-9]/g, ''))} /></label>
       <label>상태 <select value={filter.status} onChange={(e) => onApply({ memberId, status: e.target.value as TopupFilter['status'] })}>
-        <option value="">전체</option>{['READY', 'PROCESSING', 'UNKNOWN', 'COMPLETED', 'FAILED'].map((s) => <option key={s} value={s}>{s}</option>)}
+        <option value="">전체</option>{['READY', 'PROCESSING', 'UNKNOWN', 'COMPLETED', 'FAILED'].map((s) => <option key={s} value={s}>{plainLabel(topupStatusLabels, s)}</option>)}
       </select></label>
       <button type="submit">조회</button>
       <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), TOPUP_KEYS, [memberId])}
@@ -129,7 +130,7 @@ function Topups({ filter, onApply, search }: { filter: TopupFilter; onApply: (ne
             {list.data.items.length === 0 ? <p className={styles.empty}>조건에 맞는 충전이 없어요.</p> : <ul className={styles.list}>
               {list.data.items.map((item) => <li key={item.id}>
                 <strong>충전 #{item.id}</strong>
-                <p><span className={item.status === 'FAILED' ? styles.toneDanger : item.status === 'UNKNOWN' || item.status === 'PROCESSING' ? styles.toneWarn : item.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{item.status}</span>
+                <p><span className={item.status === 'FAILED' ? styles.toneDanger : item.status === 'UNKNOWN' || item.status === 'PROCESSING' ? styles.toneWarn : item.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{codeLabel(topupStatusLabels, item.status)}</span>
                   {formatWon(item.amount)} · 회원 #{item.memberId} · 복구 시도 {item.recoveryAttemptCount}회{item.lastErrorCode && <> · 오류 {item.lastErrorCode}</>}</p>
                 <small>신청 {time(item.createdAt)} · 처리 시작 {time(item.processingStartedAt)} · 다음 복구 {time(item.nextRecoveryAt)} · 처리권 만료 {time(item.recoveryLeaseUntil)} · 완료 {time(item.completedAt)}</small>
                 <p>자동 복구: {decisionLabel(item.automaticRecovery.eligible, item.automaticRecovery.reason)}</p>
@@ -154,7 +155,7 @@ function Jobs() {
     {list.data.items.length === 0 ? <p className={styles.empty}>실행된 충전 복구 작업이 없어요.</p> : <ul className={styles.list}>
       {list.data.items.map((job) => <li key={job.instanceId}>
         <strong>작업 #{job.instanceId}{job.executionId ? ` · 실행 #${job.executionId}` : ' · 실행 기록 없음'}</strong>
-        <p><span className={job.status === 'FAILED' || job.status === 'STOPPED' ? styles.toneDanger : job.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{job.status}</span>
+        <p><span className={job.status === 'FAILED' || job.status === 'STOPPED' ? styles.toneDanger : job.status === 'COMPLETED' ? styles.toneOk : styles.badge}>{codeLabel(jobStatusLabels, job.status)}</span>
           읽음 {job.readCount} · 지급 {job.creditedCount} · 제외 {job.filteredCount}
           {Object.entries(job.outcomes).map(([key, count]) => <span key={key}> · {key} {count}</span>)}</p>
         <small>원래 스캔 요청 시각 {time(job.scanRequestedAt)}</small>

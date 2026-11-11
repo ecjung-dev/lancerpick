@@ -1,3 +1,5 @@
+import type { OrderFunds } from './types'
+
 export const orderStatuses = ['REQUESTED', 'AWAITING_PAYMENT', 'IN_PROGRESS', 'AWAITING_CONFIRMATION', 'REVISION_IN_PROGRESS', 'COMPLETED', 'REJECTED', 'CANCELLED'] as const
 
 export const orderStatusNames = ['수락 대기', '결제 대기', '진행 중', '납품 확인 대기', '수정 진행 중', '구매 확정', '거절됨', '취소됨'] as const
@@ -16,4 +18,12 @@ const cancellationStatusNames: Record<string, string> = {
 
 export function cancellationStatusLabel(status: string) {
   return cancellationStatusNames[status] ?? status
+}
+
+/** 주문 대금(order_funds) 상태 문구. 주문 화면 대금 패널과 관리자 금융 상세가 함께 쓴다. */
+export const orderFundsStatusLabels: Record<OrderFunds['status'], string> = {
+  NOT_PAID: '전액 결제 대기',
+  HELD: '주문 대금 보관 중',
+  RELEASED: '판매자 지급 완료',
+  REFUNDED: '구매자 전액 반환 완료',
 }
