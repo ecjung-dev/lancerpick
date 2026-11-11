@@ -16,7 +16,10 @@ import { REASON_MAX, isValidProductId as isValidId, validateReason } from '../va
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { MemberLink } from '../components/MemberLink'
 import styles from './Admin.module.css'
+
+const FACTS = `${styles.facts} ${styles.factsAligned}`
 
 /** 목록에서 넘겨준 돌아갈 주소. 관리자 문의 목록 경로만 허용한다. */
 const name = (party: Party) => party.displayName ?? `회원 #${party.id}`
@@ -55,34 +58,41 @@ export function AdminInquiryDetailPage() {
 
 function InquirySummary({ inquiry, refreshing }: { inquiry: AdminInquiryDetail; refreshing: boolean }) {
   const { order, cancellationRequest: request } = inquiry
+  const here = `/admin/inquiries/${inquiry.id}`
   return <>
     <header className={styles.heading}>
       <p>{inquiryTypeLabel(inquiry.type)} · 신청 {name(inquiry.requester)}</p>
       <h1>{inquiry.subject}</h1>
-      <p>
+      <p className={styles.statusLine}>
         <span className={inquiry.status === 'CLOSED' ? styles.visible : styles.hidden}>{inquiryStatusLabel(inquiry.status)}</span>
-        접수 {formatDateTime(inquiry.createdAt)}
-        {inquiry.resolvedAt && <> · 처리 {formatDateTime(inquiry.resolvedAt)}{inquiry.assignedAdminId && <> (관리자 #{inquiry.assignedAdminId})</>}</>}
+        <span>접수 {formatDateTime(inquiry.createdAt)}
+          {inquiry.resolvedAt && <> · 처리 {formatDateTime(inquiry.resolvedAt)}{inquiry.assignedAdminId && <> (<MemberLink id={inquiry.assignedAdminId} role="관리자" from={here} />)</>}</>}</span>
       </p>
       {refreshing && <p role="status">최신 상태를 확인하고 있어요.</p>}
     </header>
-    {order && <section className={styles.block}>
+    {/* 주문·취소 요청을 카드 두 개로. 각각 있을 때만 보여 준다. */}
+    {(order || request) && <div className={styles.financeGrid}>
+    {order && <section className={styles.card}>
       <h2>주문</h2>
-      <dl className={styles.facts}>
-        <dt>주문 번호</dt><dd>#{order.id}</dd>
+      <dl className={FACTS}>
+        <dt>주문 번호</dt><dd><Link className={styles.inlineLink} to={`/admin/finance/orders/${order.id}`} state={{ from: here }}>#{order.id}</Link></dd>
         <dt>상태</dt><dd>{orderStatusLabel(order.status)}</dd>
-        <dt>결제 금액</dt><dd>{formatWon(order.priceAmount)}{order.paidAt && <> · 결제 {formatDateTime(order.paidAt)}</>}</dd>
-        <dt>구매자</dt><dd>{name(order.buyer)}</dd>
-        <dt>판매자</dt><dd>{name(order.seller)}</dd>
+        <dt>결제 금액</dt><dd><span className={styles.amount}>{formatWon(order.priceAmount)}</span>{order.paidAt && <> · 결제 {formatDateTime(order.paidAt)}</>}</dd>
+        <dt>구매자</dt><dd><MemberLink id={order.buyer.id} from={here}>{name(order.buyer)}</MemberLink></dd>
+        <dt>판매자</dt><dd><MemberLink id={order.seller.id} from={here}>{name(order.seller)}</MemberLink></dd>
       </dl>
     </section>}
-    {request && <section className={styles.block}>
+    {request && <section className={styles.card}>
       <h2>구매자 취소 요청</h2>
-      <p>{cancellationLabel[request.status] ?? request.status} · 요청 {formatDateTime(request.requestedAt)}
-        {request.resolvedAt && <> · 처리 {formatDateTime(request.resolvedAt)}{request.resolutionSource === 'ADMIN' ? ' (관리자)' : ''}</>}</p>
-      <p className={styles.text}>{request.reason}</p>
-      {request.responseReason && <p className={styles.text}>처리 사유: {request.responseReason}</p>}
+      <dl className={FACTS}>
+        <dt>상태</dt><dd><span className={styles.badge}>{cancellationLabel[request.status] ?? request.status}</span></dd>
+        <dt>요청</dt><dd>{formatDateTime(request.requestedAt)}</dd>
+        {request.resolvedAt && <><dt>처리</dt><dd>{formatDateTime(request.resolvedAt)}{request.resolutionSource === 'ADMIN' ? ' (관리자)' : ''}</dd></>}
+        <dt>취소 사유</dt><dd className={styles.text}>{request.reason}</dd>
+        {request.responseReason && <><dt>처리 사유</dt><dd className={styles.text}>{request.responseReason}</dd></>}
+      </dl>
     </section>}
+    </div>}
   </>
 }
 

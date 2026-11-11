@@ -19,16 +19,26 @@ export function AdminActionLogList({ filter, empty }: { filter: ActionLogFilter;
   if (!list.data) return <AsyncState title="작업 이력을 불러오고 있어요" />
   return <>
     <p className={styles.count}>총 {list.data.totalElements}건</p>
-    {list.data.items.length === 0 ? <p>{empty}</p> : <ul className={styles.list}>
-      {list.data.items.map((log) => <li key={log.id}>
-        <strong>{ACTION_LABELS[log.action] ?? log.action} · {targetLabel(log)}</strong>
-        <p><span className={log.status === 'SUCCEEDED' ? styles.badge : styles.hidden}>{STATUS_LABELS[log.status] ?? log.status}</span>
-          {resultLabel(log)}</p>
-        <p>사유: {log.reason}</p>
-        <small>요청 #{log.id} · 관리자 #{log.adminId} · 요청 {formatDateTime(log.requestedAt)}
-          {log.completedAt && <> · 결과 {formatDateTime(log.completedAt)}</>}</small>
-      </li>)}
-    </ul>}
+    {list.data.items.length === 0 ? <p className={styles.empty}>{empty}</p> : <div className={styles.tableWrap}><table className={styles.table}>
+      <thead><tr>
+        <th scope="col">요청</th><th scope="col">작업</th><th scope="col">대상</th><th scope="col">상태</th>
+        <th scope="col">결과</th><th scope="col">관리자</th><th scope="col">요청일</th><th scope="col">결과 시각</th>
+      </tr></thead>
+      {/* 작업 한 건 = 기본 행 + 사유 보조 행. */}
+      {list.data.items.map((log) => <tbody key={log.id}>
+        <tr className={styles.hasDetail}>
+          <td className={styles.cellId} data-label="요청">#{log.id}</td>
+          <td data-label="작업"><strong>{ACTION_LABELS[log.action] ?? log.action}</strong></td>
+          <td data-label="대상">{targetLabel(log)}</td>
+          <td data-label="상태"><span className={log.status === 'SUCCEEDED' ? styles.badge : styles.hidden}>{STATUS_LABELS[log.status] ?? log.status}</span></td>
+          <td data-label="결과">{resultLabel(log)}</td>
+          <td className={styles.cellId} data-label="관리자">#{log.adminId}</td>
+          <td className={styles.cellDate} data-label="요청일">{formatDateTime(log.requestedAt)}</td>
+          <td className={styles.cellDate} data-label="결과 시각">{log.completedAt ? formatDateTime(log.completedAt) : '—'}</td>
+        </tr>
+        <tr className={styles.detailRow}><td colSpan={8} data-label=""><p className={styles.text}>사유: {log.reason}</p></td></tr>
+      </tbody>)}
+    </table></div>}
     <AdminPager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="작업 이력 페이지" />
   </>
 }

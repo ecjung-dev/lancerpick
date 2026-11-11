@@ -14,6 +14,9 @@ import type { AdminProductDetail, VisibilityInput } from '../types'
 import { REASON_MAX, isValidProductId, saleStatusLabel, validateReason } from '../validation'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
+import { AdminNav } from './AdminNav'
+import { MemberLink } from '../components/MemberLink'
+import { AdminPager } from '../components/AdminPager'
 import styles from './Admin.module.css'
 
 /** 목록에서 넘겨준 돌아갈 주소. 관리자 목록 경로만 허용한다. */
@@ -26,6 +29,8 @@ export function AdminProductDetailPage() {
   const missing = !isValidProductId(id) || (product.error instanceof ApiError && product.error.status === 404)
 
   return <section className={styles.page}>
+    <p className={styles.eyebrow}>ADMIN</p>
+    <AdminNav />
     <Link to={back}>← 상품 운영 목록</Link>
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="상품을 찾을 수 없어요" description="상품 번호를 다시 확인해 주세요." />
@@ -47,19 +52,28 @@ export function AdminProductDetailPage() {
 function ProductSummary({ product, refreshing }: { product: AdminProductDetail; refreshing: boolean }) {
   return <>
     <header className={styles.heading}>
-      <p>{product.category.name} · 판매자 {product.seller.displayName}</p>
+      <p>{product.category.name} · <MemberLink id={product.seller.id} from={`/admin/products/${product.id}`}>판매자 {product.seller.displayName}</MemberLink></p>
       <h1>{product.title}</h1>
-      <p>
-        <span className={product.isHidden ? styles.hidden : styles.visible}>{product.isHidden ? '숨김' : '공개'}</span>
-        <span className={styles.badge}>{saleStatusLabel(product.saleStatus)}</span>
-        {formatWon(product.priceAmount)} · {product.durationDays}일 · 버전 {product.version}
+      {/* 목록과 같은 기준: 숨김·판매 중지만 배지, 공개·판매 중은 보통 글자. */}
+      <p className={styles.statusLine}>
+        <span className={product.isHidden ? styles.hidden : styles.cellMuted}>{product.isHidden ? '숨김' : '공개'}</span>
+        <span className={product.saleStatus === 'ON_SALE' ? styles.cellMuted : styles.toneWarn}>{saleStatusLabel(product.saleStatus)}</span>
       </p>
       {refreshing && <p role="status">최신 상태를 확인하고 있어요.</p>}
     </header>
+    <section className={styles.card} aria-label="상품 기본 정보">
+      <dl className={`${styles.facts} ${styles.factsAligned}`}>
+        <dt>상품 번호</dt><dd>#{product.id}</dd>
+        <dt>가격</dt><dd className={styles.amount}>{formatWon(product.priceAmount)}</dd>
+        <dt>작업 기간</dt><dd>{product.durationDays}일</dd>
+        <dt>버전</dt><dd>{product.version}</dd>
+        <dt>등록</dt><dd>{formatDateTime(product.createdAt)}</dd>
+        <dt>수정</dt><dd>{formatDateTime(product.updatedAt)}</dd>
+      </dl>
+    </section>
     <section className={styles.block}><h2>서비스 소개</h2><p className={styles.text}>{product.description}</p></section>
     <section className={styles.block}><h2>작업 범위</h2><p className={styles.text}>{product.scopeDescription}</p></section>
     <section className={styles.block}><h2>구매 전 준비사항</h2><p className={styles.text}>{product.preparationDescription}</p></section>
-    <small>등록 {formatDateTime(product.createdAt)} · 수정 {formatDateTime(product.updatedAt)}</small>
   </>
 }
 
@@ -155,18 +169,16 @@ function ModerationLogs({ id }: { id: string }) {
     {problem ? <AdminAccessNotice problem={problem} />
       : logs.isError ? <AsyncState title="운영 이력을 불러오지 못했어요" error={logs.error} onRetry={() => { void logs.refetch() }} />
         : !logs.data ? <AsyncState title="운영 이력을 불러오고 있어요" />
-          : logs.data.items.length === 0 ? <p>{page > 0 ? '이 페이지에 이력이 없어요.' : '아직 운영 이력이 없어요.'}</p>
-            : <ul className={styles.list}>{logs.data.items.map((log) => <li key={log.id}>
-              <strong>{log.action === 'HIDE' ? '숨김' : '복구'}</strong>
-              <time dateTime={log.createdAt}>{formatDateTime(log.createdAt)}</time>
-              <p className={styles.text}>{log.reason}</p>
-              <small>관리자 #{log.adminId}</small>
-            </li>)}</ul>}
-    {logs.data && logs.data.items.length === 0 && page > 0 && <button className={styles.secondary} onClick={() => setPage(0)}>첫 페이지로</button>}
-    {logs.data && logs.data.totalPages > 1 && <nav className={styles.pager} aria-label="운영 이력 페이지">
-      <button disabled={logs.isFetching || page === 0} onClick={() => setPage(page - 1)}>이전</button>
-      <span>{page + 1}페이지</span>
-      <button disabled={logs.isFetching || page + 1 >= logs.data.totalPages} onClick={() => setPage(page + 1)}>다음</button>
-    </nav>}
+          : logs.data.items.length === 0 ? <p className={styles.empty}>{page > 0 ? '이 페이지에 이력이 없어요.' : '아직 운영 이력이 없어요.'}</p>
+            : <div className={styles.tableWrap}><table className={styles.table}>
+              <thead><tr><th scope="col">처리</th><th scope="col">사유</th><th scope="col">관리자</th><th scope="col">처리일</th></tr></thead>
+              <tbody>{logs.data.items.map((log) => <tr key={log.id}>
+                <td data-label="처리"><span className={log.action === 'HIDE' ? styles.hidden : styles.visible}>{log.action === 'HIDE' ? '숨김' : '복구'}</span></td>
+                <td className={styles.cellText} data-label="사유">{log.reason}</td>
+                <td className={styles.cellId} data-label="관리자">관리자 #{log.adminId}</td>
+                <td className={styles.cellDate} data-label="처리일"><time dateTime={log.createdAt}>{formatDateTime(log.createdAt)}</time></td>
+              </tr>)}</tbody>
+            </table></div>}
+    {logs.data && <AdminPager page={page} totalPages={logs.data.totalPages} busy={logs.isFetching} onPage={setPage} label="운영 이력 페이지" />}
   </section>
 }

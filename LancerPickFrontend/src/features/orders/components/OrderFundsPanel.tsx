@@ -1,5 +1,5 @@
 import { useOrderFunds } from '../queries'
-import type { OrderFunds } from '../types'
+import { orderFundsStatusLabels as statusLabels } from '../status'
 import { formatWon, formatDateTime } from '../../../shared/lib/format'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { Button } from '../../../shared/components/Button'
@@ -12,12 +12,6 @@ interface OrderFundsPanelProps {
   feeRateBps?: number
 }
 
-const statusLabels: Record<OrderFunds['status'], string> = {
-  NOT_PAID: '전액 결제 대기',
-  HELD: '주문 대금 보관 중',
-  RELEASED: '판매자 지급 완료',
-  REFUNDED: '구매자 전액 반환 완료',
-}
 
 export function OrderFundsPanel({ orderId, orderStatus, compact = false, sellerView = false, feeRateBps }: OrderFundsPanelProps) {
   const query = useOrderFunds(orderId)

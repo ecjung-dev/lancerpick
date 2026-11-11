@@ -51,7 +51,7 @@ test('direct search URL restores keyword, dates and sort and keeps them on detai
   assert.match(html, /type="date" value="2026-10-01"/)
   assert.match(html, /type="date" value="2026-10-31"/)
   assert.match(html, /value="oldest" selected=""/)
-  assert.match(html, /총 60건/)
+  assert.match(html, /전체 거래 <strong[^>]*>60<\/strong>건/)
   assert.match(html, /주문번호 9007199254740993/)
   assert.match(html, /href="\/orders\/9007199254740993\?side=SELLER&amp;q=%EB%A1%9C%EA%B3%A0&amp;from=2026-10-01&amp;to=2026-10-31&amp;sort=oldest&amp;page=1"/)
 })
@@ -200,7 +200,7 @@ test('empty filtered order list explains that no orders match', () => {
   try {
     const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/orders?side=BUYER&status=COMPLETED'] },
       createElement(QueryClientProvider, { client }, createElement(OrderListPage))))
-    assert.match(html, /이 조건에 맞는 거래 내역이 없습니다/)
+    assert.match(html, /조회된 거래 내역이 없습니다/)
     assert.match(html, /value="COMPLETED" selected=""/)
   } finally { client.clear() }
 })

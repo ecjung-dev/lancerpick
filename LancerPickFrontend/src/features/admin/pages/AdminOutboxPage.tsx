@@ -7,7 +7,9 @@ import { outboxErrorLabel, readOutboxFilter, useOutboxIssues, type OutboxFilter,
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
-import { Pager } from './AdminFinancePage'
+import { AdminPager } from '../components/AdminPager'
+import { canResetFilter } from '../filterReset'
+import { codeLabel, outboxTypeLabels } from '../statusLabels'
 import styles from './Admin.module.css'
 
 const TABS: { key: OutboxIssueStatus; label: string }[] = [
@@ -34,15 +36,15 @@ export function AdminOutboxPage() {
     <AdminNav />
     <h1>알림 처리 상태</h1>
     <p className={styles.lead}>주문 알림을 만들지 못한 이벤트를 조회만 해요. 거래 자체는 이미 끝났고 알림만 빠진 상태예요. 다시 보내기는 운영 이력 기능과 함께 추가할 예정이에요.</p>
-    <nav className={styles.tabs} aria-label="알림 처리 상태 종류">
+    <nav className={styles.subtabs} aria-label="알림 처리 상태 종류">
       {TABS.map((item) => <Link key={item.key} to={`/admin/outbox?status=${item.key}${filter.orderId ? `&orderId=${filter.orderId}` : ''}`}
         aria-current={filter.status === item.key ? 'page' : undefined}>{item.label}</Link>)}
     </nav>
-    <Issues key={params.toString()} filter={filter} onApply={apply} />
+    <Issues key={params.toString()} filter={filter} onApply={apply} search={params.toString()} />
   </section>
 }
 
-function Issues({ filter, onApply }: { filter: OutboxFilter; onApply: (next: OutboxFilter) => void }) {
+function Issues({ filter, onApply, search }: { filter: OutboxFilter; onApply: (next: OutboxFilter) => void; search: string }) {
   const [page, setPage] = usePageSearchParam()
   const [orderId, setOrderId] = useState(filter.orderId)
   const list = useOutboxIssues(filter, page)
@@ -51,6 +53,9 @@ function Issues({ filter, onApply }: { filter: OutboxFilter; onApply: (next: Out
     <form className={styles.filters} role="search" onSubmit={(e: FormEvent) => { e.preventDefault(); onApply({ ...filter, orderId }) }}>
       <label>주문 번호 <input inputMode="numeric" value={orderId} onChange={(e) => setOrderId(e.target.value.replace(/[^0-9]/g, ''))} /></label>
       <button type="submit">조회</button>
+      {/* 상태 탭(status)은 유지하고 주문 번호·page만 지운다. */}
+      <button type="button" className={styles.secondary} disabled={!canResetFilter(new URLSearchParams(search), ['orderId'], [orderId])}
+        onClick={() => { setOrderId(''); onApply({ ...filter, orderId: '' }) }}>초기화</button>
     </form>
     {problem ? <AdminAccessNotice problem={problem} />
       : list.isError ? <AsyncState title="알림 처리 상태를 불러오지 못했어요" error={list.error} onRetry={() => { void list.refetch() }} />
@@ -62,14 +67,14 @@ function Issues({ filter, onApply }: { filter: OutboxFilter; onApply: (next: Out
               : <ul className={styles.list}>
                 {list.data.items.map((item) => <li key={item.id}>
                   <strong>{item.aggregateType === 'ORDER'
-                    ? <Link to={`/admin/finance/orders/${item.aggregateId}`}>주문 #{item.aggregateId}</Link>
-                    : `${item.aggregateType} #${item.aggregateId}`} · {item.type}</strong>
+                    ? <Link to={`/admin/finance/orders/${item.aggregateId}`} state={{ from: `/admin/outbox?${search}` }}>주문 #{item.aggregateId}</Link>
+                    : `${item.aggregateType} #${item.aggregateId}`} · {codeLabel(outboxTypeLabels, item.type)}</strong>
                   <p><span className={item.status === 'FAILED' ? styles.toneDanger : styles.toneWarn}>{item.status === 'FAILED' ? '처리 중단' : '재시도 대기'}</span>
                     {outboxErrorLabel(item.lastErrorCode)} · 시도 {item.attemptCount}회</p>
                   <small>이벤트 #{item.id} · 생성 {formatDateTime(item.createdAt)}{item.nextAttemptAt && <> · 다음 시도 {formatDateTime(item.nextAttemptAt)}</>}</small>
                 </li>)}
               </ul>}
-            <Pager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="알림 처리 상태 페이지" />
+            <AdminPager page={page} totalPages={list.data.totalPages} busy={list.isFetching} onPage={setPage} label="알림 처리 상태 페이지" />
           </>}
   </>
 }

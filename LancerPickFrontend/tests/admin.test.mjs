@@ -174,7 +174,7 @@ test('detail of a hidden product offers restore, escapes text and shows moderati
     assert.match(html, /판매 중지 상태는 판매자가 따로 관리/)
     assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
     assert.doesNotMatch(html, /<script>/)
-    assert.match(html, /버전 3/)
+    assert.match(html, /<dt>버전<\/dt><dd>3<\/dd>/)
     assert.match(html, /부적절한 내용/)
     assert.match(html, /관리자 #1/)
     assert.match(html, /href="\/admin\/products"/)
@@ -252,4 +252,29 @@ test('adminBackPath는 같은 목록 경로(검색 조건 포함)만 되돌아�
   assert.equal(adminBackPath('https://evil.example/admin/products', '/admin/products'), '/admin/products')
   assert.equal(adminBackPath(undefined, '/admin/inquiries', '/admin/inquiries?status=OPEN'), '/admin/inquiries?status=OPEN')
   assert.equal(adminBackPath({ from: '/admin/inquiries' }, '/admin/inquiries', '/admin/inquiries?status=OPEN'), '/admin/inquiries?status=OPEN')
+})
+
+test('adminReturnTo는 호출 화면이 적은 출처만 허용하고, 정규식은 경로 전체·쿼리 없음으로 비교한다', async () => {
+  const { adminReturnTo } = await import('../src/features/admin/navigation.ts')
+  const origins = [
+    { path: '/admin/members', label: '회원 목록' },
+    { path: '/admin/finance', label: '금융 조회' },
+    { path: /\/admin\/finance\/orders\/[1-9]\d*/, label: '주문 금융' },
+  ]
+  const fallback = { to: '/admin/members', label: '회원 목록' }
+  assert.deepEqual(adminReturnTo('/admin/finance?tab=payments&buyerId=5', origins, fallback), { to: '/admin/finance?tab=payments&buyerId=5', label: '금융 조회' })
+  assert.deepEqual(adminReturnTo('/admin/finance/orders/58', origins, fallback), { to: '/admin/finance/orders/58', label: '주문 금융' })
+  assert.deepEqual(adminReturnTo('/admin/finance/orders/58/x', origins, fallback), fallback, '정규식 뒤에 더 붙은 경로는 거부')
+  assert.deepEqual(adminReturnTo('/admin/finance/orders/58?x=1', origins, fallback), fallback, '상세 경로에는 쿼리를 받지 않는다')
+  assert.deepEqual(adminReturnTo('/admin/finance-old', origins, fallback), fallback)
+  assert.deepEqual(adminReturnTo('/admin/products', origins, fallback), fallback, '적지 않은 관리자 화면은 거부')
+  assert.deepEqual(adminReturnTo('https://evil.example/admin/members', origins, fallback), fallback)
+  assert.deepEqual(adminReturnTo(undefined, origins, fallback), fallback)
+  const more = [...origins, { path: '/admin/outbox', label: '알림 처리' }, { path: '/admin/review-timers', label: '자동 확정 타이머' },
+    { path: /\/admin\/products\/[1-9]\d*/, label: '상품 운영' }]
+  assert.deepEqual(adminReturnTo('/admin/outbox?status=FAILED&page=2', more, fallback), { to: '/admin/outbox?status=FAILED&page=2', label: '알림 처리' })
+  assert.deepEqual(adminReturnTo('/admin/review-timers?page=1', more, fallback), { to: '/admin/review-timers?page=1', label: '자동 확정 타이머' })
+  assert.deepEqual(adminReturnTo('/admin/products/5', more, fallback), { to: '/admin/products/5', label: '상품 운영' })
+  assert.deepEqual(adminReturnTo('/admin/products/05', more, fallback), fallback, '0으로 시작하는 번호는 상세 경로로 보지 않는다')
+  assert.deepEqual(adminReturnTo('/admin/outbox-x', more, fallback), fallback)
 })

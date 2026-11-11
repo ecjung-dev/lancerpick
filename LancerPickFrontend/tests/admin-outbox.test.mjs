@@ -65,6 +65,9 @@ test('failed tab lists events with order link, Korean reason and no retry button
     assert.match(html, new RegExp(`href="/admin/finance/orders/${orderId}"`))
     assert.match(html, /MEMBER #7/, '주문이 아닌 대상은 링크 없이 표시')
     assert.match(html, /처리 중 오류 \(PROCESSING_FAILED\) · 시도 5회/)
+    assert.match(html, /주문 수락 \(ORDER_ACCEPTED\)/, '이벤트 유형은 관리자용 짧은 이름과 코드')
+    assert.match(html, /MEMBER #7 · MEMBER_TEST/, '모르는 유형은 원문 그대로')
+    assert.match(html, /<button type="button"[^>]*disabled=""[^>]*>초기화<\/button>/, '주문 번호 조건이 없으면 초기화를 막는다')
     assert.doesNotMatch(html, /다음 시도/)
     assert.doesNotMatch(html, /<button[^>]*>(재처리|다시 보내기|재시도)/, '조회 화면에는 실행 버튼이 없다')
   } finally { client.clear() }

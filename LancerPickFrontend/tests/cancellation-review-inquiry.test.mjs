@@ -240,7 +240,7 @@ test('admin list restores filters from the URL and links to the detail', () => {
     const html = render('/admin/inquiries?status=OPEN', '/admin/inquiries', createElement(AdminInquiryListPage), client)
     assert.match(html, /value="OPEN" selected=""/)
     assert.match(html, new RegExp(`href="/admin/inquiries/${inquiryId}"`))
-    assert.match(html, /주문 #9007199254740993/)
+    assert.match(html, /data-label="주문">#9007199254740993</)
     assert.match(html, /총 1건/)
   } finally { client.clear() }
 })

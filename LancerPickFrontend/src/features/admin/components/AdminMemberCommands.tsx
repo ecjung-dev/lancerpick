@@ -115,7 +115,7 @@ export function AdminMemberCommands({
   if (!detail.canManage)
     return (
       <p className={styles.notice}>
-        관리자 계정과 본인 계정은 이 화면에서 제재할 수 없습니다.
+        관리자 계정과 본인 계정은 이 화면에서 제재할 수 없어요.
       </p>
     )
   return (
@@ -129,24 +129,24 @@ export function AdminMemberCommands({
       <h2>제재 적용·해제</h2>
       <p>
         일반 이용 제한은 신규 주문·상품 등록·주문 수락을 막고 기존 거래 처리는
-        허용합니다. 보안 잠금은 로그인·기존 세션을 차단하며 진행 중 거래는
-        관리자 확인이 필요합니다.
+        허용해요. 보안 잠금은 로그인·기존 세션을 차단하고 진행 중 거래는
+        관리자 확인이 필요해요.
       </p>
       <p>
         동일 종류를 새로 적용하면 기존 제재를 해제하고 새 기간·사유로
-        교체합니다. 서로 다른 종류는 함께 유지됩니다. 제재로 주문 취소·환불·수익
-        회수는 하지 않습니다.
+        교체해요. 서로 다른 종류는 함께 유지돼요. 제재로 주문 취소·환불·수익
+        회수는 하지 않아요.
       </p>
       {success && (
         <p className={styles.success} role="status">
-          처리했습니다. 현재 상태와 이력을 확인해 주세요.
+          처리했어요. 현재 상태와 이력을 확인해 주세요.
         </p>
       )}
       {pending?.phase === 'uncertain' && (
         <p className={styles.notice} role="alert">
           서버가 처리했을 수 있어요. 아래 원래 요청을 유지한 채 ‘같은 요청으로
           결과 확인’을 눌러 주세요. 화면을 이동해도 같은 로그인 상태에서는
-          요청을 보존합니다.
+          요청을 보존해요.
         </p>
       )}
       {error && (
@@ -196,7 +196,7 @@ export function AdminMemberCommands({
             />
             <p className={styles.help}>
               조회 기준 서버 시각: {formatDateTime(detail.serverTime)}. 만료 시
-              제한은 자동 해제되며 폐기된 로그인 세션은 복원되지 않습니다.
+              제한은 자동 해제되며 폐기된 로그인 세션은 복원되지 않아요.
             </p>
           </>
         )}
@@ -212,7 +212,7 @@ export function AdminMemberCommands({
             checked={stored ? true : confirmed}
             onChange={(event) => setConfirmed(event.target.checked)}
           />{' '}
-          대상 회원과 처리 영향을 확인했습니다.
+          대상 회원과 처리 영향을 확인했어요.
         </label>
       </fieldset>
       <button type="submit" disabled={busy || stale || (!stored && !confirmed)}>

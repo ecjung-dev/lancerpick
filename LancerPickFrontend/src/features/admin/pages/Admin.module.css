@@ -1,34 +1,99 @@
 /* 폭·좌우 여백은 AppLayout .main을 따른다(헤더 로고와 같은 선에서 시작). */
-.page { margin: 40px 0 80px; color: var(--ink); overflow-wrap: anywhere; }
+/* keep-all: 한글 단어 중간 줄바꿈 방지. anywhere: 긴 이메일·ID는 넘치지 않게 끊는다. */
+.page { margin: 40px 0 80px; color: var(--ink); word-break: keep-all; overflow-wrap: anywhere; }
 .eyebrow { font-size: 11px; letter-spacing: .14em; font-weight: 700; margin: 0; }
 .page h1 { margin: 8px 0 12px; font-size: clamp(26px, 4vw, 34px); letter-spacing: -.04em; }
 .lead { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0 0 24px; max-width: 72ch; }
 .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; padding: 18px; margin-bottom: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .filters label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 650; }
-.filters input, .filters select { min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: white; font-size: 14px; }
+.filters input, .filters select { height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: white; font-size: 14px; }
+/* 입력값·선택값은 보통 굵기. label의 650을 그대로 물려받아 "전체"가 굵게 보이던 것을 바로잡는다. */
+.filters input, .filters select { font-weight: 400; color: var(--ink); }
 .filters input { min-width: 240px; }
+/* 번호만 받는 칸(주문·회원 번호)은 좁게 둬 결제 필터 5칸과 버튼 2개가 한 줄에 들어가게 한다. */
+.filters input[inputmode='numeric'] { min-width: 0; width: 150px; }
 .page button { min-height: 40px; padding: 10px 18px; border: 0; border-radius: 8px; background: var(--ink); color: white; font-weight: 650; cursor: pointer; }
+/* 필터 버튼은 입력칸과 같은 40px. .page button보다 뒤·더 구체적인 선택자로 둬야 padding이 덮이지 않는다. */
+.page .filters button { height: 40px; padding: 0 18px; }
 .page button:disabled { opacity: .35; cursor: not-allowed; }
 /* 보조 버튼: 초기화·새로고침·페이지 이동. 옅은 --line 대신 --muted 테두리로 흰 배경에서도 구분한다. */
 .page button.secondary, .page .pager button { background: white; color: var(--ink); border: 1px solid var(--muted); }
 .page button.secondary:hover:not(:disabled), .page .pager button:hover:not(:disabled) { background: var(--surface); }
 .page button.secondary:disabled, .page .pager button:disabled { opacity: 1; color: var(--muted); border-color: var(--line); background: var(--surface); }
-.count { color: var(--muted); font-size: 13px; }
+.count { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
 .empty { margin: 0 0 20px; padding: 40px 16px; border: 1px dashed var(--line); border-radius: 12px; text-align: center; color: var(--muted); font-size: 14px; }
-.list { list-style: none; padding: 0; margin: 0; }
-.list li { padding: 18px 0; border-bottom: 1px solid var(--line); }
+/* 이력 목록(문장형): 목록 전체를 테두리 상자로 묶고 행 사이만 구분선을 둔다. */
+.list { list-style: none; padding: 0; margin: 0; border: 1px solid var(--line); border-radius: 12px; background: white; overflow: hidden; }
+.list li { padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.list li:last-child { border-bottom: 0; }
 .list li > a { font-weight: 700; font-size: 16px; text-decoration: underline; text-underline-offset: 3px; }
 .list li p { margin: 8px 0 4px; font-size: 14px; }
 .list li small, .list li time { color: var(--muted); font-size: 12px; }
 .list li time { margin-left: 10px; }
-.badge, .hidden, .visible, .toneWarn, .toneDanger, .toneOk { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid var(--line); }
+/* 문장 안 회원·주문 번호 링크. 본문과 같은 색이라 밑줄로 링크임을 보인다. */
+.inlineLink { text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 2px; }
+.inlineLink:hover { text-decoration-color: var(--ink); }
+
+/* 회원·상품·문의·결제·충전 목록 표: 번호·이름·상태·금액·날짜를 열로 나눈다.
+   제목 링크(.cellLink)가 행 전체를 덮어(::after) 행 어디를 눌러도 상세로 간다. 칸 안 다른 링크·폼은 그 위(z-index)에 둔다. */
+.tableWrap { border: 1px solid var(--line); border-radius: 12px; background: white; overflow-x: auto; }
+/* 화면에는 숨기고 보조기술에만 읽히는 문구(예: 표 칸 링크의 "구매자 #5"에서 "구매자 "). */
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; word-break: keep-all; }
+.table th { padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 650; text-align: left; white-space: nowrap; }
+.table td { padding: 13px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.table tbody tr { position: relative; transition: background-color .12s; }
+.table tbody tr:hover { background: var(--surface); }
+.table tbody tr:last-child td { border-bottom: 0; }
+.table td > span[class] { margin-right: 0; }
+.table .inlineLink, .table details, .table form, .table button { position: relative; z-index: 1; }
+.cellLink { font-weight: 700; }
+.cellLink::after { content: ''; position: absolute; inset: 0; }
+tr:hover .cellLink { text-decoration: underline; text-underline-offset: 3px; }
+/* 번호·날짜는 줄바꿈하지 않고 숫자 폭을 맞춘다. 금액은 오른쪽 정렬. */
+.cellId, .cellDate { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--muted); }
+.cellDate { font-size: 13px; }
+.table .cellNum { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cellNum strong { font-weight: 700; }
+.cellMuted { color: var(--muted); }
+/* 상세 화면 제목 아래 상태 한 줄(배지·보통 글자). */
+.statusLine { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 14px; }
+.statusLine > span[class] { margin-right: 0; }
+/* 상세 화면 금액: 숫자 폭을 맞춰 위아래 금액 자리를 정렬한다. */
+.amount { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* 사유 같은 긴 글: 줄바꿈을 살리고 너무 좁아지지 않게 한다. */
+.cellText { min-width: 14em; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cellSub { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+/* 충전 목록의 복구 판단·재처리 폼: 바로 위 행에 딸린 보조 행. 위 행과의 구분선을 없앤다. */
+.table tbody + tbody { border-top: 1px solid var(--line); }
+.cellId strong { color: var(--ink); }
+.table tr.detailRow { background: white; }
+.table tr.hasDetail td { border-bottom: 0; padding-bottom: 6px; }
+.table tr.detailRow td { padding-top: 0; font-size: 13px; color: var(--muted); }
+.detailRow p { margin: 2px 0; }
+/* 좁은 화면: 표 머리글을 숨기고 행마다 "라벨  값" 카드로 펼친다(가로 스크롤 없음). */
+@media (max-width: 720px) {
+  .table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tbody tr { padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .table tbody tr:last-child, .table tr.hasDetail { border-bottom: 0; }
+  .table td, .table tr.hasDetail td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 0; border: 0; text-align: right; }
+  .table td::before { content: attr(data-label); flex: none; color: var(--muted); font-size: 12px; text-align: left; }
+  .table td[data-label=''], .table tr.detailRow td { display: block; text-align: left; }
+  .table td[data-label='']::before, .table tr.detailRow td::before { content: none; }
+  .table tr.detailRow { padding-top: 0; }
+  .table td, .table tr.hasDetail td { flex-wrap: wrap; row-gap: 0; }
+  /* 환불 금액·진행 시각 같은 보조 줄은 값 아래 오른쪽에 한 줄씩. */
+  .cellSub { flex-basis: 100%; margin: 0; text-align: right; white-space: normal; }
+}
+.badge, .hidden, .visible, .toneWarn, .toneDanger, .toneOk { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 650; line-height: 1.5; white-space: nowrap; border: 1px solid var(--line); color: var(--ink); }
 .hidden { background: var(--ink); color: white; border-color: var(--ink); }
 .visible { background: white; }
 /* 상태 톤: 배지 문구가 그대로 있어 색만으로 구분하지 않는다. */
 .toneWarn { background: #fff8ec; color: #6b4a12; border-color: #ecd9b4; }
 .toneDanger { background: #fbeaea; color: #9f2929; border-color: #eec4c4; }
 .toneOk { background: #f1f6f2; color: #285333; border-color: #c9ddcd; }
-.pager { display: flex; align-items: center; gap: 16px; margin: 24px 0; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 20px 0; font-size: 14px; font-variant-numeric: tabular-nums; }
 .heading { margin: 24px 0; }
 .heading > p { color: var(--muted); font-size: 14px; }
 .block { margin: 28px 0; }
@@ -40,7 +105,7 @@
 .form fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .form label { display: block; margin: 16px 0 8px; font-weight: 650; }
 .form label span { margin-left: 6px; font-size: 11px; color: var(--muted); font-weight: 450; }
-.form textarea { width: 100%; min-height: 110px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; resize: vertical; }
+.form textarea { width: 100%; max-width: 640px; min-height: 110px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; resize: vertical; }
 .form textarea[aria-invalid='true'] { border: 2px solid var(--ink); }
 .help { margin: 6px 0; font-size: 12px; color: var(--muted); }
 .fieldError { margin: 6px 0; color: #9f2929; font-size: 13px; }
@@ -48,15 +113,37 @@
 .success { background: #f1f6f2; color: #285333; padding: 12px; border-radius: 8px; font-size: 14px; }
 .notice { background: #fff8ec; color: #6b4a12; padding: 14px; border-radius: 8px; font-size: 14px; margin: 16px 0; }
 .notice a { display: inline-block; margin-top: 8px; text-decoration: underline; }
-@media (max-width: 600px) { .page { margin-top: 24px; } .filters input { min-width: 0; width: 100%; } .filters label { flex: 1 1 100%; } .form { padding: 16px; } .empty { padding: 28px 12px; } }
+@media (max-width: 600px) { .page { margin-top: 24px; } .filters input, .filters input[inputmode='numeric'] { min-width: 0; width: 100%; } .filters label { flex: 1 1 100%; } .form { padding: 16px; } .empty { padding: 28px 12px; } }
 
 .tabs { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 20px; font-size: 14px; font-weight: 650; }
 .tabs a { padding-bottom: 6px; color: var(--muted); }
 .tabs a[aria-current='page'] { color: var(--ink); border-bottom: 2px solid var(--ink); }
+/* 화면 안 하위 분류(금융 조회 종류·알림 처리 상태): 상단 관리자 메뉴와 구분되는 칩. */
+.subtabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; font-size: 13px; font-weight: 650; }
+.subtabs a { padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; background: white; color: var(--muted); }
+.subtabs a:hover { color: var(--ink); border-color: var(--muted); }
+.subtabs a[aria-current='page'] { background: var(--ink); border-color: var(--ink); color: white; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+/* 주문 금융 상세: 섹션마다 따로 있는 dl의 라벨 열을 같은 폭으로 맞춰 값 시작선을 정렬한다. */
+.factsAligned { grid-template-columns: 13em minmax(0, 1fr); }
+/* 375px 등 좁은 화면: 라벨 위·값 아래 한 열로 바꿔 값 영역을 넓힌다(문의 상세 facts 포함). */
+@media (max-width: 600px) { .facts, .factsAligned { grid-template-columns: minmax(0, 1fr); gap: 2px; } .facts dd + dt { margin-top: 10px; } }
+/* 주문 금융 상세 금액 카드. 카드 폭 기준으로 facts를 한 열로 바꾼다(1000px 두 열에서 값 영역 확보). */
+.financeGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 24px 0; }
+@media (min-width: 1000px) { .financeGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.card { container-type: inline-size; min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+.card h2 { margin: 0 0 12px; font-size: 18px; }
+.card > p { margin: 0; color: var(--muted); font-size: 14px; }
+@container (max-width: 440px) { .factsAligned { grid-template-columns: minmax(0, 1fr); gap: 2px; } .factsAligned dd + dt { margin-top: 10px; } }
+/* 대시보드: 집계 대상 여섯 항목이 모두 0건일 때 한 줄 요약. */
+.allClear { margin: 0 0 16px; padding: 14px 16px; border-radius: 10px; background: #f1f6f2; color: #285333; font-size: 14px; }
+.statusHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 10px; }
+.statusHead h2 { margin: 0; }
+.statusCard { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.statusCard > p { margin: 6px 0; font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
 
 /* 카드 6개: 900px 이상 3열, 600~899px 2열, 600px 미만 1열. */
 .cards { list-style: none; padding: 0; margin: 0 0 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }

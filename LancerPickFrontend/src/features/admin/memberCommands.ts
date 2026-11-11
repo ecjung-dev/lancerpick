@@ -26,7 +26,7 @@ export async function submitMemberSanction(
   const key = pendingMemberCommandKey(id)
   const previous = client.getQueryData<PendingMemberCommand | null>(key)
   if (previous?.phase === 'sending')
-    throw new Error('이미 처리 중인 요청이 있습니다.')
+    throw new Error('이미 처리 중인 요청이 있어요.')
   const command = previous?.command ?? input
   if (!command) throw new Error('처리할 제재 요청을 확인해 주세요.')
   client.setQueryDefaults(pendingMemberCommandPrefix, { gcTime: Infinity })

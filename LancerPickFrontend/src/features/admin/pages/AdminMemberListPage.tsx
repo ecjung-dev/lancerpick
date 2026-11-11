@@ -12,6 +12,7 @@ import type { AdminMemberFilter } from '../memberTypes'
 import { keywordError } from '../validation'
 import { AdminAccessNotice } from './AdminAccess'
 import { AdminNav } from './AdminNav'
+import { canResetFilter } from '../filterReset'
 import styles from './Admin.module.css'
 
 export function AdminMemberListPage() {
@@ -32,10 +33,10 @@ export function AdminMemberListPage() {
       <AdminNav />
       <h1>회원 관리</h1>
       <p className={styles.lead}>
-        회원의 현재 제한 상태와 제재 이력을 확인하고 관리합니다. 보안 잠금과
-        일반 이용 제한이 겹치면 보안 잠금이 우선 표시됩니다.
+        회원의 현재 제한 상태와 제재 이력을 확인하고 관리해요. 보안 잠금과
+        일반 이용 제한이 겹치면 보안 잠금이 우선 표시돼요.
       </p>
-      <MemberFilter key={params.toString()} filter={filter} onApply={apply} />
+      <MemberFilter key={params.toString()} filter={filter} onApply={apply} params={params} />
       {problem ? (
         <AdminAccessNotice problem={problem} />
       ) : query.isError ? (
@@ -47,47 +48,78 @@ export function AdminMemberListPage() {
           }}
         />
       ) : !query.data ? (
-        <AsyncState title="회원 목록을 불러오는 중입니다" />
+        <AsyncState title="회원 목록을 불러오고 있어요" />
       ) : (
         <>
           <p className={styles.count}>
             총 {query.data.totalElements}명 · 최신 가입순 · 30초마다 상태 갱신
           </p>
           {!query.data.items.length ? (
-            <p className={styles.empty}>조건에 맞는 회원이 없습니다.</p>
+            <p className={styles.empty}>조건에 맞는 회원이 없어요.</p>
           ) : (
-            <ul className={styles.list}>
-              {query.data.items.map((member) => (
-                <li key={member.id}>
-                  <Link
-                    to={`/admin/members/${member.id}`}
-                    state={{
-                      from: `/admin/members${params.size ? `?${params}` : ''}`,
-                    }}
-                  >
-                    {member.displayName} · 회원 #{member.id}
-                  </Link>
-                  <p>
-                    {member.email} ·{' '}
-                    {member.role === 'ADMIN' ? '관리자' : '일반 회원'}
-                  </p>
-                  <p>
-                    <span
-                      className={
-                        member.restriction === 'SECURITY_LOCK'
-                          ? styles.toneDanger
-                          : member.restriction === 'GENERAL_RESTRICTION'
-                            ? styles.toneWarn
-                            : styles.badge
-                      }
-                    >
-                      {restrictionLabels[member.restriction]}
-                    </span>
-                    가입 {formatDateTime(member.createdAt)}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th scope="col">번호</th>
+                    <th scope="col">이름</th>
+                    <th scope="col">이메일</th>
+                    <th scope="col">구분</th>
+                    <th scope="col">제한 상태</th>
+                    <th scope="col">가입일</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {query.data.items.map((member) => (
+                    <tr key={member.id}>
+                      <td className={styles.cellId} data-label="번호">
+                        #{member.id}
+                      </td>
+                      <td data-label="">
+                        <Link
+                          className={styles.cellLink}
+                          to={`/admin/members/${member.id}`}
+                          state={{
+                            from: `/admin/members${params.size ? `?${params}` : ''}`,
+                          }}
+                        >
+                          {member.displayName}
+                        </Link>
+                      </td>
+                      <td data-label="이메일">{member.email}</td>
+                      <td data-label="구분">
+                        {member.role === 'ADMIN' ? (
+                          <span className={styles.hidden}>관리자</span>
+                        ) : (
+                          '일반 회원'
+                        )}
+                      </td>
+                      {/* 제한이 있을 때만 배지. "제한 없음"은 보통 글자로 둬 확인할 회원이 눈에 띄게 한다. */}
+                      <td data-label="제한 상태">
+                        {member.restriction === 'NONE' ? (
+                          <span className={styles.cellMuted}>
+                            {restrictionLabels.NONE}
+                          </span>
+                        ) : (
+                          <span
+                            className={
+                              member.restriction === 'SECURITY_LOCK'
+                                ? styles.toneDanger
+                                : styles.toneWarn
+                            }
+                          >
+                            {restrictionLabels[member.restriction]}
+                          </span>
+                        )}
+                      </td>
+                      <td className={styles.cellDate} data-label="가입일">
+                        {formatDateTime(member.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           <AdminPager
             page={page}
@@ -105,9 +137,11 @@ export function AdminMemberListPage() {
 function MemberFilter({
   filter,
   onApply,
+  params,
 }: {
   filter: AdminMemberFilter
   onApply: (next: AdminMemberFilter) => void
+  params: URLSearchParams
 }) {
   const [draft, setDraft] = useState(filter)
   const [error, setError] = useState<string>()
@@ -154,6 +188,9 @@ function MemberFilter({
         <button
           type="button"
           className={styles.secondary}
+          disabled={
+            !canResetFilter(params, ['q', 'restriction'], [draft.q, draft.restriction])
+          }
           onClick={() => {
             const empty = { q: '', restriction: '' } as const
             setDraft(empty)

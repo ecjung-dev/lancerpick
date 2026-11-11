@@ -1,13 +1,17 @@
 .form input:not([type='checkbox']),
 .form select {
   width: 100%;
-  max-width: 440px;
+  max-width: 640px;
   min-width: 0;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   font: inherit;
   background: white;
+}
+/* 제재 폼의 입력칸(select·일시·사유)을 같은 폭으로 맞춘다. 공용 .form textarea(다른 관리자 폼)는 건드리지 않는다. */
+form.form textarea {
+  max-width: 640px;
 }
 .form button {
   margin-top: 16px;
