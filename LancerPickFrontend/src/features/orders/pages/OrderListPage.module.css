@@ -2,7 +2,7 @@
 .orders button, .orders input, .orders select { font: inherit; box-sizing: border-box; border: 1px solid var(--line); border-radius: 6px; min-height: 40px; padding: 9px 12px; background: white; color: var(--ink); max-width: 100%; }
 .orders button { cursor: pointer; font-size: 12px; }
 .orders button:hover:not(:disabled) { background: var(--surface); }
-.orders button:disabled { opacity: .4; cursor: default; }
+.orders button:disabled { opacity: var(--disabled-opacity); cursor: default; }
 .orders :is(button, input, select, a):focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .list-search { margin: 24px 0 18px; padding: 22px; display: grid; gap: 18px; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; font-size: 12px; }
 .list-search > label { display: grid; gap: 8px; font-weight: 600; }

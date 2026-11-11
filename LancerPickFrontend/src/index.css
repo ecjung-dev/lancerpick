@@ -17,6 +17,8 @@
   --success-surface: #f1f6f2;
   --warning: #6b4a12;
   --warning-surface: #fff8ec;
+  /* 비활성 버튼 투명도. 의도적으로 흐리지 않는 버튼(알림 행 본문·관리자 보조 버튼)은 opacity: 1로 따로 둔다. */
+  --disabled-opacity: .4;
 }
 
 * { box-sizing: border-box; }

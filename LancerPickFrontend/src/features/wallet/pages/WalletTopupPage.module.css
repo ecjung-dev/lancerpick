@@ -19,7 +19,7 @@
 .presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 28px; }
 .presets button { border: 1px solid var(--line); border-radius: 6px; padding: 9px 3px; background: white; font-size: 11px; cursor: pointer; }
 .presets button[aria-pressed='true'] { border-color: var(--ink); background: var(--surface); font-weight: 750; }
-.presets button:disabled { opacity: .5; cursor: default; }
+.presets button:disabled { opacity: var(--disabled-opacity); cursor: default; }
 .formCard > button { width: 100%; }
 .formCard h2.paymentHeading { margin-top: 34px; }
 .widgetPreview { padding: 30px 20px; background: var(--surface); border: 1px dashed #bdbdbd; border-radius: 8px; margin: 20px 0; font-size: 12px; text-align: center; }

@@ -8,7 +8,7 @@
 .primary { background: var(--ink); color: white; border: 1px solid var(--ink); }
 .secondary { background: white; color: var(--ink); border: 1px solid var(--line); }
 .secondary:hover:not(:disabled) { background: var(--surface); }
-.primary:disabled, .secondary:disabled { opacity: .4; cursor: default; }
+.primary:disabled, .secondary:disabled { opacity: var(--disabled-opacity); cursor: default; }
 .sectionHead { margin: 36px 0 16px; }
 .sectionHead h2 { margin: 0; font-size: 18px; letter-spacing: -.03em; }
 .sectionHead h2 small { margin-left: 6px; font-size: 13px; font-weight: 400; color: var(--muted); }

@@ -7,7 +7,7 @@
 .chip[aria-pressed='true'] { background: var(--ink); color: white; border-color: var(--ink); }
 .secondary { background: white; color: var(--ink); border: 1px solid var(--line); }
 .chip:hover:not([aria-pressed='true']), .secondary:hover:not(:disabled) { background: var(--surface); }
-.chip:disabled, .secondary:disabled { opacity: .4; cursor: default; }
+.chip:disabled, .secondary:disabled { opacity: var(--disabled-opacity); cursor: default; }
 .notifications :is(.chip, .secondary):focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .notice { margin: 24px 0; font-size: 14px; }
 .notice a { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }

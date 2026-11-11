@@ -2,7 +2,7 @@
 .pager > span { color: var(--muted); text-align: center; line-height: 1.6; }
 .pager .button { min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); font: inherit; font-weight: 650; white-space: nowrap; cursor: pointer; transition: background .15s; }
 .pager .button:hover:not(:disabled) { background: var(--surface); }
-.pager .button:disabled { opacity: .4; cursor: not-allowed; }
+.pager .button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
 @media (max-width: 560px) {
   .pager { gap: 8px; }
   .pager > span { flex: 1; min-width: 0; font-size: 11px; }

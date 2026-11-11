@@ -57,7 +57,7 @@
 .summary small { display: block; font-size: 12px; color: #777; line-height: 1.65; }
 .summaryRows { border-top: 1px solid #e3e3e3; padding-top: 14px; }
 .chatEntry button { display: block; width: 100%; min-height: 44px; border: 1px solid #171717; border-radius: 8px; background: #fff; color: #171717; padding: 10px 12px; font: inherit; font-size: 14px; cursor: pointer; }
-.chatEntry button:disabled { opacity: .4; cursor: not-allowed; }
+.chatEntry button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
 .earningsLink { border-top: 1px solid #e3e3e3; margin-top: 24px; padding-top: 18px; }
 .earningsLink a { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; color: #171717; font-weight: 650; font-size: 14px; text-decoration: none; }
 .feedback { padding: 16px 20px; border: 1px solid #bcbcbc; border-radius: 10px; background: #f8f8f8; margin-bottom: 20px; }
@@ -78,7 +78,7 @@
 .page input[type='url'] { display: block; width: 100%; min-height: 44px; margin-top: 8px; }
 .page input[type='checkbox'] { accent-color: #171717; }
 .page fieldset button { min-height: 44px; border: 1px solid #171717; border-radius: 8px; background: #171717; color: #fff; padding: 10px 18px; font: inherit; font-size: 14px; cursor: pointer; }
-.page button:disabled { cursor: not-allowed; opacity: .4; }
+.page button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
 .commands > fieldset { margin-top: 18px; }
 .secondaryActions fieldset button { color: #171717; background: #fff; border-color: #bbb; }
 .page fieldset p { font-size: 13px; color: #686868; }

@@ -6,7 +6,7 @@
 .toolbar button, .pager { font-size: 12px; }
 .filters { display: flex; gap: 4px; }
 .filters button[aria-pressed='true'] { background: var(--ink); color: white; }
-.toolbar button:disabled, .content button:disabled { opacity: .45; cursor: default; }
+.toolbar button:disabled, .content button:disabled { opacity: var(--disabled-opacity); cursor: default; }
 .content { min-height: 0; flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; padding: 12px; font-size: 13px; line-height: 1.6; }
 .heading, .toolbar, .all { flex-shrink: 0; }
 .list { display: grid; gap: 7px; margin: 0; padding: 0; }

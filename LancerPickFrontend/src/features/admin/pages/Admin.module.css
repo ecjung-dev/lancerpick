@@ -17,7 +17,7 @@
 .button:hover:not(:disabled) { background: #333; }
 /* 필터 버튼은 입력칸과 같은 40px. */
 .filters .button { height: 40px; padding: 0 18px; }
-.button:disabled { opacity: .4; cursor: not-allowed; }
+.button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
 /* 보조 버튼: 초기화·새로고침·페이지 이동. 옅은 --line 대신 --muted 테두리로 흰 배경에서도 구분하고, 비활성은 투명도 대신 색으로 구분한다. */
 .button.secondary { background: white; color: var(--ink); border: 1px solid var(--muted); }
 .button.secondary:hover:not(:disabled) { background: var(--surface); }

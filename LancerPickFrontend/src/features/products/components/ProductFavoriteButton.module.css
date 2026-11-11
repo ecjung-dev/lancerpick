@@ -3,5 +3,5 @@
 .heart[aria-pressed='true'] { color: #171717; border-color: #aaa; }
 .heart[aria-pressed='true'] svg { fill: currentColor; }
 .heart:focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
-.heart:disabled { opacity: .4; cursor: default; }
+.heart:disabled { opacity: var(--disabled-opacity); cursor: default; }
 .error { flex-basis: 100%; color: var(--danger); font-size: 12px; line-height: 1.7; margin: 8px 0 0; }
