@@ -1,9 +1,15 @@
 .page { padding: 36px 0 70px; overflow-wrap: anywhere; }
-.profile { margin: 24px 0 36px; padding: 24px; border: 1px solid var(--line); border-radius: 14px; }
-.profile h1 { margin: 0 0 16px; }
-.profile dt { margin-top: 12px; font-weight: 700; }
-.profile dd { margin: 4px 0 0; white-space: pre-wrap; }
-.profile a, .page > a { text-decoration: underline; text-underline-offset: 4px; }
+.back { font-size: 13px; color: var(--muted); }
+.profile { margin: 20px 0 40px; padding: 28px; border: 1px solid var(--line); border-radius: 14px; }
+.eyebrow { margin: 0; font-size: 10px; letter-spacing: .16em; color: var(--muted); }
+.profile h1 { margin: 6px 0 18px; font-size: 28px; letter-spacing: -.05em; line-height: 1.35; }
+.profile dl { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px 16px; margin: 0; padding-top: 18px; border-top: 1px solid var(--line); }
+.profile dt { color: var(--muted); font-size: 13px; }
+.profile dd { margin: 0; font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
+.profile a { display: inline-flex; align-items: center; min-height: 40px; margin-top: 18px; padding: 10px 18px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-weight: 650; }
+.profile a:hover { background: var(--surface); text-decoration: none; }
+.sectionTitle { margin: 0 0 18px; font-size: 21px; letter-spacing: -.04em; }
 .products { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
 @media (max-width: 900px) { .products { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .profile { padding: 22px; } .profile h1 { font-size: 24px; } .profile dl { grid-template-columns: minmax(0, 1fr); gap: 4px; } .profile dd + dt { margin-top: 10px; } }
 @media (max-width: 480px) { .products { grid-template-columns: minmax(0, 1fr); } }

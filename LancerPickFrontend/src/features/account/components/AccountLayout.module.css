@@ -8,7 +8,7 @@
 .sidebar { border-top: 2px solid var(--ink); }
 .member { display: flex; flex-direction: column; gap: 8px; padding: 24px 12px; }
 .avatar { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: var(--surface); font-size: 20px; font-weight: 700; }
-.member > span:last-child { font-size: 11px; color: var(--muted); }
+.member > span:last-child { font-size: 11px; color: var(--muted); word-break: keep-all; }
 .switcher { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
 .switcher a { text-align: center; padding: 12px 6px; border-bottom: 2px solid transparent; font-size: 14px; }
 .switcher a[aria-current] { border-color: var(--ink); font-weight: 700; }

@@ -21,7 +21,7 @@ export function PublicSellerPage() {
 
   return (
     <section className={styles.page}>
-      <Link to={productPath ?? '/'} state={productPath ? location.state?.productState : undefined}>
+      <Link className={styles.back} to={productPath ?? '/'} state={productPath ? location.state?.productState : undefined}>
         {productPath ? '← 상품 상세로' : '← 상품 목록으로'}
       </Link>
       {profile.isPending ? <AsyncState title="판매자 소개를 불러오고 있어요." />
@@ -34,6 +34,7 @@ export function PublicSellerPage() {
         ) : (
           <>
             <header className={styles.profile}>
+              <p className={styles.eyebrow}>SELLER PROFILE</p>
               <h1>{profile.data.displayName}</h1>
               <dl>
                 <dt>전문 분야</dt>
@@ -62,7 +63,7 @@ function SellerProducts({ sellerId }: { sellerId: string }) {
 
   return (
     <section aria-labelledby="seller-products-title" aria-busy={products.isFetching}>
-      <h2 id="seller-products-title">판매 중인 상품</h2>
+      <h2 id="seller-products-title" className={styles.sectionTitle}>판매 중인 상품</h2>
       {products.isPending ? <AsyncState title="상품을 불러오고 있어요." />
         : products.isError ? (
           <AsyncState title="상품을 불러오지 못했어요." error={products.error} onRetry={() => void products.refetch()} />

@@ -35,6 +35,7 @@ import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage'
 import { WalletPage, WalletPreviewPage } from '../features/wallet/pages/WalletPage'
 import { WalletTopupPage, WalletTopupPreviewPage } from '../features/wallet/pages/WalletTopupPage'
 import { WalletTopupResultPage } from '../features/wallet/pages/WalletTopupResultPage'
+import { NotFoundPage } from './NotFoundPage'
 
 export const router = createBrowserRouter([
   {
@@ -82,7 +83,7 @@ export const router = createBrowserRouter([
       { path: 'admin/finance', element: <AdminFinancePage /> },
       { path: 'admin/finance/orders/:id', element: <AdminOrderFinancePage /> },
       { path: 'admin/outbox', element: <AdminOutboxPage /> },
-      { path: '*', element: <h1>페이지를 찾을 수 없어요.</h1> },
+      { path: '*', element: <NotFoundPage /> },
     ],
   },
 ])
