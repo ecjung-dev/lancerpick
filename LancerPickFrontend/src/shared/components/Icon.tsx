@@ -1,7 +1,8 @@
 import type { CSSProperties } from 'react'
 
-export type IconName = 'search' | 'design' | 'code' | 'video' | 'marketing' | 'translate' | 'document' | 'arrow' | 'check' | 'bell' | 'message'
+export type IconName = 'refresh' | 'search' | 'design' | 'code' | 'video' | 'marketing' | 'translate' | 'document' | 'arrow' | 'check' | 'bell' | 'message'
 const paths: Record<IconName, React.ReactNode> = {
+  refresh: <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1" /></>,
   message: <path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-6 4V5a2 2 0 0 1 1-2Z" />,
   bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" /></>,
   search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></>,

@@ -1,5 +1,11 @@
 # 변경 이력과 설계 결정
 
+## 2026-11-11 메시지·알림 사이드바 로컬 구현
+
+`codex/message-notification-sidebar`에서 헤더 오른쪽 사이드바·세션 새 메시지 점·새로고침 아이콘·Enter 전송/Alt+Enter 줄바꿈·IME 전송 방지를 구현했다. 방 전환 시 계정별 임시 입력을 보관하며 기존 pending UUID 처리는 유지했다. 서버 채팅 읽음 기능은 없으므로 표시 범위와 최신 20개/30초 조회 제한은 features.md에 명시했다.
+
+프런트 typecheck·lint·test:api 335건·build를 통과했다. Edge API 대역으로 1440px/320px 목록→대화 연결, 입력 복귀, Alt+Enter, 일반 Enter 단일 HTTP 전송, 합성 IME keydown 전송 없음, 새로고침 이름/툴팁, 알림 사이드바 폭을 확인했다. 실제 한글 IME·소켓·실제 DB/서버 통합 검증과 구분한다. 자체 5273 preview 서버는 종료했으며 사용자 5173 서버는 조작하지 않았다. push·PR·병합은 하지 않았다. 기존 미추적 seed-showcase-data.sql과 Git 제외 개인 자료를 보존했다.
+
 [목차](README.md) · [현재 진행](project-progress.md) · [현재 설계](architecture.md) · [기능 명세](features.md)
 
 ## 기록 해석

@@ -3,8 +3,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
+import { Icon } from '../../../shared/components/Icon'
+import { useChatWorkspace } from '../workspace'
 import { Button } from '../../../shared/components/Button'
 import { loginPath, recheckSession } from '../../auth/session'
+import { chatEnterAction } from '../keyboard'
 import { mergeChatMessages } from '../messages'
 import { useChatMember, useChatMessages } from '../queries'
 import { chatStatusAllowsSend, MAX_MESSAGE_LENGTH } from '../validation'
@@ -90,6 +93,18 @@ function ChatConversation({
     query.data?.pages[0]?.lastSequence,
   )
   const messages = mergeChatMessages(query.data?.pages ?? [])
+  const workspace = useChatWorkspace()
+  const latest = messages.at(-1)?.createdAt
+  const acknowledge = workspace?.acknowledge
+  useEffect(() => {
+    const viewed = () => {
+      if (active && latest && !query.isError && document.visibilityState === 'visible')
+        acknowledge?.(orderId, latest)
+    }
+    viewed()
+    document.addEventListener('visibilitychange', viewed)
+    return () => document.removeEventListener('visibilitychange', viewed)
+  }, [active, latest, orderId, acknowledge, query.isError])
   const canSend =
     Boolean(query.data?.pages[0]?.canSend) && chatStatusAllowsSend(orderStatus)
   const { content, setDraft, busy, uncertain, failure, length, send, refresh } =
@@ -151,11 +166,13 @@ function ChatConversation({
         <Button
           variant="secondary"
           disabled={query.isFetching}
+          aria-label="대화 새로고침"
+          title="대화 새로고침"
           onClick={() => {
             void refresh()
           }}
         >
-          대화 새로고침
+          <Icon name="refresh" size={18} />
         </Button>
         {query.hasNextPage && (
           <Button
@@ -195,7 +212,28 @@ function ChatConversation({
             value={content}
             readOnly={busy || uncertain}
             onChange={(event) => setDraft(event.target.value)}
+            aria-describedby={`chat-hint-${orderId}`}
+            onKeyDown={(event) => {
+              const action = chatEnterAction({
+                key: event.key, altKey: event.altKey, repeat: event.repeat,
+                isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode,
+              })
+              if (action === 'newline') {
+                event.preventDefault()
+                if (busy || uncertain) return
+                const input = event.currentTarget
+                const start = input.selectionStart
+                setDraft(content.slice(0, start) + '\n' + content.slice(input.selectionEnd))
+                requestAnimationFrame(() => input.setSelectionRange(start + 1, start + 1))
+              } else if (action === 'send') {
+                event.preventDefault()
+                if (!busy && !uncertain && !query.isFetching) void send()
+              } else if (event.key === 'Enter' && event.repeat && !event.nativeEvent.isComposing) {
+                event.preventDefault()
+              }
+            }}
           />
+          <small id={`chat-hint-${orderId}`}>Enter 전송 · Alt+Enter 줄바꿈</small>
           <span>
             {length} / {MAX_MESSAGE_LENGTH}자
           </span>

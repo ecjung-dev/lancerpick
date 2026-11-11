@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
+import { Icon } from '../../../shared/components/Icon'
 import { isUnauthorized } from '../../../shared/api/client'
 import { formatDateTime } from '../../../shared/lib/format'
 import { useOrder } from '../../orders/queries'
 import { orderStatusLabel } from '../../orders/status'
+import { useChatWorkspace } from '../workspace'
 import { useChatThreads } from '../queries'
 import type { ChatWorkspaceState } from './ChatWorkspaceProvider'
 import { OrderChatPanel } from './OrderChatPanel'
@@ -45,8 +47,14 @@ export function ChatDock({
   return createPortal(
     <div className={styles.dock}>
       {state.minimized && (
-        <button type="button" className={styles.restore} onClick={onRestore}>
-          메시지 다시 열기
+        <button
+          type="button"
+          className={styles.restore}
+          onClick={onRestore}
+          aria-label="메시지 다시 열기"
+          title="메시지 다시 열기"
+        >
+          <Icon name="message" size={24} />
         </button>
       )}
       <div
@@ -117,6 +125,7 @@ function ThreadList({
   selected: string | null
   onSelect: (id: string) => void
 }) {
+  const workspace = useChatWorkspace()
   const [draft, setDraft] = useState('')
   const [q, setQ] = useState('')
   const [page, setPage] = useState(0)
@@ -185,6 +194,7 @@ function ThreadList({
                       onClick={() => onSelect(thread.orderId)}
                     >
                       <strong>
+                        {workspace?.newOrderIds.includes(thread.orderId) && <span className={styles.newLabel}>새 메시지</span>}
                         {thread.counterparty.displayName}{' '}
                         <small>
                           {thread.side === 'BUYER' ? '구매' : '판매'} · 주문 #
