@@ -1,13 +1,16 @@
 /* 폭·좌우 여백은 AppLayout .main을 따른다(헤더 로고와 같은 선에서 시작). */
-.page { margin: 40px 0 80px; color: var(--ink); overflow-wrap: anywhere; }
+/* keep-all: 한글 단어 중간 줄바꿈 방지. anywhere: 긴 이메일·ID는 넘치지 않게 끊는다. */
+.page { margin: 40px 0 80px; color: var(--ink); word-break: keep-all; overflow-wrap: anywhere; }
 .eyebrow { font-size: 11px; letter-spacing: .14em; font-weight: 700; margin: 0; }
 .page h1 { margin: 8px 0 12px; font-size: clamp(26px, 4vw, 34px); letter-spacing: -.04em; }
 .lead { color: var(--muted); font-size: 14px; line-height: 1.7; margin: 0 0 24px; max-width: 72ch; }
 .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px; padding: 18px; margin-bottom: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .filters label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 650; }
-.filters input, .filters select { min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: white; font-size: 14px; }
+.filters input, .filters select { height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: white; font-size: 14px; }
 .filters input { min-width: 240px; }
 .page button { min-height: 40px; padding: 10px 18px; border: 0; border-radius: 8px; background: var(--ink); color: white; font-weight: 650; cursor: pointer; }
+/* 필터 버튼은 입력칸과 같은 40px. .page button보다 뒤·더 구체적인 선택자로 둬야 padding이 덮이지 않는다. */
+.page .filters button { height: 40px; padding: 0 18px; }
 .page button:disabled { opacity: .35; cursor: not-allowed; }
 /* 보조 버튼: 초기화·새로고침·페이지 이동. 옅은 --line 대신 --muted 테두리로 흰 배경에서도 구분한다. */
 .page button.secondary, .page .pager button { background: white; color: var(--ink); border: 1px solid var(--muted); }
@@ -53,10 +56,23 @@
 .tabs { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 20px; font-size: 14px; font-weight: 650; }
 .tabs a { padding-bottom: 6px; color: var(--muted); }
 .tabs a[aria-current='page'] { color: var(--ink); border-bottom: 2px solid var(--ink); }
+/* 화면 안 하위 분류(금융 조회 종류·알림 처리 상태): 상단 관리자 메뉴와 구분되는 칩. */
+.subtabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; font-size: 13px; font-weight: 650; }
+.subtabs a { padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px; background: white; color: var(--muted); }
+.subtabs a:hover { color: var(--ink); border-color: var(--muted); }
+.subtabs a[aria-current='page'] { background: var(--ink); border-color: var(--ink); color: white; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+/* 주문 금융 상세: 섹션마다 따로 있는 dl의 라벨 열을 같은 폭으로 맞춰 값 시작선을 정렬한다. */
+.factsAligned { grid-template-columns: 13em minmax(0, 1fr); }
+/* 375px 등 좁은 화면: 라벨 위·값 아래 한 열로 바꿔 값 영역을 넓힌다(문의 상세 facts 포함). */
+@media (max-width: 600px) { .facts, .factsAligned { grid-template-columns: minmax(0, 1fr); gap: 2px; } .facts dd + dt { margin-top: 10px; } }
+.statusHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 10px; }
+.statusHead h2 { margin: 0; }
+.statusCard { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.statusCard > p { margin: 6px 0; font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
 
 /* 카드 6개: 900px 이상 3열, 600~899px 2열, 600px 미만 1열. */
 .cards { list-style: none; padding: 0; margin: 0 0 20px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }

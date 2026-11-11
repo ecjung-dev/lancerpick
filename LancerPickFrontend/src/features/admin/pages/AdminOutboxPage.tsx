@@ -34,7 +34,7 @@ export function AdminOutboxPage() {
     <AdminNav />
     <h1>알림 처리 상태</h1>
     <p className={styles.lead}>주문 알림을 만들지 못한 이벤트를 조회만 해요. 거래 자체는 이미 끝났고 알림만 빠진 상태예요. 다시 보내기는 운영 이력 기능과 함께 추가할 예정이에요.</p>
-    <nav className={styles.tabs} aria-label="알림 처리 상태 종류">
+    <nav className={styles.subtabs} aria-label="알림 처리 상태 종류">
       {TABS.map((item) => <Link key={item.key} to={`/admin/outbox?status=${item.key}${filter.orderId ? `&orderId=${filter.orderId}` : ''}`}
         aria-current={filter.status === item.key ? 'page' : undefined}>{item.label}</Link>)}
     </nav>

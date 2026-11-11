@@ -13,6 +13,8 @@ export function AdminPager({
   onPage: (page: number) => void
   label: string
 }) {
+  // 한 페이지뿐이고 첫 페이지에 있으면 숨긴다. 뒤 페이지에서 결과가 줄었으면 이전으로 돌아갈 수 있게 남긴다.
+  if (page === 0 && totalPages <= 1) return null
   return (
     <nav className={styles.pager} aria-label={label}>
       <button

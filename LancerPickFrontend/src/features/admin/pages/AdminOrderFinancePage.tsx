@@ -17,6 +17,8 @@ import styles from './Admin.module.css'
 const time = (value: string | null | undefined) => value ? formatDateTime(value) : '—'
 /** 기록이 없으면 0원으로 바꾸지 않고 "기록 없음"으로 보여 준다. */
 const NONE = <p>기록 없음</p>
+/** 섹션마다 dl이 따로 있어도 라벨 열 폭을 맞춘다. */
+const FACTS = `${styles.facts} ${styles.factsAligned}`
 
 /** /admin/finance/orders/:id. 한 주문의 결제·보관금·정산·종료 분배와 계약 PDF 상태를 조회하고, 후보인 PDF는 재생성을 요청할 수 있다(K6). */
 export function AdminOrderFinancePage() {
@@ -47,23 +49,23 @@ function FinanceSummary({ data }: { data: OrderFinance }) {
       <h1>주문 #{data.orderId}</h1>
       <p>주문 금액 {formatWon(data.orderAmount)} · 구매자 #{data.buyerId} · 판매자 #{data.sellerId}</p>
     </header>
-    <section className={styles.block}><h2>결제·환불</h2>{payment ? <dl className={styles.facts}>
+    <section className={styles.block}><h2>결제·환불</h2>{payment ? <dl className={FACTS}>
       <dt>상태</dt><dd>{payment.status}</dd>
       <dt>결제 금액</dt><dd>{formatWon(payment.amount)} · {time(payment.paidAt)}</dd>
       <dt>환불 금액</dt><dd>{formatWon(payment.refundedAmount)}{payment.refundedAt && <> · {time(payment.refundedAt)}</>}</dd>
     </dl> : NONE}</section>
-    <section className={styles.block}><h2>보관금</h2>{funds ? <dl className={styles.facts}>
+    <section className={styles.block}><h2>보관금</h2>{funds ? <dl className={FACTS}>
       <dt>상태</dt><dd>{funds.status}</dd>
       <dt>보관 금액</dt><dd>{formatWon(funds.amount)} · 남은 금액 {formatWon(funds.remainingAmount)}</dd>
       <dt>보관 시작</dt><dd>{time(funds.heldAt)}</dd><dt>처리</dt><dd>{time(funds.resolvedAt)}</dd>
     </dl> : NONE}</section>
-    <section className={styles.block}><h2>정산</h2>{settlement ? <dl className={styles.facts}>
+    <section className={styles.block}><h2>정산</h2>{settlement ? <dl className={FACTS}>
       <dt>유형</dt><dd>{settlement.type}</dd>
       <dt>총액</dt><dd>{formatWon(settlement.grossAmount)}</dd>
       <dt>수수료</dt><dd>{formatWon(settlement.feeAmount)} ({(settlement.feeRateBps / 100).toFixed(2)}%)</dd>
       <dt>판매자 수익</dt><dd>{formatWon(settlement.sellerAmount)}</dd><dt>시각</dt><dd>{time(settlement.createdAt)}</dd>
     </dl> : NONE}</section>
-    <section className={styles.block}><h2>종료 분배</h2>{closure ? <dl className={styles.facts}>
+    <section className={styles.block}><h2>종료 분배</h2>{closure ? <dl className={FACTS}>
       <dt>사유</dt><dd>{closure.reason}</dd>
       <dt>결제 금액</dt><dd>{formatWon(closure.paidAmount)}</dd>
       <dt>구매자 반환</dt><dd>{formatWon(closure.buyerRefundAmount)}</dd>
@@ -86,7 +88,7 @@ function ContractPdfSection({ orderId }: { orderId: string }) {
 }
 
 function PdfFacts({ data }: { data: ContractPdf }) {
-  return <><dl className={styles.facts}>
+  return <><dl className={FACTS}>
     <dt>버전</dt><dd>{data.version}{data.currentVersion ? ' (현재)' : ''} · 계약 #{data.contractId}</dd>
     <dt>상태</dt><dd>{data.status}</dd>
     <dt>파일 정보</dt><dd>{data.fileMetadataPresent ? 'DB에 파일 정보 있음(실제 파일 확인은 아님)' : 'DB에 파일 정보 없음'}</dd>

@@ -14,6 +14,7 @@ import type { AdminProductDetail, VisibilityInput } from '../types'
 import { REASON_MAX, isValidProductId, saleStatusLabel, validateReason } from '../validation'
 import { accessProblem } from '../access'
 import { AdminAccessNotice } from './AdminAccess'
+import { AdminNav } from './AdminNav'
 import styles from './Admin.module.css'
 
 /** 목록에서 넘겨준 돌아갈 주소. 관리자 목록 경로만 허용한다. */
@@ -26,6 +27,8 @@ export function AdminProductDetailPage() {
   const missing = !isValidProductId(id) || (product.error instanceof ApiError && product.error.status === 404)
 
   return <section className={styles.page}>
+    <p className={styles.eyebrow}>ADMIN</p>
+    <AdminNav />
     <Link to={back}>← 상품 운영 목록</Link>
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="상품을 찾을 수 없어요" description="상품 번호를 다시 확인해 주세요." />
@@ -155,7 +158,7 @@ function ModerationLogs({ id }: { id: string }) {
     {problem ? <AdminAccessNotice problem={problem} />
       : logs.isError ? <AsyncState title="운영 이력을 불러오지 못했어요" error={logs.error} onRetry={() => { void logs.refetch() }} />
         : !logs.data ? <AsyncState title="운영 이력을 불러오고 있어요" />
-          : logs.data.items.length === 0 ? <p>{page > 0 ? '이 페이지에 이력이 없어요.' : '아직 운영 이력이 없어요.'}</p>
+          : logs.data.items.length === 0 ? <p className={styles.empty}>{page > 0 ? '이 페이지에 이력이 없어요.' : '아직 운영 이력이 없어요.'}</p>
             : <ul className={styles.list}>{logs.data.items.map((log) => <li key={log.id}>
               <strong>{log.action === 'HIDE' ? '숨김' : '복구'}</strong>
               <time dateTime={log.createdAt}>{formatDateTime(log.createdAt)}</time>

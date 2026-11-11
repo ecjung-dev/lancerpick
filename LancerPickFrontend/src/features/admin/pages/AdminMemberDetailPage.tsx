@@ -61,20 +61,22 @@ export function AdminMemberDetailPage() {
               최신 상태 조회에 실패했습니다. 재조회 후 처리해 주세요.
             </p>
           )}
-          <button
-            type="button"
-            className={styles.secondary}
-            disabled={query.isFetching}
-            onClick={() => {
-              void query.refetch()
-            }}
-          >
-            현재 상태 새로고침
-          </button>
-          <section className={styles.block}>
-            <h2>
-              현재 상태 · {restrictionLabels[query.data.member.restriction]}
-            </h2>
+          <section className={`${styles.block} ${styles.statusCard}`}>
+            <div className={styles.statusHead}>
+              <h2>
+                현재 상태 · {restrictionLabels[query.data.member.restriction]}
+              </h2>
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={query.isFetching}
+                onClick={() => {
+                  void query.refetch()
+                }}
+              >
+                현재 상태 새로고침
+              </button>
+            </div>
             <p>
               가입 {formatDateTime(query.data.member.createdAt)} · 이메일{' '}
               {query.data.emailVerifiedAt ? '인증됨' : '인증 기록 없음'}

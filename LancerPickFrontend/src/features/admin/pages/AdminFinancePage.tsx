@@ -42,7 +42,7 @@ export function AdminFinancePage() {
     <AdminNav />
     <h1>금융 조회</h1>
     <p className={styles.lead}>충전·결제·보관금·정산과 충전 복구 작업을 조회해요. "재처리 후보"인 충전·복구 작업은 사유를 적고 재확인·재시작을 요청할 수 있어요. 실행 직전에 서버가 조건을 다시 확인하고, 모든 요청은 관리자 작업 이력에 남아요.</p>
-    <nav className={styles.tabs} aria-label="금융 조회 종류">
+    <nav className={styles.subtabs} aria-label="금융 조회 종류">
       {TABS.map((item) => <Link key={item.key} to={`/admin/finance?tab=${item.key}`} aria-current={tab === item.key ? 'page' : undefined}>{item.label}</Link>)}
     </nav>
     {tab === 'payments' && <Payments key={params.toString()} filter={readPaymentFilter(params)} onApply={(f) => apply({ tab, ...f })} search={params.toString()} />}
@@ -54,6 +54,8 @@ export function AdminFinancePage() {
 
 /** 관리자 조회 목록 공통 이전/다음 페이지. 알림 처리 화면도 같이 쓴다. */
 export function Pager({ page, totalPages, busy, onPage, label }: { page: number; totalPages: number; busy: boolean; onPage: (page: number) => void; label: string }) {
+  // 한 페이지뿐이고 첫 페이지에 있으면 숨긴다. 뒤 페이지에서 결과가 줄었으면 이전으로 돌아갈 수 있게 남긴다.
+  if (page === 0 && totalPages <= 1) return null
   return <nav className={styles.pager} aria-label={label}>
     <button disabled={busy || page === 0} onClick={() => onPage(page - 1)}>이전</button>
     <span>{page + 1}페이지</span>

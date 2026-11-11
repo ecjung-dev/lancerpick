@@ -19,7 +19,7 @@ export function AdminActionLogList({ filter, empty }: { filter: ActionLogFilter;
   if (!list.data) return <AsyncState title="작업 이력을 불러오고 있어요" />
   return <>
     <p className={styles.count}>총 {list.data.totalElements}건</p>
-    {list.data.items.length === 0 ? <p>{empty}</p> : <ul className={styles.list}>
+    {list.data.items.length === 0 ? <p className={styles.empty}>{empty}</p> : <ul className={styles.list}>
       {list.data.items.map((log) => <li key={log.id}>
         <strong>{ACTION_LABELS[log.action] ?? log.action} · {targetLabel(log)}</strong>
         <p><span className={log.status === 'SUCCEEDED' ? styles.badge : styles.hidden}>{STATUS_LABELS[log.status] ?? log.status}</span>
