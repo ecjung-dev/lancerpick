@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError, isUnauthorized } from '../../../shared/api/client'
 import { Button } from '../../../shared/components/Button'
+import { Icon } from '../../../shared/components/Icon'
 import { formatDateTime } from '../../../shared/lib/format'
 import { loginPath } from '../../auth/session'
 import { useCurrentMember } from '../../auth/queries'
@@ -165,7 +166,7 @@ function OrderDetail({ id }: { id: string }) {
             {order.review.content && <p className={styles.text}>{order.review.content}</p>}
           </section>}
           <details className={styles.secondaryActions} id="order-secondary-actions" open={view.pendingCancellation || undefined}>
-            <summary>취소·문의 <span aria-hidden="true">⌄</span></summary>
+            <summary>취소·문의 <Icon name="chevron" size={18} /></summary>
             <div>
               <RejectForm key={`reject-${resets.success}`} {...forms} />
               <CancelForm key={`cancel-${resets.success}`} {...forms} />

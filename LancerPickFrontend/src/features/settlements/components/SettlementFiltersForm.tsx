@@ -41,22 +41,25 @@ export function SettlementFiltersForm({ filters, onApply }: {
     onApply({ from: '', to: '', sort: 'latest', page: 0 })
   }
   return <form aria-label="판매 수익 조회 조건" className={styles.filters} onSubmit={submit}>
-    <p>정산 기록일 · 한국 시간 기준, 종료일 당일까지 포함</p>
-    <div className={styles.fields}>
-      <label>상품명·주문번호<input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="상품명 또는 주문번호" /></label>
+    <label className={styles.keyword}>상품명·주문번호<input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="상품명 또는 주문번호" /></label>
+    <div className={styles.period}>
       <label>시작일<input type="date" min="1000-01-01" max="9999-12-31" value={from} onChange={e => setFrom(e.target.value)} /></label>
       <label>종료일<input type="date" min="1000-01-01" max="9999-12-31" value={to} onChange={e => setTo(e.target.value)} /></label>
+      <div className={styles.presets} role="group" aria-label="판매 수익 조회 기간">
+        <button type="button" onClick={() => period('month')}>이번 달</button>
+        <button type="button" onClick={() => period(1)}>최근 1개월</button>
+        <button type="button" onClick={() => period(3)}>최근 3개월</button>
+        <button type="button" onClick={() => period('all')}>전체</button>
+      </div>
+    </div>
+    <p className={styles.hint}>정산 기록일 · 한국 시간 기준, 종료일 당일까지 포함</p>
+    {error && <p role="alert" className={styles.error}>{error}</p>}
+    <div className={styles.actions}>
       <label>정렬<select value={sort} onChange={e => setSort(e.target.value === 'oldest' ? 'oldest' : 'latest')}>
         <option value="latest">최신순</option><option value="oldest">오래된순</option>
       </select></label>
-      <button type="submit">조회</button><button type="button" onClick={reset}>초기화</button>
+      <button type="submit" className={styles.submit}>조회</button>
+      <button type="button" onClick={reset}>초기화</button>
     </div>
-    <div className={styles.presets} role="group" aria-label="판매 수익 조회 기간">
-      <button type="button" onClick={() => period('month')}>이번 달</button>
-      <button type="button" onClick={() => period(1)}>최근 1개월</button>
-      <button type="button" onClick={() => period(3)}>최근 3개월</button>
-      <button type="button" onClick={() => period('all')}>전체</button>
-    </div>
-    {error && <p role="alert">{error}</p>}
   </form>
 }

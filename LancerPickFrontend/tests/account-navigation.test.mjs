@@ -22,12 +22,12 @@ test('wallet content leaves account navigation to the shared layout', () => {
   assert.doesNotMatch(html, /aria-label="마이페이지 메뉴"|TEST CREDIT|테스트 적립금/)
 })
 
-function renderOrders(url, side, page, status = '', { q = '', from = '', to = '', sort = 'latest' } = {}) {
+function renderOrders(url, side, page, status = '', { q = '', from = '', to = '', sort = 'latest', totalPages = 3 } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   client.setQueryData(['wallet', 'orders', side, status, page, q, from, to, sort], {
     items: [{ id: '9007199254740993', productTitle: `${side} saved page ${page}`, priceAmount: 999,
       status: 'COMPLETED', counterparty: { id: '2', displayName: 'counterparty' }, createdAt: '2026-11-03T00:00:00Z', currentDueAt: null }],
-    page, size: 20, totalElements: 60, totalPages: 3,
+    page, size: 20, totalElements: totalPages * 20, totalPages,
   })
   try {
     return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [url] },
@@ -128,7 +128,7 @@ test('direct cancellation explains whether a paid amount will be refunded', () =
   }
 })
 
-function renderFinance(kind, url, page, empty = false) {
+function renderFinance(kind, url, page, empty = false, totalPages = 3) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const orderId = '9007199254740993'
   const createdAt = '2026-11-04T00:00:00Z'
@@ -138,7 +138,7 @@ function renderFinance(kind, url, page, empty = false) {
     { id: '3', orderId: null, type: 'INITIAL_GRANT', amountDelta: 1000000, balanceAfter: 1000000, createdAt },
     { id: '4', orderId: null, type: 'TOPUP', amountDelta: 50000, balanceAfter: 1050000, createdAt },
   ] : [{ id: '1', orderId, grossAmount: 999, feeRateBps: 1000, feeAmount: 99, sellerAmount: 900, createdAt }]
-  const data = { items: empty ? [] : items, page, size: 20, totalElements: 60, totalPages: 3 }
+  const data = { items: empty ? [] : items, page, size: 20, totalElements: 60, totalPages }
   if (kind === 'wallet') {
     client.setQueryData(['wallet', 'member', 'balance'], { balance: 1050000, currency: 'KRW', isTest: true })
     client.setQueryData(['wallet', 'member', 'entries', { page, size: 20 }], data)
@@ -188,6 +188,18 @@ test('out-of-range empty finance pages provide a first-page recovery action', ()
     assert.match(html, /첫 페이지로/)
     assert.doesNotMatch(html, /9 \/ 3|9페이지/)
   }
+})
+
+test('single-page lists hide the pager while out-of-range pages keep recovery', () => {
+  const orders = renderOrders('/orders?side=SELLER', 'SELLER', 0, '', { totalPages: 1 })
+  assert.doesNotMatch(orders, /aria-label="거래 내역 페이지"/)
+  assert.match(orders, /주문번호 9007199254740993/)
+  const ordersLater = renderOrders('/orders?side=SELLER&page=2', 'SELLER', 2, '', { totalPages: 1 })
+  assert.match(ordersLater, /aria-label="거래 내역 페이지"/)
+  const settlements = renderFinance('settlements', '/mypage/settlements', 0, false, 1)
+  assert.doesNotMatch(settlements, /aria-label="정산 내역 페이지"/)
+  assert.match(settlements, /판매 수익 900원/)
+  assert.match(settlements, /주문 #9007199254740993 상세 보기/)
 })
 
 test('preview order numbers never lead to real orders', () => {

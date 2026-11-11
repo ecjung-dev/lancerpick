@@ -45,6 +45,8 @@
 .list-options { justify-content: space-between; gap: 8px; }
 .list-options label { flex-wrap: wrap; }
 .list li { padding: 16px; }
+.list-period label { flex-basis: 100%; }
+.list-period button { flex: 1 1 0; padding-inline: 4px; }
 .cardBody { flex-direction: column; align-items: flex-start; gap: 12px; }
 .cardMeta { align-items: flex-start; }
 }

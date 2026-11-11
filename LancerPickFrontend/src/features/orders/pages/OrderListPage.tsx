@@ -228,7 +228,7 @@ function OrderList({
           ))}
         </ul>
       )}
-      <nav aria-label="거래 내역 페이지">
+      {(page > 0 || query.data.totalPages > 1) && <nav aria-label="거래 내역 페이지">
         <button
           disabled={page === 0 || query.isFetching}
           onClick={() => onPageChange(page - 1)}
@@ -242,7 +242,7 @@ function OrderList({
         >
           다음
         </button>
-      </nav>
+      </nav>}
       {page > 0 && query.data.items.length === 0 && (
         <button onClick={() => onPageChange(0)}>첫 페이지로</button>
       )}

@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 
-export type IconName = 'heart' | 'star' | 'refresh' | 'search' | 'design' | 'code' | 'video' | 'marketing' | 'translate' | 'document' | 'arrow' | 'check' | 'bell' | 'message'
+export type IconName = 'heart' | 'star' | 'refresh' | 'search' | 'design' | 'code' | 'video' | 'marketing' | 'translate' | 'document' | 'arrow' | 'chevron' | 'check' | 'bell' | 'message'
 const paths: Record<IconName, React.ReactNode> = {
   heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />,
   star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" />,
@@ -15,6 +15,7 @@ const paths: Record<IconName, React.ReactNode> = {
   translate: <><path d="M3 5h12M9 2v3M5 5c0 6 5 9 9 10M13 5c0 6-5 9-10 11m11 5 4-11 4 11m-6-4h4" /></>,
   document: <><path d="M5 2h9l5 5v15H5V2Zm9 0v6h5M8 12h8M8 16h8" /></>,
   arrow: <path d="M4 12h16m-6-6 6 6-6 6" />,
+  chevron: <path d="m6 9 6 6 6-6" />,
   check: <><circle cx="12" cy="12" r="9" /><path d="m8 12 3 3 5-6" /></>,
 }
 
