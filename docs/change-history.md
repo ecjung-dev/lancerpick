@@ -84,6 +84,17 @@
 - 개인 DB에는 테스트 계정 2개·상품 #5·주문 #1·더미 충전 5건·복구 실행 #1(FAILED 표시)·#2가 남아 있다. 검증 이후 병합된 디자인 PR(#183·#186~#189)은 화면 표시만 바뀌었고 이 결과의 기준 커밋은 `5f089c3`이다. #183 병합 후 프런트 검사(테스트 327건)는 통과했다.
 - 문서만 변경(실행 검증 결과 기록).
 
+<a id="refactoring-second-pass"></a>
+### 2차 리팩터링 점검: 죽은 코드·화면 직접 API 호출 정리 — 2026-11-12
+
+정은찬, `refactor/essential-cleanup`, main `7e0e2d9`(#208) 기준. 백엔드·프런트 전체를 8줄 창 중복, 미사용 파일·export, 규칙 위반(`/api` 직접 호출, 현재 시각, ID 파싱, queryKey 접두사) 기준으로 다시 훑고, Codex 읽기 전용 반박 검토를 받아 필수 항목만 고쳤다.
+
+- 삭제: 어디서도 import되지 않는 `products/components/ProductPreview.tsx`·`.module.css`, 쓰이지 않는 `auth/passwordReset.ts`의 `RESET_REQUEST_COOLDOWN_SECONDS`(원본 `MAIL_REQUEST_COOLDOWN_SECONDS`는 이메일 링크 폼이 사용해 유지).
+- 상품 등록·수정 화면(`ProductEditorPage`)이 `/me`를 직접 호출하던 두 곳을 다른 화면과 같은 `auth/api`의 `getMemberSession`으로 바꿨다. 401을 그대로 전달하는 함수라 로그인 안내 분기가 같고, 쿼리 키 `['product-editor-session']`·`retry: false`·`gcTime: 0`·제출 직전 계정 재확인(캐시 아닌 직접 요청) 순서는 그대로다.
+- 하지 않음: 생성자·QueryDSL 컬럼 목록·`AccountChallenge` 팩토리 등 반복(동작상 이득 없음), V3 판매자 승인과 관리자 승인 취소의 검사 블록 공통화(금융 경로), `AdminPager`·`Pager` 통합(범위 밖 페이지 정책 차이), 파일 안에서만 쓰는 export 정리, 큰 파일 추가 분리. 백엔드는 규칙 위반을 찾지 못해 변경 없음.
+
+자동 테스트: 프런트 typecheck·lint·test:api 353건·build 통과. 화면 동작이 같아 새 테스트는 없고, 브라우저 확인은 하지 않았다. API·DB·백엔드 변경 없음.
+
 <a id="refactoring-wrapup"></a>
 ### 전체 리팩터링 마무리 검토 — 2026-11-10, main 반영(#180)
 

@@ -2,11 +2,8 @@ import type { QueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../shared/api/client.ts'
 import { resetPassword } from './api.ts'
 import { isUnclearResult, recheckSession } from './session.ts'
-import { MAIL_REQUEST_COOLDOWN_SECONDS, readLinkToken } from './linkToken.ts'
+import { readLinkToken } from './linkToken.ts'
 import type { PasswordResetInput } from './types.ts'
-
-/** 재설정 다시 요청 잠금 시간(초). 가입 인증과 같은 공통 값(linkToken.ts). */
-export const RESET_REQUEST_COOLDOWN_SECONDS = MAIL_REQUEST_COOLDOWN_SECONDS
 
 /** 재설정 링크(#token=...)의 토큰. 가입 인증 링크와 같은 규칙(linkToken.ts의 readLinkToken). */
 export const readResetToken = readLinkToken

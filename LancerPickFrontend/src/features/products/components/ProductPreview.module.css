@@ -1,8 +1,0 @@
-.dialog { width: min(480px, calc(100% - 32px)); padding: 32px; border: 1px solid var(--line); border-radius: 18px; color: var(--ink); }
-.dialog::backdrop { background: #0007; }
-.dialog h2 { font-size: 24px; line-height: 1.6; word-break: keep-all; }
-.dialog p { color: var(--muted); }
-.label { font-size: 12px; }
-.amount { font-size: 25px; font-weight: 750; }
-.amount small { display: block; font-size: 13px; font-weight: 400; margin-top: 8px; }
-.notice { padding: 16px 0; font-size: 14px; }

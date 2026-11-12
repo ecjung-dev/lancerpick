@@ -2,7 +2,8 @@ import { loginPath } from '../../auth/session'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { apiRequest, ApiError, isUnauthorized } from '../../../shared/api/client'
+import { ApiError, isUnauthorized } from '../../../shared/api/client'
+import { getMemberSession } from '../../auth/api'
 import { Icon } from '../../../shared/components/Icon'
 import { formatWon } from '../../../shared/lib/format'
 import { normalizedLength } from '../../../shared/lib/text'
@@ -18,7 +19,7 @@ import { PageHeading } from '../../../shared/components/PageHeading'
 export function ProductEditorPage() {
   const { id } = useParams()
   const location = useLocation()
-  const member = useQuery({ queryKey: ['product-editor-session'], queryFn: ({ signal }) => apiRequest<{ id: string }>('/me', { signal }), retry: false, gcTime: 0 })
+  const member = useQuery({ queryKey: ['product-editor-session'], queryFn: ({ signal }) => getMemberSession(signal), retry: false, gcTime: 0 })
   if (isUnauthorized(member.error)) return <section className={styles.page}><h1>로그인 후 상품을 관리해 주세요</h1><Link to={loginPath(location.pathname + location.search)}>로그인</Link></section>
   if (member.isError) return <AsyncState title="계정을 확인하지 못했어요" error={member.error} onRetry={() => { void member.refetch() }} />
   if (!member.data) return <AsyncState title="계정 확인 중" />
@@ -67,7 +68,7 @@ function ProductForm({ initial, categories, memberId, checking }: { initial?: Ow
     try { input = validateProduct(draft) } catch (cause) { setError((cause as Error).message); return }
     inFlight.current = true; setPending(true); setError(''); setSaved(false)
     try {
-      const member = await apiRequest<{ id: string }>('/me')
+      const member = await getMemberSession()
       if (!active.current) return
       if (member.id !== memberId) { setAccountInvalid(true); throw new Error('로그인 계정이 바뀌었어요. 페이지를 다시 열어 주세요.') }
       let result: OwnedProduct
