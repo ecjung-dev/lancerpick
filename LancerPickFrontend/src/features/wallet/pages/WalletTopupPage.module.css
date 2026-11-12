@@ -1,5 +1,4 @@
 .page { max-width: 1020px; margin: 0 auto; padding: 32px 0; }
-.back { color: var(--muted); font-size: 12px; }
 .eyebrow { margin: 36px 0 9px; font-size: 10px; font-weight: 700; letter-spacing: .2em; color: var(--muted); }
 .page h1 { margin: 0; font-size: 31px; letter-spacing: -.05em; }
 .subtitle { font-size: 13px; color: var(--muted); margin: 12px 0 0; }

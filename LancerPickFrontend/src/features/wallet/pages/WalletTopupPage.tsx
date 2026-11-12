@@ -1,4 +1,5 @@
 import { useTopupAccess } from '../queries'
+import { BackLink } from '../../../shared/components/BackLink'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { isUnauthorized } from '../../../shared/api/client'
@@ -66,12 +67,9 @@ function TopupFrame({
 }) {
   return (
     <section className={styles.page}>
-      <Link
-        className={styles.back}
-        to={preview ? '/mypage/wallet/preview' : '/mypage/wallet'}
-      >
-        ← 적립금 · 이용 내역
-      </Link>
+      <BackLink to={preview ? '/mypage/wallet/preview' : '/mypage/wallet'}>
+        적립금 · 이용 내역
+      </BackLink>
       <p className={styles.eyebrow}>MY WALLET</p>
       <h1>테스트 적립금 충전</h1>
       <p className={styles.subtitle}>

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { BackLink } from '../../../shared/components/BackLink'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError, isUnauthorized } from '../../../shared/api/client'
@@ -75,15 +76,15 @@ function OrderDetail({ id }: { id: string }) {
   }
 
   if (isUnauthorized(query.error)) return <section className={styles.page}>
+    <BackLink to={`/orders${location.search}`}>거래 내역</BackLink>
     <h1>주문 상세</h1><p>로그인이 필요해요.</p>
     <Link to={loginPath(location.pathname + location.search)}>로그인</Link>
-    <p><Link to={`/orders${location.search}`}>← 거래 내역</Link></p>
   </section>
   if (query.isError) return <section className={styles.page}>
+    <BackLink to={`/orders${location.search}`}>거래 내역</BackLink>
     <h1>주문을 확인할 수 없어요.</h1>
     <p role="alert">{query.error instanceof ApiError ? query.error.message : '주문을 불러오지 못했어요.'}</p>
     <Button variant="secondary" onClick={() => void refresh()}>다시 조회</Button>
-    <p><Link to={`/orders${location.search}`}>← 거래 내역</Link></p>
   </section>
   if (!query.data) return <p className={styles.page} role="status">주문을 불러오는 중이에요.</p>
 
@@ -98,7 +99,7 @@ function OrderDetail({ id }: { id: string }) {
     .some(action => order.allowedActions.includes(action))
 
   return <section className={styles.page}>
-    <Link className={styles.backLink} to={`/orders${location.search}`}>← 거래 내역</Link>
+    <BackLink to={`/orders${location.search}`}>거래 내역</BackLink>
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>거래 상세</p><h1>{order.productSnapshot.title}</h1>
         <p className={styles.meta}>주문 #{order.id} · 구매자 {order.buyer.displayName} · 판매자 {order.seller.displayName}</p>

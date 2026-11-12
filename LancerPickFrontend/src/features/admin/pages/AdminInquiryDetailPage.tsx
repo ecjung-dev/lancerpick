@@ -1,4 +1,5 @@
 import { adminBackPath } from '../navigation'
+import { BackLink } from '../../../shared/components/BackLink'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
@@ -41,7 +42,7 @@ export function AdminInquiryDetailPage() {
   return <section className={styles.page}>
     <p className={styles.eyebrow}>ADMIN</p>
     <AdminNav />
-    <Link to={back}>← 운영 문의 목록</Link>
+    <BackLink to={back}>운영 문의 목록</BackLink>
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="문의를 찾을 수 없어요" description="문의 번호를 다시 확인해 주세요." />
         : !inquiry.data && inquiry.isError ? <AsyncState title="문의를 불러오지 못했어요" error={inquiry.error} onRetry={() => { void inquiry.refetch() }} />

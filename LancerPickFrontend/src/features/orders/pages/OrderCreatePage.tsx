@@ -1,4 +1,5 @@
 import { loginPath } from '../../auth/session'
+import { BackLink } from '../../../shared/components/BackLink'
 import { useOrderEntryMember } from '../queries'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
@@ -32,20 +33,19 @@ export function OrderCreatePage() {
   if (isUnauthorized(member.error))
     return (
       <section className={styles.page}>
+        <BackLink to={`/products/${id}`}>상품 상세</BackLink>
         <h1>로그인이 필요해요</h1>
         <Link
           to={loginPath(location.pathname + location.search)}
         >
           로그인으로 이동
         </Link>
-        <p>
-          <Link to={`/products/${id}`}>상품으로 돌아가기</Link>
-        </p>
       </section>
     )
   if (member.isError || product.isError)
     return (
       <section className={styles.page}>
+        <BackLink to={`/products/${id}`}>상품 상세</BackLink>
         <AsyncState
           title="주문 정보를 불러오지 못했어요"
           error={member.error ?? product.error}
@@ -54,7 +54,6 @@ export function OrderCreatePage() {
             void product.refetch()
           }}
         />
-        <Link to={`/products/${id}`}>상품으로 돌아가기</Link>
       </section>
     )
   if (!member.data || !product.data)
@@ -62,13 +61,13 @@ export function OrderCreatePage() {
   if (member.data.id === product.data.seller.id)
     return (
       <section className={styles.page}>
+        <BackLink to={`/products/${id}`}>상품 상세</BackLink>
         <h1>내 상품에는 주문할 수 없어요</h1>
-        <Link to={`/products/${id}`}>상품으로 돌아가기</Link>
       </section>
     )
   return (
     <section className={styles.page}>
-      <Link to={`/products/${id}`}>← 상품 상세</Link>
+      <BackLink to={`/products/${id}`}>상품 상세</BackLink>
       <h1>주문 요청 작성</h1>
       <div hidden={member.isFetching || product.isFetching}>
         <OrderForm
