@@ -1,5 +1,4 @@
 .page { padding: 36px 0 70px; overflow-wrap: anywhere; }
-.back { font-size: 13px; color: var(--muted); }
 .profile { margin: 20px 0 40px; padding: 28px; border: 1px solid var(--line); border-radius: 14px; }
 .eyebrow { margin: 0; font-size: 10px; letter-spacing: .16em; color: var(--muted); }
 .profile h1 { margin: 6px 0 18px; font-size: 28px; letter-spacing: -.05em; line-height: 1.35; }

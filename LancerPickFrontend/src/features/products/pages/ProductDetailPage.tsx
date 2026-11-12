@@ -1,4 +1,5 @@
 import { useProductDetail } from '../queries'
+import { BackLink } from '../../../shared/components/BackLink'
 import { orderMinimumNotice } from '../orderMinimum'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
@@ -26,9 +27,9 @@ export function ProductDetailPage() {
     product.error instanceof ApiError && product.error.status === 404
   return (
     <section className={styles.page}>
-      <Link to={back} state={fromSeller ? location.state?.sellerState : undefined}>
-        {fromSeller ? '← 판매자 상품으로' : fromFavorites ? '← 내 관심 상품으로' : '← 상품 목록으로'}
-      </Link>
+      <BackLink to={back} state={fromSeller ? location.state?.sellerState : undefined}>
+        {fromSeller ? '판매자 상품' : fromFavorites ? '내 관심 상품' : '상품 목록'}
+      </BackLink>
       {product.isPending ? (
         <AsyncState title="상품을 불러오는 중이에요" />
       ) : product.isError ? (

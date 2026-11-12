@@ -1,4 +1,5 @@
 import { loginPath } from '../../auth/session'
+import { BackLink } from '../../../shared/components/BackLink'
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
@@ -23,7 +24,7 @@ export function ProductSaleStatusPage() {
   if (session.isError) return <AsyncState title="계정을 확인하지 못했어요" error={session.error} onRetry={() => { void session.refetch() }} />
   if (!session.data) return <AsyncState title="계정 확인 중" />
   return <section className={styles.page}>
-    <Link to={myProductsReturnPath(location.state?.fromMyProducts)}>← 내 상품 조회</Link>
+    <BackLink to={myProductsReturnPath(location.state?.fromMyProducts)}>내 상품 조회</BackLink>
     <p><Link to={`/mypage/products/${id}/edit`} state={{ fromMyProducts: myProductsReturnPath(location.state?.fromMyProducts) }}>상품 수정</Link></p>
     <h1>상품 판매 상태 관리</h1>
     {session.isFetching && <p role="status">계정을 다시 확인하고 있어요.</p>}

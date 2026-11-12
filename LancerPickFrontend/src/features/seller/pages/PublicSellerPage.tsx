@@ -1,4 +1,5 @@
-import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router'
+import { BackLink } from '../../../shared/components/BackLink'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { usePageSearchParam } from '../../../shared/lib/usePageSearchParam'
@@ -21,9 +22,9 @@ export function PublicSellerPage() {
 
   return (
     <section className={styles.page}>
-      <Link className={styles.back} to={productPath ?? '/'} state={productPath ? location.state?.productState : undefined}>
-        {productPath ? '← 상품 상세로' : '← 상품 목록으로'}
-      </Link>
+      <BackLink to={productPath ?? '/'} state={productPath ? location.state?.productState : undefined}>
+        {productPath ? '상품 상세' : '상품 목록'}
+      </BackLink>
       {profile.isPending ? <AsyncState title="판매자 소개를 불러오는 중이에요" />
         : profile.isError ? (
           <AsyncState

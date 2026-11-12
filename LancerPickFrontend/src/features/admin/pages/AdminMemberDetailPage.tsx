@@ -1,4 +1,5 @@
-import { Link, useLocation, useParams } from 'react-router'
+import { useLocation, useParams } from 'react-router'
+import { BackLink } from '../../../shared/components/BackLink'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime } from '../../../shared/lib/format'
@@ -41,7 +42,7 @@ export function AdminMemberDetailPage() {
     <section className={styles.page}>
       <p className={styles.eyebrow}>ADMIN</p>
       <AdminNav />
-      <Link to={back.to}>← {back.label}</Link>
+      <BackLink to={back.to}>{back.label}</BackLink>
       {problem ? (
         <AdminAccessNotice problem={problem} />
       ) : missing ? (

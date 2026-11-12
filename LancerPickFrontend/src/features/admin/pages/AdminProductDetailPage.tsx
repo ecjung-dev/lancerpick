@@ -1,7 +1,8 @@
 import { adminBackPath } from '../navigation'
+import { BackLink } from '../../../shared/components/BackLink'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link, useLocation, useParams } from 'react-router'
+import { useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
@@ -33,7 +34,7 @@ export function AdminProductDetailPage() {
   return <section className={styles.page}>
     <p className={styles.eyebrow}>ADMIN</p>
     <AdminNav />
-    <Link to={back}>← 상품 운영 목록</Link>
+    <BackLink to={back}>상품 운영 목록</BackLink>
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="상품을 찾을 수 없어요" description="상품 번호를 다시 확인해 주세요." />
         : !product.data && product.isError ? <AsyncState title="상품을 불러오지 못했어요" error={product.error} onRetry={() => { void product.refetch() }} />

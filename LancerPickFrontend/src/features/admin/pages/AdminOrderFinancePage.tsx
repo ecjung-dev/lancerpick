@@ -1,6 +1,7 @@
 import { adminReturnTo, type AdminReturnOrigin } from '../navigation'
+import { BackLink } from '../../../shared/components/BackLink'
 import { MemberLink } from '../components/MemberLink'
-import { Link, useLocation, useParams } from 'react-router'
+import { useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
@@ -42,7 +43,7 @@ export function AdminOrderFinancePage() {
   return <section className={styles.page}>
     <p className={styles.eyebrow}>ADMIN</p>
     <AdminNav />
-    <Link to={back.to}>← {back.label}</Link>
+    <BackLink to={back.to}>{back.label}</BackLink>
     {problem ? <AdminAccessNotice problem={problem} />
       : missing ? <AsyncState title="주문을 찾을 수 없어요" description="주문 번호를 다시 확인해 주세요." />
         : finance.isError ? <AsyncState title="주문 금액을 불러오지 못했어요" error={finance.error} onRetry={() => { void finance.refetch() }} />

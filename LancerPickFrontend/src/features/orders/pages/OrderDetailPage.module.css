@@ -1,8 +1,7 @@
 .page { max-width: 1200px; margin: 36px auto 72px; padding: 0 24px; color: var(--ink, #171717); overflow-wrap: anywhere; }
 .page *, .page *::before, .page *::after { box-sizing: border-box; }
 .page p { line-height: 1.7; }
-.backLink { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; text-decoration: none; }
-.backLink:hover, .inlineLink:hover, .earningsLink a:hover { text-decoration: underline; }
+.inlineLink:hover, .earningsLink a:hover { text-decoration: underline; }
 .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin: 22px 0 36px; }
 .header h1 { font-size: clamp(24px, 2.5vw, 34px); line-height: 1.35; letter-spacing: -.04em; margin: 8px 0 12px; word-break: keep-all; }
 .eyebrow { margin: 0 0 8px; color: #686868; font-size: 12px; font-weight: 650; letter-spacing: .08em; }
