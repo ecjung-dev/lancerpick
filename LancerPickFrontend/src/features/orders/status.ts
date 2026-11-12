@@ -1,3 +1,4 @@
+import type { ToneMap } from '../../shared/lib/statusTone'
 import type { OrderFunds } from './types'
 
 export const orderStatuses = ['REQUESTED', 'AWAITING_PAYMENT', 'IN_PROGRESS', 'AWAITING_CONFIRMATION', 'REVISION_IN_PROGRESS', 'COMPLETED', 'REJECTED', 'CANCELLED'] as const
@@ -11,6 +12,9 @@ export function orderStatusLabel(status: string) {
   const index = orderStatuses.findIndex(value => value === status)
   return index < 0 ? status : orderStatusNames[index]
 }
+
+/** 주문 상태 배지 톤. 구매 확정만 성공 종료(ok)이고 거절·취소·계약 종료는 기록상 종료라 neutral. */
+export const orderStatusTones: ToneMap = { COMPLETED: 'ok' }
 
 const cancellationStatusNames: Record<string, string> = {
   PENDING: '처리 대기', APPROVED: '승인됨', REJECTED: '거절됨', WITHDRAWN: '철회됨',

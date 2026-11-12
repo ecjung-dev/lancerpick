@@ -10,6 +10,12 @@ import styles from './SettlementPage.module.css'
 import { useSettlements, useSettlementSummary } from '../queries'
 import { Pager } from '../../../shared/components/Pager'
 import { PageHeading } from '../../../shared/components/PageHeading'
+import { AsyncState } from '../../../shared/components/AsyncState'
+import { StatusBadge } from '../../../shared/components/StatusBadge'
+import { toneOf } from '../../../shared/lib/statusTone'
+
+/** 정산 지급 상태 배지 톤. 확인 필요(UNCONFIRMED)는 실패가 아니라 확인 대상이라 warn. */
+const payoutTones = { CREDITED: 'ok', UNCONFIRMED: 'warn' } as const
 
 function payoutLabel(status: Settlement['payoutStatus']) {
   return status === 'CREDITED' ? '적립금 지급 완료'
@@ -57,11 +63,8 @@ export function SettlementPage() {
   return <section className={styles.settlements}>
     {heading}
     <SettlementFiltersForm key={JSON.stringify([filters.from, filters.to, filters.sort, filters.q])} filters={filters} onApply={apply} />
-    {error ? <div role="alert" className={styles.notice}>
-      <p>판매 수익을 불러오지 못했어요.</p>
-      <button type="button" className={styles.primary} onClick={retry}>다시 조회</button>
-    </div>
-      : !list.data || !summary.data ? <p role="status" className={styles.notice}>판매 수익을 불러오는 중이에요.</p>
+    {error ? <AsyncState title="판매 수익을 불러오지 못했어요" description="잠시 후 다시 조회해 주세요." error={error} onRetry={retry} />
+      : !list.data || !summary.data ? <AsyncState title="판매 수익을 불러오는 중이에요" />
       : <>
         <div className={styles.sectionHead}>
           <h2>조회 조건 합계</h2>
@@ -87,10 +90,9 @@ export function SettlementPage() {
             {list.data.items.map(item => <li key={item.id}>
               <div className={styles.cardMeta}>
                 <time dateTime={item.createdAt}>정산 기록일 {formatDateTime(item.createdAt)}</time>
-                <span className={item.payoutStatus === 'CREDITED' ? styles.badge
-                  : item.payoutStatus === 'RECORD_ONLY' ? styles.badgeMuted : styles.badgeWarning}>
+                <StatusBadge tone={toneOf(payoutTones, item.payoutStatus)} className={styles.badge}>
                   {payoutLabel(item.payoutStatus)}
-                </span>
+                </StatusBadge>
               </div>
               <div className={styles.cardBody}>
                 <div>

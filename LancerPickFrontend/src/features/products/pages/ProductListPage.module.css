@@ -75,7 +75,7 @@
 .filterFooter > p { font-size: 11px; color: var(--muted); margin: 0; line-height: 1.7; }
 .filterActions { display: flex; gap: 8px; }
 .filterActions button { min-height: 40px; padding: 8px 16px; font-size: 12px; border-radius: 8px; white-space: nowrap; }
-.filterError { color: #a32626; font-size: 12px; line-height: 1.7; margin: 0; }
+.filterError { color: var(--danger); font-size: 12px; line-height: 1.7; margin: 0; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 720px) {
   .filters { padding: 18px; gap: 18px; }

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { BackLink } from '../../../shared/components/BackLink'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
-import { ApiError, isUnauthorized } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { Button } from '../../../shared/components/Button'
 import { Icon } from '../../../shared/components/Icon'
 import { formatDateTime } from '../../../shared/lib/format'
@@ -18,7 +18,10 @@ import { orderDetailPresentation, orderDetailTabs } from '../detailPresentation'
 import type { OrderDetailTab } from '../detailPresentation'
 import { orderCommandFailureMessage } from '../failure'
 import { useOrder } from '../queries'
-import { orderStatusLabel } from '../status'
+import { orderStatusLabel, orderStatusTones } from '../status'
+import { AsyncState } from '../../../shared/components/AsyncState'
+import { StatusBadge } from '../../../shared/components/StatusBadge'
+import { toneOf } from '../../../shared/lib/statusTone'
 import type { OrderDetail as OrderDetailData } from '../types'
 import { CancellationActions } from './CancellationActions'
 import { AcceptForm, CancelForm, ConfirmForm, DeliveryForm, PayForm, RejectForm, RevisionForm } from './OrderCommandForms'
@@ -83,10 +86,9 @@ function OrderDetail({ id }: { id: string }) {
   if (query.isError) return <section className={styles.page}>
     <BackLink to={`/orders${location.search}`}>거래 내역</BackLink>
     <h1>주문을 확인할 수 없어요.</h1>
-    <p role="alert">{query.error instanceof ApiError ? query.error.message : '주문을 불러오지 못했어요.'}</p>
-    <Button variant="secondary" onClick={() => void refresh()}>다시 조회</Button>
+    <AsyncState title="주문을 불러오지 못했어요" description="잠시 후 다시 조회해 주세요." error={query.error} onRetry={() => void refresh()} />
   </section>
-  if (!query.data) return <p className={styles.page} role="status">주문을 불러오는 중이에요.</p>
+  if (!query.data) return <section className={styles.page}><AsyncState title="주문을 불러오는 중이에요" /></section>
 
   const order = query.data
   const isSeller = member.isSuccess && member.data?.id === order.seller.id
@@ -104,7 +106,7 @@ function OrderDetail({ id }: { id: string }) {
       <div><p className={styles.eyebrow}>거래 상세</p><h1>{order.productSnapshot.title}</h1>
         <p className={styles.meta}>주문 #{order.id} · 구매자 {order.buyer.displayName} · 판매자 {order.seller.displayName}</p>
       </div>
-      <span className={styles.status}>{orderStatusLabel(order.status)}</span>
+      <StatusBadge tone={toneOf(orderStatusTones, order.status)} className={styles.status}>{orderStatusLabel(order.status)}</StatusBadge>
     </header>
     {view.stage !== null && <ol className={styles.steps} aria-label="거래 진행 단계">
       {view.steps.map((step, index) => <li key={step}

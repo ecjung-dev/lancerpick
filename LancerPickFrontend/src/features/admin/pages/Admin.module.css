@@ -88,12 +88,8 @@ tr:hover .cellLink { text-decoration: underline; text-underline-offset: 3px; }
   /* 환불 금액·진행 시각 같은 보조 줄은 값 아래 오른쪽에 한 줄씩. */
   .cellSub { flex-basis: 100%; margin: 0; text-align: right; white-space: normal; }
 }
-/* 상태 배지(StatusBadge): 모양은 .badge 하나, 색은 톤 클래스(statusTone.ts 기준). 배지 문구가 그대로 있어 색만으로 구분하지 않는다. */
-.badge { display: inline-block; margin-right: 8px; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 650; line-height: 1.5; white-space: nowrap; border: 1px solid var(--line); background: white; color: var(--ink); }
-.toneOk { background: var(--success-surface); color: var(--success); border-color: #c9ddcd; }
-.toneWarn { background: var(--warning-surface); color: var(--warning); border-color: #ecd9b4; }
-.toneDanger { background: #fbeaea; color: var(--danger); border-color: #eec4c4; }
-.toneStrong { background: var(--ink); color: white; border-color: var(--ink); }
+/* 상태 배지 모양·색은 shared/components/StatusBadge.module.css. 관리자 표에서는 오른쪽 여백만 더한다. */
+.badgeGap { margin-right: 8px; }
 .pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 20px 0; font-size: 14px; font-variant-numeric: tabular-nums; }
 .heading { margin: 24px 0; }
 .heading > p { color: var(--muted); font-size: 14px; }

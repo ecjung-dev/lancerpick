@@ -1,12 +1,13 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useSearchParams } from 'react-router'
-import { ApiError, isUnauthorized } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { captureAccountScope, loginPath } from '../../auth/session'
 import { notificationReadOptions, useNotifications } from '../queries'
 import { NotificationRow } from '../components/NotificationRow'
 import styles from './Notifications.module.css'
 import { Pager } from '../../../shared/components/Pager'
 import { PageHeading } from '../../../shared/components/PageHeading'
+import { AsyncState } from '../../../shared/components/AsyncState'
 
 export { NotificationReadError } from '../components/NotificationRow'
 
@@ -64,13 +65,8 @@ function NotificationList({
       </p>
     )
   if (query.isError)
-    return (
-      <div role="alert" className={styles.notice}>
-        <p>{query.error instanceof ApiError ? query.error.message : '알림을 불러오지 못했어요.'}</p>
-        <button type="button" className={styles.secondary} onClick={() => void query.refetch()}>다시 조회</button>
-      </div>
-    )
-  if (!query.data) return <p role="status" className={styles.notice}>알림을 불러오는 중이에요.</p>
+    return <AsyncState title="알림을 불러오지 못했어요" description="잠시 후 다시 조회해 주세요." error={query.error} onRetry={() => { void query.refetch() }} />
+  if (!query.data) return <AsyncState title="알림을 불러오는 중이에요" />
   return (
     <>
       {query.data.items.length === 0 ? (

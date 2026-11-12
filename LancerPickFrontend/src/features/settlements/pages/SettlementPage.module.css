@@ -21,11 +21,8 @@
 .settlement-list { display: grid; gap: 16px; list-style: none; padding: 0; margin: 0; }
 .settlement-list li { min-width: 0; padding: 20px 22px; border: 1px solid var(--line); border-radius: 10px; }
 .cardMeta { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 11px; color: var(--muted); }
-.badge, .badgeMuted, .badgeWarning { border-radius: 4px; padding: 6px 10px; font-weight: 600; flex-shrink: 0; }
-.badge { background: var(--ink); color: white; }
-.badgeMuted { background: var(--surface); color: var(--ink); }
+.badge { flex-shrink: 0; }
 /* 지급 증거가 없는 정산(UNCONFIRMED)은 기존 거래 기록과 구분해 주의 톤으로 표시한다. */
-.badgeWarning { background: #fff4e5; color: #8a4b00; border: 1px solid #f3d3a4; }
 .cardBody { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 0; }
 .productTitle { font-size: 16px; line-height: 1.6; }
 .counterparty { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
@@ -48,6 +45,6 @@
   .settlement-list li { padding: 16px; }
   .cardBody { flex-direction: column; align-items: flex-start; gap: 12px; }
   .cardMeta { flex-wrap: wrap; align-items: flex-start; gap: 8px; }
-  .cardMeta > span { flex-shrink: 1; max-width: 100%; }
+  .cardMeta > span { flex-shrink: 1; max-width: 100%; white-space: normal; }
   .earning { white-space: normal; }
 }

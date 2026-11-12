@@ -6,8 +6,13 @@ import { downloadContract, generateContract, verifyContractPdf } from '../api'
 import { prepareContract, signContract } from '../api'
 import { useContract, useContractMember } from '../queries'
 import { Icon } from '../../../shared/components/Icon'
+import { StatusBadge } from '../../../shared/components/StatusBadge'
+import { toneOf } from '../../../shared/lib/statusTone'
 import { contractSections } from '../document-view'
 import styles from './ContractPanel.module.css'
+
+/** 계약 상태 배지 톤. 관리자 계약 톤과 같다(서명 완료 ok, PDF 생성 실패 danger, 나머지 neutral). */
+const contractTones = { SIGNED: 'ok', FAILED: 'danger' } as const
 
 const labels = {
   DRAFT: 'PDF 생성 대기',
@@ -215,9 +220,9 @@ export function ContractPanel({
               }}
             />
           </label>
-          <p className={styles.badge} role="status">
+          <StatusBadge tone={toneOf(contractTones, document.status)} role="status">
             {labels[document.status] ?? '계약 상태 확인 필요'}
-          </p>
+          </StatusBadge>
           <p className={styles.signatureCount}>서명 <strong>{document.signatures.length}/2</strong></p>
           </div>
           <div className={styles.signatures} aria-label="서명 현황">

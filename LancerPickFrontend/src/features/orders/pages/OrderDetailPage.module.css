@@ -6,7 +6,7 @@
 .header h1 { font-size: clamp(24px, 2.5vw, 34px); line-height: 1.35; letter-spacing: -.04em; margin: 8px 0 12px; word-break: keep-all; }
 .eyebrow { margin: 0 0 8px; color: #686868; font-size: 12px; font-weight: 650; letter-spacing: .08em; }
 .meta { color: #686868; font-size: 13px; margin: 8px 0; }
-.status { flex-shrink: 0; padding: 6px 12px; border-radius: 4px; background: #f1f1ef; font-size: 13px; font-weight: 650; margin-top: 26px; }
+.status { flex-shrink: 0; margin-top: 26px; }
 .steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0 0 40px; }
 .steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
 .steps li:not(:last-child)::after { content: ''; position: absolute; height: 2px; background: #e2e2e2; left: calc(50% + 9px); right: calc(-50% + 9px); top: 8px; }

@@ -2,9 +2,12 @@ import { loginPath } from '../../auth/session'
 import { useOrders } from '../queries'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import { useState, type FormEvent } from 'react'
-import { ApiError, isUnauthorized } from '../../../shared/api/client'
+import { isUnauthorized } from '../../../shared/api/client'
 import { formatDateTime, formatWon } from '../../../shared/lib/format'
-import { orderStatuses, orderStatusNames, orderStatusLabel } from '../status'
+import { orderStatuses, orderStatusNames, orderStatusLabel, orderStatusTones } from '../status'
+import { AsyncState } from '../../../shared/components/AsyncState'
+import { StatusBadge } from '../../../shared/components/StatusBadge'
+import { toneOf } from '../../../shared/lib/statusTone'
 import {
   MAX_ORDER_KEYWORD_LENGTH,
   keywordLength,
@@ -182,23 +185,8 @@ function OrderList({
       </p>
     )
   if (query.isError)
-    return (
-      <div role="alert">
-        <p>
-          {query.error instanceof ApiError
-            ? query.error.message
-            : '거래 내역을 불러오지 못했어요.'}
-        </p>
-        <button
-          onClick={() => {
-            void query.refetch()
-          }}
-        >
-          다시 조회
-        </button>
-      </div>
-    )
-  if (!query.data) return <p role="status">거래 내역을 불러오는 중이에요.</p>
+    return <AsyncState title="거래 내역을 불러오지 못했어요" description="잠시 후 다시 조회해 주세요." error={query.error} onRetry={() => { void query.refetch() }} />
+  if (!query.data) return <AsyncState title="거래 내역을 불러오는 중이에요" />
   return (
     <>
       <p className={styles.count}>전체 거래 <strong>{query.data.totalElements.toLocaleString('ko-KR')}</strong>건</p>
@@ -210,7 +198,7 @@ function OrderList({
             <li key={order.id}>
               <div className={styles.cardMeta}>
                 <span>주문번호 {order.id}</span>
-                <span className={styles.badge}>{orderStatusLabel(order.status)}</span>
+                <StatusBadge tone={toneOf(orderStatusTones, order.status)} className={styles.badge}>{orderStatusLabel(order.status)}</StatusBadge>
               </div>
               <div className={styles.cardBody}>
                 <div><Link className={styles.productTitle} to={`/orders/${order.id}${location.search}`}>{order.productTitle}</Link>

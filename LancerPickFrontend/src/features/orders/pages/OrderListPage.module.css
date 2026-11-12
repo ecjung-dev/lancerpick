@@ -22,7 +22,7 @@
 .list { display: grid; gap: 16px; list-style: none; padding: 0; margin: 0; }
 .list li { min-width: 0; padding: 20px 22px; border: 1px solid var(--line); border-radius: 10px; }
 .cardMeta { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 11px; color: var(--muted); }
-.badge { border-radius: 4px; padding: 6px 10px; background: var(--surface); color: var(--ink); font-weight: 600; flex-shrink: 0; }
+.badge { flex-shrink: 0; }
 .cardBody { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 0; }
 .productTitle { font-size: 16px; font-weight: 700; line-height: 1.6; }
 .productTitle:hover { text-decoration: underline; }

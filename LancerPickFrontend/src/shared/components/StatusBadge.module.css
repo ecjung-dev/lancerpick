@@ -1,0 +1,6 @@
+/* 상태 배지: 모양은 .badge 하나, 색은 톤 클래스. 배지 문구가 그대로 있어 색만으로 구분하지 않는다. 화면별 여백·정렬은 호출한 쪽 className으로 더한다. */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 650; line-height: 1.5; white-space: nowrap; border: 1px solid var(--line); background: white; color: var(--ink); }
+.toneOk { background: var(--success-surface); color: var(--success); border-color: #c9ddcd; }
+.toneWarn { background: var(--warning-surface); color: var(--warning); border-color: #ecd9b4; }
+.toneDanger { background: var(--danger-surface); color: var(--danger); border-color: #eec4c4; }
+.toneStrong { background: var(--ink); color: white; border-color: var(--ink); }
