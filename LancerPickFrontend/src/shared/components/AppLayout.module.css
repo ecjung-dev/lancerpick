@@ -37,3 +37,32 @@
 
 .browse { white-space: nowrap; font-size: 13px; }
 @media (max-width: 1000px) { .discovery { flex-wrap: wrap; } }
+.mobileSearchToggle, .mobileSearch { display: none; }
+@media (max-width: 720px) {
+  .headerInner { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; padding: 14px 16px 12px; }
+  .brand { grid-column: 1; grid-row: 1; font-size: 22px; gap: 7px; }
+  .discovery { grid-column: 2; grid-row: 1; flex-wrap: nowrap; gap: 9px; justify-content: end; }
+  .browse { font-size: 12px; }
+  .discovery .search { display: none; }
+  .mobileSearchToggle { display: grid; place-items: center; width: 40px; height: 40px; flex-shrink: 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: white; cursor: pointer; }
+  .mobileSearchToggle[aria-expanded='true'] { background: var(--surface); border-color: var(--ink); }
+  .nav { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; justify-content: flex-end; flex-wrap: wrap; gap: 8px; font-size: 12px; }
+  .nav > a[href='/mypage'] { max-width: min(26vw, 180px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav button[aria-haspopup='dialog'] { padding: 4px 6px; }
+  .navButton { font-size: 12px; padding: 8px 10px; }
+  .mobileSearch:not([hidden]) { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; grid-row: 3; padding-top: 10px; border-top: 1px solid var(--line); }
+  .mobileSearchField { display: flex; align-items: center; flex: 1; min-width: 0; gap: 4px; padding: 3px 6px 3px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  .mobileSearchField input { border: 0; padding: 8px 0; min-width: 0; min-height: 36px; background: transparent; font-size: 14px; }
+  .mobileSearchField button { display: grid; place-items: center; padding: 7px; border: 0; background: none; color: var(--ink); cursor: pointer; flex-shrink: 0; }
+  .closeSearch { min-height: 42px; padding: 8px 10px; border: 1px solid var(--line); background: white; border-radius: 8px; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; flex-shrink: 0; }
+  .mobileSearchToggle:focus-visible, .mobileSearch button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+}
+@media (max-width: 360px) {
+  .brand { font-size: 20px; }
+  .brandMark { width: 18px; height: 18px; border-width: 6px; }
+  .browse { font-size: 11px; }
+  .discovery { gap: 6px; }
+  .nav { gap: 6px; }
+  .nav > a[href='/mypage'] { max-width: 22vw; }
+  .navButton { padding-inline: 8px; }
+}

@@ -27,4 +27,16 @@
   .menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .menu a, .disabled { overflow-wrap: anywhere; }
   .disabled { flex-direction: column; }
+  .page { padding: 16px 0; }
+  .heading { gap: 6px; margin-bottom: 18px; }
+  .heading p { margin-top: 12px; }
+  .heading strong { font-size: 24px; }
+  .heading > span { font-size: 12px; line-height: 1.6; }
+  .columns { gap: 20px; }
+  .switcher { margin-bottom: 8px; }
+  .switcher a { padding: 10px 6px; font-size: 13px; }
+  .menu { gap: 6px; align-items: stretch; }
+  .menu a, .disabled { min-height: 44px; box-sizing: border-box; padding: 10px 12px; font-size: 12px; display: flex; align-items: center; }
+  .menu > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .disabled { align-items: flex-start; gap: 3px; }
 }
