@@ -50,6 +50,9 @@ test('searched earnings show escaped snapshot/buyer and distinguish actual credi
     const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ['/mypage/settlements?q=로고'] },
       createElement(QueryClientProvider,{client},createElement(SettlementPage))))
     for (const text of ['적립금 지급 완료','기존 거래 · 수익 기록만 보관','적립금 지급 기록 확인 필요','27,000원']) assert.ok(html.includes(text))
+    // 지급 상태 배지 톤: 지급 완료 ok, 기존 거래 기록 neutral, 확인 필요 warn(실패로 단정하지 않는다)
+    for (const [tone, text] of [['ok','적립금 지급 완료'],['neutral','기존 거래 · 수익 기록만 보관'],['warn','적립금 지급 기록 확인 필요']])
+      assert.match(html, new RegExp(`data-tone="${tone}">\\s*${text}\\s*</span>`), text)
     assert.match(html,/type="search"[^>]*value="로고"/)
     assert.ok(html.includes('&lt;script&gt;buyer&lt;/script&gt;'))
     assert.doesNotMatch(html,/<img src=x|<script>buyer/)

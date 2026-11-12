@@ -230,6 +230,15 @@ test('authentication, server, network and unrecognized 404 failures never become
   }
   assert.match(renderContractError('AWAITING_CONTRACT', { code: 'UNKNOWN_404' }), /role="alert"/)
 })
+test('contract status badge colors signed as ok, PDF failure as danger and the rest as neutral', () => {
+  const badge = (html) => html.match(/<span class="[^"]*" data-tone="([a-z]+)" role="status">([^<]*)<\/span>/)
+  for (const [status, tone] of [['SIGNED', 'ok'], ['FAILED', 'danger'], ['READY', 'neutral'], ['DRAFT', 'neutral']]) {
+    const match = badge(render(status, '7', status === 'FAILED' || status === 'DRAFT' ? null : 'a'.repeat(64)))
+    assert.ok(match, status)
+    assert.equal(match[1], tone, status)
+  }
+})
+
 test('signed contract asks for payment only while the order is awaiting payment', () => {
   const v3 = (orderStatus) =>
     render('SIGNED', '8', 'a'.repeat(64), false, { orderStatus, policyVersion: 'CONTRACT_V3' })
