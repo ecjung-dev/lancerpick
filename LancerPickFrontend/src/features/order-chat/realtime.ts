@@ -20,7 +20,7 @@ interface ChatRealtimeOptions {
 }
 
 // 테스트에서 통신·시간만 교체한다. 실제 전송은 자동 재시도하지 않는다.
-export interface ChatRealtimeDependencies {
+interface ChatRealtimeDependencies {
   createClient: () => Client | Promise<Client>
   session: typeof getMemberSession
   csrf: typeof getChatCsrfToken

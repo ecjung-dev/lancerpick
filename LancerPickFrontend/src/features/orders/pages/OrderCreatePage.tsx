@@ -1,7 +1,7 @@
 import { loginPath } from '../../auth/session'
 import { BackLink } from '../../../shared/components/BackLink'
 import { useOrderEntryMember } from '../queries'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { ApiError, isUnauthorized } from '../../../shared/api/client'
 import { AsyncState } from '../../../shared/components/AsyncState'
@@ -24,6 +24,7 @@ import {
   isDefinitiveOrderRejection,
 } from '../attempt'
 import styles from './OrderCreatePage.module.css'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 export function OrderCreatePage() {
   const { id = '' } = useParams()
@@ -116,13 +117,7 @@ function OrderForm({
   const [blocked, setBlocked] = useState(restored.failed)
   const [rejected, setRejected] = useState(false)
   const inFlight = useRef(false)
-  const active = useRef(true)
-  useEffect(() => {
-    active.current = true
-    return () => {
-      active.current = false
-    }
-  }, [])
+  const active = useMountedRef()
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (inFlight.current || checking || blocked || belowMinimum) return

@@ -60,7 +60,7 @@ export function isUnclearResult(error: unknown) {
  * recheckSession 결과. same=같은 계정 그대로, signedOut=로그인 안 함, changed=다른 계정, unknown=확인 실패,
  * superseded=확인하는 동안 다른 곳에서 로그인·로그아웃이 끝나 결과를 반영하지 않음(그쪽 상태가 최신).
  */
-export type RecheckOutcome = 'same' | 'signedOut' | 'changed' | 'unknown' | 'superseded'
+type RecheckOutcome = 'same' | 'signedOut' | 'changed' | 'unknown' | 'superseded'
 
 /**
  * 로그인·로그아웃 결과가 불명확할 때 호출한다. 요청 자체는 다시 보내지 않는다.

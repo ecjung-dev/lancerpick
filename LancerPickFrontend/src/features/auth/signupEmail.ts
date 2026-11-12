@@ -7,7 +7,7 @@ import { isUnclearResult } from './session.ts'
  * csrf: 요청 정보 만료 → 다시 시도 안내(링크는 아직 쓸 수 있음)
  * unclear: 통신 오류·5xx → 서버에서 인증됐을 수 있다. 같은 링크를 다시 보내지 않고 새 인증 메일을 받도록 안내
  */
-export type VerifyFailureKind = 'invalidLink' | 'csrf' | 'unclear' | 'other'
+type VerifyFailureKind = 'invalidLink' | 'csrf' | 'unclear' | 'other'
 
 export function verifyFailureKind(error: unknown): VerifyFailureKind {
   if (isUnclearResult(error)) return 'unclear'
@@ -24,7 +24,7 @@ export function verifyFailureKind(error: unknown): VerifyFailureKind {
  * fields: 비밀번호·표시 이름 규칙 위반 → 입력칸 안내(증명은 그대로 쓸 수 있음)
  * unclear: 통신 오류·5xx → 가입됐을 수 있다. 다시 보내지 않고 로그인부터 시도하도록 안내
  */
-export type SignupFailureKind = 'proofInvalid' | 'alreadyRegistered' | 'fields' | 'csrf' | 'unclear' | 'other'
+type SignupFailureKind = 'proofInvalid' | 'alreadyRegistered' | 'fields' | 'csrf' | 'unclear' | 'other'
 
 export function signupFailureKind(error: unknown): SignupFailureKind {
   if (isUnclearResult(error)) return 'unclear'

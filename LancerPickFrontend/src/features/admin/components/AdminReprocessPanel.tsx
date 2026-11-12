@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { captureAccountScope } from '../../auth/session'
 import {
@@ -9,6 +9,7 @@ import { REASON_MAX, validateReason } from '../validation'
 import styles from '../pages/Admin.module.css'
 import { StatusBadge } from './StatusBadge'
 import { actionTones, toneOf } from '../statusTone'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 const BUTTONS: Record<ReprocessAction, string> = {
   TOPUP_RECHECK: '재확인 요청', TOPUP_RECOVERY_RESTART: '재시작 요청', CONTRACT_PDF_REGENERATE: 'PDF 다시 만들기 요청',
@@ -30,13 +31,9 @@ export function AdminReprocessPanel({ action, target, eligible, version }: {
   const pending = usePendingReprocess(action, target)
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string>()
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
   const id = useId()
-  useEffect(() => {
-    active.current = true
-    return () => { active.current = false }
-  }, [])
 
   if (!eligible && !pending) return null
   const busy = pending?.phase === 'sending'

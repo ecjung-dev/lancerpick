@@ -27,7 +27,7 @@ export async function submitPasswordReset(client: QueryClient, input: PasswordRe
  * csrf: 요청 정보 만료 → 다시 시도 안내
  * unclear: 통신 오류·5xx → 바뀌었을 수 있다. 실패로 단정하지 않고 새 비밀번호 로그인부터 시도하도록 안내
  */
-export type ResetFailureKind = 'invalidLink' | 'fields' | 'csrf' | 'unclear' | 'other'
+type ResetFailureKind = 'invalidLink' | 'fields' | 'csrf' | 'unclear' | 'other'
 
 export function resetFailureKind(error: unknown): ResetFailureKind {
   if (isUnclearResult(error)) return 'unclear'

@@ -1,6 +1,6 @@
 import { adminBackPath } from '../navigation'
 import { BackLink } from '../../../shared/components/BackLink'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
@@ -21,6 +21,7 @@ import { MemberLink } from '../components/MemberLink'
 import styles from './Admin.module.css'
 import { StatusBadge } from '../components/StatusBadge'
 import { cancellationTones, inquiryTones, toneOf } from '../statusTone'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 const FACTS = `${styles.facts} ${styles.factsAligned}`
 
@@ -109,9 +110,8 @@ function InquirySummary({ inquiry, refreshing }: { inquiry: AdminInquiryDetail; 
 function DecisionForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
   const client = useQueryClient()
   // 화면을 떠난 뒤 도착한 응답은 화면 상태를 바꾸지 않고, 빠른 두 번 클릭은 렌더링 전에도 막는다.
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [reason, setReason] = useState('')
   const [agree, setAgree] = useState(false)
   const [error, setError] = useState<string>()
@@ -188,9 +188,8 @@ function DecisionForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
 /** 판매자가 먼저 처리했거나 구매자가 철회해 승인·거절할 수 없게 된 문의를 닫는다. 주문·대금은 바뀌지 않는다. */
 function CloseForm({ inquiry }: { inquiry: AdminInquiryDetail }) {
   const client = useQueryClient()
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [notice, setNotice] = useState<string>()
   const close = useMutation({
     retry: false,

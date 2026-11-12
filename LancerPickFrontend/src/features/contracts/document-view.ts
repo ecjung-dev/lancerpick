@@ -20,7 +20,7 @@ const labels: Record<string, string> = {
   standardBody: '표준 계약 본문',
   specialTerms: '특약',
 }
-export function contractFields(
+function contractFields(
   canonical: string,
 ): { label: string; value: string }[] {
   try {

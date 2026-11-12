@@ -5,7 +5,7 @@ import { memberQueryKey, resetAccountState } from './session.ts'
 import type { Member } from './types.ts'
 
 /** saved=저장됨, signedOut=세션이 끝나 보내지 않음, accountChanged=다른 계정으로 바뀌어 보내지 않음(또는 다른 계정 응답) */
-export type SaveNameOutcome =
+type SaveNameOutcome =
   | { kind: 'saved'; member: Member }
   | { kind: 'signedOut' }
   | { kind: 'accountChanged' }

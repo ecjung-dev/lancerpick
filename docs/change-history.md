@@ -87,13 +87,17 @@
 <a id="refactoring-second-pass"></a>
 ### 2차 리팩터링 점검: 죽은 코드·화면 직접 API 호출 정리 — 2026-11-12
 
-정은찬, `refactor/essential-cleanup`, main `7e0e2d9`(#208) 기준. 백엔드·프런트 전체를 8줄 창 중복, 미사용 파일·export, 규칙 위반(`/api` 직접 호출, 현재 시각, ID 파싱, queryKey 접두사) 기준으로 다시 훑고, Codex 읽기 전용 반박 검토를 받아 필수 항목만 고쳤다.
+정은찬, main `7e0e2d9`(#208) 기준. 아래 삭제·`/me` 정리는 `refactor/essential-cleanup`으로 main 반영(#209 `830c866`), 재검토 항목은 `refactor/mounted-ref-exports`. 백엔드·프런트 전체를 8줄 창 중복, 미사용 파일·export, 규칙 위반(`/api` 직접 호출, 현재 시각, ID 파싱, queryKey 접두사) 기준으로 다시 훑고, Codex 읽기 전용 반박 검토를 받아 필수 항목만 고쳤다.
 
 - 삭제: 어디서도 import되지 않는 `products/components/ProductPreview.tsx`·`.module.css`, 쓰이지 않는 `auth/passwordReset.ts`의 `RESET_REQUEST_COOLDOWN_SECONDS`(원본 `MAIL_REQUEST_COOLDOWN_SECONDS`는 이메일 링크 폼이 사용해 유지).
 - 상품 등록·수정 화면(`ProductEditorPage`)이 `/me`를 직접 호출하던 두 곳을 다른 화면과 같은 `auth/api`의 `getMemberSession`으로 바꿨다. 401을 그대로 전달하는 함수라 로그인 안내 분기가 같고, 쿼리 키 `['product-editor-session']`·`retry: false`·`gcTime: 0`·제출 직전 계정 재확인(캐시 아닌 직접 요청) 순서는 그대로다.
-- 하지 않음: 생성자·QueryDSL 컬럼 목록·`AccountChallenge` 팩토리 등 반복(동작상 이득 없음), V3 판매자 승인과 관리자 승인 취소의 검사 블록 공통화(금융 경로), `AdminPager`·`Pager` 통합(범위 밖 페이지 정책 차이), 파일 안에서만 쓰는 export 정리, 큰 파일 추가 분리. 백엔드는 규칙 위반을 찾지 못해 변경 없음.
+- 재검토(같은 날, 작업자 한 명·리뷰어 없음 조건, Codex 반박 검토, `refactor/mounted-ref-exports`): 리뷰 부담을 이유로 뺀 항목을 다시 넣었다.
+  - 마운트 여부 ref: `useRef(true)` + 마운트 표시 effect가 반복되던 17곳을 `shared/lib/useMountedRef`로 바꿨다(설정 true·정리 false 순서 유지, `tests/mounted-ref.test.mjs`로 StrictMode 재설정 순서 확인). 쿼리 취소·위젯 정리가 함께 있는 effect(`ProductSaleStatusPage`·`SellerProfilePage`·`useTopupCheckout`)는 그대로 둔다.
+  - 파일 안에서만 쓰는 export 37개의 `export`를 뗐다(src·tests 전체 참조 없음 확인, 테스트가 import하는 심볼은 제외).
+  - 백엔드 `AdminMemberQueries`의 현재 제재·제재 이력 조회가 반복하던 선택 열 10개를 `SANCTION_COLUMNS` 상수로 모았다(필터·정렬·개수 그대로).
+- 하지 않음: 생성자·`AccountChallenge` 팩토리(V5 CHECK 용도별 제약)·이메일 인증 두 서비스(기존 회원은 잠근 뒤 재확인) 등 의미가 다른 반복, V3 판매자 승인과 관리자 승인 취소의 검사 블록 공통화(대기 요청 조회 주체·지갑 잠금 뒤 시각·종료 기록이 다른 금융 경로), `AdminPager`·`Pager` 통합(범위 밖 페이지 표시 차이), 큰 파일 추가 분리(리뷰어가 없어 발표 전 회귀 위험을 더 보수적으로 봄).
 
-자동 테스트: 프런트 typecheck·lint·test:api 353건·build 통과. 화면 동작이 같아 새 테스트는 없고, 브라우저 확인은 하지 않았다. API·DB·백엔드 변경 없음.
+자동 테스트: 프런트 typecheck·lint·test:api 354건(마운트 표시 순서 테스트 추가)·build 통과, 백엔드 `AdminMemberApiIntegrationTests` 9건·`clean build`(테스트 1,149건) 통과, Codex 적대적 리뷰 지적 없음. 브라우저 확인은 하지 않았다. API·DB 변경 없음.
 
 <a id="refactoring-wrapup"></a>
 ### 전체 리팩터링 마무리 검토 — 2026-11-10, main 반영(#180)

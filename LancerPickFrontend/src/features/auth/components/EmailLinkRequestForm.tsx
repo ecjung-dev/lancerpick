@@ -7,6 +7,7 @@ import { MAIL_REQUEST_COOLDOWN_SECONDS } from '../linkToken'
 import { isUnclearResult } from '../session'
 import { validatePasswordResetRequest } from '../validation'
 import styles from '../pages/AuthPage.module.css'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 /**
  * 이메일을 받아 링크 메일을 요청하는 공통 폼(비밀번호 재설정 요청·가입 인증 메일 요청).
@@ -23,9 +24,8 @@ export function EmailLinkRequestForm({ idPrefix, request, submitLabel, successTe
   /** 기존 계정(재설정)은 비밀번호 관리 프로그램이 알아보도록 'username', 새 가입은 'email' */
   autoComplete?: 'email' | 'username'
 }) {
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
 
   const [email, setEmail] = useState('')
   const [fieldError, setFieldError] = useState<string>()

@@ -16,7 +16,7 @@ export interface AdminDashboard {
 export const getAdminDashboard = (signal?: AbortSignal) => apiRequest<AdminDashboard>('/admin/dashboard', { signal })
 
 /** ['admin'] 아래라 계정 전환 때 지워진다. 매번 최신으로 조회하고 보관하지 않는다. */
-export const dashboardKey = ['admin', 'dashboard'] as const
+const dashboardKey = ['admin', 'dashboard'] as const
 
 export const useAdminDashboard = () =>
   useQuery({ queryKey: dashboardKey, queryFn: ({ signal }) => getAdminDashboard(signal), retry: false, staleTime: 0, gcTime: 0 })

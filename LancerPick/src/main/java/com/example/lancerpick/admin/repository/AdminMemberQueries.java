@@ -6,6 +6,7 @@ import com.example.lancerpick.member.entity.QMember;
 import com.example.lancerpick.member.entity.QMemberSanction;
 import com.example.lancerpick.member.entity.SanctionKind;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Expression;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.jpa.JPAExpressions;
@@ -24,6 +25,19 @@ import org.springframework.stereotype.Repository;
 public class AdminMemberQueries {
   private static final QMember M = QMember.member;
   private static final QMemberSanction S = QMemberSanction.memberSanction;
+  /** 제재 응답({@link #sanction})이 읽는 열. 현재 제재·이력 조회가 같은 목록을 쓴다. */
+  private static final Expression<?>[] SANCTION_COLUMNS = {
+    S.id,
+    S.kind,
+    S.reason,
+    S.appliedBy,
+    S.startsAt,
+    S.endsAt,
+    S.revokedAt,
+    S.revokedBy,
+    S.revokeReason,
+    S.timerStopDeliveredAt
+  };
   private final JPAQueryFactory query;
 
   public record Filter(String keyword, boolean numeric, Long memberId, SanctionKind restriction) {}
@@ -125,17 +139,7 @@ public class AdminMemberQueries {
     for (var kind : List.of(SanctionKind.SECURITY_LOCK, SanctionKind.GENERAL_RESTRICTION)) {
       var row =
           query
-              .select(
-                  S.id,
-                  S.kind,
-                  S.reason,
-                  S.appliedBy,
-                  S.startsAt,
-                  S.endsAt,
-                  S.revokedAt,
-                  S.revokedBy,
-                  S.revokeReason,
-                  S.timerStopDeliveredAt)
+              .select(SANCTION_COLUMNS)
               .from(S)
               .where(S.memberId.eq(memberId), S.kind.eq(kind), active(now))
               .orderBy(S.id.desc())
@@ -151,17 +155,7 @@ public class AdminMemberQueries {
 
   public List<Sanction> history(long memberId, LocalDateTime now, long offset, int size) {
     return query
-        .select(
-            S.id,
-            S.kind,
-            S.reason,
-            S.appliedBy,
-            S.startsAt,
-            S.endsAt,
-            S.revokedAt,
-            S.revokedBy,
-            S.revokeReason,
-            S.timerStopDeliveredAt)
+        .select(SANCTION_COLUMNS)
         .from(S)
         .where(S.memberId.eq(memberId))
         .orderBy(S.startsAt.desc(), S.id.desc())

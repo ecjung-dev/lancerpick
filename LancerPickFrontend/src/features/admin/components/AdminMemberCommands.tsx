@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { captureAccountScope } from '../../auth/session'
 import { formatDateTime } from '../../../shared/lib/format'
@@ -13,6 +13,7 @@ import type {
 } from '../memberTypes'
 import styles from '../pages/Admin.module.css'
 import memberStyles from './AdminMemberCommands.module.css'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 const koreaInput = (iso: string) => koreaInputValue(Date.parse(iso))
 
@@ -32,14 +33,8 @@ export function AdminMemberCommands({
   const [confirmed, setConfirmed] = useState(false)
   const [error, setError] = useState<string>()
   const [success, setSuccess] = useState(false)
-  const active = useRef(true),
+  const active = useMountedRef(),
     sending = useRef(false)
-  useEffect(() => {
-    active.current = true
-    return () => {
-      active.current = false
-    }
-  }, [])
   const stored = pending?.command
   const currentAction = stored
     ? stored.action === 'apply'

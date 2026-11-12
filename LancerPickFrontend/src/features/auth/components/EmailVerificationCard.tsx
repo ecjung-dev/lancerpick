@@ -7,6 +7,7 @@ import { MAIL_REQUEST_COOLDOWN_SECONDS } from '../linkToken'
 import { captureAccountScope, isUnclearResult, memberQueryKey } from '../session'
 import type { Member } from '../types'
 import styles from '../pages/MyProfilePage.module.css'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 /**
  * 내 정보의 이메일 인증 상태(K1 기존 회원 전환). 인증 전이면 인증 메일을 요청할 수 있다.
@@ -17,9 +18,8 @@ import styles from '../pages/MyProfilePage.module.css'
  */
 export function EmailVerificationCard({ member }: { member: Member }) {
   const client = useQueryClient()
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string }>()
   const [cooldown, setCooldown] = useState(0)
 

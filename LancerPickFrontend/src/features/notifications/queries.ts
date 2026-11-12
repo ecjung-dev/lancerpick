@@ -2,7 +2,7 @@ import { useQuery, type QueryClient } from '@tanstack/react-query'
 import { getNotifications, getUnreadNotificationCount, markAllNotificationsRead, markNotificationRead } from './api.ts'
 
 // 계정 전환 시 shared/api/accountCache.ts가 auth 외 모든 조회를 지우므로 별도 정리 목록이 필요 없다.
-export const notificationKeys = {
+const notificationKeys = {
   all: ['notifications'] as const,
   lists: ['notifications', 'list'] as const,
   list: (page: number, unreadOnly: boolean) =>

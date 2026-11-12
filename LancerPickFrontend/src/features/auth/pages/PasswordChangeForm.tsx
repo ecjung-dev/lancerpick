@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import { ApiError, isUnauthorized } from '../../../shared/api/client'
@@ -10,6 +10,7 @@ import type { ChangePasswordInput, Member } from '../types'
 import { validatePasswordChange, type PasswordChangeErrors } from '../validation'
 import type { LoginPageState } from './LoginPage'
 import styles from './MyProfilePage.module.css'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 type Draft = { currentPassword: string; newPassword: string; newPasswordConfirm: string }
 
@@ -30,9 +31,8 @@ const EMPTY_DRAFT: Draft = { currentPassword: '', newPassword: '', newPasswordCo
 export function PasswordChangeForm({ member, onAccountChanged }: { member: Member; onAccountChanged: () => void }) {
   const client = useQueryClient()
   const navigate = useNavigate()
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
   const [errors, setErrors] = useState<PasswordChangeErrors>({})
   const [message, setMessage] = useState<string>()

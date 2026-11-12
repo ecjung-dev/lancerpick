@@ -16,7 +16,7 @@ export interface ActiveReviewTimer {
 }
 
 /** ReviewTimerService가 돌려주는 해제 후 상태(ADMIN_STOPPED 등). */
-export interface ReviewTimerStatus { status: string }
+interface ReviewTimerStatus { status: string }
 
 export function getActiveReviewTimers(page: number, signal?: AbortSignal) {
   const params = new URLSearchParams({ page: String(page), size: '20' })
@@ -33,7 +33,7 @@ export function stopReviewTimer(orderId: string, reason: string, isCurrentAccoun
 }
 
 /** 타이머는 시간이 지나면 자동 확정되거나 다른 관리자가 해제할 수 있어 매번 최신으로 조회하고 보관하지 않는다. */
-export const adminTimerKeys = { active: (page: number) => ['admin', 'review-timers', page] as const }
+const adminTimerKeys = { active: (page: number) => ['admin', 'review-timers', page] as const }
 
 export function useActiveReviewTimers(page: number) {
   return useQuery({ queryKey: adminTimerKeys.active(page), queryFn: ({ signal }) => getActiveReviewTimers(page, signal), retry: false, staleTime: 0, gcTime: 0 })

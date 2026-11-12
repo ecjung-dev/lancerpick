@@ -1,5 +1,5 @@
 import { loginPath } from '../../auth/session'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { ApiError, isUnauthorized } from '../../../shared/api/client'
@@ -15,6 +15,7 @@ import type { Category } from '../types'
 import styles from './ProductEditorPage.module.css'
 import { myProductsReturnPath } from '../myProductsNavigation'
 import { PageHeading } from '../../../shared/components/PageHeading'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 export function ProductEditorPage() {
   const { id } = useParams()
@@ -59,8 +60,7 @@ function ProductForm({ initial, categories, memberId, checking }: { initial?: Ow
   const [saved, setSaved] = useState(false)
   const [accountInvalid, setAccountInvalid] = useState(false)
   const inFlight = useRef(false)
-  const active = useRef(true)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
+  const active = useMountedRef()
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (inFlight.current || checking || locked || latest) return

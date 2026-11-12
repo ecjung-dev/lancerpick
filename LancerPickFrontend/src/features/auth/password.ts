@@ -5,7 +5,7 @@ import { resetAccountState } from './session.ts'
 import type { ChangePasswordInput } from './types.ts'
 
 /** changed=바뀜(세션 끝남), signedOut=이미 로그인이 끝나 보내지 않음, accountChanged=다른 계정으로 바뀌어 보내지 않음 */
-export type ChangePasswordOutcome =
+type ChangePasswordOutcome =
   | { kind: 'changed' }
   | { kind: 'signedOut' }
   | { kind: 'accountChanged' }

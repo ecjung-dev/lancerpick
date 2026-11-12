@@ -30,7 +30,7 @@ export function validateDisplayName(value: string) {
   return { displayName, error }
 }
 
-export function normalizeEmail(value: string) {
+function normalizeEmail(value: string) {
   return normalizeText(value).toLowerCase()
 }
 

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getSettlements, getSettlementSummary } from './api'
 import type { SettlementPeriod } from './filters'
 
-export const settlementKeys = {
+const settlementKeys = {
   list: (page: number, period: SettlementPeriod, sort: 'latest' | 'oldest') => ['wallet', 'settlements', page, period.from, period.to, sort, ...(period.q ? [period.q] : [])] as const,
   summary: (period: SettlementPeriod) => ['wallet', 'settlement-summary', period.from, period.to, ...(period.q ? [period.q] : [])] as const,
 }

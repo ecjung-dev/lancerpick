@@ -15,7 +15,7 @@ export interface AdminInquirySummary {
   resolvedAt: string | null
 }
 
-export type AdminInquiryAction = 'APPROVE' | 'REJECT' | 'CLOSE'
+type AdminInquiryAction = 'APPROVE' | 'REJECT' | 'CLOSE'
 
 export interface AdminInquiryDetail {
   id: string

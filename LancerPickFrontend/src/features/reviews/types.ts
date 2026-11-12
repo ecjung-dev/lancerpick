@@ -1,6 +1,6 @@
 import type { PageResponse } from '../../shared/api/types'
 
-export interface PublicReview {
+interface PublicReview {
   id: string
   authorDisplayName: string
   rating: number

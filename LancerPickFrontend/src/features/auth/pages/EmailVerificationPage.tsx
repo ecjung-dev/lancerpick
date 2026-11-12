@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
@@ -9,6 +9,7 @@ import { captureAccountScope, isUnclearResult, memberQueryKey } from '../session
 import { useLinkToken } from '../useLinkToken'
 import { AuthLayout } from './AuthLayout'
 import styles from './AuthPage.module.css'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 type Stage = 'ready' | 'done' | 'invalidLink' | 'unclear'
 
@@ -24,9 +25,8 @@ export function EmailVerificationPage() {
   const client = useQueryClient()
   const member = useCurrentMember()
   const token = useLinkToken()
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [stage, setStage] = useState<Stage>(token === null ? 'invalidLink' : 'ready')
   const [message, setMessage] = useState<string>()
 

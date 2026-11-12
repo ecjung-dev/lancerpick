@@ -8,16 +8,16 @@ import { isValidProductId as isValidId } from './validation.ts'
  * 응답의 후보 판단(eligible·reason)은 조회 순간의 조건일 뿐 실행 권한이 아니다. 실행은 reprocessApi.ts(K6)가 따로 요청하고 서버가 다시 검사한다.
  */
 export type TopupStatus = 'READY' | 'PROCESSING' | 'UNKNOWN' | 'COMPLETED' | 'FAILED'
-export type PolicyVersion = 'LEGACY_V1' | 'CONTRACT_V2' | 'CONTRACT_V3'
-export interface Decision { eligible: boolean; reason: string }
+type PolicyVersion = 'LEGACY_V1' | 'CONTRACT_V2' | 'CONTRACT_V3'
+interface Decision { eligible: boolean; reason: string }
 
-export interface Topup {
+interface Topup {
   id: string; memberId: string; amount: number; status: TopupStatus; lastErrorCode: string | null
   recoveryAttemptCount: number; createdAt: string; processingStartedAt: string | null; nextRecoveryAt: string | null
   recoveryLeaseUntil: string | null; completedAt: string | null; automaticRecovery: Decision; manualRecheck: Decision
 }
 
-export interface PaymentRecord {
+interface PaymentRecord {
   id: string; orderId: string; buyerId: string; sellerId: string; policyVersion: string; orderStatus: string
   status: string; amount: number; refundedAmount: number; paidAt: string; refundedAt: string | null
 }
@@ -30,7 +30,7 @@ export interface OrderFinance {
   closure: { reason: string; paidAmount: number; buyerRefundAmount: number; sellerGrossAmount: number; feeAmount: number; sellerNetAmount: number } | null
 }
 
-export interface RecoveryJob {
+interface RecoveryJob {
   executionId: string | null; instanceId: string; status: string; scanRequestedAt: string | null
   readCount: number; creditedCount: number; filteredCount: number; outcomes: Record<string, number>; restart: Decision
 }
@@ -100,7 +100,7 @@ export function getContractPdf(orderId: string, signal?: AbortSignal) {
 
 /** 금융 상태는 결제·복구 작업·다른 관리자로 계속 바뀌므로 매번 최신으로 조회하고 보관하지 않는다. ['admin'] 아래라 계정 전환 때 지워진다. */
 const fresh = { retry: false, staleTime: 0, gcTime: 0 } as const
-export const financeKeys = {
+const financeKeys = {
   topups: (filter: TopupFilter, page: number) => ['admin', 'finance', 'topups', filter, page] as const,
   payments: (filter: PaymentFilter, page: number) => ['admin', 'finance', 'payments', filter, page] as const,
   jobs: (page: number) => ['admin', 'finance', 'jobs', page] as const,

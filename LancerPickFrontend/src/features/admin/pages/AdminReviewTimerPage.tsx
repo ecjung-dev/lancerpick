@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
@@ -15,6 +15,7 @@ import { AdminNav } from './AdminNav'
 import { AdminPager } from '../components/AdminPager'
 import { MemberLink } from '../components/MemberLink'
 import styles from './Admin.module.css'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 const name = (party: { id: string; displayName: string | null }) => party.displayName ?? `회원 #${party.id}`
 
@@ -61,9 +62,8 @@ export function AdminReviewTimerPage() {
  */
 function StopForm({ timer, onDone }: { timer: ActiveReviewTimer; onDone: () => void }) {
   const client = useQueryClient()
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()

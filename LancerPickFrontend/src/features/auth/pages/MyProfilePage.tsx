@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useRef,
   useState,
   type FormEvent,
@@ -23,6 +22,7 @@ import styles from './MyProfilePage.module.css'
 import { PasswordChangeForm } from './PasswordChangeForm'
 import { EmailVerificationCard } from '../components/EmailVerificationCard'
 import { PageHeading } from '../../../shared/components/PageHeading'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 const PROFILE_PATH = '/mypage/profile'
 
@@ -99,14 +99,8 @@ function ProfileForm({
   onAccountChanged: () => void
 }) {
   const client = useQueryClient()
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => {
-    active.current = true
-    return () => {
-      active.current = false
-    }
-  }, [])
   const [name, setName] = useState(member.displayName)
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()

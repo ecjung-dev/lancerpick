@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router'
 import { Button } from '../../../shared/components/Button'
@@ -9,6 +9,7 @@ import { validatePasswordReset, type PasswordResetErrors } from '../validation'
 import { AuthLayout } from './AuthLayout'
 import type { LoginPageState } from './LoginPage'
 import styles from './AuthPage.module.css'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 type Draft = { newPassword: string; newPasswordConfirm: string }
 
@@ -25,9 +26,8 @@ export function PasswordResetPage() {
   const navigate = useNavigate()
   const client = useQueryClient()
   const token = useLinkToken()   // 주소의 #token=... 을 메모리로 옮기고 주소창에서 지운다
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
 
   const [draft, setDraft] = useState<Draft>({ newPassword: '', newPasswordConfirm: '' })
   const [errors, setErrors] = useState<PasswordResetErrors>({})

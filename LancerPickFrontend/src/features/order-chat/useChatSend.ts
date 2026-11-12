@@ -15,6 +15,7 @@ import {
 } from './pending'
 import type { useChatRealtime } from './useChatRealtime'
 import { MAX_MESSAGE_LENGTH } from './validation'
+import { useMountedRef } from '../../shared/lib/useMountedRef'
 
 /**
  * 주문 대화의 입력·발송·복구 흐름. 같은 clientMessageId로만 재전송하고(멱등), 발송 전후로 현재 계정을 확인하며,
@@ -54,13 +55,7 @@ export function useChatSend({
   const busy = preparing || pending?.phase === 'sending'
   const uncertain = pending?.phase === 'uncertain'
   const sending = useRef(false)
-  const mounted = useRef(true)
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
-  }, [])
+  const mounted = useMountedRef()
   const length = normalizedLength(content)
 
   useEffect(() => {

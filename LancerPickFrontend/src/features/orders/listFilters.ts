@@ -1,8 +1,8 @@
 import { orderStatuses } from './status.ts'
 import { isCalendarDate as isOrderListDate } from '../../shared/lib/dateRange.ts'
 
-export type OrderSide = 'BUYER' | 'SELLER'
-export type OrderSort = 'latest' | 'oldest'
+type OrderSide = 'BUYER' | 'SELLER'
+type OrderSort = 'latest' | 'oldest'
 
 /** 거래 내역 목록 조건. 빈 문자열은 조건 없음이다. 날짜는 한국 날짜(yyyy-MM-dd)다. */
 export interface OrderListFilters {

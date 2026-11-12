@@ -4,7 +4,7 @@ import type { Member } from '../auth/types.ts'
 import { normalizeText } from '../../shared/lib/text.ts'
 import type { SendChatMessageInput } from './types.ts'
 
-export const pendingChatPrefix = ['order-chat', 'pending-send'] as const
+const pendingChatPrefix = ['order-chat', 'pending-send'] as const
 export const pendingChatKey = (memberId: string, orderId: string) =>
   [...pendingChatPrefix, memberId, orderId] as const
 

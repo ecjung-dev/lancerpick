@@ -10,16 +10,16 @@ import { isValidProductId as isValidId } from './validation.ts'
  * 같은 requestKey·같은 사유로 다시 보내면 서버는 다시 실행하지 않고 기존 기록을 돌려준다(200).
  */
 export type ReprocessAction = 'TOPUP_RECHECK' | 'TOPUP_RECOVERY_RESTART' | 'CONTRACT_PDF_REGENERATE'
-export type ActionStatus = 'REQUESTED' | 'SUCCEEDED' | 'REJECTED' | 'FAILED' | 'UNKNOWN'
+type ActionStatus = 'REQUESTED' | 'SUCCEEDED' | 'REJECTED' | 'FAILED' | 'UNKNOWN'
 
-export interface ActionReceipt {
+interface ActionReceipt {
   id: string; adminId: string; action: ReprocessAction; targetType: string; targetId: string; orderId: string | null
   reason: string; requestKey: string; status: ActionStatus; resultCode: string | null
   requestedAt: string; leaseUntil: string; completedAt: string | null
 }
 
 /** target은 충전 ID / Batch 실행 ID / 주문 ID(PDF). version은 PDF에서만 쓴다. */
-export interface ReprocessCommand {
+interface ReprocessCommand {
   action: ReprocessAction; target: string; version?: number; reason: string; requestKey: string
 }
 
@@ -49,7 +49,7 @@ export function getActionLogs(filter: ActionLogFilter, page: number, signal?: Ab
   return apiRequest<PageResponse<ActionReceipt>>(`/admin/action-logs?${params}`, { signal, cache: 'no-store' })
 }
 
-export const actionLogPrefix = ['admin', 'action-logs'] as const
+const actionLogPrefix = ['admin', 'action-logs'] as const
 export const useActionLogs = (filter: ActionLogFilter, page: number) =>
   useQuery({
     queryKey: [...actionLogPrefix, filter, page],
@@ -61,7 +61,7 @@ export const useActionLogs = (filter: ActionLogFilter, page: number) =>
  * 보낸 요청을 계정별 메모리에 보관한다(['admin'] 아래라 로그아웃·계정 전환 때 지워진다).
  * sending: 응답 대기 중, uncertain: 서버가 처리했을 수 있어 같은 요청으로 결과를 확인해야 함, done: 서버가 기록을 돌려줌.
  */
-export interface PendingReprocess {
+interface PendingReprocess {
   command: ReprocessCommand; phase: 'sending' | 'uncertain' | 'done'; receipt?: ActionReceipt; operationId: string
 }
 const pendingPrefix = ['admin', 'reprocess'] as const

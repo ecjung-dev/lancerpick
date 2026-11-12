@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react'
+import { useRef, useState, type FormEvent, type ReactElement } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
@@ -14,6 +14,7 @@ import { validateSignup, type SignupErrors } from '../validation'
 import { AuthLayout } from './AuthLayout'
 import type { LoginPageState } from './LoginPage'
 import styles from './AuthPage.module.css'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 type FieldName = 'password' | 'passwordConfirm' | 'displayName'
 /** 화면 단계: 인증 전 → (이미 가입됨 | 가입 정보 입력) / 링크 사용 불가 / 인증 만료 */
@@ -34,9 +35,8 @@ export function SignupVerifyPage() {
   const navigate = useNavigate()
   const current = useCurrentMember()
   const token = useLinkToken()
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
 
   const [stage, setStage] = useState<Stage>(token === null ? 'invalidLink' : 'verify')
   const [verified, setVerified] = useState<SignupEmailVerification>()

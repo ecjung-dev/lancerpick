@@ -1,7 +1,7 @@
 import { codePointLength, normalizeText } from '../../shared/lib/text.ts'
 import type { AdminProductFilter, SaleStatus } from './types.ts'
 
-export const KEYWORD_MAX = 100
+const KEYWORD_MAX = 100
 export const REASON_MAX = 1000
 
 /**

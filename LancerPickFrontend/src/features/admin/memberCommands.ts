@@ -4,7 +4,7 @@ import { executeMemberSanction } from './memberApi.ts'
 import type { MemberSanctionCommand } from './memberTypes.ts'
 
 export const adminMemberPrefix = ['admin', 'members'] as const
-export const pendingMemberCommandPrefix = ['admin', 'member-command'] as const
+const pendingMemberCommandPrefix = ['admin', 'member-command'] as const
 export const pendingMemberCommandKey = (id: string) =>
   [...pendingMemberCommandPrefix, id] as const
 export interface PendingMemberCommand {

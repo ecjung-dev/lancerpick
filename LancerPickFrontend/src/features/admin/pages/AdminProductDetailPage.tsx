@@ -1,6 +1,6 @@
 import { adminBackPath } from '../navigation'
 import { BackLink } from '../../../shared/components/BackLink'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useParams } from 'react-router'
 import { ApiError } from '../../../shared/api/client'
@@ -21,6 +21,7 @@ import { AdminPager } from '../components/AdminPager'
 import styles from './Admin.module.css'
 import { StatusBadge } from '../components/StatusBadge'
 import { saleStatusTones, toneOf, visibilityTone } from '../statusTone'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 /** 목록에서 넘겨준 돌아갈 주소. 관리자 목록 경로만 허용한다. */
 export function AdminProductDetailPage() {
@@ -92,9 +93,8 @@ function ProductSummary({ product, refreshing }: { product: AdminProductDetail; 
  */
 function VisibilityForm({ product }: { product: AdminProductDetail }) {
   const client = useQueryClient()
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()

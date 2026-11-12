@@ -9,7 +9,7 @@ import { isValidProductId as isValidId } from './validation.ts'
  */
 export type OutboxIssueStatus = 'FAILED' | 'RETRYING'
 
-export interface OutboxIssue {
+interface OutboxIssue {
   id: string; eventId: string; type: string; aggregateType: string; aggregateId: string
   status: OutboxIssueStatus; attemptCount: number; lastErrorCode: string | null
   nextAttemptAt: string | null; createdAt: string
@@ -33,7 +33,7 @@ export function getOutboxIssues(filter: OutboxFilter, page: number, signal?: Abo
 }
 
 /** 처리기가 계속 상태를 바꾸므로 매번 최신으로 조회하고 보관하지 않는다. ['admin'] 캐시는 계정 전환 때 지워진다. */
-export const outboxKeys = { list: (filter: OutboxFilter, page: number) => ['admin', 'outbox', filter, page] as const }
+const outboxKeys = { list: (filter: OutboxFilter, page: number) => ['admin', 'outbox', filter, page] as const }
 
 export const useOutboxIssues = (filter: OutboxFilter, page: number) =>
   useQuery({ queryKey: outboxKeys.list(filter, page), queryFn: ({ signal }) => getOutboxIssues(filter, page, signal), retry: false, staleTime: 0, gcTime: 0 })

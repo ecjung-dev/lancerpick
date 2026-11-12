@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '../../../shared/api/client'
 import { formatDateTime } from '../../../shared/lib/format'
@@ -8,6 +8,7 @@ import type { OrderDetail } from '../../orders/types'
 import { requestCancellationReview } from '../api'
 import { inquiryKeys, useOrderInquiries } from '../queries'
 import { SUBJECT_MAX, canAskForReview, inquiryStatusLabel, validateSubject } from '../validation'
+import { useMountedRef } from '../../../shared/lib/useMountedRef'
 
 interface Props {
   order: Pick<OrderDetail, 'id' | 'policyVersion' | 'status' | 'allowedActions' | 'cancellationRequests'>
@@ -24,9 +25,8 @@ export function CancellationReviewRequest({ order, disabled }: Props) {
   const client = useQueryClient()
   const isV3 = order.policyVersion === 'CONTRACT_V3'
   const inquiries = useOrderInquiries(order.id, isV3)
-  const active = useRef(true)
+  const active = useMountedRef()
   const sending = useRef(false)
-  useEffect(() => { active.current = true; return () => { active.current = false } }, [])
   const [subject, setSubject] = useState('')
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()

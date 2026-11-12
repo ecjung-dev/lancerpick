@@ -4,7 +4,7 @@ import { reviewTimerRefetchInterval } from './reviewTimer'
 import type { OrderListFilters } from './listFilters'
 import { useQuery } from '@tanstack/react-query'
 
-export function orderListKey(filters: OrderListFilters) {
+function orderListKey(filters: OrderListFilters) {
   const { side, status, page, q, from, to, sort } = filters
   return ['wallet', 'orders', side, status, page, q, from, to, sort] as const
 }
