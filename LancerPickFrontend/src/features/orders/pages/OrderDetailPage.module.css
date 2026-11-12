@@ -9,25 +9,25 @@
 .status { flex-shrink: 0; margin-top: 26px; }
 .steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0 0 40px; }
 .steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 13px; color: var(--muted); }
-.steps li:not(:last-child)::after { content: ''; position: absolute; height: 2px; background: #e2e2e2; left: calc(50% + 9px); right: calc(-50% + 9px); top: 8px; }
-.steps .stepReached { color: #171717; font-weight: 650; }
-.steps .stepReached:not([aria-current])::after { background: #171717; }
+.steps li:not(:last-child)::after { content: ''; position: absolute; height: 2px; background: var(--line); left: calc(50% + 9px); right: calc(-50% + 9px); top: 8px; }
+.steps .stepReached { color: var(--ink); font-weight: 650; }
+.steps .stepReached:not([aria-current])::after { background: var(--ink); }
 .stepDot { width: 18px; height: 18px; border: 2px solid #dedede; border-radius: 50%; background: #dedede; }
-.stepReached .stepDot { border-color: #171717; background: #171717; }
+.stepReached .stepDot { border-color: var(--ink); background: var(--ink); }
 .steps [aria-current] .stepDot { background: white; }
 /* 마지막 단계(완료)가 현재 단계이면 거래가 끝난 것이므로 채워서 표시한다. */
-.steps li:last-child[aria-current] .stepDot { background: #171717; }
+.steps li:last-child[aria-current] .stepDot { background: var(--ink); }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 28px; }
 .main { min-width: 0; }
 .banner { padding: 24px; border-radius: 14px; background: #f4f4f2; }
 .banner h2 { font-size: 24px; line-height: 1.4; margin: 0 0 8px; letter-spacing: -.025em; word-break: keep-all; }
 .banner > p:not(.eyebrow) { margin: 8px 0; }
 .banner button { margin-top: 12px; }
-.late { padding: 10px 12px; border-left: 3px solid #171717; font-size: 14px; }
+.late { padding: 10px 12px; border-left: 3px solid var(--ink); font-size: 14px; }
 .tabs { display: flex; border-bottom: 1px solid #d9d9d9; margin: 24px 0 20px; }
 .tabs button { flex: 1; min-width: 0; min-height: 54px; padding: 12px 8px; background: none; border: none; border-bottom: 3px solid transparent; font: inherit; color: #686868; cursor: pointer; }
-.tabs button[aria-selected='true'] { border-bottom-color: #171717; color: #171717; font-weight: 700; }
-.tabs button:focus-visible, .page summary:focus-visible, .page a:focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
+.tabs button[aria-selected='true'] { border-bottom-color: var(--ink); color: var(--ink); font-weight: 700; }
+.tabs button:focus-visible, .page summary:focus-visible, .page a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 .panel[hidden] { display: none; }
 .panel:not([hidden]) { display: grid; gap: 20px; }
 .card { padding: 24px; border: 1px solid #dedede; border-radius: 12px; min-width: 0; background: #fff; }
@@ -46,7 +46,7 @@
 .conditions dd { margin: 0; white-space: pre-wrap; line-height: 1.75; font-size: 14px; }
 .summary { position: sticky; top: 24px; padding: 24px; border: 1px solid #d5d5d5; border-radius: 12px; min-width: 0; background: #fff; }
 .amount { font-size: 32px; font-weight: 750; letter-spacing: -.05em; margin: 12px 0 20px; }
-.summary > section { border-top: 1px solid #e3e3e3; padding: 20px 0 8px; }
+.summary > section { border-top: 1px solid var(--line); padding: 20px 0 8px; }
 .summary h3 { margin: 0; color: #686868; font-size: 13px; font-weight: 500; }
 .summary section > p { font-size: 14px; }
 .summary dl { margin: 14px 0; }
@@ -54,11 +54,11 @@
 .summary dt { color: #686868; flex-shrink: 0; }
 .summary dd { margin: 0; font-weight: 600; text-align: right; }
 .summary small { display: block; font-size: 12px; color: var(--muted); line-height: 1.65; }
-.summaryRows { border-top: 1px solid #e3e3e3; padding-top: 14px; }
-.chatEntry button { display: block; width: 100%; min-height: 44px; border: 1px solid #171717; border-radius: 8px; background: #fff; color: #171717; padding: 10px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.summaryRows { border-top: 1px solid var(--line); padding-top: 14px; }
+.chatEntry button { display: block; width: 100%; min-height: 44px; border: 1px solid var(--ink); border-radius: 8px; background: #fff; color: var(--ink); padding: 10px 12px; font: inherit; font-size: 14px; cursor: pointer; }
 .chatEntry button:disabled { opacity: var(--disabled-opacity); cursor: not-allowed; }
-.earningsLink { border-top: 1px solid #e3e3e3; margin-top: 24px; padding-top: 18px; }
-.earningsLink a { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; color: #171717; font-weight: 650; font-size: 14px; text-decoration: none; }
+.earningsLink { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 18px; }
+.earningsLink a { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; color: var(--ink); font-weight: 650; font-size: 14px; text-decoration: none; }
 .feedback { padding: 16px 20px; border: 1px solid #bcbcbc; border-radius: 10px; background: #f8f8f8; margin-bottom: 20px; }
 .feedback p { margin: 0 0 12px; }
 .refreshRow { display: flex; justify-content: flex-end; margin-top: 20px; }
@@ -72,14 +72,14 @@
 .page fieldset { min-width: 0; border: 1px solid #dedede; border-radius: 9px; padding: 20px; margin: 18px 0 0; }
 .page legend { font-weight: 650; padding: 0 6px; }
 .page label { display: block; font-size: 14px; line-height: 1.8; margin: 14px 0; }
-.page textarea, .page input[type='url'], .page input[type='text'], .page select { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; padding: 10px 12px; background: white; color: #171717; font: inherit; min-width: 0; }
+.page textarea, .page input[type='url'], .page input[type='text'], .page select { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; padding: 10px 12px; background: white; color: var(--ink); font: inherit; min-width: 0; }
 .page textarea { display: block; width: 100%; min-height: 110px; margin-top: 8px; resize: vertical; }
 .page input[type='url'] { display: block; width: 100%; min-height: 44px; margin-top: 8px; }
-.page input[type='checkbox'] { accent-color: #171717; }
-.page fieldset button { min-height: 44px; border: 1px solid #171717; border-radius: 8px; background: #171717; color: #fff; padding: 10px 18px; font: inherit; font-size: 14px; cursor: pointer; }
+.page input[type='checkbox'] { accent-color: var(--ink); }
+.page fieldset button { min-height: 44px; border: 1px solid var(--ink); border-radius: 8px; background: var(--ink); color: #fff; padding: 10px 18px; font: inherit; font-size: 14px; cursor: pointer; }
 .page button:disabled { cursor: not-allowed; opacity: var(--disabled-opacity); }
 .commands > fieldset { margin-top: 18px; }
-.secondaryActions fieldset button { color: #171717; background: #fff; border-color: #bbb; }
+.secondaryActions fieldset button { color: var(--ink); background: #fff; border-color: #bbb; }
 .page fieldset p { font-size: 13px; color: #686868; }
 .contract > section { border: 0; margin: 0; padding: 0; }
 .history ol { margin: 0; padding-left: 18px; }
@@ -110,7 +110,7 @@
   .tabs { margin-top: 20px; }
   .tabs button { font-size: 14px; }
   .conditions > div { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .conditions dt { font-weight: 650; color: #171717; }
+  .conditions dt { font-weight: 650; color: var(--ink); }
   .page fieldset { padding: 14px; }
   .page fieldset button, .outlineLink { max-width: 100%; white-space: normal; }
   .deliveryHeading { flex-direction: column; align-items: flex-start; gap: 4px; }

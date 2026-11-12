@@ -3,7 +3,7 @@
   margin: 40px auto;
   padding: 0 20px;
   overflow-wrap: anywhere;
-  color: #171717;
+  color: var(--ink);
 }
 .orders p {
   line-height: 1.7;
@@ -17,7 +17,7 @@
 }
 .orders button {
   padding: 12px 20px;
-  background: #171717;
+  background: var(--ink);
   color: white;
   border: 0;
   border-radius: 8px;

@@ -1,16 +1,16 @@
 .page { padding: 0 0 48px; overflow-wrap: anywhere; color: var(--ink); }
-.create { display: inline-flex; align-items: center; gap: 8px; padding: 11px 17px; background: #171717; color: white; border-radius: 7px; font-size: 12px; white-space: nowrap; }
+.create { display: inline-flex; align-items: center; gap: 8px; padding: 11px 17px; background: var(--ink); color: white; border-radius: 7px; font-size: 12px; white-space: nowrap; }
 .create > span { font-size: 17px; line-height: 1; }
 .create:hover { background: #333; text-decoration: none; }
-.page :is(a, button):focus-visible { outline: 2px solid #171717; outline-offset: 3px; }
-.listHeading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 22px; border-top: 1px solid #e5e5e5; }
+.page :is(a, button):focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.listHeading { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 22px; border-top: 1px solid var(--line); }
 .listHeading p { font-size: 13px; margin: 0; }
 .listHeading strong { margin-left: 5px; }
 .listHeading > span { color: var(--muted); font-size: 11px; }
 .notice { display: flex; align-items: start; gap: 7px; margin: 14px 0 20px; font-size: 11px; color: var(--muted); line-height: 1.7; }
 .notice svg { flex-shrink: 0; margin-top: 1px; }
 .list { list-style: none; padding: 0; margin: 0; display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.card { min-width: 0; padding: 22px; border: 1px solid #e3e3e3; border-radius: 10px; display: flex; flex-direction: column; background: white; }
+.card { min-width: 0; padding: 22px; border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; background: white; }
 .cardTop { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 17px; }
 .category { font-size: 11px; color: var(--muted); padding-top: 4px; }
 .states { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; flex-shrink: 0; }
@@ -28,7 +28,7 @@
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
 .actions a { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 8px; border: 1px solid #ddd; min-height: 40px; border-radius: 8px; font-size: 12px; line-height: 1.5; text-align: center; color: #555; }
 .actions a:hover { text-decoration: none; background: #f6f6f6; border-color: #aaa; }
-.actions .edit { border-color: #aaa; color: #171717; font-weight: 650; }
+.actions .edit { border-color: #aaa; color: var(--ink); font-weight: 650; }
 .actions .public { grid-column: 1 / -1; background: #fafafa; border-color: #eee; color: var(--muted); }
 @media (max-width: 1000px) and (min-width: 801px) { .list { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) {
